@@ -10,6 +10,7 @@ alias goto-tracking="cd $HELLMANN_DEV_ROOT/trackingall"
 alias goto-rlr="cd $HELLMANN_DEV_ROOT/rlr"
 
 #maven aliases
+alias mvn-ci="mvn clean install"
 alias mvn-ci-skiptest="mvn clean install -DskipTests"
 alias mvn-ci-skip-all="mvn clean install -DskipTests -Dnogwt -Dnodocker"
 
@@ -21,5 +22,5 @@ alias docker-tracking-stop-env="$TRACKING_DOCKER_COMPOSE_ROOT/call-compose.sh lo
 #RLR
 alias docker-rlr-start-int-env="$RLR_ROOT/build/start-db-env.sh"
 alias docker-rlr-start-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 up"
-alias docker-rlr-start-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 rm -fv"
+alias docker-rlr-stop-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 rm -fv"
 
