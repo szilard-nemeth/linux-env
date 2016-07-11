@@ -1,1 +1,3 @@
-alias intellij="/usr/local/bin/idea &"
+alias goto-tracking="/home/snemeth/development/hellmann-repos/trackingall"
+alias goto-rlr="/home/snemeth/development/hellmann-repos/rlr"
+
