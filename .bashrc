@@ -220,7 +220,7 @@ psgrep() {
 }
 
 ANT_HOME=/usr/local/apache-ant-1.8.4
-JAVA_HOME=/usr/lib/jvm/jdk1.7.0_55
+JAVA_HOME=/usr/lib/jvm/java-8-oracle/
 export JAVA_HOME
 export ANT_HOME
 PATH=$PATH:$ANT_HOME/bin
@@ -271,3 +271,15 @@ LIGHTGREEN="$(tput bold ; tput setaf 2)"
 echo -e "${WHITE}"; cal ; 
 echo -ne "${CYAN}";
 echo -ne "${LIGHTPURPLE}Sysinfo:";uptime ;echo ""
+
+
+# source other alias files
+#################################################################################
+echo Sourcing files from ~/aliases;
+for f in ~/aliases/*.sh
+do
+    echo Sourcing file $f
+    . "$f"
+done
+echo Done sourcing files from ~/aliases;
+
