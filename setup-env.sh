@@ -4,4 +4,4 @@ yes | cp -aR ./aliases/. ~/aliases/
 yes | cp -aR ./dotfiles/. ~/
 cp .bashrc ~/.bashrc;
 
-source ~/.bashrc
+. ~/.bashrc
