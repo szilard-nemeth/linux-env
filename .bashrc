@@ -219,7 +219,7 @@ psgrep() {
 	fi
 }
 
-ANT_HOME=/usr/local/apache-ant-1.8.4
+ANT_HOME=/usr/share/ant
 JAVA_HOME=/usr/lib/jvm/java-8-oracle/
 export JAVA_HOME
 export ANT_HOME
