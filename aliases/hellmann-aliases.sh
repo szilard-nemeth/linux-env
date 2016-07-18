@@ -5,6 +5,14 @@ TRACKING_DOCKER_COMPOSE_ROOT="$TRACKING_ROOT/tracking-docker/tracking-docker-com
 RLR_ROOT="$HELLMANN_DEV_ROOT/rlr/"
 RLR_DOCKER_COMPOSE_ROOT="$RLR_ROOT/rlr-docker-compose/rlr/"
 
+
+
+#alias functions
+mavenSetVersion() {
+	mvn versions:set -DnewVersion=$1
+}
+
+
 #goto aliases
 alias goto-tracking="cd $HELLMANN_DEV_ROOT/trackingall"
 alias goto-rlr="cd $HELLMANN_DEV_ROOT/rlr"
@@ -13,6 +21,7 @@ alias goto-rlr="cd $HELLMANN_DEV_ROOT/rlr"
 alias mvn-ci="mvn clean install"
 alias mvn-ci-skiptest="mvn clean install -DskipTests"
 alias mvn-ci-skip-all="mvn clean install -DskipTests -Dnogwt -Dnodocker"
+alias mvn-setversion=mavenSetVersion
 
 #docker aliases
 #Tracking
@@ -23,4 +32,6 @@ alias docker-tracking-stop-env="$TRACKING_DOCKER_COMPOSE_ROOT/call-compose.sh lo
 alias docker-rlr-start-int-env="$RLR_ROOT/build/start-db-env.sh"
 alias docker-rlr-start-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 up"
 alias docker-rlr-stop-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 rm -fv"
+
+
 
