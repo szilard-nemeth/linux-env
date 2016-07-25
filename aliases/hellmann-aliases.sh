@@ -27,11 +27,18 @@ alias mvn-setversion=mavenSetVersion
 #Tracking
 alias docker-tracking-start-int-env="~/development/hellmann-repos/trackingall/build/start-integration-env.sh"
 alias docker-tracking-start-env="$TRACKING_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local tracking_1 up"
-alias docker-tracking-stop-env="$TRACKING_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local tracking_1 rm -fv"
+alias docker-tracking-stop-env="$TRACKING_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local tracking_1 kill && $TRACKING_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local tracking_1 rm -fv"
 #RLR
 alias docker-rlr-start-int-env="$RLR_ROOT/build/start-db-env.sh"
 alias docker-rlr-start-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 up"
-alias docker-rlr-stop-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 rm -fv"
+alias docker-rlr-stop-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 kill && $RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 rm -fv"
 
+#docker test
+#TODO add instance-name parameters
+#TODO add since parameter (last 24 hours!)
+alias docker-tracking-test-logs="$TRACKING_DOCKER_COMPOSE_ROOT/call-compose.sh docker@emea-jas-a12t.hwl-family.net test user-acceptance-b logs --follow"
+alias docker-rlr-test-logs="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh docker@emea-jas-a12t.hwl-family.net test rlr-test logs --follow"
 
+#other aliases
+alias setup-ssh-tunnel-a12t="ssh -L 8777:localhost:33609 docker@emea-jas-a12t.hwl-family.net"
 
