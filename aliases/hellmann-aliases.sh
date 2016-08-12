@@ -12,6 +12,7 @@ mavenSetVersion() {
 	mvn versions:set -DnewVersion=$1
 }
 
+alias mount-allshare="sudo mount.cifs //172.24.227.38/ALLSHARE /mnt/allshare/ -o user=snemeth"
 
 #goto aliases
 alias goto-tracking="cd $HELLMANN_DEV_ROOT/trackingall"
@@ -25,13 +26,15 @@ alias mvn-setversion=mavenSetVersion
 
 #docker aliases
 #Tracking
-alias docker-tracking-start-int-env="~/development/hellmann-repos/trackingall/build/start-integration-env.sh"
+alias docker-tracking-start-int-env="$TRACKING_ROOT/build/start-integration-env.sh"
 alias docker-tracking-start-env="$TRACKING_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local tracking_1 up"
 alias docker-tracking-stop-env="$TRACKING_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local tracking_1 kill && $TRACKING_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local tracking_1 rm -fv"
+alias docker-tracking-logs="$TRACKING_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local tracking_1 logs"
 #RLR
 alias docker-rlr-start-int-env="$RLR_ROOT/build/start-db-env.sh"
 alias docker-rlr-start-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 up"
 alias docker-rlr-stop-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 kill && $RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 rm -fv"
+alias docker-rlr-logs="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 logs"
 
 #docker test
 #TODO add instance-name parameters
