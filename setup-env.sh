@@ -1,7 +1,15 @@
 #TODO add warning about overwrite before copying to home directory!
 
-yes | cp -aR ./aliases/. ~/aliases/
-yes | cp -aR ./dotfiles/. ~/
-cp .bashrc ~/.bashrc;
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-. ~/.bashrc
+echo "Copying files from $DIR/aliases to $HOME/aliases"
+yes | cp -aR $DIR/aliases/. $HOME/aliases/
+
+echo "Copying files from $DIR/dotfiles to $HOME"
+yes | cp -aR $DIR/dotfiles/. ~/
+
+echo "Copying files from $DIR/scripts to $HOME/scripts"
+yes | cp -aR $DIR/scripts/. $HOME/scripts
+
+echo "Copying $DIR/.bashrc to $HOME/.bashrc"
+cp $DIR/.bashrc ~/.bashrc;

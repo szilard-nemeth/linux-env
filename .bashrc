@@ -13,8 +13,9 @@ HISTCONTROL=ignoreboth
 shopt -s histappend
 
 # for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-HISTSIZE=1000
-HISTFILESIZE=2000
+##empty value --> unlimited
+HISTSIZE=
+HISTFILESIZE=
 
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
@@ -272,9 +273,11 @@ echo -e "${WHITE}"; cal ;
 echo -ne "${CYAN}";
 echo -ne "${LIGHTPURPLE}Sysinfo:";uptime ;echo ""
 
-
 # source other alias files
 #################################################################################
+
+#source setup env from linux_env repository (copying all env files)
+. ~/development/my-repos/linux_env/setup-env.sh
 echo Sourcing files from ~/aliases;
 for f in ~/aliases/*.sh
 do
