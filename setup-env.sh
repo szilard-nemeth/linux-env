@@ -14,5 +14,5 @@ yes | cp -aR $DIR/scripts/. $HOME/scripts
 echo "Copying $DIR/.bashrc to $HOME/.bashrc"
 cp $DIR/.bashrc ~/.bashrc;
 
-echo "Copying $DIR/configurations/i3/* to $HOME/.i3/"
-cp $DIR/configurations/i3/* $HOME/.i3
+echo "Copying $DIR/config/i3/* to $HOME/.i3/"
+cp $DIR/config/i3/* $HOME/.i3
