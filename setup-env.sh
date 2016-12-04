@@ -16,3 +16,29 @@ cp $DIR/.bashrc ~/.bashrc;
 
 echo "Copying $DIR/config/i3/* to $HOME/.i3/"
 cp $DIR/config/i3/* $HOME/.i3
+
+
+##copy workplace-specific aliases
+SRC_DIR=$DIR/workplace-specific/
+DEST_DIR=$HOME/workplace-specific/
+echo "Copying workplace-specific aliases..."
+echo "Copying $DIR/workplace-specific/* to $HOME/aliases/workplace-specific/"
+
+test -d "$DEST_DIR" || mkdir -p "$DEST_DIR" && yes | cp -aR $SRC_DIR $DEST_DIR
+
+echo Sourcing files from $HOME/aliases;
+for f in $HOME/aliases/*.sh; do
+  echo Sourcing file $f
+  . "$f"
+done
+echo Done sourcing files from ~/aliases;
+
+echo "Searching for .source-this files and sourcing them..."
+matched_dirs=$(find $HOME/workplace-specific/ -name .source-this -printf "%h\n")
+for d in $matched_dirs; do
+  echo Sourcing files from $d
+  for f in $(find $d -maxdepth 1 -iname  "*.sh"); do
+    echo Sourcing file $f
+    . "$f"
+  done
+done

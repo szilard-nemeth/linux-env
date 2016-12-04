@@ -278,11 +278,4 @@ echo -ne "${LIGHTPURPLE}Sysinfo:";uptime ;echo ""
 
 #source setup env from linux_env repository (copying all env files)
 . ~/development/my-repos/linux_env/setup-env.sh
-echo Sourcing files from ~/aliases;
-for f in ~/aliases/*.sh
-do
-    echo Sourcing file $f
-    . "$f"
-done
-echo Done sourcing files from ~/aliases;
 
