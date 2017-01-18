@@ -1,5 +1,6 @@
-alias start-google-chrome="google-chrome > /dev/null 2>&1"
+alias start-google-chrome="nohup google-chrome & disown"
 #alias start-intellij="/usr/local/bin/idea > /dev/null 2>&1"
-alias start-intellij="/usr/local/intellij-idea/bin/idea.sh"
+alias start-intellij="nohup /usr/local/intellij-idea/bin/idea.sh &"
 alias start-squirrel="/usr/local/squirrel/squirrel-sql.sh > /dev/null 2>&1"
 alias start-hipchat4="hipchat4 > /dev/null 2>&1"
+alias restart-hipchat4="ps -ef | grep hipchat | awk '{print $2}' | xargs kill && nohup hipchat4&"
