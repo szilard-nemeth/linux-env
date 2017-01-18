@@ -227,6 +227,7 @@ export ANT_HOME
 PATH=$PATH:$ANT_HOME/bin
 PATH=$PATH:~/applications/android-sdk-linux/platform-tools
 PATH=$PATH:/usr/share/jython/bin
+PATH=$PATH:/home/snemeth/scripts/
 export PATH
 export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=1024m"
 export JBOSS_HOME="/home/ejnogrs/jboss/jboss-eap-6.1/"

@@ -39,6 +39,7 @@ alias currentweek="date +%V"
 alias vpn-szyszy="sudo openvpn --client --config ~/openvpn-szyszy/client.ovpn --ca ~/openvpn-szyszy/ca.crt"
 alias aws-login="\$(aws ecr get-login --region eu-west-1)"
 alias linux-env-reload="~/development/my-repos/linux_env/setup-env.sh"
+alias restart-network="sudo service network-manager restart"
 
 ##i3 aliases
 
@@ -52,4 +53,20 @@ function i3-rename-workspace() {
 
 alias i3-display-unplugged="xrandr --output HDMI1 --off"
 alias i3-display-plugged="exec xrandr --output HDMI1 --auto --right-of eDP1"
+alias suspend="$HOME/i3/i3exit.sh suspend"
 
+## cd aliases
+
+up(){
+  local d=""
+  limit=$1
+  for ((i=1 ; i <= limit ; i++))
+    do
+      d=$d/..
+    done
+  d=$(echo $d | sed 's/^\///')
+  if [ -z "$d" ]; then
+    d=..
+  fi
+  cd $d
+}
