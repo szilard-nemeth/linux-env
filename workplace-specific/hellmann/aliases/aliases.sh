@@ -1,13 +1,19 @@
 #setup locations
+HELLMANN_DEV_ROOT="$HOME/development/hellmann-repos/"
+
+#Tracking
 TRACKING_COMPOSE_NAME="tracking_1"
 TRACKING_COMPOSE_ARGS="localhost local $TRACKING_COMPOSE_NAME"
-HELLMANN_DEV_ROOT="$HOME/development/hellmann-repos/"
 TRACKING_ROOT="$HELLMANN_DEV_ROOT/trackingall/"
 TRACKING_DOCKER_COMPOSE_ROOT_TR="$TRACKING_ROOT/tracking-docker/tracking-docker-compose/tracking/"
 TRACKING_DOCKER_COMPOSE_ROOT_TDS="$TRACKING_ROOT/tracking-docker/tracking-docker-compose/dataservice/"
 TRACKING_DOCKER_COMPOSE_ROOT_KAFKA="$TRACKING_ROOT/tracking-docker/tracking-docker-compose/kafka-feeder/"
+
+#Road Live Reporting
 RLR_ROOT="$HELLMANN_DEV_ROOT/rlr/"
 RLR_DOCKER_COMPOSE_ROOT="$RLR_ROOT/rlr-docker-compose/rlr/"
+RLR_COMPOSE_NAME="rlr_1"
+RLR_COMPOSE_ARGS="localhost local $RLR_COMPOSE_NAME"
 
 
 
@@ -31,25 +37,26 @@ alias mvn-setversion=mavenSetVersion
 #docker aliases
 #Tracking
 alias docker-tracking-start-integration="$TRACKING_ROOT/build/start-integration-env.sh"
-alias docker-tracking-start="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS up -d" \
-                            "$TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS up -d" \
-                            "$TRACKING_DOCKER_COMPOSE_ROOT_KAFKA/call-compose.sh $TRACKING_COMPOSE_ARGS up -d";
+alias docker-tracking-start="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS up -d && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS up -d && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_KAFKA/call-compose.sh $TRACKING_COMPOSE_ARGS up -d;"
 
-alias docker-tracking-stop="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS kill" \
-                            "$TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS kill" \
-                            "$TRACKING_DOCKER_COMPOSE_ROOT_KAFKA/call-compose.sh $TRACKING_COMPOSE_ARGS kill" \
-                            "$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS rm -fv" \
-                            "$TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS rm -fv" \
-                            "$TRACKING_DOCKER_COMPOSE_ROOT_KAFKA/call-compose.sh $TRACKING_COMPOSE_ARGS rm -fv";
+alias docker-tracking-stop="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS kill && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS rm -fv && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS kill && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS rm -fv && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_KAFKA/call-compose.sh $TRACKING_COMPOSE_ARGS kill && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_KAFKA/call-compose.sh $TRACKING_COMPOSE_ARGS rm -fv;"
 
 alias docker-tracking-logs="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS logs"
 
 
 #RLR
-alias docker-rlr-start-int-env="$RLR_ROOT/build/start-db-env.sh"
-alias docker-rlr-start-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 up"
-alias docker-rlr-stop-env="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 kill && $RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 rm -fv"
-alias docker-rlr-logs="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh localhost local rlr_1 logs"
+alias docker-rlr-start-integration="$RLR_ROOT/build/start-db-env.sh"
+alias docker-rlr-start="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS up -d"
+alias docker-rlr-stop="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS kill && \
+                       $RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS rm -fv"
+alias docker-rlr-logs="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS logs"
 
 #docker test
 #TODO add instance-name parameters
