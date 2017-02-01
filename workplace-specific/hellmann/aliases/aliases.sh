@@ -41,7 +41,16 @@ alias docker-tracking-start="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $T
                             $TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS up -d && \
                             $TRACKING_DOCKER_COMPOSE_ROOT_KAFKA/call-compose.sh $TRACKING_COMPOSE_ARGS up -d;"
 
+alias docker-tracking-start-dataservice="$TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS up -d"
+
 alias docker-tracking-stop="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS kill && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS rm -f && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS kill && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS rm -f && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_KAFKA/call-compose.sh $TRACKING_COMPOSE_ARGS kill && \
+                            $TRACKING_DOCKER_COMPOSE_ROOT_KAFKA/call-compose.sh $TRACKING_COMPOSE_ARGS rm -f;"
+
+alias docker-tracking-stop-rmfv="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS kill && \
                             $TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS rm -fv && \
                             $TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS kill && \
                             $TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS rm -fv && \
@@ -55,6 +64,8 @@ alias docker-tracking-logs="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TR
 alias docker-rlr-start-integration="$RLR_ROOT/build/start-db-env.sh"
 alias docker-rlr-start="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS up -d"
 alias docker-rlr-stop="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS kill && \
+                       $RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS rm -f"
+alias docker-rlr-stop-rmfv="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS kill && \
                        $RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS rm -fv"
 alias docker-rlr-logs="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS logs"
 
