@@ -1,5 +1,6 @@
 #TODO add warning about overwrite before copying to home directory!
 
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo "Copying files from $DIR/aliases to $HOME/aliases"
@@ -23,9 +24,9 @@ cp $SRC_DIR/* $DEST_DIR
 
 ##copy workplace-specific aliases
 SRC_DIR=$DIR/workplace-specific/
-DEST_DIR=$HOME/workplace-specific/
+DEST_DIR=$HOME/
 echo "Copying workplace-specific aliases..."
-echo "Copying $DIR/workplace-specific/* to $HOME/aliases/workplace-specific/"
+echo "Copying $SRC_DIR to $HOME/"
 
 test -d "$DEST_DIR" || mkdir -p "$DEST_DIR" && yes | cp -aR $SRC_DIR $DEST_DIR
 
