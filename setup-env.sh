@@ -37,6 +37,13 @@ for f in $HOME/aliases/*.sh; do
 done
 echo Done sourcing files from ~/aliases;
 
+echo "Searching for .add-to-path files and sourcing them..."
+matched_dirs=$(find $HOME/workplace-specific/ -name .add-to-path -printf "%h\n")
+for d in $matched_dirs; do
+  echo Adding files from directory $d to PATH...
+  PATH=$PATH:$d
+done
+
 echo "Searching for .source-this files and sourcing them..."
 matched_dirs=$(find $HOME/workplace-specific/ -name .source-this -printf "%h\n")
 for d in $matched_dirs; do
