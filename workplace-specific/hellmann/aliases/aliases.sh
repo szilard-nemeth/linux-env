@@ -1,16 +1,17 @@
 #setup locations
 HELLMANN_DEV_ROOT="$HOME/development/hellmann-repos/"
+HELLMANN_TRACKANDTRACE_ROOT="$HELLMANN_DEV_ROOT/gis-portal-trackandtrace/"
 
 #Tracking
 TRACKING_COMPOSE_NAME="tracking_1"
 TRACKING_COMPOSE_ARGS="localhost local $TRACKING_COMPOSE_NAME"
-TRACKING_ROOT="$HELLMANN_DEV_ROOT/trackingall/"
+TRACKING_ROOT="$HELLMANN_TRACKANDTRACE_ROOT/trackingall/"
 TRACKING_DOCKER_COMPOSE_ROOT_TR="$TRACKING_ROOT/tracking-docker/tracking-docker-compose/tracking/"
 TRACKING_DOCKER_COMPOSE_ROOT_TDS="$TRACKING_ROOT/tracking-docker/tracking-docker-compose/dataservice/"
 TRACKING_DOCKER_COMPOSE_ROOT_KAFKA="$TRACKING_ROOT/tracking-docker/tracking-docker-compose/kafka-feeder/"
 
 #Road Live Reporting
-RLR_ROOT="$HELLMANN_DEV_ROOT/rlr/"
+RLR_ROOT="$HELLMANN_TRACKANDTRACE_ROOT/rlr/"
 RLR_DOCKER_COMPOSE_ROOT="$RLR_ROOT/rlr-docker-compose/rlr/"
 RLR_COMPOSE_NAME="rlr_1"
 RLR_COMPOSE_ARGS="localhost local $RLR_COMPOSE_NAME"
@@ -25,8 +26,8 @@ mavenSetVersion() {
 alias mount-allshare="sudo mount.cifs //172.24.227.38/ALLSHARE /mnt/allshare/ -o user=snemeth"
 
 #goto aliases
-alias goto-tracking="cd $HELLMANN_DEV_ROOT/trackingall"
-alias goto-rlr="cd $HELLMANN_DEV_ROOT/rlr"
+alias goto-tracking="cd $TRACKING_ROOT"
+alias goto-rlr="cd $RLR_ROOT"
 
 #maven aliases
 alias mvn-ci="mvn clean install"
@@ -58,6 +59,8 @@ alias docker-tracking-stop-rmfv="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.s
                             $TRACKING_DOCKER_COMPOSE_ROOT_KAFKA/call-compose.sh $TRACKING_COMPOSE_ARGS rm -fv;"
 
 alias docker-tracking-logs="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh $TRACKING_COMPOSE_ARGS logs"
+alias docker-tds-logs="$TRACKING_DOCKER_COMPOSE_ROOT_TDS/call-compose.sh $TRACKING_COMPOSE_ARGS logs"
+alias docker-kafka-logs="$TRACKING_DOCKER_COMPOSE_ROOT_KAFKA/call-compose.sh $TRACKING_COMPOSE_ARGS logs"
 
 
 #RLR

@@ -1,4 +1,4 @@
-$HOME/development/hellmann-repos/notes/run-notes.sh
+$HOME/development/hellmann-repos/other/notes/run-notes.sh
 
 
 ##Akos Version
