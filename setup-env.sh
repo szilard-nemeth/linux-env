@@ -39,6 +39,46 @@ function copy_entries() {
     done
 }
 
+function source_scripts() {
+    source_from=$1
+
+    echo Sourcing files from $HOME/aliases;
+    for f in $source_from/*.sh; do
+        echo Sourcing file $f
+        . "$f"
+    done
+    echo Done sourcing files from $source_from;
+}
+
+function source_files() {
+    marker_file_name=$1
+    from_dir="$HOME/workplace-specific/"
+
+    echo "Searching for $marker_file_name files and sourcing them..."
+    matched_dirs=$(find $from_dir -name $marker_file_name -printf "%h\n")
+    for d in $matched_dirs; do
+        printf "\tSourcing files from $d\n"
+        for f in $(find $d -maxdepth 1 -iname  "*.sh"); do
+            printf "\tSourcing file $f\n"
+            . "$f"
+        done
+    done
+    echo "Done sourcing $marker_file_name files from $from_dir"
+}
+
+function add_to_path() {
+    marker_file_name=$1
+    from_dir="$HOME/workplace-specific/"
+
+    echo "Searching for $marker_file_name files and adding them to PATH..."
+    matched_dirs=$(find $from_dir -name $marker_file_name -printf "%h\n")
+    for d in $matched_dirs; do
+        printf "\tAdding files from directory $d to PATH...\n"
+        PATH=$PATH:$d
+    done
+    echo "Done sourcing $marker_file_name files from $from_dir"
+}
+
 
 declare -a COPY_LIST=()
 COPY_LIST+=("$DIR/aliases/. $HOME/aliases/")
@@ -49,27 +89,6 @@ COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
 COPY_LIST+=("$DIR/workplace-specific/. $HOME/workplace-specific")
 
 copy_entries "${COPY_LIST[@]}"
-
-echo Sourcing files from $HOME/aliases;
-for f in $HOME/aliases/*.sh; do
-  echo Sourcing file $f
-  . "$f"
-done
-echo Done sourcing files from ~/aliases;
-
-echo "Searching for .add-to-path files and adding them to PATH..."
-matched_dirs=$(find $HOME/workplace-specific/ -name .add-to-path -printf "%h\n")
-for d in $matched_dirs; do
-  echo "Adding files from directory $d to PATH..."
-  PATH=$PATH:$d
-done
-
-echo "Searching for .source-this files and sourcing them..."
-matched_dirs=$(find $HOME/workplace-specific/ -name .source-this -printf "%h\n")
-for d in $matched_dirs; do
-  echo "Sourcing files from $d"
-  for f in $(find $d -maxdepth 1 -iname  "*.sh"); do
-    echo "Sourcing file $f"
-    . "$f"
-  done
-done
+source_scripts $HOME/aliases
+source_files ".source-this"
+add_to_path ".add-to-path"
