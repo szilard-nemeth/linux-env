@@ -9,37 +9,46 @@ rm $ENV_FILE_MAPPINGS
 touch $ENV_FILE_MAPPINGS
 
 
-echo "Copying files from $DIR/aliases to $HOME/aliases"
-yes | cp -aR $DIR/aliases/. $HOME/aliases/
-echo "$DIR/aliases/ $HOME/aliases/" >> $ENV_FILE_MAPPINGS
+function copy_entries() {
+    #TODO parameter number check --> should be even, otherwise skip copy and error!
+    #TODO check return value of cp before adding entry to $ENV_FILE_MAPPINGS
 
-echo "Copying files from $DIR/dotfiles to $HOME"
-yes | cp -aR $DIR/dotfiles/. $HOME/
-echo "$DIR/dotfiles/ $HOME/" >> $ENV_FILE_MAPPINGS
+    IFS=' ' read -ra copy_list <<< "$@"
 
-echo "Copying files from $DIR/scripts to $HOME/scripts"
-yes | cp -aR $DIR/scripts/. $HOME/scripts
-echo "$DIR/scripts/ $HOME/scripts" >> $ENV_FILE_MAPPINGS
+    if [ $((${#copy_list[@]} % 2)) -ne 0 ]; then
+        echo "Illegal number of parameters, should be even!"
+        exit 1
+    fi
 
-echo "Copying $DIR/.bashrc to $HOME/.bashrc"
-cp $DIR/.bashrc $HOME/.bashrc;
-echo "$DIR/.bashrc $HOME/.bashrc" >> $ENV_FILE_MAPPINGS
+    i="0"
+    while [ $i -lt ${#copy_list[@]} ]; do
+        from="${copy_list[$i]}"
+        to="${copy_list[$i+1]}"
 
-SRC_DIR=$DIR/dotfiles/i3/
-DEST_DIR=$HOME/.i3/
-echo "Copying $SRC_DIR to $DEST_DIR"
-yes | cp -aR $SRC_DIR/. $DEST_DIR
-echo "$SRC_DIR $DEST_DIR" >> $ENV_FILE_MAPPINGS
+        if [[ "$from" == *. ]]; then
+            echo "Copying files from $from to $to (recursive)"
+            yes | cp -aR $from $to
+            echo "${from::-1} $to" >> $ENV_FILE_MAPPINGS
+        else
+            echo "Copying file from $from to $to"
+            cp $from $to
+            echo "$from $to" >> $ENV_FILE_MAPPINGS
+        fi
+
+        i=$[$i+2]
+    done
+}
 
 
-##copy workplace-specific aliases
-SRC_DIR=$DIR/workplace-specific/
-DEST_DIR=$HOME/
-echo "Copying workplace-specific aliases..."
-echo "Copying $SRC_DIR to $HOME/"
+declare -a COPY_LIST=()
+COPY_LIST+=("$DIR/aliases/. $HOME/aliases/")
+COPY_LIST+=("$DIR/dotfiles/. $HOME/")
+COPY_LIST+=("$DIR/scripts/. $HOME/scripts")
+COPY_LIST+=("$DIR/.bashrc $HOME/.bashrc")
+COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
+COPY_LIST+=("$DIR/workplace-specific/. $HOME/workplace-specific")
 
-test -d "$DEST_DIR" || mkdir -p "$DEST_DIR" && yes | cp -aR $SRC_DIR $DEST_DIR
-echo "$SRC_DIR $DEST_DIR" >> $ENV_FILE_MAPPINGS
+copy_entries "${COPY_LIST[@]}"
 
 echo Sourcing files from $HOME/aliases;
 for f in $HOME/aliases/*.sh; do
