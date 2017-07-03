@@ -21,6 +21,9 @@ font -misc-fixed-medium-r-normal--13-120-75-75-C-70-iso10646-1
 # chose a FreeType font, such as:
 # font pango:DejaVu Sans Mono 10
 
+#default workspace layout: tabbed mode
+workspace_layout tabbed
+
 # Use Mouse+$mod to drag floating windows to their wanted position
 floating_modifier $mod
 
@@ -148,6 +151,7 @@ bindsym $mod+r mode "resize"
 # finds out, if available)
 bar {
         status_command i3status -c ~/.i3/i3status.conf
+        tray_output primary
 }
 
 bindsym $mod+shift+x exec i3lock -c000000
@@ -179,3 +183,8 @@ exec --no-startup-id xinput set-prop "ETPS/2 Elantech Touchpad" "Synaptics Two-F
 
 # change between current and last workspace
 bindsym $mod+Tab workspace back_and_forth
+
+for_window [title="IBM Notes"] floating enable
+
+exec --no-startup-id i3-msg 'workspace 1; exec /usr/bin/firefox'
+exec --no-startup-id i3-msg 'workspace 2;notes; exec ~/workspace/notes/run-notes.sh'
