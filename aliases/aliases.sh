@@ -24,6 +24,10 @@ function docker-operation-except() {
     docker ps --format '{{.Names}}' | grep $GREP_CRITERIA | xargs docker $DOCKER_COMMAND
 }
 
+function unmount-poweroff() {
+    sudo umount $1 && udisksctl power-off -b $1
+}
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR
 
@@ -53,6 +57,7 @@ function i3-rename-workspace() {
 
 alias i3-display-unplugged="xrandr --output HDMI1 --off"
 alias i3-display-plugged="exec xrandr --output HDMI1 --auto --right-of eDP1"
+alias i3-display-primary="xrandr --output HDMI1 --primary"
 alias suspend="$HOME/i3/i3exit.sh suspend"
 
 ## cd aliases
@@ -70,3 +75,6 @@ up(){
   fi
   cd $d
 }
+
+#rsync aliases
+alias rsync-backup="rsync -avh $HOME/backup/ /media/snemeth/szyszy-exthdd-data/backups/hell-laptop-backupsdir/"
