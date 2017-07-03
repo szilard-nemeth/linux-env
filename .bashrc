@@ -220,6 +220,14 @@ psgrep() {
 	fi
 }
 
+psgrep-silent() {
+	if [ ! -z $1 ] ; then
+		ps aux | grep $1 | grep -v grep
+	else
+		echo "!! Need name to grep for"
+	fi
+}
+
 ANT_HOME=/usr/share/ant
 JAVA_HOME=/usr/lib/jvm/java-8-oracle/
 export JAVA_HOME
@@ -231,6 +239,7 @@ PATH=$PATH:/home/snemeth/scripts/
 export PATH
 export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=1024m"
 export JBOSS_HOME="/home/ejnogrs/jboss/jboss-eap-6.1/"
+export ANT_OPTS="-XX:PermSize=512m -XX:MaxPermSize=512m -Xmx1024m -Xms1024m"
 
 alias hlrLabDbTunnel="ssh -Y -L 7001:localhost:3306 -L 7002:localhost:5005 -L 7003:localhost:1234 hlrtest@hlrlabserv.eth.ericsson.se"
 alias sl="sl --help"
@@ -280,3 +289,4 @@ echo -ne "${LIGHTPURPLE}Sysinfo:";uptime ;echo ""
 #source setup env from linux_env repository (copying all env files)
 . ~/development/my-repos/linux_env/setup-env.sh
 
+#eval $(thefuck --alias)
