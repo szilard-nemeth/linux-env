@@ -1,3 +1,6 @@
+[url "https://"]
+    insteadOf = git://
+
 [push]
     default=upstream
 
