@@ -1,17 +1,19 @@
+#!/bin/bash
+
 #setup locations
 HELLMANN_DEV_ROOT="$HOME/development/hellmann-repos/"
-HELLMANN_TRACKANDTRACE_ROOT="$HELLMANN_DEV_ROOT/gis-portal-trackandtrace/"
+HELLMANN_TT_ROOT="$HELLMANN_DEV_ROOT/gis-portal-trackandtrace/"
 
 #Tracking
 TRACKING_COMPOSE_NAME="tracking_1"
 TRACKING_COMPOSE_ARGS="localhost local $TRACKING_COMPOSE_NAME"
-TRACKING_ROOT="$HELLMANN_TRACKANDTRACE_ROOT/trackingall/"
+TRACKING_ROOT="$HELLMANN_TT_ROOT/trackingall/"
 TRACKING_DOCKER_COMPOSE_ROOT_TR="$TRACKING_ROOT/tracking-docker/tracking-docker-compose/tracking/"
 TRACKING_DOCKER_COMPOSE_ROOT_TDS="$TRACKING_ROOT/tracking-docker/tracking-docker-compose/dataservice/"
 TRACKING_DOCKER_COMPOSE_ROOT_KAFKA="$TRACKING_ROOT/tracking-docker/tracking-docker-compose/kafka-feeder/"
 
 #Road Live Reporting
-RLR_ROOT="$HELLMANN_TRACKANDTRACE_ROOT/rlr/"
+RLR_ROOT="$HELLMANN_TT_ROOT/rlr/"
 RLR_DOCKER_COMPOSE_ROOT="$RLR_ROOT/rlr-docker-compose/rlr/"
 RLR_COMPOSE_NAME="rlr_1"
 RLR_COMPOSE_ARGS="localhost local $RLR_COMPOSE_NAME"
@@ -28,6 +30,7 @@ alias mount-allshare="sudo mount.cifs //172.24.227.38/ALLSHARE /mnt/allshare/ -o
 #goto aliases
 alias goto-tracking="cd $TRACKING_ROOT"
 alias goto-rlr="cd $RLR_ROOT"
+alias goto-deploy="cd $HOME/development/hellmann-repos/gis-portal-portalservices/hps-deploy"
 
 #maven aliases
 alias mvn-ci="mvn clean install"
@@ -81,5 +84,6 @@ alias docker-rlr-test-logs="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh docker@emea
 #other aliases
 alias setup-ssh-tunnel-a12t="ssh -L 8777:localhost:33609 docker@emea-jas-a12t.hwl-family.net"
 alias start-notes="$HOME/scripts/hellmann/start-notes.sh"
-alias develop-integration-diff="git log --graph --pretty=format:'%Cred%h%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative --first-parent origin/develop..origin/integration"
+alias diff-develop-integration="git log --graph --pretty=format:'%Cred%h%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative --first-parent origin/develop..origin/integration"
 alias vpn-hellmann="sudo openvpn --client --config ~/openvpn-hellmann/client-mathias.ovpn"
+alias keepass-hellmann="/usr/lib/keepass2/KeePass.exe /home/snemeth/Dropbox/work/hellmann/keepass/keepass-own.kdbx"
