@@ -31,6 +31,7 @@ alias mount-allshare="sudo mount.cifs //172.24.227.38/ALLSHARE /mnt/allshare/ -o
 alias goto-tracking="cd $TRACKING_ROOT"
 alias goto-rlr="cd $RLR_ROOT"
 alias goto-deploy="cd $HOME/development/hellmann-repos/gis-portal-portalservices/hps-deploy"
+alias goto-thinpoc="cd $HOME/development/hellmann-repos/gis-portal-applications/thinpoc"
 
 #maven aliases
 alias mvn-ci="mvn clean install"
@@ -87,3 +88,5 @@ alias start-notes="$HOME/scripts/hellmann/start-notes.sh"
 alias diff-develop-integration="git log --graph --pretty=format:'%Cred%h%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative --first-parent origin/develop..origin/integration"
 alias vpn-hellmann="sudo openvpn --client --config ~/openvpn-hellmann/client-mathias.ovpn"
 alias keepass-hellmann="/usr/lib/keepass2/KeePass.exe /home/snemeth/Dropbox/work/hellmann/keepass/keepass-own.kdbx"
+alias copy-chat-history="docker cp notes:/home/notes/Documents/SametimeTranscripts/ $HOME/notes-chat-history"
+alias edit-hellmann-aliases="vi $HOME/development/my-repos/linux_env/workplace-specific/hellmann/aliases/aliases.sh"

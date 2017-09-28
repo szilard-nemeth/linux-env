@@ -25,7 +25,8 @@ function docker-operation-except() {
 }
 
 function unmount-poweroff() {
-    sudo umount $1 && udisksctl power-off -b $1
+#    sudo umount $1 && udisksctl power-off -b $1
+     sudo udisksctl unmount -b $1 && sudo udisksctl power-off -b $1
 }
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -35,6 +36,7 @@ alias goto-linuxenv-repo="cd $HOME/development/my-repos/linux_env"
 alias intellij-keyboard-fix="ibus-daemon -rd"
 
 #alias docker-rmfv-all="docker rm -fv \$(docker ps -q)"
+alias docker-rm-net="docker network rm $(docker network ls | awk '/ / { print $1 }')"
 alias docker-rmfv-all="docker-operation-except $DIR/.docker-op-exceptions rm -fv"
 alias docker-rmf-all="docker-operation-except $DIR/.docker-op-exceptions rm -f"
 alias docker-stop-all="docker-operation-except $DIR/.docker-op-exceptions stop"
