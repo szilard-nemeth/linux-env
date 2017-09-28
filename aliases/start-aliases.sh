@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-INTELLIJ_PATH="/usr/local/intellij-idea6_3_3/bin/idea.sh"
+INTELLIJ_PATH="/usr/local/intellij-idea-2017-2-2/bin/idea.sh"
 SQUIRREL_PATH=/usr/local/squirrel/squirrel-sql.sh
 
 start-app-silent() {
