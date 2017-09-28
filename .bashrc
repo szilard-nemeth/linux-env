@@ -233,19 +233,14 @@ JAVA_HOME=/usr/lib/jvm/java-8-oracle/
 export JAVA_HOME
 export ANT_HOME
 PATH=$PATH:$ANT_HOME/bin
-PATH=$PATH:~/applications/android-sdk-linux/platform-tools
-PATH=$PATH:/usr/share/jython/bin
-PATH=$PATH:/home/snemeth/scripts/
+PATH=$PATH:$HOME/scripts/
+PATH=$PATH:$HOME/.npm-global/bin
 export PATH
 export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=1024m"
-export JBOSS_HOME="/home/ejnogrs/jboss/jboss-eap-6.1/"
 export ANT_OPTS="-XX:PermSize=512m -XX:MaxPermSize=512m -Xmx1024m -Xms1024m"
 
-alias hlrLabDbTunnel="ssh -Y -L 7001:localhost:3306 -L 7002:localhost:5005 -L 7003:localhost:1234 hlrtest@hlrlabserv.eth.ericsson.se"
 alias sl="sl --help"
-alias aafm="~/applications/aafm-master/src/aafm-gui.py &"
 alias gedit="vim"
-alias downloadFCM="~/downloadFCM.sh"
 alias grep='grep --color=auto'
 alias dfh='df -h'
 alias calc='gcalctool -s'
