@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#example usage: ./save-portal-logs.sh --cell b --basedir /home/snemeth/tmp/trace-logs-20170508/ --patterns "SystemOut*,trace*"
+#example usage: bash -x ./save-portal-logs-toolserver.sh --cell ab --basedir /home/snemeth/tmp/trace-logs-20170619/ --patterns "SystemOut*,trace*"
 function print_usage {
     echo -e "Usage:\nsave-portal-logs-toolserver.sh --cell <a|b|ab> --basedir <dir> --patterns <pattern1,pattern2,pattern3,...>"
     echo -e example usage: ./save-portal-logs-toolserver.sh --cell b --basedir /home/snemeth/tmp/trace-logs-20170508/ --patterns "SystemOut*,trace*"
