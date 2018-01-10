@@ -3,11 +3,13 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-ENV_FILE_MAPPINGS=$HOME/.env/.file-mappings
 mkdir -p $HOME/.env
+ENV_FILE_MAPPINGS=$HOME/.env/.file-mappings
 rm $ENV_FILE_MAPPINGS
 touch $ENV_FILE_MAPPINGS
 
+HOME_LINUXENV_DIR="$HOME/.linuxenv/"
+WORKPLACE_SPECIFIC_DIR="$HOME_LINUXENV_DIR/workplace-specific/"
 
 function copy_entries() {
     #TODO parameter number check --> should be even, otherwise skip copy and error!
@@ -25,10 +27,17 @@ function copy_entries() {
         from="${copy_list[$i]}"
         to="${copy_list[$i+1]}"
 
+        if [[ -d "${to}" ]]; then
+            mkdir -p $to
+        elif [[ -f "${to}" ]]; then
+            mkdir -p $(dirname ${to})
+        fi
+
         if [[ "$from" == *. ]]; then
             echo "Copying files from $from to $to (recursive)"
             yes | cp -aR $from $to
-            echo "${from::-1} $to" >> $ENV_FILE_MAPPINGS
+            from_stripped=$(echo $from | sed 's/.$//')
+            echo "$from_stripped $to" >> $ENV_FILE_MAPPINGS
         else
             echo "Copying file from $from to $to"
             cp $from $to
@@ -42,7 +51,7 @@ function copy_entries() {
 function source_scripts() {
     source_from=$1
 
-    echo Sourcing files from $HOME/aliases;
+    echo Sourcing files from $HOME_LINUXENV_DIR/aliases;
     for f in $source_from/*.sh; do
         echo Sourcing file $f
         . "$f"
@@ -51,11 +60,11 @@ function source_scripts() {
 }
 
 function source_files() {
-    marker_file_name=$1
-    from_dir="$HOME/workplace-specific/"
+    local marker_file_name=$1
+    local from_dir="$WORKPLACE_SPECIFIC_DIR"
 
     echo "Searching for $marker_file_name files and sourcing them..."
-    matched_dirs=$(find $from_dir -name $marker_file_name -printf "%h\n")
+    set_matched_dirs $WORKPLACE_SPECIFIC_DIR $marker_file_name
     for d in $matched_dirs; do
         printf "\tSourcing files from $d\n"
         for f in $(find $d -maxdepth 1 -iname  "*.sh"); do
@@ -68,10 +77,10 @@ function source_files() {
 
 function add_to_path() {
     marker_file_name=$1
-    from_dir="$HOME/workplace-specific/"
+    from_dir="$WORKPLACE_SPECIFIC_DIR"
 
     echo "Searching for $marker_file_name files and adding them to PATH..."
-    matched_dirs=$(find $from_dir -name $marker_file_name -printf "%h\n")
+    set_matched_dirs $from_dir $marker_file_name
     for d in $matched_dirs; do
         printf "\tAdding files from directory $d to PATH...\n"
         PATH=$PATH:$d
@@ -79,16 +88,32 @@ function add_to_path() {
     echo "Done sourcing $marker_file_name files from $from_dir"
 }
 
+function set_matched_dirs() {
+    local from_dir=$1
+    local marker_file_name=$2
 
+    #matched_dirs will contain full path of the directory containing marker_file_name
+    #https://stackoverflow.com/a/2282701/1106893
+    ##compatible with GNU find:
+    ## matched_dirs=$(find $from_dir -name $marker_file_name -printf "%h\n")
+
+    #compatible with MacOS / FreeBSD
+    matched_dirs=$(find $from_dir -name $marker_file_name -print0 | xargs -0 -n1 dirname | sort --unique)
+}
+
+set -x
 declare -a COPY_LIST=()
-COPY_LIST+=("$DIR/aliases/. $HOME/aliases/")
-COPY_LIST+=("$DIR/dotfiles/. $HOME/")
-COPY_LIST+=("$DIR/scripts/. $HOME/scripts")
 COPY_LIST+=("$DIR/.bashrc $HOME/.bashrc")
+COPY_LIST+=("$DIR/dotfiles/. $HOME/")
 COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
-COPY_LIST+=("$DIR/workplace-specific/. $HOME/workplace-specific")
-
+COPY_LIST+=("$DIR/aliases/. $HOME_LINUXENV_DIR/aliases/")
+COPY_LIST+=("$DIR/scripts/. $HOME_LINUXENV_DIR/scripts")
+COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
 copy_entries "${COPY_LIST[@]}"
-source_scripts $HOME/aliases
+
+#source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
+source_scripts $HOME_LINUXENV_DIR/aliases
 source_files ".source-this"
 add_to_path ".add-to-path"
+
+set +x
