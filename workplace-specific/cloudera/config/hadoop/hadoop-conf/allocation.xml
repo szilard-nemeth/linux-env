@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+
+<allocations>
+
+<!--
+
+  <queue name="sample_queue">
+
+    <minResources>512 mb,0vcores</minResources>
+
+    <maxResources>2048 mb,0vcores</maxResources>
+
+    <maxRunningApps>50</maxRunningApps>
+
+    <maxAMShare>-1.0</maxAMShare>
+
+    <weight>2.0</weight>
+
+    <schedulingPolicy>fair</schedulingPolicy>
+
+  </queue>
+
+-->
+
+
+
+  <queueMaxAMShareDefault>-1.0</queueMaxAMShareDefault>
+
+<!--
+
+  <queueMaxResourcesDefault>40000 mb,0vcores</queueMaxResourcesDefault>
+
+
+
+  <user name="sample_user">
+
+    <maxRunningApps>30</maxRunningApps>
+
+  </user>
+
+  <userMaxAppsDefault>5</userMaxAppsDefault>
+
+
+
+  <queuePlacementPolicy>
+
+    <rule name="default" queue="sample_queue"/>
+
+  </queuePlacementPolicy>
+
+-->
+
+</allocations>

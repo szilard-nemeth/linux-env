@@ -1,0 +1,7 @@
+<configuration>
+<property>
+   <name>yarn.resource-types</name>
+   <value>gpu,fpga</value>
+ </property>
+</configuration>
+

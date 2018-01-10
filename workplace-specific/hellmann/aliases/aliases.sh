@@ -89,4 +89,4 @@ alias diff-develop-integration="git log --graph --pretty=format:'%Cred%h%Creset 
 alias vpn-hellmann="sudo openvpn --client --config ~/openvpn-hellmann/client-mathias.ovpn"
 alias keepass-hellmann="/usr/lib/keepass2/KeePass.exe /home/snemeth/Dropbox/work/hellmann/keepass/keepass-own.kdbx"
 alias copy-chat-history="docker cp notes:/home/notes/Documents/SametimeTranscripts/ $HOME/notes-chat-history"
-alias edit-hellmann-aliases="vi $HOME/development/my-repos/linux_env/workplace-specific/hellmann/aliases/aliases.sh"
+alias edit-hellmann-aliases="vi $LINUX_ENV_REPO/workplace-specific/hellmann/aliases/aliases.sh"
