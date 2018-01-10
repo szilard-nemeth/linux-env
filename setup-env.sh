@@ -101,7 +101,7 @@ function set_matched_dirs() {
     matched_dirs=$(find $from_dir -name $marker_file_name -print0 | xargs -0 -n1 dirname | sort --unique)
 }
 
-set -x
+#set -x
 declare -a COPY_LIST=()
 COPY_LIST+=("$DIR/.bashrc $HOME/.bashrc")
 COPY_LIST+=("$DIR/dotfiles/. $HOME/")
@@ -116,4 +116,4 @@ source_scripts $HOME_LINUXENV_DIR/aliases
 source_files ".source-this"
 add_to_path ".add-to-path"
 
-set +x
+#set +x

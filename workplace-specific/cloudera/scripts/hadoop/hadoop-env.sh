@@ -1,6 +1,5 @@
 #!/bin/bash
 
-set -x
 HADOOP_MVN_DIR="$HOME/development/apache/hadoop-maven/"
 export HADOOP_HOME=$HADOOP_MVN_DIR/$(cd $HADOOP_MVN_DIR; ls -d hadoop-dist/target/hadoop-*-SNAPSHOT)
 export PATH=$HADOOP_HOME/bin:$PATH
@@ -13,7 +12,6 @@ pushd $HADOOP_MVN_DIR
 MVN_VER=$(echo '${project.version}' | mvn help:evaluate 2> /dev/null | grep -v '^[[]')
 sed -i "s+target/hadoop-.*+target/hadoop-$MVN_VER</value>+" $HADOOP_CONF_DIR/mapred-site.xml
 popd
-set +x
 
 export HADOOP_MAPRED_HOME=$HADOOP_HOME
 export HADOOP_COMMON_HOME=$HADOOP_HOME

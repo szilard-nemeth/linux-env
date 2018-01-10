@@ -35,8 +35,6 @@ function save_logs_cell_b {
 }
 
 
-set -x
-
 if [[ $# -eq 1 ]]; then
     case "$1" in
     -h|--help)

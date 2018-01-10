@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 function start-hadoop-example-job {
-set -x
     HADOOP_PARAMETERS=$1
     #example parameters: 'pi -Dmapreduce.framework.name=yarn -Dmapreduce.map.resource.gpu=5000m 10 100'
 
