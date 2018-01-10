@@ -20,6 +20,8 @@ set cmdheight=2
 
 " Highlight syntax
 syntax on
+syntax enable
+colorscheme darcula
 
 " Some nice colorscheme
 colors evening
