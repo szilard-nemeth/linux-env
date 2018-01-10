@@ -30,21 +30,26 @@ function unmount-poweroff() {
 }
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd $DIR
+#cd $DIR
 
-alias goto-linuxenv-repo="cd $HOME/development/my-repos/linux_env"
+alias goto-linuxenv-repo="cd $LINUX_ENV_REPO"
 alias intellij-keyboard-fix="ibus-daemon -rd"
 
+
+command -v docker;
+if [ $? -eq 0 ]; then
+    alias docker-rm-net="docker network rm $(docker network ls | awk '/ / { print $1 }')"
+    alias docker-rmfv-all="docker-operation-except $DIR/.docker-op-exceptions rm -fv"
+    alias docker-rmf-all="docker-operation-except $DIR/.docker-op-exceptions rm -f"
+    alias docker-stop-all="docker-operation-except $DIR/.docker-op-exceptions stop"
+fi
+
 #alias docker-rmfv-all="docker rm -fv \$(docker ps -q)"
-alias docker-rm-net="docker network rm $(docker network ls | awk '/ / { print $1 }')"
-alias docker-rmfv-all="docker-operation-except $DIR/.docker-op-exceptions rm -fv"
-alias docker-rmf-all="docker-operation-except $DIR/.docker-op-exceptions rm -f"
-alias docker-stop-all="docker-operation-except $DIR/.docker-op-exceptions stop"
 alias konsoleb="konsole --background-mode&"
 alias currentweek="date +%V"
 alias vpn-szyszy="sudo openvpn --client --config ~/openvpn-szyszy/client.ovpn --ca ~/openvpn-szyszy/ca.crt"
 alias aws-login="\$(aws ecr get-login --region eu-west-1)"
-alias linux-env-reload="~/development/my-repos/linux_env/setup-env.sh"
+alias linux-env-reload="$LINUX_ENV_REPO/setup-env.sh"
 alias restart-network="sudo service network-manager restart"
 
 ##i3 aliases

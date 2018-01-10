@@ -274,14 +274,23 @@ bind '"\es"':"\"calc \""
 
 LIGHTGREEN="$(tput bold ; tput setaf 2)"
 
-echo -e "${WHITE}"; cal ; 
+echo -e "${WHITE}"; cal ;
 echo -ne "${CYAN}";
 echo -ne "${LIGHTPURPLE}Sysinfo:";uptime ;echo ""
 
 # source other alias files
 #################################################################################
 
+LINUX_ENV_REPO=$HOME/development/my-repos/linux_env/
+export LINUX_ENV_REPO
 #source setup env from linux_env repository (copying all env files)
-. ~/development/my-repos/linux_env/setup-env.sh
+. $LINUX_ENV_REPO/setup-env.sh
+
+HOME_LINUXENV_DIR="$HOME/.linuxenv/"
+CLOUDERA_DIR="$HOME_LINUXENV_DIR/workplace-specific/cloudera/"
+
+export HOME_LINUXENV_DIR
+export CLOUDERA_DIR
 
 #eval $(thefuck --alias)
+alias mc='LANG=en_EN.UTF-8 mc'
