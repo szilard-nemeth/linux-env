@@ -1,6 +1,5 @@
 #!/bin/bash
 
-HADOOP_MVN_DIR="$HOME/development/apache/hadoop-maven/"
 export HADOOP_HOME=$HADOOP_MVN_DIR/$(cd $HADOOP_MVN_DIR; ls -d hadoop-dist/target/hadoop-*-SNAPSHOT)
 export PATH=$HADOOP_HOME/bin:$PATH
 

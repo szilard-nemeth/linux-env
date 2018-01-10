@@ -2,7 +2,8 @@
 
 #setup locations
 CLOUDERA_DEV_ROOT="$HOME/development/cloudera/"
-CLOUDERA_HADOOP_ROOT="CLOUDERA_DEV_ROOT/hadoop/"
+CLOUDERA_HADOOP_ROOT="$CLOUDERA_DEV_ROOT/hadoop/"
+HADOOP_MVN_DIR="$HOME/development/apache/hadoop-maven/"
 
 
 #goto aliases

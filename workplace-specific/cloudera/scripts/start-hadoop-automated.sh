@@ -7,7 +7,6 @@ function start-hadoop {
     echo "Sourcing $HADOOP_ENV_SCRIPT"
     source $HADOOP_ENV_SCRIPT
 
-    HADOOP_MVN_DIR="$HOME/development/apache/hadoop-maven/"
     cd $HADOOP_MVN_DIR
 
     echo "Starting Hadoop..."

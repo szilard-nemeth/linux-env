@@ -4,7 +4,6 @@ function start-hadoop-example-job {
     HADOOP_PARAMETERS=$1
     #example parameters: 'pi -Dmapreduce.framework.name=yarn -Dmapreduce.map.resource.gpu=5000m 10 100'
 
-    HADOOP_MVN_DIR="$HOME/development/apache/hadoop-maven/"
     HADOOP_DIST_DIR="$HADOOP_MVN_DIR/hadoop-dist/"
 
     #update $version with current pom.xml version in mapred-site.xml
