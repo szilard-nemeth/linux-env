@@ -15,7 +15,7 @@
     cob = checkout -b
     cm = !git add -A && git commit -m
     save = !git add -A && git commit -m 'SAVEPOINT'
-    wip = !git add -u && git commit -m "WIP" 
+    wip = !git add -u && git commit -m "WIP"
     undo = reset HEAD~1 --mixed
     amend = commit -a --amend
     wipe = !git add -A && git commit -qm 'WIPE SAVEPOINT' && git reset HEAD~1 --hard
@@ -24,5 +24,20 @@
     reset-soft = "reset --soft HEAD^"
     remove-commit = "reset --hard HEAD~1"
 
-[credential]                                                                                                             
+[credential]
 	helper = cache --timeout=43200
+
+[diff]
+    tool = p4merge
+[difftool "p4merge"]
+	cmd = /Applications/p4merge.app/Contents/Resources/launchp4merge "\"$REMOTE\"" "\"$LOCAL\""
+
+
+[merge]
+  keepBackup = false
+	tool = p4merge
+[mergetool "p4merge"]
+	cmd = /Applications/p4merge.app/Contents/Resources/launchp4merge "\"$PWD/$BASE\"" "\"$PWD/$REMOTE\"" "\"$PWD/$LOCAL\"" "\"$PWD/$MERGED\""
+	keepTemporaries = false
+	trustExitCode = false
+	keepBackup = false
