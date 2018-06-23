@@ -22,3 +22,7 @@ function start-hadoop {
 function start-hadoop-dev {
     start-hadoop-internal $HADOOP_DEV_DIR
 }
+
+function start-hadoop-cloudera {
+    start-hadoop-internal $CLOUDERA_HADOOP_ROOT
+}
