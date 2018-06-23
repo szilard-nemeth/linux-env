@@ -3,6 +3,8 @@
 echo "Passed arguments to hadoop-env.sh: $@"
 HADOOP_DIR=$1
 export HADOOP_HOME=$HADOOP_DIR/$(cd $HADOOP_DIR; ls -d hadoop-dist/target/hadoop-*-SNAPSHOT)
+echo "HADOOP_HOME is: $HADOOP_HOME"
+
 export PATH=$HADOOP_HOME/bin:$PATH
 
 # hadoop-conf was copied from ./hadoop-yarn-project/hadoop-yarn/conf/
@@ -10,6 +12,7 @@ export PATH=$HADOOP_HOME/bin:$PATH
 #if in-place modifications were performed on config files
 cp -R $CLOUDERA_DIR/config/hadoop/hadoop-conf-template $CLOUDERA_DIR/config/hadoop/hadoop-conf
 export HADOOP_CONF_DIR=$CLOUDERA_DIR/config/hadoop/hadoop-conf
+echo "Hadoop config directory is: $HADOOP_CONF_DIR"
 
 #update $version with current pom.xml version in mapred-site.xml
 pushd $HADOOP_DIR > /dev/null
