@@ -110,7 +110,7 @@ fi
 LIGHTRED="$(tput bold ; tput setaf 1)"
 LIGHTGREEN="$(tput bold ; tput setaf 2)"
 YELLOW="$(tput bold ; tput setaf 3)"
-LIGHTBLUE="$(tput bold ; tput setaf 4)"
+LIGHTBLUE="$(tput bold ; tput setaf 25)"
 LIGHTPURPLE="$(tput setaf 5)"
 LIGHTCYAN="$(tput bold ; tput setaf 6)"
 WHITE="$(tput bold ; tput setaf 7)"
@@ -235,6 +235,8 @@ export ANT_HOME
 PATH=$PATH:$ANT_HOME/bin
 PATH=$PATH:$HOME/scripts/
 PATH=$PATH:$HOME/.npm-global/bin
+PATH=$PATH:$HOME/development/other-repos/util-scripts
+PATH=$PATH:$HOME/development/cloudera/dist_test/bin
 export PATH
 export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=1024m"
 export ANT_OPTS="-XX:PermSize=512m -XX:MaxPermSize=512m -Xmx1024m -Xms1024m"
