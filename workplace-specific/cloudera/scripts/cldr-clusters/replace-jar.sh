@@ -1,5 +1,21 @@
 #!/usr/bin/env bash
-# set -x
+#set -x
+
+function select-menu {
+    oldIFS=$IFS
+    IFS=$'\n'
+    choices=( $@ )
+    IFS=$oldIFS
+    PS3="Please enter your choice: "
+    select answer in "${choices[@]}"; do
+      for item in "${choices[@]}"; do
+        if [[ $item == $answer ]]; then
+          break 2
+        fi
+      done
+    done
+    echo "$answer"
+}
 
 if [ $# -ne 3 ]; then
     echo "Usage: replace-jar.sh [filename] [destination hostname] [cloudera hadoop project root>"
@@ -20,19 +36,19 @@ then
 fi
 
 
-pushd $CLOUDERA_DEV_ROOT
+pushd $CLOUDERA_DEV_ROOT > /dev/null
 
 #inverse grep: do not include lib directories
-SRC_JAR_PATH=$(find . \( -iname target ! -iname lib \) -exec find {} -type f \( -iname "$JAR_FILE_NAME" ! -iname "*-tests.jar" \) \; | grep -v "lib")
+SRC_JAR_PATH=$(find . \( -iname target ! -iname lib \) -exec find {} -type f \( -iname "$JAR_FILE_NAME" ! -iname "*-tests.jar" ! -iname "*-javadoc.jar" ! -iname "*-sources.jar" \) \; | grep -v "lib")
 #SRC_JAR_PATH=$(find . \( -iname target ! -iname lib \) -exec find {} -type f \( -iname "*yarn*resourcemanager*jar" ! -iname "*-tests.jar" \) \;)
 
 NUMBER_OF_RESULTS=$(echo "$SRC_JAR_PATH" | wc -l)
 if [ $NUMBER_OF_RESULTS -gt 1 ]
 then
-	echo "Two or more files found for pattern $JAR_FILE_NAME";
-	echo "File list: ";
-	echo "$SRC_JAR_PATH";
-	exit -1
+	echo "Two or more files found for pattern $JAR_FILE_NAME in search root: $CLOUDERA_DEV_ROOT";
+#	echo "File list: ";
+#	echo "$SRC_JAR_PATH";
+    SRC_JAR_PATH=$(select-menu ${SRC_JAR_PATH})
 fi
 
 SRC_JAR_FILENAME=$(basename $SRC_JAR_PATH)
@@ -42,7 +58,7 @@ NEW_JAR_PATH="/home/systest/$SRC_JAR_FILENAME"
 
 #scp jar to host
 echo "Copying jar file $SRC_JAR_PATH to $CLOUDERA_HOSTNAME:$NEW_JAR_PATH";
-scp $SRC_JAR_PATH $CLOUDERA_HOSTNAME:/$NEW_JAR_PATH
+scp -q -o "StrictHostKeyChecking no" $SRC_JAR_PATH $CLOUDERA_HOSTNAME:/$NEW_JAR_PATH
 
 echo "Running replace-jar-remote.sh on $CLOUDERA_HOSTNAME..."
-ssh $CLOUDERA_HOSTNAME SRC_JAR_FILENAME="$SRC_JAR_FILENAME" 'bash -s' < "$DIR/replace-jar-remote.sh"
+ssh -o "StrictHostKeyChecking no" $CLOUDERA_HOSTNAME SRC_JAR_FILENAME="$SRC_JAR_FILENAME" 'bash -s' < "$DIR/replace-jar-remote.sh"
