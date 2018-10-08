@@ -8,7 +8,8 @@ alias goto-linuxenv-repo="cd $LINUX_ENV_REPO"
 alias linux-env-reload="$LINUX_ENV_REPO/setup-env.sh"
 alias linux-env-todos="grep '#TODO' -r $LINUX_ENV_REPO"
 
-
+## OTHER ALIASES
+alias rm='safe-rm'
 alias intellij-keyboard-fix="ibus-daemon -rd"
 alias currentweek="date +%V"
 alias vpn-szyszy="sudo openvpn --client --config ~/openvpn-szyszy/client.ovpn --ca ~/openvpn-szyszy/ca.crt"
