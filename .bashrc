@@ -237,6 +237,7 @@ PATH=$PATH:$HOME/scripts/
 PATH=$PATH:$HOME/.npm-global/bin
 PATH=$PATH:$HOME/development/other-repos/util-scripts
 PATH=$PATH:$HOME/development/cloudera/dist_test/bin
+PATH=$PATH:$HOME/Library/Python/2.7/bin
 export PATH
 export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=1024m"
 export ANT_OPTS="-XX:PermSize=512m -XX:MaxPermSize=512m -Xmx1024m -Xms1024m"
@@ -294,5 +295,6 @@ CLOUDERA_DIR="$HOME_LINUXENV_DIR/workplace-specific/cloudera/"
 export HOME_LINUXENV_DIR
 export CLOUDERA_DIR
 
-#eval $(thefuck --alias)
+eval $(thefuck --alias)
 alias mc='LANG=en_EN.UTF-8 mc'
+
