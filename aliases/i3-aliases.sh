@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [[ $platform == 'macos' ]]; then
-    echo "i3 aliases won't be used as platform is $platform!"
+    echo "!!! i3 aliases won't be used as platform is $platform!!!"
     return 1
 fi
 function i3-rename-window() {

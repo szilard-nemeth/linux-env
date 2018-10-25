@@ -12,7 +12,7 @@ TRACKING_DOCKER_COMPOSE_ROOT_TR="$TRACKING_ROOT/tracking-docker/tracking-docker-
 TRACKING_DOCKER_COMPOSE_ROOT_TDS="$TRACKING_ROOT/tracking-docker/tracking-docker-compose/dataservice/"
 TRACKING_DOCKER_COMPOSE_ROOT_KAFKA="$TRACKING_ROOT/tracking-docker/tracking-docker-compose/kafka-feeder/"
 
-#Road Live Reporting
+#RLR
 RLR_ROOT="$HELLMANN_TT_ROOT/rlr/"
 RLR_DOCKER_COMPOSE_ROOT="$RLR_ROOT/rlr-docker-compose/rlr/"
 RLR_COMPOSE_NAME="rlr_1"
@@ -90,3 +90,7 @@ alias vpn-hellmann="sudo openvpn --client --config ~/openvpn-hellmann/client-mat
 alias keepass-hellmann="/usr/lib/keepass2/KeePass.exe /home/snemeth/Dropbox/work/hellmann/keepass/keepass-own.kdbx"
 alias copy-chat-history="docker cp notes:/home/notes/Documents/SametimeTranscripts/ $HOME/notes-chat-history"
 alias edit-hellmann-aliases="vi $LINUX_ENV_REPO/workplace-specific/hellmann/aliases/aliases.sh"
+
+#rsync aliases
+alias rsync-backup="rsync -avh $HOME/backup/ /media/snemeth/szyszy-exthdd-data/backups/hell-laptop-backupsdir/"
+alias aws-login="\$(aws ecr get-login --region eu-west-1)"
