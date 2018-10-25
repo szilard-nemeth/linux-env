@@ -118,37 +118,48 @@ function initial_setup_macos() {
 
 }
 
-#set -x
-declare -a COPY_LIST=()
-COPY_LIST+=("$DIR/.bashrc $HOME/.bashrc")
-COPY_LIST+=("$DIR/.bash_profile $HOME/.bash_profile")
-COPY_LIST+=("$DIR/dotfiles/. $HOME/")
-COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
-COPY_LIST+=("$DIR/aliases/. $HOME_LINUXENV_DIR/aliases/")
-COPY_LIST+=("$DIR/scripts/. $HOME_LINUXENV_DIR/scripts")
-COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
+function determine_platform() {
+    platform='unknown'
+    unamestr=`uname`
+    if [[ "$unamestr" == 'Linux' ]]; then
+       platform='linux'
+    elif [[ "$unamestr" == 'FreeBSD' ]]; then
+       platform='freebsd'
+    elif [[ "$unamestr" == 'Darwin' ]]; then
+       platform='macos'
+    fi
+    echo $platform
+}
 
-set -e
-copy_files "${COPY_LIST[@]}"
-set +e
+function copy_files_from_linuxenv_repo_to_home() {
+    declare -a COPY_LIST=()
+    COPY_LIST+=("$DIR/.bashrc $HOME/.bashrc")
+    COPY_LIST+=("$DIR/.bash_profile $HOME/.bash_profile")
+    COPY_LIST+=("$DIR/dotfiles/. $HOME/")
+    COPY_LIST+=("$DIR/aliases/. $HOME_LINUXENV_DIR/aliases/")
+    COPY_LIST+=("$DIR/scripts/. $HOME_LINUXENV_DIR/scripts")
+    COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
+    
+    if [[ ! $platform == 'macos' ]]; then
+        COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
+    else
+        echo "Not copying i3 files as platform is $platform"
+    fi
+    
+    set -e
+    copy_files "${COPY_LIST[@]}"
+    set +e
+    
+    #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
+    source_scripts $HOME_LINUXENV_DIR/aliases
+    source_files ".source-this"
+    add_to_path ".add-to-path"
+}
 
-#source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
-source_scripts $HOME_LINUXENV_DIR/aliases
-source_files ".source-this"
-add_to_path ".add-to-path"
-
-
-platform='unknown'
-unamestr=`uname`
-if [[ "$unamestr" == 'Linux' ]]; then
-   platform='linux'
-elif [[ "$unamestr" == 'FreeBSD' ]]; then
-   platform='freebsd'
-elif [[ "$unamestr" == 'Darwin' ]]; then
-   platform='macos'
-fi
-
+platform=$(determine_platform)
+echo "Platform is: $platform"
 if [[ $platform == 'macos' ]]; then
     initial_setup_macos
 fi
-#set +x
+
+copy_files_from_linuxenv_repo_to_home

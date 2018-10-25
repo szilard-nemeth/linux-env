@@ -62,6 +62,7 @@ function i3-rename-workspace() {
   i3-input -F 'rename workspace to "%s"' -P 'New name: ' 2>&1 > /dev/null
 }
 
+#TODO separate i3 aliases to different file!
 alias i3-display-unplugged="xrandr --output HDMI1 --off"
 alias i3-display-plugged="exec xrandr --output HDMI1 --auto --right-of eDP1"
 alias i3-display-primary="xrandr --output HDMI1 --primary"
