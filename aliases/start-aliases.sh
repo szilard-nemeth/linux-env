@@ -9,6 +9,7 @@ start-app-silent() {
     nohup $APP_NAME& > /dev/null 2>&1
 }
 
+#TODO check every app existence and add aliases if executable exists
 alias start-google-chrome="start-app-silent google-chrome"
 alias start-intellij="start-app-silent $INTELLIJ_PATH"
 alias start-squirrel="start-app-silent $SQUIRREL_PATH"
