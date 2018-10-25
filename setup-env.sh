@@ -11,7 +11,7 @@ touch $ENV_FILE_MAPPINGS
 HOME_LINUXENV_DIR="$HOME/.linuxenv/"
 WORKPLACE_SPECIFIC_DIR="$HOME_LINUXENV_DIR/workplace-specific/"
 
-function copy_entries() {
+function copy_files() {
     #TODO parameter number check --> should be even, otherwise skip copy and error!
     #TODO check return value of cp before adding entry to $ENV_FILE_MAPPINGS
 
@@ -27,9 +27,9 @@ function copy_entries() {
         from="${copy_list[$i]}"
         to="${copy_list[$i+1]}"
 
-        if [[ -d "${to}" ]]; then
+        if [[ -d "${from}" ]]; then
             mkdir -p $to
-        elif [[ -f "${to}" ]]; then
+        elif [[ -f "${from}" ]]; then
             mkdir -p $(dirname ${to})
         fi
 
@@ -101,19 +101,54 @@ function set_matched_dirs() {
     matched_dirs=$(find $from_dir -name $marker_file_name -print0 | xargs -0 -n1 dirname | sort --unique)
 }
 
+function initial_setup_macos() {
+    echo "Running initial macOS setup"
+    echo "Checking whether Homebrew is installed..."
+    if ! hash brew 2>/dev/null; then
+        echo "Homebrew not found! Installing Homebrew..."
+        /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+    fi
+    
+    echo "Checking whether GNU sed is available..."
+    echo "123 abc" | sed -r 's/[0-9]+/& &/' > /dev/null
+    if [[ "$?" -ne 0 ]]; then
+        echo "Installing GNU sed"
+        brew install gnu-sed --with-default-names
+    fi
+
+}
+
 #set -x
 declare -a COPY_LIST=()
 COPY_LIST+=("$DIR/.bashrc $HOME/.bashrc")
+COPY_LIST+=("$DIR/.bash_profile $HOME/.bash_profile")
 COPY_LIST+=("$DIR/dotfiles/. $HOME/")
 COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
 COPY_LIST+=("$DIR/aliases/. $HOME_LINUXENV_DIR/aliases/")
 COPY_LIST+=("$DIR/scripts/. $HOME_LINUXENV_DIR/scripts")
 COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
-copy_entries "${COPY_LIST[@]}"
+
+set -e
+copy_files "${COPY_LIST[@]}"
+set +e
 
 #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
 source_scripts $HOME_LINUXENV_DIR/aliases
 source_files ".source-this"
 add_to_path ".add-to-path"
 
+
+platform='unknown'
+unamestr=`uname`
+if [[ "$unamestr" == 'Linux' ]]; then
+   platform='linux'
+elif [[ "$unamestr" == 'FreeBSD' ]]; then
+   platform='freebsd'
+elif [[ "$unamestr" == 'Darwin' ]]; then
+   platform='macos'
+fi
+
+if [[ $platform == 'macos' ]]; then
+    initial_setup_macos
+fi
 #set +x
