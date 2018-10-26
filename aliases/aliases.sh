@@ -3,6 +3,8 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #cd $DIR
 
+#TODO create functions from scripts/*.sh
+
 ## LINUX-ENV ALIASES
 alias goto-linuxenv-repo="cd $LINUX_ENV_REPO"
 alias linux-env-reload="$LINUX_ENV_REPO/setup-env.sh"
