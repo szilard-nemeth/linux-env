@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+##TODO add force mode: ignore whitespace issues and make backup of patch!
 function save-patch() {
     BRANCH_NAME=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
     if [ "$BRANCH_NAME" = "trunk" ]; then
@@ -65,5 +66,3 @@ function save-patch() {
     
     #"/tmp/yarndiff-$(BRANCH_NAME)-$(PATCH_NO_STR)"
 }
-
-

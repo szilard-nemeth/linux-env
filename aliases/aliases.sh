@@ -4,6 +4,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #cd $DIR
 
 #TODO create functions from scripts/*.sh
+#TODO create alias: resync all changes from linuxenv repo (copies all files)
 
 ## LINUX-ENV ALIASES
 alias goto-linuxenv-repo="cd $LINUX_ENV_REPO"
