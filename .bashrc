@@ -284,9 +284,9 @@ echo -ne "${LIGHTPURPLE}Sysinfo:";uptime ;echo ""
 # source other alias files
 #################################################################################
 
-LINUX_ENV_REPO=$HOME/development/my-repos/linux_env/
+LINUX_ENV_REPO=$HOME/development/my-repos/linux-env/
 export LINUX_ENV_REPO
-#source setup env from linux_env repository (copying all env files)
+#source setup env from linux-env repository (copying all env files)
 . $LINUX_ENV_REPO/setup-env.sh
 
 HOME_LINUXENV_DIR="$HOME/.linuxenv/"
