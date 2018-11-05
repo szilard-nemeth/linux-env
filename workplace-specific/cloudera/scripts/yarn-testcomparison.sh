@@ -85,7 +85,11 @@ function exec-junit-tests() {
     local BASE_DIR=$3
     local TEST_FILE_PATH=$(find . -iname "*${TEST_CLASS}.java") #TODO check if test file is an existing one!
     set -e
-    mvn clean > "$BASE_DIR/mvn-clean-$TEST_RESULT_FILE_PREFIX.out"
+    
+    MVN_BUILD_OUTPUT_FILE="$BASE_DIR/mvn-build-$TEST_RESULT_FILE_PREFIX.out"
+    echo "Printing git diff to file $MVN_BUILD_OUTPUT_FILE before compiling test code"
+    git diff > $MVN_BUILD_OUTPUT_FILE
+    mvn clean package -DskipTests >> $MVN_BUILD_OUTPUT_FILE
     
     TESTCASES=($(grep '@Test' -A2 $TEST_FILE_PATH | grep 'test.*' | sed -r -n -e 's/.*(test[a-zA-Z0-9_]+)\(.*/\1/p'))
     echo "Discovered testcases in $TEST_CLASS:"
@@ -96,7 +100,7 @@ function exec-junit-tests() {
     TC_COUNTER=0
     for TC_NAME in "${TESTCASES[@]}"; do 
         for SF_PARAM in "${SUREFIRE_TC_PARAMS[@]}"; do
-            TC_COUNTER=$(expr $USCOUNTER + 1)
+            TC_COUNTER=$(expr $TC_COUNTER + 1)
             #cleanup original surefire reports directory
             rm "$SUREFIRE_REPORTS_DIR"/* || true
             
@@ -135,8 +139,14 @@ function print-junit-report() {
         IFS="$OLDIFS"
         local TEST_CLASS=${PARTS[0]}
         local TEST_CASE=${PARTS[1]}
-        local MODE=${PARTS[2]}
-        echo -e "[TEST_REPORT] Class: $TEST_CLASS - testcase: $TEST_CASE - mode: $MODE"
+        local MODE=$(echo ${PARTS[2]} | sed 's/-failed//')
+        
+        if [ "$MODE" = "with-codechange" ]; then
+           FAILED_PREFIX="With codechange"   
+        elif [ "$MODE" = "wo-codechange" ]; then
+           FAILED_PREFIX="Without codechange"  
+        fi
+        echo -e "[TEST_REPORT] [FAILED $FAILED_PREFIX] Class: $TEST_CLASS - testcase: $TEST_CASE"
     done
     IFS="$OLDIFS"
     echo -e "[TEST_REPORT] ------------------------------------------------------------------------\n"
@@ -185,7 +195,7 @@ function grep-in-test-logs() {
         GREPPED_LOGS_FILENAME_WITH_CHANGE="$(echo "$TEST_OUTPUT_WITH_CODE_CHANGE" | sed -e 's/\.txt//')-grepped-log.txt"
         GREP_CMD="grep -f $LOG_STMTS_ALL_REGEX $TEST_OUTPUT_WITH_CODE_CHANGE"
         #print-script-step "Executing command: $GREP_CMD  > $GREPPED_LOGS_FILENAME_WITH_CHANGE"
-        $GREP_CMD  > $GREPPED_LOGS_FILENAME_WO_CHANGE
+        $GREP_CMD  > $GREPPED_LOGS_FILENAME_WITH_CHANGE
         
         print-script-step "Diff these files to analyze failure: $GREPPED_LOGS_FILENAME_WO_CHANGE <> $GREPPED_LOGS_FILENAME_WO_CHANGE"
     done
@@ -203,12 +213,14 @@ function cleanup() {
 
 #TODO create 2 branches alternatively with code changes and code changes+log changes (for future tracking of which code test was running against)
 #TODO add option: whether to grep in tests results or not!
+#TODO replace all exit calls with return, as exit will terminate the shell process!
 function compare-yarn-rm-test-runs() {
     trap cleanup INT TERM EXIT
 
     #prepare params
+    #TODO create param for project to execute tests for: hadoop-yarn-server-resourcemanager
     SUREFIRE_REPORTS_DIR="$HOME/development/apache/hadoop/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/target/surefire-reports/"
-    local SUREFIRE_TEST_CLASS="TestFairSchedulerPreemptionCustomResources" #TODO make this a param
+    local SUREFIRE_TEST_CLASS="TestFairSchedulerPreemptionCustomResources" #TODO make this a param, add possibility to execute 2 or more test classes
     local LOG_PATCH="$HOME/yarn-tasks/YARN-8059/log.patch" #TODO make this a param
     
     #prepare dirs
@@ -258,11 +270,11 @@ function compare-yarn-rm-test-runs() {
     git apply $LOG_PATCH
     set +e
     
-    print-script-step "RUNNING JUNIT TESTS WITHOUT CODE CHANGES (WITH LOG PATCH AND CODE PATCH)"
+    print-script-step "RUNNING JUNIT TESTS WITH CODE CHANGES (WITH LOG PATCH AND CODE PATCH)"
     exec-junit-tests $SUREFIRE_TEST_CLASS "with-codechange" $BASE_DIR
     
-    print-junit-report $BASE_DIR
     grep-in-test-logs $BASE_DIR
+    print-junit-report $BASE_DIR
     #TODO print diff commands (meld) for failed tests
     cleanup
 }
