@@ -66,3 +66,56 @@ function save-patch() {
     
     #"/tmp/yarndiff-$(BRANCH_NAME)-$(PATCH_NO_STR)"
 }
+
+function yarn-create-review-branch() {
+    ORIG_BRANCH=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
+    PATCH_FILE=$1
+    
+    if [ "$PATCH_FILE" = "" ]; then
+        echo "Please specify a valid patch file!"
+        return 1
+    fi
+    if [ ! -f $PATCH_FILE ]; then
+        echo "File not found: $1, Please specify a valid patch file!"
+        return 2
+    fi
+    FILE_NAME_REGEX=".*YARN-[0-9]+.*\.patch"
+    
+    #try to match patch file to pattern and store branch name
+    if [[ ! $PATCH_FILE =~ $FILE_NAME_REGEX ]]; then
+        echo "Filename does not match usual patch file pattern: '$FILE_NAME_REGEX', exiting...!"
+        return 3
+    fi
+    BRANCH="review-$(echo $PATCH_FILE | sed -E "s/.*(YARN-[[:digit:]]+).*/\1/g")"
+    
+    #pull new changes
+    goto-hadoop
+    
+    GIT_STATUS_OUT="$(git status --porcelain)"
+    if [ ! -z "$GIT_STATUS_OUT" ]; then
+        echo "git working directory is not clean, please stash or drop your changes!"
+        echo "$GIT_STATUS_OUT"
+        return 4 
+    fi
+    
+    echo "Pulling latest changes from origin/trunk...."
+    git co trunk && git pull origin
+    
+    #try to apply PATCH_FILE to trunk
+    git apply $PATCH_FILE --check
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Patch does not apply to trunk, please resolve the conflicts and run: git commit -am \"patch file: $PATCH_FILE\""
+        git co $ORIG_BRANCH
+        return 3
+    else
+        echo "Patch $PATCH_FILE applies cleanly to trunk, checking out new branch $BRANCH from trunk!"
+        if [ `git branch --list "$BRANCH"` ]; then
+            git co "$BRANCH"
+        else
+            git co -b "$BRANCH" trunk
+        fi
+        git apply $PATCH_FILE
+        git commit -am "patch file: $PATCH_FILE"
+    fi
+    
+}
