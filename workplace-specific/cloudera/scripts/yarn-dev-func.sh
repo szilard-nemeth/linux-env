@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 
+function setup() {
+    export UPSTREAM_HADOOP_DIR=$HADOOP_DEV_DIR
+    export DOWNSTREAM_HADOOP_DIR=$CLOUDERA_HADOOP_ROOT
+}
+
 ##TODO add force mode: ignore whitespace issues and make backup of patch!
 function yarn-save-patch() {
+    setup
     BRANCH_NAME=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
     if [ "$BRANCH_NAME" = "trunk" ]; then
         echo "Cannot make patch, current branch is trunk!"
@@ -18,7 +24,7 @@ function yarn-save-patch() {
     #TODO check if git is clean (no modified, unstaged files, etc)
     #pull trunk, rebase current branch to trunk
     set -e
-    git co trunk && git pull && git co - && git rebase trunk
+    git checkout trunk && git pull && git checkout - && git rebase trunk
     set +e
     
     git diff trunk --check
@@ -54,9 +60,9 @@ function yarn-save-patch() {
     echo "Created patch file: $PATCH_FILE_DU_RESULT"
     
     ##Sanity check: try to apply patch
-    git co trunk
+    git checkout trunk
     git apply $PATCH_FILE --check
-    git co -
+    git checkout -
     if [ $? -ne 0 ]; then
         echo "ERROR: Patch does not apply to trunk!"
         return 3
@@ -68,6 +74,7 @@ function yarn-save-patch() {
 }
 
 function yarn-create-review-branch() {
+    setup
     ORIG_BRANCH=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
     PATCH_FILE=$1
     
@@ -89,7 +96,7 @@ function yarn-create-review-branch() {
     BRANCH="review-$(echo $PATCH_FILE | sed -E "s/.*(YARN-[[:digit:]]+).*/\1/g")"
     
     #pull new changes
-    goto-hadoop
+    cd $UPSTREAM_HADOOP_DIR
     
     GIT_STATUS_OUT="$(git status --porcelain)"
     if [ ! -z "$GIT_STATUS_OUT" ]; then
@@ -99,20 +106,20 @@ function yarn-create-review-branch() {
     fi
     
     echo "Pulling latest changes from origin/trunk...."
-    git co trunk && git pull origin
+    git checkout trunk && git pull origin
     
     #try to apply PATCH_FILE to trunk
     git apply $PATCH_FILE --check
     if [ $? -ne 0 ]; then
         echo "ERROR: Patch does not apply to trunk, please resolve the conflicts and run: git commit -am \"patch file: $PATCH_FILE\""
-        git co $ORIG_BRANCH
+        git checkout $ORIG_BRANCH
         return 3
     else
         echo "Patch $PATCH_FILE applies cleanly to trunk, checking out new branch $BRANCH from trunk!"
         if [ `git branch --list "$BRANCH"` ]; then
-            git co "$BRANCH"
+            git checkout "$BRANCH"
         else
-            git co -b "$BRANCH" trunk
+            git checkout -b "$BRANCH" trunk
         fi
         git apply $PATCH_FILE
         git commit -am "patch file: $PATCH_FILE"
@@ -121,6 +128,7 @@ function yarn-create-review-branch() {
 
 #TODO decide on the cdh branch whether this is C5 or C6 backport (remote is different)
 function yarn-backport-c6() {
+    setup
     if [[ $# -ne 3 ]]; then
         echo "Usage: yarn-backport-c6 [CDH-jira-number] [CDH-branch] [Upstream commit hash or commit message fragment]"
         echo "Example: yarn-backport-c6 CDH-64201 cdh6.x YARN-7948"
@@ -131,9 +139,9 @@ function yarn-backport-c6() {
     UPSTREAM_PATCH_NO=$3
     
     ##fetch, pull, store commit hash of upstream commit
-    goto-hadoop
+    cd $UPSTREAM_HADOOP_DIR
     ORIG_BRANCH=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
-    git fetch --all && git co trunk && git pull
+    git fetch --all && git checkout trunk && git pull
     
     IFS=$'\n'
     GIT_LOG_RES=($(git log --oneline --grep=${UPSTREAM_PATCH_NO}))
@@ -141,21 +149,20 @@ function yarn-backport-c6() {
     echo "git log res: ${GIT_LOG_RES[@]}"
     if [[ ${#GIT_LOG_RES[@]} -ne 1 ]]; then 
         echo "Multiple results found in git log of upstream repository for pattern: $UPSTREAM_PATCH_NO";
-        
         #restore original upstream branch
-        git co ${ORIG_BRANCH}
+        git checkout ${ORIG_BRANCH}
         return 1 
     fi
     
     UPSTREAM_COMMIT_HASH=$(echo ${GIT_LOG_RES} | cut -d' ' -f1)
     #restore original upstream branch
-    git co ${ORIG_BRANCH}
+    git checkout ${ORIG_BRANCH}
     
     
     ###do the rest of the work in the cloudera repo
-    goto-cldr-hadoop
+    cd $DOWNSTREAM_HADOOP_DIR
     git fetch --all 
-    git co -b "$CDH_JIRA_NO-$CDH_BRANCH" cauldron/$CDH_BRANCH
+    git checkout -b "$CDH_JIRA_NO-$CDH_BRANCH" cauldron/$CDH_BRANCH
     git cherry-pick -x $UPSTREAM_COMMIT_HASH
     
     if [ $? -ne 0 ]; then
