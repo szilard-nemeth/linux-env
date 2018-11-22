@@ -161,11 +161,12 @@ function yarn-backport-c6() {
     
     ###do the rest of the work in the cloudera repo
     cd $DOWNSTREAM_HADOOP_DIR
-    git fetch --all 
+    git fetch --all
     git checkout -b "$CDH_JIRA_NO-$CDH_BRANCH" cauldron/$CDH_BRANCH
     git cherry-pick -x $UPSTREAM_COMMIT_HASH
     
     if [ $? -ne 0 ]; then
+        #TODO print git commit and git push command, print it to a script that can continue!
         echo "!!!There was merge conflicts, please resolve them!!!"
         return 1
     fi
@@ -182,7 +183,7 @@ function yarn-backport-c6() {
     
     
     ##push to gerrit
-    echo "Commit was successful! Run this command to push to gerrit: git push cauldron HEAD:refs/for/$CDH_BRANCH"
+    echo "Commit was successful! Run this command to push to gerrit: git push cauldron HEAD:refs/for/$CDH_BRANCH%r=haibochen,r=bsteinbach,r=zsiegl,r=shuzirra,r=alex.bodo"
     #git push cauldron HEAD:refs/for/$CDH_BRANCH
 
 }
