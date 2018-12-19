@@ -23,9 +23,8 @@ function yarn-save-patch() {
     
     #TODO check if git is clean (no modified, unstaged files, etc)
     #pull trunk, rebase current branch to trunk
-    set -e
-    git checkout trunk && git pull && git checkout - && git rebase trunk
-    set +e
+    git checkout trunk && git pull || { echo "Pull failed!"; exit 1; }
+    git checkout - && git rebase trunk || { echo "Rebase failed and it was aborted! Please rebase manually!"; git rebase --abort; return 1; }
     
     git diff trunk --check
     if [ $? -ne 0 ]; then
@@ -185,5 +184,23 @@ function yarn-backport-c6() {
     ##push to gerrit
     echo "Commit was successful! Run this command to push to gerrit: git push cauldron HEAD:refs/for/$CDH_BRANCH%r=haibochen,r=bsteinbach,r=zsiegl,r=shuzirra,r=alex.bodo"
     #git push cauldron HEAD:refs/for/$CDH_BRANCH
+
+}
+
+function build-upload-yarn-to-cluster() {
+    setup
+    
+    if [[ $# -ne 1 ]]; then
+        echo "Usage: build-upload-yarn-to-cluster [hostname]"
+        echo "Example: build-upload-yarn-to-cluster <host>"
+        return 1
+    fi
+    
+    HOST_TO_UPLOAD=$1
+    
+    cd $UPSTREAM_HADOOP_DIR
+    
+    MVN_VER=$(echo '${project.version}' | mvn help:evaluate 2> /dev/null | grep -v '^[[]')
+    mvn clean package -Pdist -DskipTests -Dmaven.javadoc.skip=true && scp hadoop-dist/target/hadoop-$MVN_VER.tar.gz systest@$HOST_TO_UPLOAD:~
 
 }
