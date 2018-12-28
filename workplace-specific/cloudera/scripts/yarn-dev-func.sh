@@ -3,6 +3,7 @@
 function setup() {
     export UPSTREAM_HADOOP_DIR=$HADOOP_DEV_DIR
     export DOWNSTREAM_HADOOP_DIR=$CLOUDERA_HADOOP_ROOT
+    export TASKS_DIR="$HOME/yarn-tasks/"
 }
 
 ##TODO add force mode: ignore whitespace issues and make backup of patch!
@@ -203,4 +204,64 @@ function build-upload-yarn-to-cluster() {
     MVN_VER=$(echo '${project.version}' | mvn help:evaluate 2> /dev/null | grep -v '^[[]')
     mvn clean package -Pdist -DskipTests -Dmaven.javadoc.skip=true && scp hadoop-dist/target/hadoop-$MVN_VER.tar.gz systest@$HOST_TO_UPLOAD:~
 
+}
+
+function save-patches() {
+    setup
+    
+    if [[ -z "$TASKS_DIR" ]]; then
+        echo "You need to specify the variable 'TASKS_DIR' first (preferably in function called 'setup')"
+        return 3
+    fi
+    
+    if [[ $# -ne 2 ]]; then
+        echo "Usage: save-patches [refspec-to-diff-head-with] [destination-directory-prefix]"
+        echo "Example: save-patches master gpu"
+        return 1
+    fi
+    
+    GIT_BASE_BRANCH="$1"
+    DIR_PREFIX="$2"
+    
+    git rev-parse --verify ${GIT_BASE_BRANCH}
+    
+    if [[ $? -ne 0 ]]; then
+        echo "Specified branch is not valid: $GIT_BASE_BRANCH"
+        return 1
+    fi
+    
+    GIT_HEAD=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
+    if [[ "$GIT_HEAD" = "" ]]; then
+        echo "You are probably not in a git repository!"
+        return 2
+    fi
+    
+    
+    DEST_BASEDIR="$TASKS_DIR/$DIR_PREFIX/$(date +%Y%m%d_%H%M%S)"
+    
+    #TODO check if git is clean (no modified, unstaged files, etc)
+    #pull trunk, rebase current branch to trunk
+    git checkout ${GIT_BASE_BRANCH} && git pull || { echo "Pull failed!"; exit 1; }
+    git checkout - && git rebase ${GIT_BASE_BRANCH} || { echo "Rebase failed and it was aborted! Please rebase manually!"; git rebase --abort; return 1; }
+    
+    #TODO put this back in
+#    git diff ${GIT_BASE_BRANCH} --check
+#    if [[ $? -ne 0 ]]; then
+#        echo "There are trailing whitespaces in the diff, please fix them!"
+#        return 4
+#    fi
+    
+    GIT_FORMAT_PATCH_OUTPUT_DIR="$(mktemp -d -t gpu)"
+    git format-patch ${GIT_BASE_BRANCH} --output-directory ${GIT_FORMAT_PATCH_OUTPUT_DIR}
+    
+    #make sure destination directory exists
+    if [[ ! -d "$DEST_BASEDIR" ]]; then
+        mkdir -p ${DEST_BASEDIR}
+    fi
+    
+    echo "Saving git patches from ${GIT_FORMAT_PATCH_OUTPUT_DIR} to $DEST_BASEDIR/"
+    mv ${GIT_FORMAT_PATCH_OUTPUT_DIR}/* ${DEST_BASEDIR}/
+    
+    #remove temp dir
+    rmdir ${GIT_FORMAT_PATCH_OUTPUT_DIR}
 }
