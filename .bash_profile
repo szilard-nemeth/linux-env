@@ -3,7 +3,12 @@ if [ -f ~/.bashrc ]; then
 fi
 
 export PATH="/usr/local/opt/protobuf@2.5/bin:$PATH"
-JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_151.jdk/Contents/Home/
-export JAVA_HOME
+
+if hash /usr/libexec/java_home &>/dev/null; then
+    JAVA_HOME=$(/usr/libexec/java_home)
+    export JAVA_HOME
+else
+    echo "Cannot set JAVA_HOME as JDK was not found!"
+fi
 
 [ -f /usr/local/etc/bash_completion ] && . /usr/local/etc/bash_completion
