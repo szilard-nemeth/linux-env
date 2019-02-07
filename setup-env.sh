@@ -101,6 +101,7 @@ function set_matched_dirs() {
     matched_dirs=$(find $from_dir -name $marker_file_name -print0 | xargs -0 -n1 dirname | sort --unique)
 }
 
+#TODO do not run this on every shell launch
 function initial_setup_macos() {
     echo "Running initial macOS setup"
     echo "Checking whether Homebrew is installed..."
@@ -115,7 +116,24 @@ function initial_setup_macos() {
         echo "Installing GNU sed"
         brew install gnu-sed --with-default-names
     fi
-
+    
+    echo "Checking whether npm is available..."
+    if ! hash node 2>/dev/null; then
+        brew install node;
+        which node # => /usr/local/bin/node
+        mkdir "${HOME}/.npm-packages"
+    fi
+    npm list -g figlet-cli 1>2 2>/dev/null && echo "Figlet is already installed" || { echo "Installing figlet";npm install -g figlet-cli; }
+    
+    #gettext is required because it contains envsubst
+    brew list gettext 1>2 2>/dev/null
+    if [ "$?" -ne 0 ]; then
+        echo "Installing gettext"
+        brew install gettext
+        brew link --force gettext
+    else
+        echo "gettext is already installed"
+    fi
 }
 
 function determine_platform() {
@@ -139,6 +157,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     COPY_LIST+=("$DIR/aliases/. $HOME_LINUXENV_DIR/aliases/")
     COPY_LIST+=("$DIR/scripts/. $HOME_LINUXENV_DIR/scripts")
     COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
+    COPY_LIST+=("$DIR/.npmrc $HOME/.npmrc")
     
     if [[ ! $platform == 'macos' ]]; then
         COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
@@ -158,7 +177,7 @@ function copy_files_from_linuxenv_repo_to_home() {
 
 platform=$(determine_platform)
 echo "Platform is: $platform"
-if [[ $platform == 'macos' ]]; then
+if [[ ${platform} == 'macos' ]]; then
     initial_setup_macos
 fi
 
