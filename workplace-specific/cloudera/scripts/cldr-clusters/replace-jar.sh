@@ -48,6 +48,7 @@ then
 	echo "Two or more files found for pattern $JAR_FILE_NAME in search root: $CLOUDERA_DEV_ROOT";
 #	echo "File list: ";
 #	echo "$SRC_JAR_PATH";
+    #TODO if th md5 sums of the files are the same, don't show the menu, just print an auto-choice
     SRC_JAR_PATH=$(select-menu ${SRC_JAR_PATH})
 fi
 

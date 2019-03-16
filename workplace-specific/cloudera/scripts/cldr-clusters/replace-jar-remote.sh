@@ -26,7 +26,8 @@ fi
 
 
 #make backup of original jar
-DST_JAR_BACKUP_PATH="/home/systest/$SRC_JAR_FILENAME-original"
+DATE_OF_BACKUP=`date +%F-%H%M%S`
+DST_JAR_BACKUP_PATH="/home/systest/$SRC_JAR_FILENAME-original-$DATE_OF_BACKUP"
 echo "Making backup of jar from $DST_JAR_PATH to $DST_JAR_BACKUP_PATH"
 sudo cp $DST_JAR_PATH "$DST_JAR_BACKUP_PATH"
 
