@@ -74,6 +74,7 @@ function yarn-save-patch() {
 }
 
 function yarn-create-review-branch() {
+    #TODO this does not handle MAPREDUCE-XXX patches
     setup
     ORIG_BRANCH=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
     PATCH_FILE=$1
@@ -122,7 +123,8 @@ function yarn-create-review-branch() {
             git checkout -b "$BRANCH" trunk
         fi
         git apply $PATCH_FILE
-        git commit -am "patch file: $PATCH_FILE"
+        git add -A
+        git commit -m "patch file: $PATCH_FILE"
     fi
 }
 
@@ -162,12 +164,14 @@ function yarn-backport-c6() {
     ###do the rest of the work in the cloudera repo
     cd $DOWNSTREAM_HADOOP_DIR
     git fetch --all
+    #TODO handle if branch already exist (is it okay to silently ignore?) or should use current branch with switch?
     git checkout -b "$CDH_JIRA_NO-$CDH_BRANCH" cauldron/$CDH_BRANCH
     git cherry-pick -x $UPSTREAM_COMMIT_HASH
     
+    #TODO add resume functionality so that commit message rewrite can happen
     if [ $? -ne 0 ]; then
         #TODO print git commit and git push command, print it to a script that can continue!
-        echo "!!!There was merge conflicts, please resolve them!!!"
+        echo "!!!There were some merge conflicts, please resolve them and run: git cherry-pick --continue!!!"
         return 1
     fi
     
@@ -252,7 +256,7 @@ function save-patches() {
 #    fi
     
     GIT_FORMAT_PATCH_OUTPUT_DIR="$(mktemp -d -t gpu)"
-    git format-patch ${GIT_BASE_BRANCH} --output-directory ${GIT_FORMAT_PATCH_OUTPUT_DIR}
+    git format-patch ${GIT_BASE_BRANCH} --output-directory ${GIT_FORMAT_PATCH_OUTPUT_DIR} --full-index
     
     #make sure destination directory exists
     if [[ ! -d "$DEST_BASEDIR" ]]; then
@@ -264,4 +268,19 @@ function save-patches() {
     
     #remove temp dir
     rmdir ${GIT_FORMAT_PATCH_OUTPUT_DIR}
+}
+
+function get-remote-cm-nm-dir() {
+    #Example usage: get-remote-cm-nm-dir bsteinbach-gpu-2.vpc.cloudera.com
+    local host="$1"
+    local process_dir="/var/run/cloudera-scm-agent/process/"
+    local get_nm_dir_cmd='nm_dir=$(sudo ls -t /var/run/cloudera-scm-agent/process/| grep -m 1 yarn-NODEMANAGER);'"echo $process_dir/"'$nm_dir'
+    ssh "systest@${host}" "set -x;$get_nm_dir_cmd;sudo ls -latr $process_dir/"'$nm_dir'
+}
+
+function timezones() {
+    echo -n "Local time: " && TZ=CET date; \
+    echo -n "Time in PA: " && TZ=America/Los_Angeles date; \
+    echo -n "Time in Melbourne: " && TZ=Australia/Melbourne date; \
+    echo -n "Time in Bangalore: " && TZ="UTC-5" date
 }
