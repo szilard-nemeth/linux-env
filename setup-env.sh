@@ -101,7 +101,6 @@ function set_matched_dirs() {
     matched_dirs=$(find $from_dir -name $marker_file_name -print0 | xargs -0 -n1 dirname | sort --unique)
 }
 
-#TODO do not run this on every shell launch
 function initial_setup_macos() {
     echo "Running initial macOS setup"
     echo "Checking whether Homebrew is installed..."
@@ -134,6 +133,7 @@ function initial_setup_macos() {
     else
         echo "gettext is already installed"
     fi
+    echo "complete" > "${HOME}/.env/.initial-setup-status"
 }
 
 function determine_platform() {
@@ -177,7 +177,7 @@ function copy_files_from_linuxenv_repo_to_home() {
 
 platform=$(determine_platform)
 echo "Platform is: $platform"
-if [[ ${platform} == 'macos' ]]; then
+if [[ ${platform} == 'macos' ]] && ! grep -q "complete" "$HOME/.env/.initial-setup-status"; then
     initial_setup_macos
 fi
 
