@@ -25,6 +25,12 @@ host_to_use="systest@snemeth-testing3-3.vpc.cloudera.com"
 pid=$(ssh $host_to_use jps |grep NodeManager | cut -f1 -d' ');ssh $host_to_use kill $pid
 ```
 
+2. Start NodeManagers on cluster:
+
+```
+/opt/hadoop/bin/yarn --config /opt/hadoop/etc/hadoop --workers --daemon start nodemanager
+```
+
 Maven commands
 ==============
 
