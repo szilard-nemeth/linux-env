@@ -29,7 +29,11 @@ alias j8='export JAVA_HOME=/Library/Java//JavaVirtualMachines/jdk1.8.0_151.jdk/C
 
 #YARN-related commands
 alias upstream-gergo="git log --grep grepas --grep 'Gergo Repas' --oneline  | wc -l"
+
+#TODO write a script: intersection of grep and author commands should give the final number
 alias upstream-yarn="git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | grep YARN | wc -l"
+alias upstream-yarn2="echo $(($(git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | grep YARN | wc -l | tr -s ' ' | cut -d ' ' -f2) + $(git log --author=snemeth --oneline | wc -l | tr -s ' ' | cut -d ' ' -f2)))"
+
 alias upstream-hadoop="git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | wc -l"
 
 alias grind-yarn="export GRIND_MAVEN_FLAGS=-Dmaven-dependency-plugin.version=2.10 && \

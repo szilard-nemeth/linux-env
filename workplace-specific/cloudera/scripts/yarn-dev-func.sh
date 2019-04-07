@@ -73,6 +73,7 @@ function yarn-save-patch() {
     #"/tmp/yarndiff-$(BRANCH_NAME)-$(PATCH_NO_STR)"
 }
 
+#TODO script is not recognizing if branch already exist! Should delete branch or log a warning!
 function yarn-create-review-branch() {
     #TODO this does not handle MAPREDUCE-XXX patches
     setup
@@ -283,4 +284,8 @@ function timezones() {
     echo -n "Time in PA: " && TZ=America/Los_Angeles date; \
     echo -n "Time in Melbourne: " && TZ=Australia/Melbourne date; \
     echo -n "Time in Bangalore: " && TZ="UTC-5" date
+}
+
+function reviewsync() {
+    python $HOME/development/my-repos/hadoop-reviewsync/reviewsync/reviewsync.py --gsheet --gsheet-client-secret "/Users/szilardnemeth/.secret/client_secret_hadoopreviewsync.json" --gsheet-spreadsheet "YARN/MR Reviews" --gsheet-worksheet "Incoming" --gsheet-jira-column "JIRA" --gsheet-update-date-column "Last Updated" --gsheet-status-info-column "Reviewsync" -b branch-3.2 branch-3.1 -v
 }

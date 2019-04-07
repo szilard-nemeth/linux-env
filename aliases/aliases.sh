@@ -16,6 +16,7 @@ alias rm='safe-rm'
 alias intellij-keyboard-fix="ibus-daemon -rd"
 alias currentweek="date +%V"
 alias vpn-szyszy="sudo openvpn --client --config ~/openvpn-szyszy/client.ovpn --ca ~/openvpn-szyszy/ca.crt"
+alias formatted-date="date +%Y%m%d_%H_%M_%S"
 
 ## CD-RELATED ALIASES
 up(){

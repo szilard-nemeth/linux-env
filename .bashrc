@@ -237,7 +237,9 @@ PATH=$PATH:$HOME/scripts/
 PATH=$PATH:$HOME/.npm-global/bin
 PATH=$PATH:$HOME/development/other-repos/util-scripts
 PATH=$PATH:$HOME/development/cloudera/dist_test/bin
+#TODO make these conditional to macos
 PATH=$PATH:$HOME/Library/Python/2.7/bin
+PATH=$PATH:/Applications/CMake.app/Contents/bin
 export PATH
 export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=1024m"
 export ANT_OPTS="-XX:PermSize=512m -XX:MaxPermSize=512m -Xmx1024m -Xms1024m"
