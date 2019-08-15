@@ -12,3 +12,9 @@ else
 fi
 
 [ -f /usr/local/etc/bash_completion ] && . /usr/local/etc/bash_completion
+
+# The next line updates PATH for the Google Cloud SDK.                                                                   
+if [ -f '/Users/szilardnemeth/google-cloud-sdk/path.bash.inc' ]; then . '/Users/szilardnemeth/google-cloud-sdk/path.bash.inc'; fi
+                                                                                                                         
+# The next line enables shell command completion for gcloud.                                                             
+if [ -f '/Users/szilardnemeth/google-cloud-sdk/completion.bash.inc' ]; then . '/Users/szilardnemeth/google-cloud-sdk/completion.bash.inc'; fi
