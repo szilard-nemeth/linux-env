@@ -33,6 +33,8 @@ function yarn-save-patch() {
         return 3
     fi
     
+    #TODO add line length check to added lines, ignore imports: 'sed -n "/^+.\{81\}/p"'
+    
     #make directory in yarn-tasks if not yet exists
     if [ ! -d "$BRANCH_NAME" ]; then
         mkdir -p $PATCH_BASEDIR/$BRANCH_NAME
@@ -74,6 +76,7 @@ function yarn-save-patch() {
 }
 
 #TODO script is not recognizing if branch already exist! Should delete branch or log a warning!
+##Could add new branch per patch, e.g. YARN-1234-patch001, YARN-1234-patch002
 function yarn-create-review-branch() {
     #TODO this does not handle MAPREDUCE-XXX patches
     setup
