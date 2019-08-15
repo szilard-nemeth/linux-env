@@ -17,6 +17,7 @@ alias intellij-keyboard-fix="ibus-daemon -rd"
 alias currentweek="date +%V"
 alias vpn-szyszy="sudo openvpn --client --config ~/openvpn-szyszy/client.ovpn --ca ~/openvpn-szyszy/ca.crt"
 alias formatted-date="date +%Y%m%d_%H_%M_%S"
+alias zip-files="sudo find / -iname *1564501696813_0001_01_000001* -print0 | sudo tar -czvf backup-1564501696813_0001-20190730.tar.gz --null -T -"
 
 ## CD-RELATED ALIASES
 up(){
