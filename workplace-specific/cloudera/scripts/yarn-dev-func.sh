@@ -111,7 +111,12 @@ function yarn-create-review-branch() {
     fi
     
     echo "Pulling latest changes from origin/trunk...."
-    git checkout trunk && git pull origin
+    git checkout trunk && git pull --rebase origin
+    
+    if [[ ! -z $(git diff origin/trunk..trunk) ]]; then
+        echo "There is a diff between local trunk and origin/trunk! Run 'git reset origin/trunk --hard' and re-run the script! Exiting..."
+        return 5
+    fi
     
     #try to apply PATCH_FILE to trunk
     git apply $PATCH_FILE --check
@@ -120,11 +125,18 @@ function yarn-create-review-branch() {
         git checkout $ORIG_BRANCH
         return 3
     else
-        echo "Patch $PATCH_FILE applies cleanly to trunk, checking out new branch $BRANCH from trunk!"
+        echo "Patch $PATCH_FILE applies cleanly to trunk"
         if [ `git branch --list "$BRANCH"` ]; then
-            git checkout "$BRANCH"
+            local review_counter=$(git branch --list "$BRANCH*" | tail -n1 | tr -d "[:blank:]" | cut -d'-' -f4)
+            review_counter=$(($review_counter+1))
+            echo "review counter: $review_counter"
+            local NEW_BRANCH="$BRANCH-$review_counter"
+            echo "There is a branch named $BRANCH already! Creating new branch as: ${NEW_BRANCH}"
+            git checkout -b ${NEW_BRANCH}
         else
+            echo "Checking out new branch $BRANCH from trunk!"
             git checkout -b "$BRANCH" trunk
+            
         fi
         git apply $PATCH_FILE
         git add -A
