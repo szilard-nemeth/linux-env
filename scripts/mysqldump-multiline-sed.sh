@@ -1,12 +1,20 @@
-##https://stackoverflow.com/questions/15750535/using-mysqldump-to-format-one-insert-per-line
-
 #!/bin/bash
+
+##https://stackoverflow.com/questions/15750535/using-mysqldump-to-format-one-insert-per-line
 
 cd my_git_directory/
 
-ARGS="--host=myhostname --user=myusername --password=mypassword --opt --skip-dump-date"
-/usr/bin/mysqldump $ARGS --database mydatabase | sed 's$VALUES ($VALUES\n($g' | sed 's$),($),\n($g' > mydatabase.sql
+#Windows version
+#MYSQL_DUMP_BIN='/c/Program\ Files\ (x86)/MySQL/MySQL\ Workbench\ CE\ 6.1.6/'
+MYSQL_DUMP_BIN="/usr/bin/mysqldump"
 
+ARGS="--host=myhostname --user=myusername --password=mypassword --opt --skip-dump-date"
+#ARGS="--host=localhost --user=root --password=root --opt --skip-dump-date"
+DB="homedb"
+
+$MYSQL_DUMP_BIN $ARGS --database $DB | sed 's$VALUES ($VALUES\n($g' | sed 's$),($),\n($g' > sqldump.sql
+
+#Make git commit
 git fetch origin master
 git merge origin/master
 git add mydatabase.sql
