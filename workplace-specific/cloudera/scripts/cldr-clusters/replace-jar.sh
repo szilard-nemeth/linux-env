@@ -62,4 +62,7 @@ echo "Copying jar file $SRC_JAR_PATH to $CLOUDERA_HOSTNAME:$NEW_JAR_PATH";
 scp -q -o "StrictHostKeyChecking no" $SRC_JAR_PATH $CLOUDERA_HOSTNAME:/$NEW_JAR_PATH
 
 echo "Running replace-jar-remote.sh on $CLOUDERA_HOSTNAME..."
-ssh -o "StrictHostKeyChecking no" $CLOUDERA_HOSTNAME SRC_JAR_FILENAME="$SRC_JAR_FILENAME" 'bash -s' < "$DIR/replace-jar-remote.sh"
+ssh -o "StrictHostKeyChecking no" $CLOUDERA_HOSTNAME \
+SRC_JAR_FILENAME="$SRC_JAR_FILENAME" \
+JAR_FILE_NAME="$JAR_FILE_NAME" \
+'bash -s' < "$DIR/replace-jar-remote.sh"

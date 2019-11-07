@@ -10,10 +10,20 @@ echo "MD5 sum of copied jar on `hostname`: $MD5_NEW_JAR"
 CDH_JARS_LOCATION=/opt/cloudera/parcels/CDH/jars
 DST_JAR_PATH=$(find ${CDH_JARS_LOCATION} -iname "$SRC_JAR_FILENAME")
 
-if [ -z "$DST_JAR_PATH" ]; then
-    echo "No result files found on cluster in $CDH_JARS_LOCATION for filename $SRC_JAR_FILENAME!"
+if [[ -z "$DST_JAR_PATH" ]]; then
+    echo "No target files found on cluster in $CDH_JARS_LOCATION for filename $SRC_JAR_FILENAME!"
     echo "Command was: find ${CDH_JARS_LOCATION} -iname \"$SRC_JAR_FILENAME\""
-    exit -2
+    
+    #Fallback
+    #Example: find /opt/cloudera/parcels/CDH/jars -iname "hadoop-yarn-server-resourcemanager*"
+    echo "Fallback: Trying to find target file for filename / pattern: $JAR_FILE_NAME"
+    DST_JAR_PATH=$(find ${CDH_JARS_LOCATION} -iname "$JAR_FILE_NAME")
+    if [[ -z "$DST_JAR_PATH" ]]; then
+        echo "No target files found on cluster in $CDH_JARS_LOCATION for filename $JAR_FILE_NAME!"
+        echo "Command was: find ${CDH_JARS_LOCATION} -iname \"$JAR_FILE_NAME\""
+        exit -2
+    fi
+    SRC_JAR_FILENAME="$JAR_FILE_NAME"
 fi
 
 NUMBER_OF_RESULTS=$(echo "$DST_JAR_PATH" | wc -l)
