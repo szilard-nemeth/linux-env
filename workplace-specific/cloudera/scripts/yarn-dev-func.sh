@@ -304,3 +304,37 @@ function timezones() {
 function reviewsync() {
     python $HOME/development/my-repos/hadoop-reviewsync/reviewsync/reviewsync.py --gsheet --gsheet-client-secret "/Users/szilardnemeth/.secret/client_secret_hadoopreviewsync.json" --gsheet-spreadsheet "YARN/MR Reviews" --gsheet-worksheet "Incoming" --gsheet-jira-column "JIRA" --gsheet-update-date-column "Last Updated" --gsheet-status-info-column "Reviewsync" -b branch-3.2 branch-3.1 -v
 }
+
+function get-umbrella-data() {
+    jira="$1"
+    base_dir="/tmp/jira-umbrella-data/"
+    dir="$base_dir/$jira"
+    mkdir -p ${dir}
+    
+    jira_html_file="$dir/jira.html"
+    jira_list_file="$dir/jira-list.txt"
+    commits_file="$dir/commit-hashes.txt"
+    changed_files_file="$dir/changed-files.txt"
+    
+    curl https://issues.apache.org/jira/browse/${jira} > ${jira_html_file}
+    
+    grep "a class=\"issue-link\"" ${jira_html_file} | grep -v "$jira" | egrep -o "data-issue-key=\".*\"" | sed -E 's/^.*key="(.*)" .*/\1/p' | uniq > ${jira_list_file}
+    jira_list=$(printf "%s|\0" $(<${jira_list_file}))
+    
+    #Delete last character
+    #https://unix.stackexchange.com/questions/144298/delete-the-last-character-of-a-string-using-string-manipulation-in-shell-script/144345
+    jira_list=$(echo "${jira_list%?}")
+    echo "Jira list: ${jira_list}"
+    
+    pushd ${HADOOP_DEV_DIR}
+    git log --oneline | egrep ${jira_list} | cut -d ' ' -f1 | sort -u > ${commits_file}
+    git log --oneline | egrep ${jira_list} | cut -d ' ' -f1 | xargs -n 1 git diff-tree --no-commit-id --name-only -r | sort -u > ${changed_files_file}
+
+    echo "Number of jiras: $(cat ${jira_list_file} | wc -l | awk '{print $1}')"
+    echo "Number of commits: $(cat ${commits_file} | wc -l | awk '{print $1}')"
+    echo "Number of files changed: $(cat ${changed_files_file} | wc -l | awk '{print $1}')"
+
+    echo "All Result files: "
+    find ${dir}
+    popd
+}
