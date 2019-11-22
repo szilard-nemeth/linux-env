@@ -327,7 +327,7 @@ function get-umbrella-data() {
     echo "Jira list: ${jira_list}"
     
     pushd ${HADOOP_DEV_DIR}
-    git log --oneline | egrep ${jira_list} | cut -d ' ' -f1 | sort -u > ${commits_file}
+    git log --oneline | egrep ${jira_list} | cut -d ' ' -f1 > ${commits_file}
     git log --oneline | egrep ${jira_list} | cut -d ' ' -f1 | xargs -n 1 git diff-tree --no-commit-id --name-only -r | sort -u > ${changed_files_file}
 
     echo "Number of jiras: $(cat ${jira_list_file} | wc -l | awk '{print $1}')"
