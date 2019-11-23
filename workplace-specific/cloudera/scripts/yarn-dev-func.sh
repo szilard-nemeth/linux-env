@@ -315,6 +315,7 @@ function get-umbrella-data() {
     jira_list_file="$dir/jira-list.txt"
     commits_file="$dir/commit-hashes.txt"
     changed_files_file="$dir/changed-files.txt"
+    summary_file="$dir/summary.txt"
     
     curl https://issues.apache.org/jira/browse/${jira} > ${jira_html_file}
     
@@ -324,17 +325,30 @@ function get-umbrella-data() {
     #Delete last character
     #https://unix.stackexchange.com/questions/144298/delete-the-last-character-of-a-string-using-string-manipulation-in-shell-script/144345
     jira_list=$(echo "${jira_list%?}")
-    echo "Jira list: ${jira_list}"
+#    echo "Jira list: ${jira_list}"
     
-    pushd ${HADOOP_DEV_DIR}
-    git log --oneline | egrep ${jira_list} | cut -d ' ' -f1 > ${commits_file}
+    pushd ${HADOOP_DEV_DIR} 2>&1 > /dev/null
+    #Get commits in reverse order (oldest first)
+    git log --oneline | egrep ${jira_list} | cut -d ' ' -f1 | tail -r > ${commits_file}
     git log --oneline | egrep ${jira_list} | cut -d ' ' -f1 | xargs -n 1 git diff-tree --no-commit-id --name-only -r | sort -u > ${changed_files_file}
+    
+    #Write summary file
+    echo "Number of jiras: $(cat ${jira_list_file} | wc -l | awk '{print $1}')" > ${summary_file} 
+    echo "Number of commits: $(cat ${commits_file} | wc -l | awk '{print $1}')" > ${summary_file}
+    echo "Number of files changed: $(cat ${changed_files_file} | wc -l | awk '{print $1}')" > ${summary_file}
+    
+    #Prints:
+    # <hash> <YARN-id> <commit date>
+    while IFS= read -r hash; do
+        yarn_id=$(git show --no-patch --no-notes --oneline ${hash} | cut -d' ' -f2)
+        commit_date=$(git show --no-patch --no-notes --pretty='%cI' ${hash})
+        echo "$hash $yarn_id $commit_date" >> ${summary_file}
+    done < ${commits_file}
 
-    echo "Number of jiras: $(cat ${jira_list_file} | wc -l | awk '{print $1}')"
-    echo "Number of commits: $(cat ${commits_file} | wc -l | awk '{print $1}')"
-    echo "Number of files changed: $(cat ${changed_files_file} | wc -l | awk '{print $1}')"
+    echo "Summary: "
+    cat ${summary_file}
 
-    echo "All Result files: "
+    echo "All result files: "
     find ${dir}
-    popd
+    popd 2>&1 > /dev/null
 }
