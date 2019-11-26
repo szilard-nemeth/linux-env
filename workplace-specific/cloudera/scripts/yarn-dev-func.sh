@@ -317,6 +317,8 @@ function get-umbrella-data() {
     changed_files_file="$dir/changed-files.txt"
     summary_file="$dir/summary.txt"
     
+    echo -n "" > ${summary_file}
+    
     curl https://issues.apache.org/jira/browse/${jira} > ${jira_html_file}
     
     grep "a class=\"issue-link\"" ${jira_html_file} | grep -v "$jira" | egrep -o "data-issue-key=\".*\"" | sed -E 's/^.*key="(.*)" .*/\1/p' | uniq > ${jira_list_file}
@@ -328,21 +330,28 @@ function get-umbrella-data() {
 #    echo "Jira list: ${jira_list}"
     
     pushd ${HADOOP_DEV_DIR} 2>&1 > /dev/null
+    BRANCH_NAME=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
+    if [[ "$BRANCH_NAME" != "trunk" ]]; then
+        echo "Current branch is not trunk!"
+        popd 2>&1 > /dev/null
+        return 1    
+    fi
+    
     #Get commits in reverse order (oldest first)
     git log --oneline | egrep ${jira_list} | cut -d ' ' -f1 | tail -r > ${commits_file}
     git log --oneline | egrep ${jira_list} | cut -d ' ' -f1 | xargs -n 1 git diff-tree --no-commit-id --name-only -r | sort -u > ${changed_files_file}
     
     #Write summary file
-    echo "Number of jiras: $(cat ${jira_list_file} | wc -l | awk '{print $1}')" > ${summary_file} 
-    echo "Number of commits: $(cat ${commits_file} | wc -l | awk '{print $1}')" > ${summary_file}
-    echo "Number of files changed: $(cat ${changed_files_file} | wc -l | awk '{print $1}')" > ${summary_file}
-    
+    echo "Number of jiras: $(cat ${jira_list_file} | wc -l | awk '{print $1}')" >> ${summary_file} 
+    echo "Number of commits: $(cat ${commits_file} | wc -l | awk '{print $1}')" >> ${summary_file}
+    echo "Number of files changed: $(cat ${changed_files_file} | wc -l | awk '{print $1}')" >> ${summary_file}
     #Prints:
     # <hash> <YARN-id> <commit date>
     while IFS= read -r hash; do
-        yarn_id=$(git show --no-patch --no-notes --oneline ${hash} | cut -d' ' -f2)
+        commit_msg=$(git show --no-patch --no-notes --oneline ${hash})
+        yarn_id=$(echo ${commit_msg} | cut -d' ' -f2)
         commit_date=$(git show --no-patch --no-notes --pretty='%cI' ${hash})
-        echo "$hash $yarn_id $commit_date" >> ${summary_file}
+        echo "$commit_msg $commit_date" >> ${summary_file}
     done < ${commits_file}
 
     echo "Summary: "
