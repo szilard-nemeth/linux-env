@@ -118,3 +118,24 @@ Other tricks
 1. Trick: Watch directory contents for changes (cgroup)
 
 ```while true; do date +'%H:%M:%S:%N' | tee -a /tmp/tmp2 && find /sys/fs/cgroup | grep hadoop 2>&1 | tee -a /tmp/tmp2; sleep 1; done```
+
+
+Disk management
+============
+1. Change the reserved blocks on a partition: 
+
+> Specify the percentage of the filesystem blocks reserved for the super-user. This avoids fragmentation, and allows root-owned daemons, such as syslogd(8), to continue to function correctly after non-privi-leged processes are prevented from writing to the filesystem. The default percentage is 5%.
+
+Links:
+
+https://askubuntu.com/questions/100212/my-df-totals-dont-come-close-to-adding-up-why
+https://ma.ttias.be/change-reserved-blocks-ext3-ext4-filesystem-linux/
+
+Command to query reserved block count: 
+
+```sudo /sbin/tune2fs -l /dev/md0  | grep "Reserved block count"```
+
+
+Command to change reserved block count, -m0 means 0 percent:
+
+```sudo /sbin/tune2fs -m0 /dev/md0```
