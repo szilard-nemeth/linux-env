@@ -345,7 +345,8 @@ function get-umbrella-data() {
     echo "Number of jiras: $(cat ${jira_list_file} | wc -l | awk '{print $1}')" >> ${summary_file} 
     echo "Number of commits: $(cat ${commits_file} | wc -l | awk '{print $1}')" >> ${summary_file}
     echo "Number of files changed: $(cat ${changed_files_file} | wc -l | awk '{print $1}')" >> ${summary_file}
-    #Prints:
+    
+    #Iterate over commit hashes file, print the following to summary_file for each commit hash: 
     # <hash> <YARN-id> <commit date>
     while IFS= read -r hash; do
         commit_msg=$(git show --no-patch --no-notes --oneline ${hash})
@@ -353,6 +354,13 @@ function get-umbrella-data() {
         commit_date=$(git show --no-patch --no-notes --pretty='%cI' ${hash})
         echo "$commit_msg $commit_date" >> ${summary_file}
     done < ${commits_file}
+    
+    #Iterate over changed files, print all matching changes to the particular file
+    #Create changes file for every touched file
+    while IFS= read -r changed_file; do
+        target_file="${dir}/changes-"$(basename ${changed_file})
+        git log --follow --oneline -- ${changed_file} | egrep ${jira_list} > ${target_file}
+    done < ${changed_files_file}
 
     echo "Summary: "
     cat ${summary_file}
