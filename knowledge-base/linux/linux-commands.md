@@ -21,6 +21,16 @@ File operations (find / ls)
 
 ```find /opt/hadoop/share/hadoop/yarn/ -iname 'hadoop-yarn-server*nodemanager*' ! -iname "*test*.jar" ! -iname "*sources*jar" -printf "unzip -c %p | grep -q '' && echo %p\n" | sh```
 
+Compression commands
+===========================
+1. Compress a folder with tar
+
+```tar czf <dest>.tar.gz <file or dir>```
+
+2. Untar
+
+```tar xzvf example.tar.gz```
+
 
 Jar commands
 ============
@@ -84,7 +94,7 @@ Find out linux version (method 4):
 
 
 
-Rsync / SSH commands
+Rsync / SSH / scp commands
 ====================
 
 1. Rsync whole folder to remote machine:
@@ -94,6 +104,10 @@ Rsync / SSH commands
 2. Open a SSH tunnel: https://plenz.com/tunnel-everything.php
 
 ```ssh -NL 2345:127.0.0.1:8000 <user>@<host>```
+
+3. Scp a file from a remote host
+
+```scp snemeth@casefiles.vpc.cloudera.com:642171.tar.gz /Users/szilardnemeth/Downloads/```
 
 
 Text manipulation commands
@@ -119,6 +133,8 @@ Other tricks
 
 ```while true; do date +'%H:%M:%S:%N' | tee -a /tmp/tmp2 && find /sys/fs/cgroup | grep hadoop 2>&1 | tee -a /tmp/tmp2; sleep 1; done```
 
+2. Get OS version: 
+`lsb_release -ana`
 
 Disk management
 ============
@@ -139,3 +155,12 @@ Command to query reserved block count:
 Command to change reserved block count, -m0 means 0 percent:
 
 ```sudo /sbin/tune2fs -m0 /dev/md0```
+
+Git commands
+============
+1. Change commit message all at once (remove some part of it)
+
+```git filter-branch -f --msg-filter 'sed "s/<strtoreplace>//g"' -- --all```
+
+2. Print list of changed files (name only)
+`git diff --name-only`
