@@ -51,12 +51,12 @@ function copy_files() {
 function source_scripts() {
     source_from=$1
 
-    echo Sourcing files from $HOME_LINUXENV_DIR/aliases;
-    for f in $source_from/*.sh; do
+    echo Sourcing files from ${source_from};
+    for f in ${source_from}/*.sh; do
         echo Sourcing file $f
         . "$f"
     done
-    echo Done sourcing files from $source_from;
+    echo Done sourcing files from ${source_from};
 }
 
 function source_files() {
@@ -171,6 +171,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     
     #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
     source_scripts $HOME_LINUXENV_DIR/aliases
+    source_scripts $HOME_LINUXENV_DIR/scripts
     source_files ".source-this"
     add_to_path ".add-to-path"
 }
