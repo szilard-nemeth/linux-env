@@ -7,8 +7,15 @@
 #dr-xr-xr-x 2 4294967295 4294967295 1444 2006-05-31 21:41 VIDEO_TS
  
 
-mkdir -p /home/szyszy/mnt/temp_imagedisk
-mount -o loop "$1" /home/szyszy/mnt/temp_imagedisk
-cd /home/szyszy/mnt/temp_imagedisk/
-ls -l
+function mount-iso() {
+#    dir=/home/szyszy/mnt/temp_imagedisk
+    dir=$1
+    mkdir -p ${dir}
+    mount -o loop "$1" ${dir}
+    cd ${dir}
+    ls -l
+}
 
+function extractall() {
+    ls *.zip|awk -F'.zip' '{print "unzip "$0" -d "$1}' | sh
+}
