@@ -208,6 +208,40 @@ function yarn-backport-c6() {
 
 }
 
+function yarn-upstream-commit-pr() {
+    if [[ $# -ne 2 ]]; then
+        echo "Usage: yarn-upstream-commit-pr [github-username] [remote-branch]"
+        echo "Example: yarn-upstream-commit-pr szilard-nemeth YARN-9999"
+        echo "Example 2: yarn-upstream-commit-pr pingsutw YARN-9989"
+        return 1
+    fi
+    GITHUB_USER=$1
+    REMOTE_BRANCH=$2
+
+    git fetch https://github.com/${GITHUB_USER}/hadoop.git ${REMOTE_BRANCH}
+    if [[ $? -ne 0 ]]; then
+        echo "Cannot fetch from remote branch: $GITHUB_USER/$REMOTE_BRANCH"
+        return 1
+    fi
+    
+    
+    echo "Printing 10 topmost commits of FETCH_HEAD" 
+    git lg FETCH_HEAD | head -n 10
+    
+    echo "Printing diff of trunk..FETCH_HEAD..."
+    git log trunk..FETCH_HEAD  --oneline
+    num_commits=$(git log trunk..FETCH_HEAD  --oneline  | wc -l | tr -s ' ')
+    
+    if [[ ${num_commits} -ne 1 ]]; then
+        echo "Number of commits between trunk..FETCH_HEAD is not 1! Exiting..."
+        return 2
+    fi
+    
+    git cherry-pick FETCH_HEAD
+    echo "REMEMBER to change the commit message with command: 'git commit --amend'"
+    echo "REMEMBER to reset the author with command: 'git commit --amend --reset-author"
+}
+
 function build-upload-yarn-to-cluster() {
     setup
     
@@ -368,4 +402,54 @@ function get-umbrella-data() {
     echo "All result files: "
     find ${dir}
     popd 2>&1 > /dev/null
+}
+
+function yarn-diff-patches() {
+    #example: 
+    #1. git lg trunk | grep 10028
+    #* 13cea0412c1 - YARN-10028. Integrate the new abstract log servlet to the JobHistory server. Contributed by Adam Antal (24 hours ago) <Szilard Nemeth>
+    #
+    #2. git diff 13cea0412c1..13cea0412c1^ > /tmp/YARN-10028-trunk.diff
+    #3. git co branch-3.2
+    #4. git apply ~/Downloads/YARN-10028.branch-3.2.001.patch
+    #5. git diff > /tmp/YARN-10028-branch-32.diff
+    #6. diff -Bibw /tmp/YARN-10028-trunk.diff /tmp/YARN-10028-branch-32.diff
+    
+    
+    ###THIS SCRIPT ASSUMES EACH PROVIDED BRANCH WITH PARAMETERS (e.g. trunk, 3.2, 3.1) has the given commit committed
+    if [[ $# -ne 2 ]]; then
+        echo "Usage: diff-patches [JIRA_ID] [branches]"
+        echo "Example: YARN-7913 trunk,branch-3.2,branch-3.1"
+        return 1
+    fi
+    mkdir -p /tmp/yarndiffer
+
+    YARN_ID=$1
+    IFS=', ' read -r -a branches <<< "$2"
+    
+    #Validate branches, generate diffs
+    for br in "${branches[@]}"; do
+        git rev-parse --verify ${br}
+        
+        if [[ $? -ne 0 ]]; then
+            echo "Specified branch is not valid: $br"
+            return 1
+        fi
+        no_of_commits=$(git log ${br} --oneline | grep ${YARN_ID} | wc -l | tr -s ' ')
+        
+        
+        if [[ $no_of_commits -eq 0 ]]; then
+            echo "Specified branch $br does not contain commit for $YARN_ID"
+            return 1
+        elif [[ $no_of_commits -ne 1 ]]; then
+            echo "Specified branch $br has multiple commits for $YARN_ID"
+            return 1
+        fi
+        
+        hash=$(git log ${br} --oneline | grep ${YARN_ID} | cut -d ' ' -f1)
+
+        git diff ${hash}^..${hash} > /tmp/yarndiffer/${YARN_ID}-${br}.diff
+    done
+    echo "Generated diffs: "
+    du -sh /tmp/yarndiffer/${YARN_ID}-*
 }
