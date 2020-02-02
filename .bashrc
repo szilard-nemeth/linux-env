@@ -267,6 +267,7 @@ alias sources='(sudo vim /etc/apt/sources.list)'
 alias go='sudo apt-get update && sudo apt-get upgrade && sudo apt-get autoclean && sudo apt-get autoremove'
 
 alias bashrc='vim ~/.bashrc'
+alias logs="find /var/log -type f -exec file {} \; | grep 'text' | cut -d' ' -f1 | sed -e's/:$//g' | grep -v '[0-9]$' | xargs tail -f"
 
 alias ..='cd ..'
 alias ...='cd ../..'
