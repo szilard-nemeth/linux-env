@@ -1,4 +1,6 @@
 #!/bin/bash
+
+#TODO remove
 #MOUNT the given image parameter
 
 #[root@szyszyLAPTOP _SCRIPTS]# sudo ./mount_ISO.sh "/media/Szyszy's Ext_HDD/torrents/diablo_film/Dr House 1.évad/House_1-1.ISO"
