@@ -162,7 +162,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     if [[ ! $platform == 'macOS' ]]; then
         COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
     else
-        echo "Not copying i3 files as platform is $platform"
+        echo "$INFO_PREFIX Skip copying i3 files as platform is $platform"
     fi
     
     set -e
