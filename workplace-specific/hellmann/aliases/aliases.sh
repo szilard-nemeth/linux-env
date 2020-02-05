@@ -77,8 +77,6 @@ alias docker-rlr-stop-rmfv="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOS
 alias docker-rlr-logs="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS logs"
 
 #docker test
-#TODO add instance-name parameters
-#TODO add since parameter (last 24 hours!)
 alias docker-tracking-test-logs="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh docker@emea-jas-a12t.hwl-family.net test user-acceptance-b logs --follow"
 alias docker-rlr-test-logs="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh docker@emea-jas-a12t.hwl-family.net test rlr-test logs --follow"
 

@@ -14,5 +14,4 @@ alias start-google-chrome="start-app-silent google-chrome"
 alias start-intellij="start-app-silent $INTELLIJ_PATH"
 alias start-squirrel="start-app-silent $SQUIRREL_PATH"
 alias start-hipchat4="start-app-silent hipchat4"
-##TODO why this is not working?
 alias restart-hipchat4="psgrep-silent hipchat | awk '{print $2}' | xargs kill && start-hipchat4"
