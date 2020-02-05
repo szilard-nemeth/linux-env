@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 if [[ ! $platform == 'linux' ]]; then
-    echo "!!! ubuntu-specific aliases won't be used as platform is $platform!!!"
+    echo "$INFO_PREFIX ubuntu-specific aliases won't be used as platform is $platform!"
     return 1
 fi
 

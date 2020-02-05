@@ -144,7 +144,7 @@ function determine_platform() {
     elif [[ "$unamestr" == 'FreeBSD' ]]; then
        platform='freebsd'
     elif [[ "$unamestr" == 'Darwin' ]]; then
-       platform='macos'
+       platform='macOS'
     fi
     echo $platform
 }
@@ -159,7 +159,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
     COPY_LIST+=("$DIR/.npmrc $HOME/.npmrc")
     
-    if [[ ! $platform == 'macos' ]]; then
+    if [[ ! $platform == 'macOS' ]]; then
         COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
     else
         echo "Not copying i3 files as platform is $platform"
@@ -178,8 +178,9 @@ function copy_files_from_linuxenv_repo_to_home() {
 
 platform=$(determine_platform)
 echo "Platform is: $platform"
-if [[ ${platform} == 'macos' ]] && ! grep -q "complete" "$HOME/.env/.initial-setup-status"; then
+if [[ ${platform} == 'macOS' ]] && ! grep -q "complete" "$HOME/.env/.initial-setup-status"; then
     initial_setup_macos
 fi
 
+INFO_PREFIX="--->"
 copy_files_from_linuxenv_repo_to_home

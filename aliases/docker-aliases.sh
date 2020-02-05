@@ -2,7 +2,7 @@
 
 command -v docker;
 if [ $? -ne 0 ]; then
-    echo "!!! docker aliases won't be used as docker is not yet installed!!!"
+    echo "$INFO_PREFIX docker aliases won't be used as docker is not yet installed!"
     return 1
 fi
 

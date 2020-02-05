@@ -237,7 +237,7 @@ PATH=$PATH:$HOME/scripts/
 PATH=$PATH:$HOME/.npm-global/bin
 PATH=$PATH:$HOME/development/other-repos/util-scripts
 PATH=$PATH:$HOME/development/cloudera/dist_test/bin
-#TODO make these conditional to macos
+#TODO make these conditional to macOS
 PATH=$PATH:$HOME/Library/Python/2.7/bin
 PATH=$PATH:/Applications/CMake.app/Contents/bin
 export PATH

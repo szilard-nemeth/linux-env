@@ -187,7 +187,7 @@ function yarn-backport-c6() {
     #TODO add resume functionality so that commit message rewrite can happen
     if [ $? -ne 0 ]; then
         #TODO print git commit and git push command, print it to a script that can continue!
-        echo "!!!There were some merge conflicts, please resolve them and run: git cherry-pick --continue!!!"
+        echo "$INFO_PREFIX There were some merge conflicts, please resolve them and run: git cherry-pick --continue!"
         return 1
     fi
     
