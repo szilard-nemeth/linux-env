@@ -203,7 +203,7 @@ function yarn-backport-c6() {
     
     
     ##push to gerrit
-    echo "Commit was successful! Run this command to push to gerrit: git push cauldron HEAD:refs/for/$CDH_BRANCH%r=haibochen,r=bsteinbach,r=zsiegl,r=shuzirra,r=alex.bodo"
+    echo "Commit was successful! Run this command to push to gerrit: git push cauldron HEAD:refs/for/$CDH_BRANCH%r=shuzirra,r=adam.antal,r=pbacsko,r=kmarton,r=gandras,r=bteke"
     #git push cauldron HEAD:refs/for/$CDH_BRANCH
 
 }
