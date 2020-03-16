@@ -29,7 +29,10 @@ CLUSTER="snemeth-514-secure6-1.snemeth-514-secure6.root.hwx.site"
 function cmhack() {
 	
 	# FILES=`git status *.java | grep '.java' | grep -v -i test | sed s/modified\://g`
-	FILES=`git status *.java | grep '.java' | grep -v -i test | sed s/modified\://g | sed s/new\ file\://g`
+	#TODO this does not recognize changed files well :(
+	#FILES=`git status *.java | grep '.java' | grep -v -i test | sed s/modified\://g | sed s/new\ file\://g`
+
+	FILES=$(git diff --name-only HEAD| grep java)
 	#FILES=`git log --name-only HEAD^..HEAD | grep java | grep -v -i test`
 	#FILES="web/src/main/java/com/cloudera/cmf/service/yarn/YarnParams.java  web/src/main/java/com/cloudera/cmf/service/yarn/YarnConfigFileDefinitions.java"
 
@@ -39,7 +42,7 @@ function cmhack() {
 	    echo "***Compiling: $FILE"
 
 	    #web/src/main/java/ --> This must be added as newly compiled java files only available here as a class
-	    javac -encoding utf8 -cp "./hacklib/*:web/src/main/java/" $FILE
+	    javac -encoding utf8 -cp "./hacklib/*:web/src/main/java/:libs/common/src/main/java:./libs/common" $FILE
 	    if [ $? -gt 0 ]; then 
 	    	echo "ERROR"
 	    	return 1
@@ -66,7 +69,15 @@ function cmhack() {
 	#Rsync to cluster - Assuming using the almighty ycloud :) 
 	#If sshpass is not available on Mac:
 	#HOMEBREW_NO_AUTO_UPDATE=1 brew install https://raw.githubusercontent.com/kadwanev/bigboybrew/master/Library/Formula/sshpass.rb
+	echo "Syncing hack to $CLUSTER and restarting CM.."
 	sshpass -p "password" rsync ./$JAR_NAME root@$CLUSTER:/opt/cloudera/cm/lib/
 
 	sshpass -p "password" ssh root@$CLUSTER "echo \"Restarting cmf server\" && sudo service cloudera-scm-server restart"
+}
+
+function cmhack2() {
+	#Save script from cluster
+	#sshpass -p "password" scp root@$CLUSTER:/opt/cloudera/cm-agent/service/zookeeper/zk2.sh .
+	#cp zk2.sh agents/cmf/service/zookeeper/zk2.sh
+	sshpass -p "password" rsync ./agents/cmf/service/zookeeper/zk2.sh root@$CLUSTER:/opt/cloudera/cm-agent/service/zookeeper/zk2.sh
 }
