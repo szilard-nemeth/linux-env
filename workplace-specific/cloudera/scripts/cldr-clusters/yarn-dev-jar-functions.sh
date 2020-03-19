@@ -2,11 +2,27 @@
 #LOOK_FOR="codehaus/xfire/spring"
 
 function find_names_in_jars() {
-    PATH="$1"
+    dir="$1"
     JAR_FILE="$2"
     LOOK_FOR="$3"
     
-    for i in `find . -name "*$JAR_FILE*jar"`
+    for i in `find $dir -name "*$JAR_FILE*jar"`
+    do
+      echo "Looking in $i ..."
+      jar tvf $i | grep ${LOOK_FOR} > /dev/null
+      if [[ $? == 0 ]]
+      then
+        echo "==> Found \"$LOOK_FOR\" in $i"
+      fi
+    done
+}
+
+
+function find_names_in_all_jars() {
+    dir="$1"
+    LOOK_FOR="$2"
+    
+    for i in `find $dir -name "*jar"`
     do
       echo "Looking in $i ..."
       jar tvf $i | grep ${LOOK_FOR} > /dev/null
