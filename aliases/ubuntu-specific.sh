@@ -6,11 +6,7 @@ if [[ ! ${platform} == 'linux' ]]; then
     return 1
 fi
 
-function unmount-poweroff() {
-#    sudo umount $1 && udisksctl power-off -b $1
-     sudo udisksctl unmount -b $1 && sudo udisksctl power-off -b $1
-}
-
+alias intellij-keyboard-fix="ibus-daemon -rd"
 alias suspend='sudo pm-suspend'
 alias restart-network="sudo service network-manager restart"
 alias konsoleb="konsole --background-mode&"
