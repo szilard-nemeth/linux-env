@@ -3,8 +3,12 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #cd $DIR
 
+KB_REPO="$HOME/development/my-repos/knowledge-base/"
+KB_PRIVATE_REPO="$HOME/development/my-repos/knowledge-base-private/"
+
 #TODO create alias: resync all changes from linuxenv repo (copies all files)
 #TODO check all .sh under /aliases: Functions should be moved to /scripts
+
 
 ## LINUX-ENV ALIASES
 alias goto-linuxenv-repo="cd $LINUX_ENV_REPO"

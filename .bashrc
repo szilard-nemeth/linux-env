@@ -288,11 +288,8 @@ echo -ne "${LIGHTPURPLE}Sysinfo:";uptime ;echo ""
 #################################################################################
 
 LINUX_ENV_REPO=$HOME/development/my-repos/linux-env/
-KB_REPO=$HOME/development/my-repos/knowledge-base/
-KB_PRIVATE_REPO=$HOME/development/my-repos/knowledge-base-private/
 export LINUX_ENV_REPO
-export KB_REPO
-export KB_PRIVATE_REPO
+
 #source setup env from linux-env repository (copying all env files)
 . ${LINUX_ENV_REPO}/setup-env.sh
 
