@@ -176,6 +176,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
     COPY_LIST+=("$DIR/.npmrc $HOME/.npmrc")
     
+    #Can't use is-platform-macos alias here as it's not yet loaded
     if [[ ! ${platform} == 'macOS' ]]; then
         COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
     else

@@ -9,3 +9,15 @@ function ensure-command-available() {
         return 1
     fi
 }
+
+function is-platform-macos() {
+    if [[ ${platform} == 'macOS' ]]; then
+        return 0
+    fi
+}
+
+function is-platform-linux() {
+    if [[ ${platform} == 'linux' ]]; then
+        return 0
+    fi
+}
