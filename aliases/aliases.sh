@@ -8,6 +8,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 ## LINUX-ENV ALIASES
 alias goto-linuxenv-repo="cd $LINUX_ENV_REPO"
+alias goto-kb-repo="cd $KB_REPO"
+alias goto-kb-private-repo="cd $KB_PRIVATE_REPO"
 alias linux-env-reload="$LINUX_ENV_REPO/setup-env.sh"
 alias linux-env-todos="grep '#TODO' -r $LINUX_ENV_REPO"
 

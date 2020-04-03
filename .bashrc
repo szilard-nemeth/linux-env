@@ -288,7 +288,11 @@ echo -ne "${LIGHTPURPLE}Sysinfo:";uptime ;echo ""
 #################################################################################
 
 LINUX_ENV_REPO=$HOME/development/my-repos/linux-env/
+KB_REPO=$HOME/development/my-repos/knowledge-base/
+KB_PRIVATE_REPO=$HOME/development/my-repos/knowledge-base-private/
 export LINUX_ENV_REPO
+export KB_REPO
+export KB_PRIVATE_REPO
 #source setup env from linux-env repository (copying all env files)
 . $LINUX_ENV_REPO/setup-env.sh
 
@@ -297,6 +301,10 @@ CLOUDERA_DIR="$HOME_LINUXENV_DIR/workplace-specific/cloudera/"
 
 export HOME_LINUXENV_DIR
 export CLOUDERA_DIR
+
+#CM build specific
+export TARGETROOT=
+export MVN_NO_DOCKER=1
 
 #START OF NPM CONF
 export NODE_PATH='/usr/local/lib/node_modules'

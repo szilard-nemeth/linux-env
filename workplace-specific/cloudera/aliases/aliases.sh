@@ -59,3 +59,4 @@ alias grind-yarn-exceptions="grind --verbose test --java-version 8 \
 alias run-findbugs="mvn clean install -DskipTests && mvn findbugs:findbugs && mvn findbugs:gui"
 
 alias mvn-hadoop-patch="mvn -Ptest-patch clean site site:stage"
+alias cluster-roulette="$HOME/Downloads/scripts/cluster-roulette.sh"
