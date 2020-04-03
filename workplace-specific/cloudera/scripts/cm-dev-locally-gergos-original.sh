@@ -29,7 +29,7 @@ function cmhack() {
 	    #web/src/main/java/ --> This must be added as newly compiled java files only available here as a class
 	    javac -encoding utf8 -cp "./hacklib/*:web/src/main/java/" ${FILE}
 	    if [ $? -gt 0 ]; then
-	    	"ERROR!!!"
+	    	echo "ERROR!!!"
 	    fi
 	done
 

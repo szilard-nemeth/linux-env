@@ -12,13 +12,19 @@ KB_PRIVATE_REPO="$HOME/development/my-repos/knowledge-base-private/"
 alias linux-env-reload="$LINUX_ENV_REPO/setup-env.sh"
 alias linux-env-todos="grep '#TODO' -r $LINUX_ENV_REPO"
 
+
 ## GOTO ALIASES
 alias goto-linuxenv-repo="cd $LINUX_ENV_REPO"
 alias goto-kb-repo="cd $KB_REPO"
 alias goto-kb-private-repo="cd $KB_PRIVATE_REPO"
 
+
 ## GIT ALIASES
 alias git-commits-above-master="git log --oneline HEAD ^master | wc -l"
+alias git-mybranches="git branch | grep 'own-'"
+alias git-commit-msg="git log -n 1 --pretty=format:%s"
+alias git-remove-trailing-ws="git diff-tree --no-commit-id --name-only -r HEAD | xargs sed -i 's/[[:space:]]*$//'"
+
 
 ## OTHER ALIASES
 alias rm='safe-rm'
