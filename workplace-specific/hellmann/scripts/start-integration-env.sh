@@ -3,7 +3,7 @@
 set -e
 
 DIR="$(dirname $0)"
-cd $DIR
+cd ${DIR}
 
 export BUILD_UUID=dev
 export DEV_ENV=1

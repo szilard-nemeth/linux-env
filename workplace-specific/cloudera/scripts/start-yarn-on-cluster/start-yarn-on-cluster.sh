@@ -11,4 +11,4 @@ mvn clean package -Pdist -DskipTests -Dmaven.javadoc.skip=true && scp hadoop-dis
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 echo "Running start-yarn-on-cluster-remote.sh on $CLOUDERA_HOSTNAME..."
-ssh systest@$CLOUDERA_HOSTNAME MY_HADOOP_VERSION="$MY_HADOOP_VERSION" 'bash -s' < "$DIR/start-yarn-on-cluster-remote.sh"
+ssh systest@${CLOUDERA_HOSTNAME} MY_HADOOP_VERSION="$MY_HADOOP_VERSION" 'bash -s' < "$DIR/start-yarn-on-cluster-remote.sh"

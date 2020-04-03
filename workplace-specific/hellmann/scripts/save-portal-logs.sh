@@ -10,11 +10,11 @@ function save_logs_cell_a {
     CELL_DIR="cell-a"
 
     for machine in ${MACHINES[@]}; do
-        mkdir -p $BASE_DIR/$CELL_DIR/${machine}/;
+        mkdir -p ${BASE_DIR}/${CELL_DIR}/${machine}/;
 
         for pattern in "${patterns_array[@]}"
         do
-            scp root@$machine.hellmann.net:${MACHINES_PATHS_CELL_A[$machine]}/$pattern $BASE_DIR/$CELL_DIR/$machine/;
+            scp root@${machine}.hellmann.net:${MACHINES_PATHS_CELL_A[$machine]}/${pattern} ${BASE_DIR}/${CELL_DIR}/${machine}/;
         done
     done
 }
@@ -23,11 +23,11 @@ function save_logs_cell_b {
     CELL_DIR="cell-b"
 
     for machine in ${MACHINES[@]}; do
-        mkdir -p $BASE_DIR/$CELL_DIR/${machine}/;
+        mkdir -p ${BASE_DIR}/${CELL_DIR}/${machine}/;
 
         for pattern in "${patterns_array[@]}"
         do
-            scp root@$machine.hellmann.net:${MACHINES_PATHS_CELL_B[$machine]}/$pattern $BASE_DIR/$CELL_DIR/$machine/;
+            scp root@${machine}.hellmann.net:${MACHINES_PATHS_CELL_B[$machine]}/${pattern} ${BASE_DIR}/${CELL_DIR}/${machine}/;
         done
     done
 }
@@ -50,7 +50,7 @@ fi
 while [[ $# > 1 ]]
 do
 key="$1"
-case $key in
+case ${key} in
     --cell)
     CELL="${2}"
     shift
@@ -98,18 +98,18 @@ MACHINES=(emea-prtl-a02p emea-prtl-a03p emea-prtl-a04p emea-prtl-a05p)
 
 declare -A MACHINES_PATHS_CELL_A;
 CELL_A_LOGS_DIR=/opt/IBM/WebSphere/wp_profile/logs/
-MACHINES_PATHS_CELL_A[emea-prtl-a02p]=$CELL_A_LOGS_DIR/HPS-PORTAL-A/
-MACHINES_PATHS_CELL_A[emea-prtl-a03p]=$CELL_A_LOGS_DIR/HPS-PORTAL-B/
-MACHINES_PATHS_CELL_A[emea-prtl-a04p]=$CELL_A_LOGS_DIR/HPS-PORTAL-C/
-MACHINES_PATHS_CELL_A[emea-prtl-a05p]=$CELL_A_LOGS_DIR/HPS-PORTAL-D/
+MACHINES_PATHS_CELL_A[emea-prtl-a02p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-A/
+MACHINES_PATHS_CELL_A[emea-prtl-a03p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-B/
+MACHINES_PATHS_CELL_A[emea-prtl-a04p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-C/
+MACHINES_PATHS_CELL_A[emea-prtl-a05p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-D/
 
 
 declare -A MACHINES_PATHS_CELL_B;
 CELL_B_LOGS_DIR=/opt/IBM/WebSphere_clusterB/wp_profile/logs/
-MACHINES_PATHS_CELL_B[emea-prtl-a02p]=$CELL_B_LOGS_DIR/HPS-PORTAL-D/
-MACHINES_PATHS_CELL_B[emea-prtl-a03p]=$CELL_B_LOGS_DIR/HPS-PORTAL-C/
-MACHINES_PATHS_CELL_B[emea-prtl-a04p]=$CELL_B_LOGS_DIR/HPS-PORTAL-B/
-MACHINES_PATHS_CELL_B[emea-prtl-a05p]=$CELL_B_LOGS_DIR/HPS-PORTAL-A/
+MACHINES_PATHS_CELL_B[emea-prtl-a02p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-D/
+MACHINES_PATHS_CELL_B[emea-prtl-a03p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-C/
+MACHINES_PATHS_CELL_B[emea-prtl-a04p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-B/
+MACHINES_PATHS_CELL_B[emea-prtl-a05p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-A/
 
 if [ "${CELL}" == "a" ]; then
     save_logs_cell_a

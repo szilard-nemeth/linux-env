@@ -6,10 +6,10 @@ function find_names_in_jars() {
     JAR_FILE="$2"
     LOOK_FOR="$3"
     
-    for i in `find $dir -name "*$JAR_FILE*jar"`
+    for i in `find ${dir} -name "*$JAR_FILE*jar"`
     do
       echo "Looking in $i ..."
-      jar tvf $i | grep ${LOOK_FOR} > /dev/null
+      jar tvf ${i} | grep ${LOOK_FOR} > /dev/null
       if [[ $? == 0 ]]
       then
         echo "==> Found \"$LOOK_FOR\" in $i"
@@ -22,10 +22,10 @@ function find_names_in_all_jars() {
     dir="$1"
     LOOK_FOR="$2"
     
-    for i in `find $dir -name "*jar"`
+    for i in `find ${dir} -name "*jar"`
     do
       echo "Looking in $i ..."
-      jar tvf $i | grep ${LOOK_FOR} > /dev/null
+      jar tvf ${i} | grep ${LOOK_FOR} > /dev/null
       if [[ $? == 0 ]]
       then
         echo "==> Found \"$LOOK_FOR\" in $i"
@@ -45,7 +45,7 @@ function grep_in_code() {
     FIND_RESULTS=$(find /opt/hadoop/share/hadoop/yarn/ -iname 'hadoop-yarn-server*nodemanager*' ! -iname "*test*.jar" ! -iname "*sources*jar")
     echo ${FIND_RESULTS} | grep -E '[ "]' > /dev/null && echo "Find has 2 or more result lines: $FIND_RESULTS" && exit 1
     JAR="$FIND_RESULTS"
-    CLASSNAME=$(jar tf $JAR | grep 'org.apache.hadoop.yarn.server.nodemanager.NodeManager.class')
+    CLASSNAME=$(jar tf ${JAR} | grep 'org.apache.hadoop.yarn.server.nodemanager.NodeManager.class')
     
     cd /tmp
     jar xf ${JAR} ${CLASSNAME}
@@ -58,7 +58,7 @@ function grep_in_code_from_given_jar() {
     
      JAR="/opt/hadoop/share/hadoop/yarn/hadoop-yarn-server-nodemanager-3.3.0-SNAPSHOT.jar"
 #    JAR="/opt/hadoop/share/hadoop/yarn/hadoop-yarn-server-nodemanager-3.0.0-cdh6.x-SNAPSHOT.jar"
-    CLASSNAME=$(jar tf $JAR | grep 'org.apache.hadoop.yarn.server.nodemanager.NodeManager.class')
+    CLASSNAME=$(jar tf ${JAR} | grep 'org.apache.hadoop.yarn.server.nodemanager.NodeManager.class')
     
     cd /tmp
     jar xf ${JAR} ${CLASSNAME}

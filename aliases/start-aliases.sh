@@ -6,7 +6,7 @@ SQUIRREL_PATH=/usr/local/squirrel/squirrel-sql.sh
 start-app-silent() {
     APP_NAME=$1
     ##TODO store logs to file!
-    nohup $APP_NAME& > /dev/null 2>&1
+    nohup ${APP_NAME}& > /dev/null 2>&1
 }
 
 #TODO check every app existence and add aliases if executable exists

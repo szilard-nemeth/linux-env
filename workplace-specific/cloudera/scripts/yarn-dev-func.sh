@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 function setup() {
-    export UPSTREAM_HADOOP_DIR=$HADOOP_DEV_DIR
-    export DOWNSTREAM_HADOOP_DIR=$CLOUDERA_HADOOP_ROOT
+    export UPSTREAM_HADOOP_DIR=${HADOOP_DEV_DIR}
+    export DOWNSTREAM_HADOOP_DIR=${CLOUDERA_HADOOP_ROOT}
     export TASKS_DIR="$HOME/yarn-tasks/"
 }
 
@@ -37,33 +37,33 @@ function yarn-save-patch() {
     
     #make directory in yarn-tasks if not yet exists
     if [ ! -d "$BRANCH_NAME" ]; then
-        mkdir -p $PATCH_BASEDIR/$BRANCH_NAME
+        mkdir -p ${PATCH_BASEDIR}/${BRANCH_NAME}
     fi
     
     #find latest patch number from existing patches
     #TODO use -name option of find
-    find $PATCH_BASEDIR/$BRANCH_NAME -type f -print | grep "$BRANCH_NAME\.\d*.patch\$"
+    find ${PATCH_BASEDIR}/${BRANCH_NAME} -type f -print | grep "$BRANCH_NAME\.\d*.patch\$"
     
     #TODO this one also works: bla=$((001 + 1))
     if [ $? -ne 0 ]; then
         PATCH_NO_STR="001"
     else
-        LAST_PATCH_STR=$(basename $(find $PATCH_BASEDIR/$BRANCH_NAME -type f -print | grep "$BRANCH_NAME\.\d*.patch\$" | sort -r | head -n 1) | cut -d '.' -f 2)
+        LAST_PATCH_STR=$(basename $(find ${PATCH_BASEDIR}/${BRANCH_NAME} -type f -print | grep "$BRANCH_NAME\.\d*.patch\$" | sort -r | head -n 1) | cut -d '.' -f 2)
         #remove leading zeros
-        LAST_PATCH_NO=$(echo $LAST_PATCH_STR | sed 's/^0*//')
-        PATCH_NO_STR=$(seq -f '%03g' $LAST_PATCH_NO $(($LAST_PATCH_NO + 1)) | tail -n 1)
+        LAST_PATCH_NO=$(echo ${LAST_PATCH_STR} | sed 's/^0*//')
+        PATCH_NO_STR=$(seq -f '%03g' ${LAST_PATCH_NO} $(($LAST_PATCH_NO + 1)) | tail -n 1)
     fi
     
     PATCH_FILE="$PATCH_BASEDIR/$BRANCH_NAME/$BRANCH_NAME.$PATCH_NO_STR.patch"
-    git diff trunk > $PATCH_FILE
+    git diff trunk > ${PATCH_FILE}
     #TODO replacing all spaces in patch file caused issues when patch applied
     #sed -i 's/^\([+-].*\)[ \t]*$/\1/' $PATCH_FILE
-    PATCH_FILE_DU_RESULT=$(du -h $PATCH_FILE)
+    PATCH_FILE_DU_RESULT=$(du -h ${PATCH_FILE})
     echo "Created patch file: $PATCH_FILE_DU_RESULT"
     
     ##Sanity check: try to apply patch
     git checkout trunk
-    git apply $PATCH_FILE --check
+    git apply ${PATCH_FILE} --check
     git checkout -
     if [ $? -ne 0 ]; then
         echo "ERROR: Patch does not apply to trunk!"
@@ -87,21 +87,21 @@ function yarn-create-review-branch() {
         echo "Please specify a valid patch file!"
         return 1
     fi
-    if [ ! -f $PATCH_FILE ]; then
+    if [ ! -f ${PATCH_FILE} ]; then
         echo "File not found: $1, Please specify a valid patch file!"
         return 2
     fi
     FILE_NAME_REGEX=".*YARN-[0-9]+.*\.patch"
     
     #try to match patch file to pattern and store branch name
-    if [[ ! $PATCH_FILE =~ $FILE_NAME_REGEX ]]; then
+    if [[ ! ${PATCH_FILE} =~ $FILE_NAME_REGEX ]]; then
         echo "Filename does not match usual patch file pattern: '$FILE_NAME_REGEX', exiting...!"
         return 3
     fi
-    BRANCH="review-$(echo $PATCH_FILE | sed -E "s/.*(YARN-[[:digit:]]+).*/\1/g")"
+    BRANCH="review-$(echo ${PATCH_FILE} | sed -E "s/.*(YARN-[[:digit:]]+).*/\1/g")"
     
     #pull new changes
-    cd $UPSTREAM_HADOOP_DIR
+    cd ${UPSTREAM_HADOOP_DIR}
     
     GIT_STATUS_OUT="$(git status --porcelain)"
     if [ ! -z "$GIT_STATUS_OUT" ]; then
@@ -119,10 +119,10 @@ function yarn-create-review-branch() {
     fi
     
     #try to apply PATCH_FILE to trunk
-    git apply $PATCH_FILE --check
+    git apply ${PATCH_FILE} --check
     if [ $? -ne 0 ]; then
         echo "ERROR: Patch does not apply to trunk, please resolve the conflicts and run: git commit -am \"patch file: $PATCH_FILE\""
-        git checkout $ORIG_BRANCH
+        git checkout ${ORIG_BRANCH}
         return 3
     else
         echo "Patch $PATCH_FILE applies cleanly to trunk"
@@ -138,7 +138,7 @@ function yarn-create-review-branch() {
             git checkout -b "$BRANCH" trunk
             
         fi
-        git apply $PATCH_FILE
+        git apply ${PATCH_FILE}
         git add -A
         git commit -m "patch file: $PATCH_FILE"
     fi
@@ -157,7 +157,7 @@ function yarn-backport-c6() {
     UPSTREAM_PATCH_NO=$3
     
     ##fetch, pull, store commit hash of upstream commit
-    cd $UPSTREAM_HADOOP_DIR
+    cd ${UPSTREAM_HADOOP_DIR}
     ORIG_BRANCH=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
     git fetch --all && git checkout trunk && git pull
     
@@ -178,11 +178,11 @@ function yarn-backport-c6() {
     
     
     ###do the rest of the work in the cloudera repo
-    cd $DOWNSTREAM_HADOOP_DIR
+    cd ${DOWNSTREAM_HADOOP_DIR}
     git fetch --all
     #TODO handle if branch already exist (is it okay to silently ignore?) or should use current branch with switch?
-    git checkout -b "$CDH_JIRA_NO-$CDH_BRANCH" cauldron/$CDH_BRANCH
-    git cherry-pick -x $UPSTREAM_COMMIT_HASH
+    git checkout -b "$CDH_JIRA_NO-$CDH_BRANCH" cauldron/${CDH_BRANCH}
+    git cherry-pick -x ${UPSTREAM_COMMIT_HASH}
     
     #TODO add resume functionality so that commit message rewrite can happen
     if [ $? -ne 0 ]; then
@@ -253,10 +253,10 @@ function build-upload-yarn-to-cluster() {
     
     HOST_TO_UPLOAD=$1
     
-    cd $UPSTREAM_HADOOP_DIR
+    cd ${UPSTREAM_HADOOP_DIR}
     
     MVN_VER=$(echo '${project.version}' | mvn help:evaluate 2> /dev/null | grep -v '^[[]')
-    mvn clean package -Pdist -DskipTests -Dmaven.javadoc.skip=true && scp hadoop-dist/target/hadoop-$MVN_VER.tar.gz systest@$HOST_TO_UPLOAD:~
+    mvn clean package -Pdist -DskipTests -Dmaven.javadoc.skip=true && scp hadoop-dist/target/hadoop-${MVN_VER}.tar.gz systest@${HOST_TO_UPLOAD}:~
 
 }
 
@@ -438,10 +438,10 @@ function yarn-diff-patches() {
         no_of_commits=$(git log ${br} --oneline | grep ${YARN_ID} | wc -l | tr -s ' ')
         
         
-        if [[ $no_of_commits -eq 0 ]]; then
+        if [[ ${no_of_commits} -eq 0 ]]; then
             echo "Specified branch $br does not contain commit for $YARN_ID"
             return 1
-        elif [[ $no_of_commits -ne 1 ]]; then
+        elif [[ ${no_of_commits} -ne 1 ]]; then
             echo "Specified branch $br has multiple commits for $YARN_ID"
             return 1
         fi

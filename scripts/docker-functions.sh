@@ -2,7 +2,7 @@
 
 function docker-execbash() {
     containerid=`docker ps | grep $1 | cut -d ' ' -f 1`
-    docker exec -it $containerid bash
+    docker exec -it ${containerid} bash
 }
 
 cleanup_docker_images() {

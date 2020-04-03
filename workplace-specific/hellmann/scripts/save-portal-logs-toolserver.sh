@@ -11,11 +11,11 @@ function save_logs_cell_a {
 
     for machine in ${MACHINES[@]}; do
         BASENAME=`basename ${MACHINES_PATHS_CELL_A[$machine]}`
-        mkdir -p $BASE_DIR/$CELL_DIR/${machine}/$BASENAME/;
+        mkdir -p ${BASE_DIR}/${CELL_DIR}/${machine}/${BASENAME}/;
 
         for pattern in "${patterns_array[@]}"
         do
-            scp develop@emea-hps-a02d.hellmann.net:${MACHINES_PATHS_CELL_A[$machine]}/$pattern $BASE_DIR/$CELL_DIR/$machine/$BASENAME/;
+            scp develop@emea-hps-a02d.hellmann.net:${MACHINES_PATHS_CELL_A[$machine]}/${pattern} ${BASE_DIR}/${CELL_DIR}/${machine}/${BASENAME}/;
         done
     done
 }
@@ -25,11 +25,11 @@ function save_logs_cell_b {
 
     for machine in ${MACHINES[@]}; do
         BASENAME=`basename ${MACHINES_PATHS_CELL_B[$machine]}`
-        mkdir -p $BASE_DIR/$CELL_DIR/${machine}/$BASENAME/;
+        mkdir -p ${BASE_DIR}/${CELL_DIR}/${machine}/${BASENAME}/;
 
         for pattern in "${patterns_array[@]}"
         do
-            scp develop@emea-hps-a02d.hellmann.net:${MACHINES_PATHS_CELL_B[$machine]}/$pattern $BASE_DIR/$CELL_DIR/$machine/$BASENAME/;
+            scp develop@emea-hps-a02d.hellmann.net:${MACHINES_PATHS_CELL_B[$machine]}/${pattern} ${BASE_DIR}/${CELL_DIR}/${machine}/${BASENAME}/;
         done
     done
 }
@@ -52,7 +52,7 @@ fi
 while [[ $# > 1 ]]
 do
 key="$1"
-case $key in
+case ${key} in
     --cell)
     CELL="${2}"
     shift
@@ -100,18 +100,18 @@ MACHINES=(emea-hps-a02d-a emea-hps-a02d-b emea-hps-a02d-c emea-hps-a02d-d)
 
 declare -A MACHINES_PATHS_CELL_A;
 CELL_A_LOGS_DIR=/toolserver/logs/WPS7/LiveA
-MACHINES_PATHS_CELL_A[emea-hps-a02d-a]=$CELL_A_LOGS_DIR/HPS-PORTAL-A/HPS-PORTAL-A
-MACHINES_PATHS_CELL_A[emea-hps-a02d-b]=$CELL_A_LOGS_DIR/HPS-PORTAL-B/HPS-PORTAL-B
-MACHINES_PATHS_CELL_A[emea-hps-a02d-c]=$CELL_A_LOGS_DIR/HPS-PORTAL-C/HPS-PORTAL-C
-MACHINES_PATHS_CELL_A[emea-hps-a02d-d]=$CELL_A_LOGS_DIR/HPS-PORTAL-D/HPS-PORTAL-D
+MACHINES_PATHS_CELL_A[emea-hps-a02d-a]=${CELL_A_LOGS_DIR}/HPS-PORTAL-A/HPS-PORTAL-A
+MACHINES_PATHS_CELL_A[emea-hps-a02d-b]=${CELL_A_LOGS_DIR}/HPS-PORTAL-B/HPS-PORTAL-B
+MACHINES_PATHS_CELL_A[emea-hps-a02d-c]=${CELL_A_LOGS_DIR}/HPS-PORTAL-C/HPS-PORTAL-C
+MACHINES_PATHS_CELL_A[emea-hps-a02d-d]=${CELL_A_LOGS_DIR}/HPS-PORTAL-D/HPS-PORTAL-D
 
 
 declare -A MACHINES_PATHS_CELL_B;
 CELL_B_LOGS_DIR=/toolserver/logs/WPS7/LiveB
-MACHINES_PATHS_CELL_B[emea-hps-a02d-a]=$CELL_B_LOGS_DIR/HPS-PORTAL-A/HPS-PORTAL-A
-MACHINES_PATHS_CELL_B[emea-hps-a02d-b]=$CELL_B_LOGS_DIR/HPS-PORTAL-B/HPS-PORTAL-B
-MACHINES_PATHS_CELL_B[emea-hps-a02d-c]=$CELL_B_LOGS_DIR/HPS-PORTAL-C/HPS-PORTAL-C
-MACHINES_PATHS_CELL_B[emea-hps-a02d-d]=$CELL_B_LOGS_DIR/HPS-PORTAL-D/HPS-PORTAL-D
+MACHINES_PATHS_CELL_B[emea-hps-a02d-a]=${CELL_B_LOGS_DIR}/HPS-PORTAL-A/HPS-PORTAL-A
+MACHINES_PATHS_CELL_B[emea-hps-a02d-b]=${CELL_B_LOGS_DIR}/HPS-PORTAL-B/HPS-PORTAL-B
+MACHINES_PATHS_CELL_B[emea-hps-a02d-c]=${CELL_B_LOGS_DIR}/HPS-PORTAL-C/HPS-PORTAL-C
+MACHINES_PATHS_CELL_B[emea-hps-a02d-d]=${CELL_B_LOGS_DIR}/HPS-PORTAL-D/HPS-PORTAL-D
 
 if [ "${CELL}" == "a" ]; then
     save_logs_cell_a

@@ -5,8 +5,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 mkdir -p $HOME/.env
 ENV_FILE_MAPPINGS=$HOME/.env/.file-mappings
-rm $ENV_FILE_MAPPINGS
-touch $ENV_FILE_MAPPINGS
+rm ${ENV_FILE_MAPPINGS}
+touch ${ENV_FILE_MAPPINGS}
 
 HOME_LINUXENV_DIR="$HOME/.linuxenv/"
 WORKPLACE_SPECIFIC_DIR="$HOME_LINUXENV_DIR/workplace-specific/"
@@ -23,25 +23,25 @@ function copy_files() {
     fi
 
     i="0"
-    while [ $i -lt ${#copy_list[@]} ]; do
+    while [ ${i} -lt ${#copy_list[@]} ]; do
         from="${copy_list[$i]}"
         to="${copy_list[$i+1]}"
 
         if [[ -d "${from}" ]]; then
-            mkdir -p $to
+            mkdir -p ${to}
         elif [[ -f "${from}" ]]; then
             mkdir -p $(dirname ${to})
         fi
 
         if [[ "$from" == *. ]]; then
             echo "Copying files from $from to $to (recursive)"
-            yes | cp -aR $from $to
-            from_stripped=$(echo $from | sed 's/.$//')
-            echo "$from_stripped $to" >> $ENV_FILE_MAPPINGS
+            yes | cp -aR ${from} ${to}
+            from_stripped=$(echo ${from} | sed 's/.$//')
+            echo "$from_stripped $to" >> ${ENV_FILE_MAPPINGS}
         else
             echo "Copying file from $from to $to"
-            cp $from $to
-            echo "$from $to" >> $ENV_FILE_MAPPINGS
+            cp ${from} ${to}
+            echo "$from $to" >> ${ENV_FILE_MAPPINGS}
         fi
 
         i=$[$i+2]
@@ -53,7 +53,7 @@ function source_scripts() {
 
     echo Sourcing files from ${source_from};
     for f in ${source_from}/*.sh; do
-        echo Sourcing file $f
+        echo Sourcing file ${f}
         . "$f"
     done
     echo Done sourcing files from ${source_from};
@@ -64,10 +64,10 @@ function source_files() {
     local from_dir="$WORKPLACE_SPECIFIC_DIR"
 
     echo "Searching for $marker_file_name files and sourcing them..."
-    set_matched_dirs $WORKPLACE_SPECIFIC_DIR $marker_file_name
-    for d in $matched_dirs; do
+    set_matched_dirs ${WORKPLACE_SPECIFIC_DIR} ${marker_file_name}
+    for d in ${matched_dirs}; do
         printf "\tSourcing files from $d\n"
-        for f in $(find $d -maxdepth 1 -iname  "*.sh"); do
+        for f in $(find ${d} -maxdepth 1 -iname  "*.sh"); do
             printf "\tSourcing file $f\n"
             . "$f"
         done
@@ -80,10 +80,10 @@ function add_to_path() {
     from_dir="$WORKPLACE_SPECIFIC_DIR"
 
     echo "Searching for $marker_file_name files and adding them to PATH..."
-    set_matched_dirs $from_dir $marker_file_name
-    for d in $matched_dirs; do
+    set_matched_dirs ${from_dir} ${marker_file_name}
+    for d in ${matched_dirs}; do
         printf "\tAdding files from directory $d to PATH...\n"
-        PATH=$PATH:$d
+        PATH=$PATH:${d}
     done
     echo "Done sourcing $marker_file_name files from $from_dir"
 }
@@ -98,7 +98,7 @@ function set_matched_dirs() {
     ## matched_dirs=$(find $from_dir -name $marker_file_name -printf "%h\n")
 
     #compatible with MacOS / FreeBSD
-    matched_dirs=$(find $from_dir -name $marker_file_name -print0 | xargs -0 -n1 dirname | sort --unique)
+    matched_dirs=$(find ${from_dir} -name ${marker_file_name} -print0 | xargs -0 -n1 dirname | sort --unique)
 }
 
 function initial_setup_macos() {
@@ -146,7 +146,7 @@ function determine_platform() {
     elif [[ "$unamestr" == 'Darwin' ]]; then
        platform='macOS'
     fi
-    echo $platform
+    echo ${platform}
 }
 
 function copy_files_from_linuxenv_repo_to_home() {
@@ -159,7 +159,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
     COPY_LIST+=("$DIR/.npmrc $HOME/.npmrc")
     
-    if [[ ! $platform == 'macOS' ]]; then
+    if [[ ! ${platform} == 'macOS' ]]; then
         COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
     else
         echo "$INFO_PREFIX Skip copying i3 files as platform is $platform"
@@ -170,8 +170,8 @@ function copy_files_from_linuxenv_repo_to_home() {
     set +e
     
     #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
-    source_scripts $HOME_LINUXENV_DIR/aliases
-    source_scripts $HOME_LINUXENV_DIR/scripts
+    source_scripts ${HOME_LINUXENV_DIR}/aliases
+    source_scripts ${HOME_LINUXENV_DIR}/scripts
     source_files ".source-this"
     add_to_path ".add-to-path"
 }

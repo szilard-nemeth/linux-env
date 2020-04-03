@@ -2,7 +2,7 @@
 
 DFS_DATA_DIR=/private/tmp/hadoop-szilardnemeth/dfs/data
 if [ -d "$DFS_DATA_DIR" ]; then
-  rm -rf $DFS_DATA_DIR;
+  rm -rf ${DFS_DATA_DIR};
 fi
 
 hdfs namenode -format

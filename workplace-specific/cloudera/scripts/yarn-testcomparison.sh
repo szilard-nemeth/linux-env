@@ -88,10 +88,10 @@ function exec-junit-tests() {
     
     MVN_BUILD_OUTPUT_FILE="$BASE_DIR/mvn-build-$TEST_RESULT_FILE_PREFIX.out"
     echo "Printing git diff to file $MVN_BUILD_OUTPUT_FILE before compiling test code"
-    git diff > $MVN_BUILD_OUTPUT_FILE
-    mvn clean package -DskipTests >> $MVN_BUILD_OUTPUT_FILE
+    git diff > ${MVN_BUILD_OUTPUT_FILE}
+    mvn clean package -DskipTests >> ${MVN_BUILD_OUTPUT_FILE}
     
-    TESTCASES=($(grep '@Test' -A2 $TEST_FILE_PATH | grep 'test.*' | sed -r -n -e 's/.*(test[a-zA-Z0-9_]+)\(.*/\1/p'))
+    TESTCASES=($(grep '@Test' -A2 ${TEST_FILE_PATH} | grep 'test.*' | sed -r -n -e 's/.*(test[a-zA-Z0-9_]+)\(.*/\1/p'))
     echo "Discovered testcases in $TEST_CLASS:"
     printf '%s\n' "${TESTCASES[@]}"
     SUREFIRE_TC_PARAMS=("FairSharePreemptionWithDRF" "MinSharePreemptionWithDRF") #TODO make junit parameters a bash function parameter
@@ -100,7 +100,7 @@ function exec-junit-tests() {
     TC_COUNTER=0
     for TC_NAME in "${TESTCASES[@]}"; do 
         for SF_PARAM in "${SUREFIRE_TC_PARAMS[@]}"; do
-            TC_COUNTER=$(expr $TC_COUNTER + 1)
+            TC_COUNTER=$(expr ${TC_COUNTER} + 1)
             #cleanup original surefire reports directory
             rm "$SUREFIRE_REPORTS_DIR"/* || true
             
@@ -113,7 +113,7 @@ function exec-junit-tests() {
             echo "$TC_COUNTER. Running testcase: $TC_FULL_NAME"
             MVN_CMD="mvn test -Dtest=$TC_FULL_NAME -DfailIfNoTests"
             echo "$TC_COUNTER. $MVN_CMD > $TC_SUREFIRE_RESULTS_DIR/$TEST_RESULT_FILE_PREFIX-mvn-test.out 2>&1" 
-            ${MVN_CMD} > $TC_SUREFIRE_RESULTS_DIR/$TEST_RESULT_FILE_PREFIX-mvn-test.out 2>&1
+            ${MVN_CMD} > ${TC_SUREFIRE_RESULTS_DIR}/${TEST_RESULT_FILE_PREFIX}-mvn-test.out 2>&1
             if [ $? -ne 0 ]; then
                 echo "TEST $TC_FULL_NAME FAILED!"
                 touch "$TC_SUREFIRE_RESULTS_DIR/$TEST_RESULT_FILE_PREFIX-failed"
@@ -129,7 +129,7 @@ function exec-junit-tests() {
 function print-junit-report() {
     local BASE_DIR=$1
     OLDIFS="$IFS"
-    local FAILED_TESTS=($(find $BASE_DIR -iname '*failed' | sed "s|$BASE_DIR/||g" | sed 's/^\s+//'))
+    local FAILED_TESTS=($(find ${BASE_DIR} -iname '*failed' | sed "s|$BASE_DIR/||g" | sed 's/^\s+//'))
     echo -e "[TEST_REPORT] ------------------------------------------------------------------------"
 #    set -x
 #for i in "${PARTS[@]}"; do printf '%s ' "$i"; done
@@ -158,7 +158,7 @@ function grep-in-test-logs() {
     local BASE_DIR=$1
     OLDIFS="$IFS"
     #only print path names and not the filenames
-    local FAILED_TESTS=($(find $BASE_DIR -iname '*failed' -exec dirname {} \; | sed "s|$BASE_DIR/||g" | sed 's/^\s+//'))
+    local FAILED_TESTS=($(find ${BASE_DIR} -iname '*failed' -exec dirname {} \; | sed "s|$BASE_DIR/||g" | sed 's/^\s+//'))
     
     for TEST_PATH in "${FAILED_TESTS[@]}"; do
         IFS="/" read -ra PARTS <<< "$TEST_PATH"
@@ -166,17 +166,17 @@ function grep-in-test-logs() {
         local TEST_CLASS=${PARTS[0]}
         local WITH_CODE_CHANGE_PATTERN="with-codechange*$TEST_CLASS*-output.txt"
         local WO_CODE_CHANGE_PATTERN="wo-codechange*$TEST_CLASS*-output.txt"
-        local TEST_OUTPUT_WITH_CODE_CHANGE=$(find $BASE_DIR/$TEST_PATH -iname "$WITH_CODE_CHANGE_PATTERN")
-        local TEST_OUTPUT_WO_CODE_CHANGE=$(find $BASE_DIR/$TEST_PATH -iname "$WO_CODE_CHANGE_PATTERN")
+        local TEST_OUTPUT_WITH_CODE_CHANGE=$(find ${BASE_DIR}/${TEST_PATH} -iname "$WITH_CODE_CHANGE_PATTERN")
+        local TEST_OUTPUT_WO_CODE_CHANGE=$(find ${BASE_DIR}/${TEST_PATH} -iname "$WO_CODE_CHANGE_PATTERN")
         
         NUMBER_OF_RESULTS=$(echo "$TEST_OUTPUT_WITH_CODE_CHANGE" | wc -l)
-        if [ $NUMBER_OF_RESULTS -gt 1 ]; then
+        if [ ${NUMBER_OF_RESULTS} -gt 1 ]; then
             echo "Two or more files found for pattern $WITH_CODE_CHANGE_PATTERN in search root: $BASE_DIR/$TEST_PATH";
             echo "Exiting..."
             exit 2
         fi
         NUMBER_OF_RESULTS=$(echo "$TEST_OUTPUT_WO_CODE_CHANGE" | wc -l)
-        if [ $NUMBER_OF_RESULTS -gt 1 ]; then
+        if [ ${NUMBER_OF_RESULTS} -gt 1 ]; then
             echo "Two or more files found for pattern $WO_CODE_CHANGE_PATTERN in search root: $BASE_DIR/$TEST_PATH";
             echo "Exiting..."
             exit 2
@@ -190,12 +190,12 @@ function grep-in-test-logs() {
         GREPPED_LOGS_FILENAME_WO_CHANGE="$(echo "$TEST_OUTPUT_WO_CODE_CHANGE" | sed -e 's/\.txt//')-grepped-log.txt"
         GREP_CMD="grep -f $LOG_STMTS_ALL_REGEX $TEST_OUTPUT_WO_CODE_CHANGE"
         #print-script-step "Executing command: $GREP_CMD > $GREPPED_LOGS_FILENAME_WO_CHANGE"
-        $GREP_CMD > $GREPPED_LOGS_FILENAME_WO_CHANGE
+        ${GREP_CMD} > ${GREPPED_LOGS_FILENAME_WO_CHANGE}
         
         GREPPED_LOGS_FILENAME_WITH_CHANGE="$(echo "$TEST_OUTPUT_WITH_CODE_CHANGE" | sed -e 's/\.txt//')-grepped-log.txt"
         GREP_CMD="grep -f $LOG_STMTS_ALL_REGEX $TEST_OUTPUT_WITH_CODE_CHANGE"
         #print-script-step "Executing command: $GREP_CMD  > $GREPPED_LOGS_FILENAME_WITH_CHANGE"
-        $GREP_CMD  > $GREPPED_LOGS_FILENAME_WITH_CHANGE
+        ${GREP_CMD}  > ${GREPPED_LOGS_FILENAME_WITH_CHANGE}
         
         print-script-step "Diff these files to analyze failure: $GREPPED_LOGS_FILENAME_WO_CHANGE <> $GREPPED_LOGS_FILENAME_WO_CHANGE"
     done
@@ -206,8 +206,8 @@ function cleanup() {
     rv=$?
     git reset HEAD --hard
     print-script-step "CLEANUP: Restoring original code patch from file: $CODE_PATCH"
-    git apply $CODE_PATCH
-    exit $rv
+    git apply ${CODE_PATCH}
+    exit ${rv}
 }
 
 
@@ -230,19 +230,19 @@ function compare-yarn-rm-test-runs() {
     
     goto-hadoop
     #create regex files from log changes
-    logs2regex $BASE_DIR $LOG_PATCH
+    logs2regex ${BASE_DIR} ${LOG_PATCH}
     
     goto-hadoop
     cd hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager
     
     ###1. Save code changes to patch file
     #global as cleanup code restores CODE_PATCH
-    CODE_PATCH=$BASE_DIR/code-changes.patch
-    git diff > $CODE_PATCH
+    CODE_PATCH=${BASE_DIR}/code-changes.patch
+    git diff > ${CODE_PATCH}
     
     #TODO make this check switchable i.e. if no code changes, just run tests in one go and store the results
-    local SIZE_OF_PATCH=$(du $CODE_PATCH | cut -f1)
-    if [ $SIZE_OF_PATCH -eq 0 ]; then 
+    local SIZE_OF_PATCH=$(du ${CODE_PATCH} | cut -f1)
+    if [ ${SIZE_OF_PATCH} -eq 0 ]; then 
         echo "'git diff' returned an empty result! Please make sure there are code changes to apply!"
         return 1
     fi
@@ -255,26 +255,26 @@ function compare-yarn-rm-test-runs() {
     
     ###3. Apply log patch
     print-script-step "Applying log patch from file: $LOG_PATCH..."
-    git apply $LOG_PATCH
+    git apply ${LOG_PATCH}
     set +e
     
     ###4. Execute junit for all testcases
     print-script-step "RUNNING JUNIT TESTS WITHOUT CODE CHANGES (WITH LOG PATCH)"
-    exec-junit-tests $SUREFIRE_TEST_CLASS "wo-codechange" $BASE_DIR
+    exec-junit-tests ${SUREFIRE_TEST_CLASS} "wo-codechange" ${BASE_DIR}
     
     ###5. Remove log patch and apply code changes and log patch on top of it
     set -e
     print-script-step "Applying code changes and log patch"
     git reset HEAD --hard
-    git apply $CODE_PATCH
-    git apply $LOG_PATCH
+    git apply ${CODE_PATCH}
+    git apply ${LOG_PATCH}
     set +e
     
     print-script-step "RUNNING JUNIT TESTS WITH CODE CHANGES (WITH LOG PATCH AND CODE PATCH)"
-    exec-junit-tests $SUREFIRE_TEST_CLASS "with-codechange" $BASE_DIR
+    exec-junit-tests ${SUREFIRE_TEST_CLASS} "with-codechange" ${BASE_DIR}
     
-    grep-in-test-logs $BASE_DIR
-    print-junit-report $BASE_DIR
+    grep-in-test-logs ${BASE_DIR}
+    print-junit-report ${BASE_DIR}
     #TODO print diff commands (meld) for failed tests
     cleanup
 }

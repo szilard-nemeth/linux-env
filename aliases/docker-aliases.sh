@@ -23,15 +23,15 @@ function docker-operation-except() {
         EXCEPTION_NAMES+="$line ";
 
         GREP_CRITERIA+=".*$line.*|"
-        done < $FILENAME;
+        done < ${FILENAME};
 
     echo "Removing containers except names like: $EXCEPTION_NAMES"
     #Remove the last pipe
     GREP_CRITERIA=${GREP_CRITERIA::-1}
 
 
-    CONTAINERS_TO_REMOVE=`docker ps --format '{{.ID}} {{.Names}}' | grep $GREP_CRITERIA`
+    CONTAINERS_TO_REMOVE=`docker ps --format '{{.ID}} {{.Names}}' | grep ${GREP_CRITERIA}`
     echo "These containers will be removed: "
     echo "$CONTAINERS_TO_REMOVE";
-    docker ps --format '{{.Names}}' | grep $GREP_CRITERIA | xargs docker $DOCKER_COMMAND
+    docker ps --format '{{.Names}}' | grep ${GREP_CRITERIA} | xargs docker ${DOCKER_COMMAND}
 }

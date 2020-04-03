@@ -27,7 +27,7 @@ function cmhack-init() {
 	CLUSTER="snemeth-secure514-4-1.snemeth-secure514-4.root.hwx.site"
 	BASE_GIT_HASH="db13be490c0"
 
-	sshpass -p "password" scp root@$CLUSTER:cm-lib.tar.gz .
+	sshpass -p "password" scp root@${CLUSTER}:cm-lib.tar.gz .
 	# Run this to see the output of scp
 	# scp root@$CLUSTER:cm-lib.tar.gz .
 	rmdir hacklib
@@ -45,7 +45,7 @@ function cmhack() {
 	#TODO this does not recognize changed files well :(
 	#FILES=`git status *.java | grep '.java' | grep -v -i test | sed s/modified\://g | sed s/new\ file\://g`
 
-	FILES=$(git diff --name-only $BASE_GIT_HASH..HEAD| grep java | grep -iv test)
+	FILES=$(git diff --name-only ${BASE_GIT_HASH}..HEAD| grep java | grep -iv test)
 	#FILES=`git log --name-only HEAD^..HEAD | grep java | grep -v -i test`
 	#FILES="web/src/main/java/com/cloudera/cmf/service/yarn/YarnParams.java  web/src/main/java/com/cloudera/cmf/service/yarn/YarnConfigFileDefinitions.java"
 
@@ -55,7 +55,7 @@ function cmhack() {
 	    echo "***Compiling: $FILE"
 
 	    #web/src/main/java/ --> This must be added as newly compiled java files only available here as a class
-	    javac -encoding utf8 -cp "./hacklib/*:web/src/main/java/:libs/common/src/main/java:./libs/common" $FILE
+	    javac -encoding utf8 -cp "./hacklib/*:web/src/main/java/:libs/common/src/main/java:./libs/common" ${FILE}
 	    if [[ $? -gt 0 ]]; then 
 	    	echo "ERROR"
 	    	return 1
@@ -108,7 +108,7 @@ function cmhack2() {
 	#sshpass -p "password" scp root@$CLUSTER:/opt/cloudera/cm-agent/service/zookeeper/zk-client.sh .
 	#cp zk-client.sh agents/cmf/service/zookeeper/zk-client.sh
 	echo "Syncing hack to $CLUSTER and restarting CM.."
-	sshpass -p "password" rsync ./agents/cmf/service/zookeeper/zk-client.sh root@$CLUSTER:/opt/cloudera/cm-agent/service/zookeeper/zk-client.sh
+	sshpass -p "password" rsync ./agents/cmf/service/zookeeper/zk-client.sh root@${CLUSTER}:/opt/cloudera/cm-agent/service/zookeeper/zk-client.sh
 }
 
 function savePatches() {

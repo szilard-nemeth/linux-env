@@ -22,12 +22,12 @@ function cmhack() {
 	#FILES=`git log --name-only HEAD^..HEAD | grep java | grep -v -i test`
 	#FILES="web/src/main/java/com/cloudera/cmf/service/yarn/YarnParams.java  web/src/main/java/com/cloudera/cmf/service/yarn/YarnConfigFileDefinitions.java"
 
-	echo $FILES
+	echo ${FILES}
 
-	for FILE in $FILES; do
-	    echo $FILE
+	for FILE in ${FILES}; do
+	    echo ${FILE}
 	    #web/src/main/java/ --> This must be added as newly compiled java files only available here as a class
-	    javac -encoding utf8 -cp "./hacklib/*:web/src/main/java/" $FILE
+	    javac -encoding utf8 -cp "./hacklib/*:web/src/main/java/" ${FILE}
 	    if [ $? -gt 0 ]; then
 	    	"ERROR!!!"
 	    fi

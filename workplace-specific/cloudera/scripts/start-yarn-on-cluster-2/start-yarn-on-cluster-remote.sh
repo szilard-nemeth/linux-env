@@ -3,8 +3,8 @@
 cd /home/systest;
 
 echo "Unpacking YARN to /home/systest/$MY_HADOOP_VERSION/"
-tar xzvf hadoop-$MY_HADOOP_VERSION.tar.gz;
-cd hadoop-$MY_HADOOP_VERSION;
+tar xzvf hadoop-${MY_HADOOP_VERSION}.tar.gz;
+cd hadoop-${MY_HADOOP_VERSION};
 
 echo "Running YARN-Cluster-Setup script..."
 ../YARN-Cluster-Setup/setup.sh;
@@ -14,9 +14,9 @@ mkdir /home/systest/hadoop-yarn-config-backup/
 cp -rf /opt/hadoop/etc/hadoop /home/systest/hadoop-yarn-config-backup/
 
 ##PLACEHOLDER: scp CONFIG FILES to RM / NM cluster nodes
-if [ ! -f $YARN_CONFIG_SCRIPT ]; then
+if [ ! -f ${YARN_CONFIG_SCRIPT} ]; then
     echo "Executing YARN config script: $YARN_CONFIG_SCRIPT"
-    /bin/bash $YARN_CONFIG_SCRIPT
+    /bin/bash ${YARN_CONFIG_SCRIPT}
 fi
 
 

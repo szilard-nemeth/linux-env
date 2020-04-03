@@ -8,49 +8,49 @@ function run_yarn_testcases() {
     local config_script="$2"
     CLDR_YARN_CFG_DIR="/home/systest/yarnconfigs"
     
-    for d in $testcase_dir/*; do
-        if [[ -d $d ]]; then
+    for d in ${testcase_dir}/*; do
+        if [[ -d ${d} ]]; then
             echo "Searching for config files [yarn-site*.xml, node-resources*.xml, resource-types*.xml] in $d"
-            CONFIG_FILES=$(find $d -type f \( -iname "node-resources*xml" -o -iname "resource-types*xml" \))
+            CONFIG_FILES=$(find ${d} -type f \( -iname "node-resources*xml" -o -iname "resource-types*xml" \))
 
             echo "Config files found: $CONFIG_FILES in $d"
-            rm $config_script
-            touch $config_script
+            rm ${config_script}
+            touch ${config_script}
             added_to_script=0
-            for f in $CONFIG_FILES; do
+            for f in ${CONFIG_FILES}; do
                 echo "***file: $f"
                 #copy node-resources.xml to all workers
-                if [[ $f =~ node-resources.*$ ]]; then
+                if [[ ${f} =~ node-resources.*$ ]]; then
                     for i in `seq 2 101`;
                     do
                       WORKER=`echo ${CLOUDERA_HOSTNAME} | sed -e "s/-1\./-$i\./g"`
-                      if [[ $WORKER =~ .*-$i\.* ]]
+                      if [[ ${WORKER} =~ .*-$i\.* ]]
                       then
-                        echo Pinging $WORKER ...
-                        if ping $WORKER.cloudera.com -c 1 &>/dev/null
+                        echo Pinging ${WORKER} ...
+                        if ping ${WORKER}.cloudera.com -c 1 &>/dev/null
                         then
-                          SCP_FILEPATH=$CLDR_YARN_CFG_DIR/$(basename $d)/$(basename $f)
-                          SCP_FULL_PATH=$WORKER:$SCP_FILEPATH
-                          ssh $WORKER "mkdir -p $SCP_FILEPATH"
+                          SCP_FILEPATH=${CLDR_YARN_CFG_DIR}/$(basename ${d})/$(basename ${f})
+                          SCP_FULL_PATH=${WORKER}:${SCP_FILEPATH}
+                          ssh ${WORKER} "mkdir -p $SCP_FILEPATH"
                           echo "Copying file $f to worker host: $SCP_FULL_PATH" 
-                          scp $f $SCP_FULL_PATH
-                          if [[ $added_to_script -eq 0 ]]; then
-                            echo "cp $CLDR_YARN_CFG_DIR/$(basename $d)/$(basename $f) /opt/hadoop/etc/hadoop/" >> $config_script
+                          scp ${f} ${SCP_FULL_PATH}
+                          if [[ ${added_to_script} -eq 0 ]]; then
+                            echo "cp $CLDR_YARN_CFG_DIR/$(basename ${d})/$(basename ${f}) /opt/hadoop/etc/hadoop/" >> ${config_script}
                           fi
                         fi
                       fi
                     done
                 else
-                    SCP_FILEPATH=$CLDR_YARN_CFG_DIR/$(basename $d)/$(basename $f)
-                    SCP_FULL_PATH=$CLOUDERA_HOSTNAME:$SCP_FILEPATH
-                    ssh $CLOUDERA_HOSTNAME "mkdir -p $SCP_FILEPATH"
+                    SCP_FILEPATH=${CLDR_YARN_CFG_DIR}/$(basename ${d})/$(basename ${f})
+                    SCP_FULL_PATH=${CLOUDERA_HOSTNAME}:${SCP_FILEPATH}
+                    ssh ${CLOUDERA_HOSTNAME} "mkdir -p $SCP_FILEPATH"
                     echo "Copying file $f to main host: $SCP_FULL_PATH" 
-                    scp $f $SCP_FULL_PATH
-                    echo "cp $CLDR_YARN_CFG_DIR/$(basename $d)/$(basename $f) /opt/hadoop/etc/hadoop/" >> $config_script
+                    scp ${f} ${SCP_FULL_PATH}
+                    echo "cp $CLDR_YARN_CFG_DIR/$(basename ${d})/$(basename ${f}) /opt/hadoop/etc/hadoop/" >> ${config_script}
                 fi
             done
             echo -e "YARN setup script generated to $config_script, listing contents:\n"
-            cat $CONFIG_SCRIPT
+            cat ${CONFIG_SCRIPT}
         fi
     done
 }
@@ -59,7 +59,7 @@ POSITIONAL=()
 while [[ $# -gt 0 ]]
 do
     key="$1"
-    case $key in
+    case ${key} in
         -h|--hostname)
         CLOUDERA_HOSTNAME="$2"
         shift # past argument

@@ -3,7 +3,7 @@
 #This method is intented to be used directly on clusters
 function rsync_yarn_site_to_workers() {
     workers_file=/tmp/workers
-    echo "" > $workers_file
+    echo "" > ${workers_file}
     for i in `seq 2 20`; do
       WORKER=`echo $HOSTNAME | sed -e "s/-1\./-$i\./g"`
       if [[ ${WORKER} =~ .*-$i\.* ]]; then

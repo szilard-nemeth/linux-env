@@ -166,7 +166,7 @@ setproxy(){
 }
 
 svim(){
-sudo vim -u /home/$USER/.vimrc $1
+sudo vim -u /home/${USER}/.vimrc $1
 }
 
 extract () {
@@ -232,7 +232,7 @@ ANT_HOME=/usr/share/ant
 JAVA_HOME=/usr/lib/jvm/java-8-oracle/
 export JAVA_HOME
 export ANT_HOME
-PATH=$PATH:$ANT_HOME/bin
+PATH=$PATH:${ANT_HOME}/bin
 PATH=$PATH:$HOME/scripts/
 PATH=$PATH:$HOME/.npm-global/bin
 PATH=$PATH:$HOME/development/other-repos/util-scripts
@@ -294,7 +294,7 @@ export LINUX_ENV_REPO
 export KB_REPO
 export KB_PRIVATE_REPO
 #source setup env from linux-env repository (copying all env files)
-. $LINUX_ENV_REPO/setup-env.sh
+. ${LINUX_ENV_REPO}/setup-env.sh
 
 HOME_LINUXENV_DIR="$HOME/.linuxenv/"
 CLOUDERA_DIR="$HOME_LINUXENV_DIR/workplace-specific/cloudera/"

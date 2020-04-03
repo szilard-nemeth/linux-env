@@ -28,11 +28,11 @@ up(){
   limit=$1
   for ((i=1 ; i <= limit ; i++))
     do
-      d=$d/..
+      d=${d}/..
     done
-  d=$(echo $d | sed 's/^\///')
+  d=$(echo ${d} | sed 's/^\///')
   if [ -z "$d" ]; then
     d=..
   fi
-  cd $d
+  cd ${d}
 }
