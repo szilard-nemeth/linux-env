@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+function ensure-command-available() {
+    cmd="$1"
+    command -v ${cmd} > /dev/null 2>&1
+    
+    if [[ $? -ne 0 ]]; then
+        echo "$INFO_PREFIX $cmd aliases won't be used as command '$cmd' is not yet installed!"
+        return 1
+    fi
+}

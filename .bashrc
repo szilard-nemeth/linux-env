@@ -148,6 +148,7 @@ PS1="$PS1 | sed 's/^[*] / @/')"
 PS1="$PS1 $WHITE)--( $LIGHTPURPLE"
 PS1="$PS1\$(echo '\w' | sed -r 's/^.*.(.{90})/<\1/')"
 PS1="$PS1 $WHITE)--\n└-\\\$ $NOCOLOR"
+#TODO Turn off colors while loading files
 
 # Adjust the title of the terminal window
 case "$TERM" in
