@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 
 #LOOK_FOR="codehaus/xfire/spring"
 

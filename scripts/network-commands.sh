@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 getMyIP() {
     local _ip _myip _line _nl=$'\n'
     while IFS=$': \t' read -a _line ;do

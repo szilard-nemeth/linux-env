@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 $HOME/development/hellmann-repos/other/notes/run-notes.sh
 
 
