@@ -50,9 +50,19 @@ function copy_files() {
 
 function source_scripts() {
     source_from=$1
-
+    src_first=${source_from}/$2
+    
+    if [[ ! -z ${src_first}  ]]; then
+        echo "Sourcing files first: $src_first"
+        . "$src_first"
+    fi
+    
     echo Sourcing files from ${source_from};
     for f in ${source_from}/*.sh; do
+        if [[ ! -z ${src_first} &&  "$f" = "$src_first" ]]; then
+            echo "Skipping sourcing file again: $f"
+            continue
+        fi
         echo Sourcing file ${f}
         . "$f"
     done
@@ -170,7 +180,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     set +e
     
     #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
-    source_scripts ${HOME_LINUXENV_DIR}/aliases
+    source_scripts ${HOME_LINUXENV_DIR}/aliases "load-these-first.sh"
     source_scripts ${HOME_LINUXENV_DIR}/scripts
     source_files ".source-this"
     add_to_path ".add-to-path"
