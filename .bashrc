@@ -26,10 +26,10 @@ shopt -s checkwinsize
 # shopt -s globstar
 
 # make less more friendly for non-text input files, see lesspipe(1)
-[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+[[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)"
 
 # set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+if [[ -z "$debian_chroot" ]] && [[ -r /etc/debian_chroot ]]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
 
@@ -97,6 +97,7 @@ if [[ -f /etc/bash_completion ]] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
 
+# Define colors
 LIGHTRED="$(tput bold ; tput setaf 1)"
 LIGHTGREEN="$(tput bold ; tput setaf 2)"
 YELLOW="$(tput bold ; tput setaf 3)"
@@ -106,8 +107,8 @@ LIGHTCYAN="$(tput bold ; tput setaf 6)"
 WHITE="$(tput bold ; tput setaf 7)"
 NOCOLOR='\[\033[0m\]'
 
-# Prompt
-# ------
+# DEFINE PROMPT
+# -----------------------------
 
 # Start with a newline as some commands don't end their output with one
 PS1="\n$WHITE┌-("
@@ -148,6 +149,9 @@ xterm*|rxvt*)
 *)
     ;;
 esac
+
+# END OF PROMPT
+# -----------------------------
 
 ANT_HOME=/usr/share/ant
 JAVA_HOME=/usr/lib/jvm/java-8-oracle/
