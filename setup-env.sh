@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-#TODO add warning about overwrite before copying to home directory!
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 mkdir -p $HOME/.env
@@ -12,9 +10,6 @@ HOME_LINUXENV_DIR="$HOME/.linuxenv/"
 WORKPLACE_SPECIFIC_DIR="$HOME_LINUXENV_DIR/workplace-specific/"
 
 function copy_files() {
-    #TODO parameter number check --> should be even, otherwise skip copy and error!
-    #TODO check return value of cp before adding entry to $ENV_FILE_MAPPINGS
-
     IFS=' ' read -ra copy_list <<< "$@"
 
     if [ $((${#copy_list[@]} % 2)) -ne 0 ]; then
