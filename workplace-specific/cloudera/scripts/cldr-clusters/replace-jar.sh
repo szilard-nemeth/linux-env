@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #set -x
 
+#TODO move this to common scripts
 function select-menu {
     oldIFS=$IFS
     IFS=$'\n'

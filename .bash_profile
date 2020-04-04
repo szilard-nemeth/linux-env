@@ -13,6 +13,7 @@ fi
 
 [ -f /usr/local/etc/bash_completion ] && . /usr/local/etc/bash_completion
 
+#TODO move these to somewhere else
 # The next line updates PATH for the Google Cloud SDK.                                                                   
 if [ -f '/Users/szilardnemeth/google-cloud-sdk/path.bash.inc' ]; then . '/Users/szilardnemeth/google-cloud-sdk/path.bash.inc'; fi
                                                                                                                          
