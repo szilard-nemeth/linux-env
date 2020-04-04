@@ -107,50 +107,48 @@ LIGHTCYAN="$(tput bold ; tput setaf 6)"
 WHITE="$(tput bold ; tput setaf 7)"
 NOCOLOR='\[\033[0m\]'
 
-# DEFINE PROMPT
-# -----------------------------
+function setup-prompt() {
+    # Start with a newline as some commands don't end their output with one
+    PS1="\n$WHITE┌-("
+    
+    # username@hostname[hh:mm:ss]
+    PS1="$PS1 \u@$YELLOW\h$WHITE[\t]"
+    
+    # Exit code of the latest command: green "<0>" or red ">NON-ZERO<"
+    PS1="$PS1 \$(__x=\$?; if [[ \$__x -ne 0 ]]; then"
+    PS1="$PS1 echo -n \"$LIGHTRED>\$__x<\";"
+    PS1="$PS1 else echo -n \"$LIGHTGREEN<\$__x>\"; fi)"
+    
+    # Last max 30 characters of current working directory with a less-than sign
+    # when truncated
+    #PS1="$PS1 $LIGHTPURPLE"
+    #PS1="$PS1\$(echo '\w' | sed -r 's/^.*.(.{30})/<\1/')"
+    
+    # Display battery info if available
+    PS1="$PS1$LIGHTCYAN\$(acpi -b 2>/dev/null |"
+    PS1="$PS1 sed -r 's/^.*(: ([a-z])[a-z]*, ([0-9]*%)).*\$/ [\\2\\3]/i' |"
+    PS1="$PS1 grep --color=never -m1 '^ \\\\[.*\\\\]\$')"
+    
+    # When inside a git repo, display the name of the current working branch
+    PS1="$PS1$LIGHTBLUE\$(git branch 2>/dev/null | grep -m1 --color=never '^[*] '"
+    PS1="$PS1 | sed 's/^[*] / @/')"
+    
+    # New command to be entered in a new line
+    PS1="$PS1 $WHITE)--( $LIGHTPURPLE"
+    PS1="$PS1\$(echo '\w' | sed -r 's/^.*.(.{90})/<\1/')"
+    PS1="$PS1 $WHITE)--\n└-\\\$ $NOCOLOR"
+    
+    # Adjust the title of the terminal window
+    case "$TERM" in
+    xterm*|rxvt*)
+        PS1="\[\e]0;\$PROMPT_EXTRA \u@\h: \w\a\]$PS1"
+        ;;
+    *)
+        ;;
+    esac
+}
 
-# Start with a newline as some commands don't end their output with one
-PS1="\n$WHITE┌-("
-
-# username@hostname[hh:mm:ss]
-PS1="$PS1 \u@$YELLOW\h$WHITE[\t]"
-
-# Exit code of the latest command: green "<0>" or red ">NON-ZERO<"
-PS1="$PS1 \$(__x=\$?; if [[ \$__x -ne 0 ]]; then"
-PS1="$PS1 echo -n \"$LIGHTRED>\$__x<\";"
-PS1="$PS1 else echo -n \"$LIGHTGREEN<\$__x>\"; fi)"
-
-# Last max 30 characters of current working directory with a less-than sign
-# when truncated
-#PS1="$PS1 $LIGHTPURPLE"
-#PS1="$PS1\$(echo '\w' | sed -r 's/^.*.(.{30})/<\1/')"
-
-# Display battery info if available
-PS1="$PS1$LIGHTCYAN\$(acpi -b 2>/dev/null |"
-PS1="$PS1 sed -r 's/^.*(: ([a-z])[a-z]*, ([0-9]*%)).*\$/ [\\2\\3]/i' |"
-PS1="$PS1 grep --color=never -m1 '^ \\\\[.*\\\\]\$')"
-
-# When inside a git repo, display the name of the current working branch
-PS1="$PS1$LIGHTBLUE\$(git branch 2>/dev/null | grep -m1 --color=never '^[*] '"
-PS1="$PS1 | sed 's/^[*] / @/')"
-
-# New command to be entered in a new line
-PS1="$PS1 $WHITE)--( $LIGHTPURPLE"
-PS1="$PS1\$(echo '\w' | sed -r 's/^.*.(.{90})/<\1/')"
-PS1="$PS1 $WHITE)--\n└-\\\$ $NOCOLOR"
-
-# Adjust the title of the terminal window
-case "$TERM" in
-xterm*|rxvt*)
-    PS1="\[\e]0;\$PROMPT_EXTRA \u@\h: \w\a\]$PS1"
-    ;;
-*)
-    ;;
-esac
-
-# END OF PROMPT
-# -----------------------------
+setup-prompt
 
 ANT_HOME=/usr/share/ant
 JAVA_HOME=/usr/lib/jvm/java-8-oracle/
