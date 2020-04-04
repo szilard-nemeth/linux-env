@@ -170,6 +170,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     declare -a COPY_LIST=()
     COPY_LIST+=("$DIR/.bashrc $HOME/.bashrc")
     COPY_LIST+=("$DIR/.bash_profile $HOME/.bash_profile")
+    COPY_LIST+=("$DIR/setup-vars.sh $HOME_LINUXENV_DIR/setup-vars.sh")
     COPY_LIST+=("$DIR/dotfiles/. $HOME/")
     COPY_LIST+=("$DIR/aliases/. $HOME_LINUXENV_DIR/aliases/")
     COPY_LIST+=("$DIR/scripts/. $HOME_LINUXENV_DIR/scripts")
@@ -189,6 +190,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     
     #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
     source_single_file "${HOME_LINUXENV_DIR}/scripts/load-these-first.sh"
+    source_single_file "${HOME_LINUXENV_DIR}/setup-vars.sh"
     source_scripts ${HOME_LINUXENV_DIR}/aliases
     source_scripts ${HOME_LINUXENV_DIR}/scripts
     source_files ".source-this"

@@ -16,3 +16,14 @@ fi
 #CM build specific settings
 export TARGETROOT=
 export MVN_NO_DOCKER=1
+
+
+#Setup PATH
+PATH=$PATH:$HOME/development/other-repos/util-scripts
+PATH=$PATH:$HOME/development/cloudera/dist_test/bin
+
+if is-platform-macos
+then
+    PATH=$PATH:$HOME/Library/Python/2.7/bin
+    PATH=$PATH:/Applications/CMake.app/Contents/bin
+fi
