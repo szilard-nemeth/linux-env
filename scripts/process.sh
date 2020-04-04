@@ -23,3 +23,20 @@ function is-process-running() {
       echo "Process is not running."
     fi
 }
+
+function psgrep() {
+	if [ ! -z $1 ] ; then
+		echo "Grepping for processes matching $1..."
+		ps aux | grep $1 | grep -v grep
+	else
+		echo "!! Need name to grep for"
+	fi
+}
+
+function psgrep-silent() {
+	if [ ! -z $1 ] ; then
+		ps aux | grep $1 | grep -v grep
+	else
+		echo "!! Need name to grep for"
+	fi
+}
