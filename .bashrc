@@ -160,17 +160,23 @@ function print-welcome-screen() {
     echo -e "${NOCOLOR}";echo "";
 }
 
+function run-setup-scripts() {
+    LINUX_ENV_REPO=$HOME/development/my-repos/linux-env/
+    SETUP_ENV_SCRIPT=${LINUX_ENV_REPO}/setup-env.sh
+    
+    if [[ -f LINUX_ENV_REPO ]]; then
+       LINUX_ENV_REPO=$HOME/development/my-repos/linux-env/
+        export LINUX_ENV_REPO
+        # Source setup env from linux-env repository (copying all env files)
+        . ${LINUX_ENV_REPO}/setup-env.sh
+    else
+        echo "Tried to source ${SETUP_ENV_SCRIPT}, but linux-env repo does not exist. Please clone the repository!" 
+    fi
+}
+
 #################################################################################
 setup-history
 setup
 define-colors
 setup-prompt
 print-welcome-screen
-
-
-LINUX_ENV_REPO=$HOME/development/my-repos/linux-env/
-export LINUX_ENV_REPO
-#TODO check if linux-env repo exists
-
-# Source setup env from linux-env repository (copying all env files)
-. ${LINUX_ENV_REPO}/setup-env.sh
