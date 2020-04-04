@@ -225,12 +225,6 @@ export LINUX_ENV_REPO
 #source setup env from linux-env repository (copying all env files)
 . ${LINUX_ENV_REPO}/setup-env.sh
 
-HOME_LINUXENV_DIR="$HOME/.linuxenv/"
-CLOUDERA_DIR="$HOME_LINUXENV_DIR/workplace-specific/cloudera/"
-
-export HOME_LINUXENV_DIR
-export CLOUDERA_DIR
-
 #CM build specific
 export TARGETROOT=
 export MVN_NO_DOCKER=1

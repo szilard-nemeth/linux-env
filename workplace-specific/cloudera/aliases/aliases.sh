@@ -6,6 +6,8 @@ CLOUDERA_HADOOP_ROOT="$CLOUDERA_DEV_ROOT/hadoop/"
 HADOOP_MVN_DIR="$HOME/development/apache/hadoop-maven/"
 HADOOP_DEV_DIR="$HOME/development/apache/hadoop/"
 
+CLOUDERA_DIR="$HOME_LINUXENV_DIR/workplace-specific/cloudera/"
+export CLOUDERA_DIR
 
 #goto aliases
 alias goto-cldr="cd $CLOUDERA_DEV_ROOT"
