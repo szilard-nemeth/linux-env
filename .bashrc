@@ -187,11 +187,6 @@ export LINUX_ENV_REPO
 #source setup env from linux-env repository (copying all env files)
 . ${LINUX_ENV_REPO}/setup-env.sh
 
-#TODO move these to cloudera
-#CM build specific
-export TARGETROOT=
-export MVN_NO_DOCKER=1
-
 #START OF NPM CONF
 export NODE_PATH='/usr/local/lib/node_modules'
 NPM_PACKAGES="${HOME}/.npm-packages"

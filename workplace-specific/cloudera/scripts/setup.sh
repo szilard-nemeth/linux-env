@@ -12,3 +12,7 @@ fi
 if [[ -f '/Users/szilardnemeth/google-cloud-sdk/completion.bash.inc' ]]; then 
     . '$HOME/google-cloud-sdk/completion.bash.inc'; 
 fi
+
+#CM build specific settings
+export TARGETROOT=
+export MVN_NO_DOCKER=1
