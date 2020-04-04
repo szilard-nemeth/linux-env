@@ -3,6 +3,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #cd $DIR
 
+#TODO move variable definitions to a common sh script
 KB_REPO="$HOME/development/my-repos/knowledge-base/"
 KB_PRIVATE_REPO="$HOME/development/my-repos/knowledge-base-private/"
 

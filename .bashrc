@@ -290,6 +290,7 @@ echo -ne "${LIGHTPURPLE}Sysinfo:";uptime ;echo ""
 
 LINUX_ENV_REPO=$HOME/development/my-repos/linux-env/
 export LINUX_ENV_REPO
+#TODO check if linux-env repo exists
 
 #source setup env from linux-env repository (copying all env files)
 . ${LINUX_ENV_REPO}/setup-env.sh
