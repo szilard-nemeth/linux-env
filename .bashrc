@@ -81,15 +81,6 @@ if [[ -x /usr/bin/dircolors ]]; then
     alias egrep='egrep --color=auto'
 fi
 
-# some more ls aliases
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
-
-# Add an "alert" alias for long running commands.  Use like so:
-# sleep 10; alert
-alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
-
 # Alias definitions.
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.
@@ -175,17 +166,6 @@ export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=1024m"
 export ANT_OPTS="-XX:PermSize=512m -XX:MaxPermSize=512m -Xmx1024m -Xms1024m"
 export GIT_EDITOR='vim'
 
-alias sl="sl --help"
-alias gedit="vim"
-alias grep='grep --color=auto'
-alias dfh='df -h'
-alias calc='gcalctool -s'
-alias bashrc='vim ~/.bashrc'
-alias logs="find /var/log -type f -exec file {} \; | grep 'text' | cut -d' ' -f1 | sed -e's/:$//g' | grep -v '[0-9]$' | xargs tail -f"
-alias ..='cd ..'
-alias ...='cd ../..'
-alias ....='cd ../../..'
-
 bind '"\es"':"\"calc \""
 
 # WELCOME SCREEN
@@ -222,7 +202,3 @@ PATH="$NPM_PACKAGES/bin:$PATH"
 unset MANPATH # delete if you already modified MANPATH elsewhere in your config
 export MANPATH="$NPM_PACKAGES/share/man:$(manpath)"
 #END OF NPM CONF
-
-
-eval $(thefuck --alias)
-alias mc='LANG=en_EN.UTF-8 mc'

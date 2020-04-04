@@ -32,6 +32,27 @@ alias rm='safe-rm'
 alias currentweek="date +%V"
 alias vpn-szyszy="sudo openvpn --client --config ~/openvpn-szyszy/client.ovpn --ca ~/openvpn-szyszy/ca.crt"
 alias date-formatted="date +%Y%m%d_%H_%M_%S"
+alias sl="sl --help" # steam-locomotive: https://www.cyberciti.biz/tips/displays-animations-when-accidentally-you-type-sl-instead-of-ls.html
+alias grep='grep --color=auto'
+alias dfh='df -h'
+alias bashrc='vim ~/.bashrc'
+alias logs="find /var/log -type f -exec file {} \; | grep 'text' | cut -d' ' -f1 | sed -e's/:$//g' | grep -v '[0-9]$' | xargs tail -f"
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
+## ls ALIASES
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+
+## OTHER ALIASES
+# Add an "alert" alias for long running commands.  Use like so:
+# sleep 10; alert
+alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+eval $(thefuck --alias)
+alias mc='LANG=en_EN.UTF-8 mc'
 
 #TODO make this a function
 alias zip-files="sudo find / -iname *1564501696813_0001_01_000001* -print0 | sudo tar -czvf backup-1564501696813_0001-20190730.tar.gz --null -T -"

@@ -10,6 +10,8 @@ alias intellij-keyboard-fix="ibus-daemon -rd"
 alias suspend='sudo pm-suspend'
 alias restart-network="sudo service network-manager restart"
 alias konsoleb="konsole --background-mode&"
+alias calc='gcalctool -s'
+alias gedit="vim"
 
 
 #APT ALIASES
