@@ -149,16 +149,17 @@ function setup-prompt() {
     esac
 }
 
+function print-welcome-screen() {
+    echo -e "${WHITE}";cal;
+    echo -ne "${CYAN}";
+    echo -ne "${LIGHTPURPLE}Sysinfo:";uptime;echo ""
+    echo -e "${NOCOLOR}";echo "";
+}
+
 define-colors
 setup-prompt
+print-welcome-screen
 
-# WELCOME SCREEN
-################################################## #####
-
-echo -e "${WHITE}"; cal ;
-echo -ne "${CYAN}";
-echo -ne "${LIGHTPURPLE}Sysinfo:";uptime ;echo ""
-echo -e "${NOCOLOR}"; echo "";
 
 # source other alias files
 #################################################################################
