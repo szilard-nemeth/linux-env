@@ -83,7 +83,8 @@ function exec-junit-tests() {
     local TEST_CLASS=$1
     local TEST_RESULT_FILE_PREFIX=$2
     local BASE_DIR=$3
-    local TEST_FILE_PATH=$(find . -iname "*${TEST_CLASS}.java") #TODO check if test file is an existing one!
+    #TODO check if test file is an existing one!
+    local TEST_FILE_PATH=$(find . -iname "*${TEST_CLASS}.java") 
     set -e
     
     MVN_BUILD_OUTPUT_FILE="$BASE_DIR/mvn-build-$TEST_RESULT_FILE_PREFIX.out"
@@ -94,7 +95,8 @@ function exec-junit-tests() {
     TESTCASES=($(grep '@Test' -A2 ${TEST_FILE_PATH} | grep 'test.*' | sed -r -n -e 's/.*(test[a-zA-Z0-9_]+)\(.*/\1/p'))
     echo "Discovered testcases in $TEST_CLASS:"
     printf '%s\n' "${TESTCASES[@]}"
-    SUREFIRE_TC_PARAMS=("FairSharePreemptionWithDRF" "MinSharePreemptionWithDRF") #TODO make junit parameters a bash function parameter
+    #TODO make junit parameters a bash function parameter
+    SUREFIRE_TC_PARAMS=("FairSharePreemptionWithDRF" "MinSharePreemptionWithDRF") 
     set +e
     
     TC_COUNTER=0
@@ -220,8 +222,10 @@ function compare-yarn-rm-test-runs() {
     #prepare params
     #TODO create param for project to execute tests for: hadoop-yarn-server-resourcemanager
     SUREFIRE_REPORTS_DIR="$HOME/development/apache/hadoop/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/target/surefire-reports/"
-    local SUREFIRE_TEST_CLASS="TestFairSchedulerPreemptionCustomResources" #TODO make this a param, add possibility to execute 2 or more test classes
-    local LOG_PATCH="$HOME/yarn-tasks/YARN-8059/log.patch" #TODO make this a param
+    #TODO make this a param, add possibility to execute 2 or more test classes
+    local SUREFIRE_TEST_CLASS="TestFairSchedulerPreemptionCustomResources"
+    #TODO make this a param 
+    local LOG_PATCH="$HOME/yarn-tasks/YARN-8059/log.patch" 
     
     #prepare dirs
     local TEST_RUN_DATE=`date +%F-%H%M%S`
