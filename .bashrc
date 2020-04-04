@@ -97,15 +97,16 @@ if [[ -f /etc/bash_completion ]] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
 
-# Define colors
-LIGHTRED="$(tput bold ; tput setaf 1)"
-LIGHTGREEN="$(tput bold ; tput setaf 2)"
-YELLOW="$(tput bold ; tput setaf 3)"
-LIGHTBLUE="$(tput bold ; tput setaf 25)"
-LIGHTPURPLE="$(tput setaf 5)"
-LIGHTCYAN="$(tput bold ; tput setaf 6)"
-WHITE="$(tput bold ; tput setaf 7)"
-NOCOLOR='\[\033[0m\]'
+function define-colors() {
+    LIGHTRED="$(tput bold ; tput setaf 1)"
+    LIGHTGREEN="$(tput bold ; tput setaf 2)"
+    YELLOW="$(tput bold ; tput setaf 3)"
+    LIGHTBLUE="$(tput bold ; tput setaf 25)"
+    LIGHTPURPLE="$(tput setaf 5)"
+    LIGHTCYAN="$(tput bold ; tput setaf 6)"
+    WHITE="$(tput bold ; tput setaf 7)"
+    NOCOLOR='\[\033[0m\]'
+}
 
 function setup-prompt() {
     # Start with a newline as some commands don't end their output with one
@@ -148,6 +149,7 @@ function setup-prompt() {
     esac
 }
 
+define-colors
 setup-prompt
 
 ANT_HOME=/usr/share/ant
