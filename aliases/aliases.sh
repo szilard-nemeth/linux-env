@@ -3,12 +3,6 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #cd $DIR
 
-#TODO move variable definitions to a common sh script
-KB_REPO="$HOME/development/my-repos/knowledge-base/"
-KB_PRIVATE_REPO="$HOME/development/my-repos/knowledge-base-private/"
-
-#TODO create alias: resync all changes from linuxenv repo (copies all files)
-
 ## LINUX-ENV ALIASES
 alias linux-env-reload="$LINUX_ENV_REPO/setup-env.sh"
 alias linux-env-todos="grep '#TODO' -r $LINUX_ENV_REPO"
@@ -54,5 +48,6 @@ alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo
 eval $(thefuck --alias)
 alias mc='LANG=en_EN.UTF-8 mc'
 
+#TODO create alias: resync all changes from linuxenv repo (copies all files)
 #TODO make this a function
 alias zip-files="sudo find / -iname *1564501696813_0001_01_000001* -print0 | sudo tar -czvf backup-1564501696813_0001-20190730.tar.gz --null -T -"

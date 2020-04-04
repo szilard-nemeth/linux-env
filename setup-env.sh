@@ -183,6 +183,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     copy_files "${COPY_LIST[@]}"
     set +e
     
+    # !!! THE ORDER OF THE FOLLOWING SOURCE COMMANDS ARE STRICT !!!
     #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
     source_single_file "${HOME_LINUXENV_DIR}/scripts/load-these-first.sh"
     source_single_file "${HOME_LINUXENV_DIR}/setup-vars.sh"
