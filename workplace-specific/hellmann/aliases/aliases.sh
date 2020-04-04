@@ -92,3 +92,13 @@ alias edit-hellmann-aliases="vi $LINUX_ENV_REPO/workplace-specific/hellmann/alia
 #rsync aliases
 alias rsync-backup="rsync -avh $HOME/backup/ /media/snemeth/szyszy-exthdd-data/backups/hell-laptop-backupsdir/"
 alias aws-login="\$(aws ecr get-login --region eu-west-1)"
+
+#Start aliases
+#TODO check every app existence and add aliases if executable exists
+INTELLIJ_PATH="/usr/local/intellij-idea-2017-2-2/bin/idea.sh"
+SQUIRREL_PATH=/usr/local/squirrel/squirrel-sql.sh
+alias start-google-chrome="start-app-silently google-chrome"
+alias start-intellij="start-app-silently $INTELLIJ_PATH"
+alias start-squirrel="start-app-silently $SQUIRREL_PATH"
+alias start-hipchat4="start-app-silently hipchat4"
+alias restart-hipchat4="psgrep-silent hipchat | awk '{print $2}' | xargs kill && start-hipchat4"
