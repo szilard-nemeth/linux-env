@@ -18,35 +18,35 @@
 #Should be executed from CM root dir
 
 function cmhack() {
-	FILES=`git status *.java | grep '.java' | grep -v -i test | sed s/modified\://g`
-	#FILES=`git log --name-only HEAD^..HEAD | grep java | grep -v -i test`
-	#FILES="web/src/main/java/com/cloudera/cmf/service/yarn/YarnParams.java  web/src/main/java/com/cloudera/cmf/service/yarn/YarnConfigFileDefinitions.java"
+    FILES=`git status *.java | grep '.java' | grep -v -i test | sed s/modified\://g`
+    #FILES=`git log --name-only HEAD^..HEAD | grep java | grep -v -i test`
+    #FILES="web/src/main/java/com/cloudera/cmf/service/yarn/YarnParams.java  web/src/main/java/com/cloudera/cmf/service/yarn/YarnConfigFileDefinitions.java"
 
-	echo ${FILES}
+    echo ${FILES}
 
-	for FILE in ${FILES}; do
-	    echo ${FILE}
-	    #web/src/main/java/ --> This must be added as newly compiled java files only available here as a class
-	    javac -encoding utf8 -cp "./hacklib/*:web/src/main/java/" ${FILE}
-	    if [ $? -gt 0 ]; then
-	    	echo "ERROR!!!"
-	    fi
-	done
+    for FILE in ${FILES}; do
+        echo ${FILE}
+        #web/src/main/java/ --> This must be added as newly compiled java files only available here as a class
+        javac -encoding utf8 -cp "./hacklib/*:web/src/main/java/" ${FILE}
+        if [ $? -gt 0 ]; then
+            echo "ERROR!!!"
+        fi
+    done
 
-	#remove previous hack!
-	rm firehose-6.3.0.jar
+    #remove previous hack!
+    rm firehose-6.3.0.jar
 
-	#original jar
-	cp ./hacklib/firehose-6.3.0.jar .
+    #original jar
+    cp ./hacklib/firehose-6.3.0.jar .
 
-	cd daemons/firehose/src/main/java
+    cd daemons/firehose/src/main/java
 
-	#Zip all new classes into the jar
-	zip -i "*.class" -r ../../../../../firehose-6.3.0.jar com/
+    #Zip all new classes into the jar
+    zip -i "*.class" -r ../../../../../firehose-6.3.0.jar com/
 
-	#Cleanup! (optional)
-	find com/ -name '*.class' | xargs rm
-	cd -
+    #Cleanup! (optional)
+    find com/ -name '*.class' | xargs rm
+    cd -
 
-	rsync ./firehose-6.3.0.jar quasar-canxrv-1.vpc.cloudera.com:/opt/cloudera/cm/lib/
+    rsync ./firehose-6.3.0.jar quasar-canxrv-1.vpc.cloudera.com:/opt/cloudera/cm/lib/
 }

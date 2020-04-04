@@ -45,9 +45,9 @@ SRC_JAR_PATH=$(find . \( -iname target ! -iname lib \) -exec find {} -type f \( 
 NUMBER_OF_RESULTS=$(echo "$SRC_JAR_PATH" | wc -l)
 if [ ${NUMBER_OF_RESULTS} -gt 1 ]
 then
-	echo "Two or more files found for pattern $JAR_FILE_NAME in search root: $CLOUDERA_DEV_ROOT";
-#	echo "File list: ";
-#	echo "$SRC_JAR_PATH";
+    echo "Two or more files found for pattern $JAR_FILE_NAME in search root: $CLOUDERA_DEV_ROOT";
+#   echo "File list: ";
+#   echo "$SRC_JAR_PATH";
     #TODO if th md5 sums of the files are the same, don't show the menu, just print an auto-choice
     SRC_JAR_PATH=$(select-menu ${SRC_JAR_PATH})
 fi

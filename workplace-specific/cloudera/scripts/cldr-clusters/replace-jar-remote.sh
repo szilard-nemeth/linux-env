@@ -28,10 +28,10 @@ fi
 
 NUMBER_OF_RESULTS=$(echo "$DST_JAR_PATH" | wc -l)
 if [ ${NUMBER_OF_RESULTS} -gt 1 ]; then
-	echo "Two or more files found for filename $SRC_JAR_FILENAME";
-	echo "File list: ";
-	echo "$DST_JAR_PATH";
-	exit -1
+    echo "Two or more files found for filename $SRC_JAR_FILENAME";
+    echo "File list: ";
+    echo "$DST_JAR_PATH";
+    exit -1
 fi
 
 
