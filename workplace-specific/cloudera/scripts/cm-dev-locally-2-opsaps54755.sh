@@ -42,7 +42,8 @@ function cmhack-init() {
 function cmhack() {
     
     # FILES=`git status *.java | grep '.java' | grep -v -i test | sed s/modified\://g`
-    #TODO this does not recognize changed files well :(
+    
+    #This does not recognize changed files well :(
     #FILES=`git status *.java | grep '.java' | grep -v -i test | sed s/modified\://g | sed s/new\ file\://g`
 
     FILES=$(git diff --name-only ${BASE_GIT_HASH}..HEAD| grep java | grep -iv test)

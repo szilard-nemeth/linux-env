@@ -24,6 +24,5 @@ function is-platform-linux() {
 
 function start-app-silently() {
     APP_NAME=$1
-    ##TODO store logs to file!
     nohup ${APP_NAME}& > /dev/null 2>&1
 }

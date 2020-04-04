@@ -94,7 +94,6 @@ alias rsync-backup="rsync -avh $HOME/backup/ /media/snemeth/szyszy-exthdd-data/b
 alias aws-login="\$(aws ecr get-login --region eu-west-1)"
 
 #Start aliases
-#TODO check every app existence and add aliases if executable exists
 INTELLIJ_PATH="/usr/local/intellij-idea-2017-2-2/bin/idea.sh"
 SQUIRREL_PATH=/usr/local/squirrel/squirrel-sql.sh
 alias start-google-chrome="start-app-silently google-chrome"

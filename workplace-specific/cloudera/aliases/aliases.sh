@@ -34,8 +34,6 @@ alias upstream-all-count="git log --grep snemeth --grep Szilard --grep 'Szilard 
 alias upstream-all="git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | grep 'YARN\|SUBMARINE\|HADOOP'"
 alias upstream-hadoop="git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | wc -l"
 alias upstream-committed="git log --author="snemeth@apache.org" --oneline | wc -l"
-
-#TODO write a script: intersection of grep and author commands should give the final number
 alias upstream-yarn2="echo $(($(git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | grep YARN | wc -l | tr -s ' ' | cut -d ' ' -f2) + $(git log --author=snemeth --oneline | wc -l | tr -s ' ' | cut -d ' ' -f2)))"
 
 
