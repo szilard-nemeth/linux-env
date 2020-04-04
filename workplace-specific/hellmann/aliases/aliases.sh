@@ -22,7 +22,7 @@ RLR_COMPOSE_ARGS="localhost local $RLR_COMPOSE_NAME"
 
 #alias functions
 mavenSetVersion() {
-	mvn versions:set -DnewVersion=$1
+    mvn versions:set -DnewVersion=$1
 }
 
 alias mount-allshare="sudo mount.cifs //172.24.227.38/ALLSHARE /mnt/allshare/ -o user=snemeth"

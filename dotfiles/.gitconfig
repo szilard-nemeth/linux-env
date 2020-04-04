@@ -25,19 +25,19 @@
     remove-commit = "reset --hard HEAD~1"
 
 [credential]
-	helper = cache --timeout=43200
+    helper = cache --timeout=43200
 
 [diff]
     tool = p4merge
 [difftool "p4merge"]
-	cmd = /Applications/p4merge.app/Contents/Resources/launchp4merge "\"$REMOTE\"" "\"$LOCAL\""
+    cmd = /Applications/p4merge.app/Contents/Resources/launchp4merge "\"$REMOTE\"" "\"$LOCAL\""
 
 
 [merge]
   keepBackup = false
-	tool = p4merge
+    tool = p4merge
 [mergetool "p4merge"]
-	cmd = /Applications/p4merge.app/Contents/Resources/launchp4merge "\"$PWD/$BASE\"" "\"$PWD/$REMOTE\"" "\"$PWD/$LOCAL\"" "\"$PWD/$MERGED\""
-	keepTemporaries = false
-	trustExitCode = false
-	keepBackup = false
+    cmd = /Applications/p4merge.app/Contents/Resources/launchp4merge "\"$PWD/$BASE\"" "\"$PWD/$REMOTE\"" "\"$PWD/$LOCAL\"" "\"$PWD/$MERGED\""
+    keepTemporaries = false
+    trustExitCode = false
+    keepBackup = false
