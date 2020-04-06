@@ -180,3 +180,4 @@ setup
 define-colors
 setup-prompt
 print-welcome-screen
+run-setup-scripts
