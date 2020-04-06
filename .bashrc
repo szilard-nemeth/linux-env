@@ -164,7 +164,7 @@ function run-setup-scripts() {
     LINUX_ENV_REPO=$HOME/development/my-repos/linux-env/
     SETUP_ENV_SCRIPT=${LINUX_ENV_REPO}/setup-env.sh
     
-    if [[ -f LINUX_ENV_REPO ]]; then
+    if [[ -f ${LINUX_ENV_REPO} ]]; then
        LINUX_ENV_REPO=$HOME/development/my-repos/linux-env/
         export LINUX_ENV_REPO
         # Source setup env from linux-env repository (copying all env files)
