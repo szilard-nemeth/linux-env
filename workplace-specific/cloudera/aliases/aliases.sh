@@ -57,3 +57,15 @@ alias run-findbugs="mvn clean install -DskipTests && mvn findbugs:findbugs && mv
 
 alias mvn-hadoop-patch="mvn -Ptest-patch clean site site:stage"
 alias cluster-roulette="$HOME/Downloads/scripts/cluster-roulette.sh"
+
+#CM specific commands
+CM_SKIPTESTS="-DskipTests"
+CM_NOBUILD_DIST="-Dnot-dist-build=true"
+CM_NOBUILD_NAV="-Dnot-nav-build=true"
+CM_NOBUILD_FRONTEND="-DskipFrontend=true"
+CM_NO_BUILD_TEST="-Dmaven.test.skip=true"
+alias cm-build="make server"
+alias cm-build-web="cd ./web && ../tools/cmf-mvn $CM_SKIPTESTS $CM_NOBUILD_FRONTEND install; cd -"
+alias cm-build-libs="cd ./libs && ../tools/cmf-mvn $CM_SKIPTESTS $CM_NOBUILD_FRONTEND install; cd -"
+alias cm-build-web-notestbuild="cd ./web && ../tools/cmf-mvn $CM_SKIPTESTS $CM_NOBUILD_FRONTEND $CM_NO_BUILD_TEST install; cd -"
+alias cm-build-libs-notestbuild="cd ./libs && ../tools/cmf-mvn $CM_SKIPTESTS $CM_NOBUILD_FRONTEND $CM_NO_BUILD_TEST install; cd -"
