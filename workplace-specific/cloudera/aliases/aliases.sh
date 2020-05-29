@@ -16,7 +16,7 @@ alias goto-tasks="cd $HOME/Google Drive File Stream/My Drive/development/tasks/"
 alias goto-hadoop="cd $HADOOP_DEV_DIR"
 alias goto-hadoop-mvn="cd $HADOOP_MVN_DIR"
 alias goto-hadoop-commit="cd $HOME/development/apache/hadoop-commit"
-alias goto-systest="cd $CLOUDERA_DEV_ROOT/qe-cmf/systest"
+alias goto-qecmf="cd $CLOUDERA_DEV_ROOT/qe-cmf/systest"
 alias goto-cmf="cd $CLOUDERA_DEV_ROOT/cmf"
 alias goto-yarn-tasks="cd $HOME/yarn-tasks"
 
