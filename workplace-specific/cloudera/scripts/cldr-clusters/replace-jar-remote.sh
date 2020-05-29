@@ -7,7 +7,12 @@ echo "MD5 sum of copied jar on `hostname`: $MD5_NEW_JAR"
 
 
 #find destination path
-CDH_JARS_LOCATION=/opt/cloudera/parcels/CDH/jars
+
+##Old path
+#CDH_JARS_LOCATION=/opt/cloudera/parcels/CDH/jars
+
+##New path
+CDH_JARS_LOCATION=/opt/cloudera/cm/lib/cdh7
 DST_JAR_PATH=$(find ${CDH_JARS_LOCATION} -iname "$SRC_JAR_FILENAME")
 
 if [[ -z "$DST_JAR_PATH" ]]; then
