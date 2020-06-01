@@ -69,3 +69,5 @@ alias cm-build-web="cd ./web && ../tools/cmf-mvn $CM_SKIPTESTS $CM_NOBUILD_FRONT
 alias cm-build-libs="cd ./libs && ../tools/cmf-mvn $CM_SKIPTESTS $CM_NOBUILD_FRONTEND install; cd -"
 alias cm-build-web-notestbuild="cd ./web && ../tools/cmf-mvn $CM_SKIPTESTS $CM_NOBUILD_FRONTEND $CM_NO_BUILD_TEST install; cd -"
 alias cm-build-libs-notestbuild="cd ./libs && ../tools/cmf-mvn $CM_SKIPTESTS $CM_NOBUILD_FRONTEND $CM_NO_BUILD_TEST install; cd -"
+
+alias backup-devdir="tar czf /tmp/devbackup-$(date +%Y%m%d_%H%M%S).gz  $HOME/development/"
