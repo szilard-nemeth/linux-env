@@ -94,22 +94,22 @@ fi
 
 #IFS=',' ;for i in `echo "Hello,World,Questions,Answers,bash shell,script"`; do echo $i; done
 IFS=', ' read -r -a patterns_array <<< "$PATTERNS"
-MACHINES=(emea-prtl-a02p emea-prtl-a03p emea-prtl-a04p emea-prtl-a05p)
+MACHINES=(host02p host03p host04p host05p)
 
 declare -A MACHINES_PATHS_CELL_A;
 CELL_A_LOGS_DIR=/opt/IBM/WebSphere/wp_profile/logs/
-MACHINES_PATHS_CELL_A[emea-prtl-a02p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-A/
-MACHINES_PATHS_CELL_A[emea-prtl-a03p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-B/
-MACHINES_PATHS_CELL_A[emea-prtl-a04p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-C/
-MACHINES_PATHS_CELL_A[emea-prtl-a05p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-D/
+MACHINES_PATHS_CELL_A[host02p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-A/
+MACHINES_PATHS_CELL_A[host03p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-B/
+MACHINES_PATHS_CELL_A[host04p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-C/
+MACHINES_PATHS_CELL_A[host05p]=${CELL_A_LOGS_DIR}/HPS-PORTAL-D/
 
 
 declare -A MACHINES_PATHS_CELL_B;
 CELL_B_LOGS_DIR=/opt/IBM/WebSphere_clusterB/wp_profile/logs/
-MACHINES_PATHS_CELL_B[emea-prtl-a02p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-D/
-MACHINES_PATHS_CELL_B[emea-prtl-a03p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-C/
-MACHINES_PATHS_CELL_B[emea-prtl-a04p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-B/
-MACHINES_PATHS_CELL_B[emea-prtl-a05p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-A/
+MACHINES_PATHS_CELL_B[host02p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-D/
+MACHINES_PATHS_CELL_B[host03p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-C/
+MACHINES_PATHS_CELL_B[host04p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-B/
+MACHINES_PATHS_CELL_B[host05p]=${CELL_B_LOGS_DIR}/HPS-PORTAL-A/
 
 if [ "${CELL}" == "a" ]; then
     save_logs_cell_a

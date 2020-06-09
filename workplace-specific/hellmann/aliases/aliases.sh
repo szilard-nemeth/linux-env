@@ -25,7 +25,7 @@ mavenSetVersion() {
     mvn versions:set -DnewVersion=$1
 }
 
-alias mount-allshare="sudo mount.cifs //172.24.227.38/ALLSHARE /mnt/allshare/ -o user=snemeth"
+alias mount-allshare="sudo mount.cifs //<IP>/ALLSHARE /mnt/allshare/ -o user=snemeth"
 
 #goto aliases
 alias goto-tracking="cd $TRACKING_ROOT"
@@ -77,11 +77,11 @@ alias docker-rlr-stop-rmfv="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOS
 alias docker-rlr-logs="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh $RLR_COMPOSE_ARGS logs"
 
 #docker test
-alias docker-tracking-test-logs="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh docker@emea-jas-a12t.hwl-family.net test user-acceptance-b logs --follow"
-alias docker-rlr-test-logs="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh docker@emea-jas-a12t.hwl-family.net test rlr-test logs --follow"
+alias docker-tracking-test-logs="$TRACKING_DOCKER_COMPOSE_ROOT_TR/call-compose.sh docker@<HOST> test user-acceptance-b logs --follow"
+alias docker-rlr-test-logs="$RLR_DOCKER_COMPOSE_ROOT/call-compose.sh docker@<HOST> test rlr-test logs --follow"
 
 #other aliases
-alias setup-ssh-tunnel-a12t="ssh -L 8777:localhost:33609 docker@emea-jas-a12t.hwl-family.net"
+alias setup-ssh-tunnel-a12t="ssh -L 8777:localhost:33609 docker@<HOST>"
 alias start-notes="$HOME/scripts/hellmann/start-notes.sh"
 alias diff-develop-integration="git log --graph --pretty=format:'%Cred%h%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative --first-parent origin/develop..origin/integration"
 alias vpn-hellmann="sudo openvpn --client --config ~/openvpn-hellmann/client-mathias.ovpn"
