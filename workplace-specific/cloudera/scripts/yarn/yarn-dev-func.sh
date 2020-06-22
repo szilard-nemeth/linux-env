@@ -453,3 +453,13 @@ function yarn-diff-patches() {
     echo "Generated diffs: "
     du -sh /tmp/yarndiffer/${YARN_ID}-*
 }
+
+function yarn-listupstreamversions() {
+    #TODO this will be more robust but requires switching branches: https://stackoverflow.com/questions/3545292/how-to-get-maven-project-version-to-the-bash-command-line
+    for branch in trunk branch-3.3 branch-3.2 branch-3.1
+    do
+        echo "Version on branch: $branch"
+        git show ${branch}:pom.xml | grep version | head -n5
+        printf "\n"
+    done
+}
