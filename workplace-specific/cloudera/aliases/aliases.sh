@@ -19,6 +19,7 @@ alias goto-hadoop-commit="cd $HOME/development/apache/hadoop-commit"
 alias goto-qecmf="cd $CLOUDERA_DEV_ROOT/qe-cmf/systest"
 alias goto-cmf="cd $CLOUDERA_DEV_ROOT/cmf"
 alias goto-yarn-tasks="cd $HOME/yarn-tasks"
+alias goto-eyarn="cd $CLOUDERA_DEV_ROOT/yarn-operator"
 
 #git specific commands
 alias gerrit-branches5="git br -r | grep gerrit | grep -e '5.1\d.*' | cut -d_ -f 2-3 | sort -u | grep -v patch"
@@ -53,6 +54,11 @@ alias grind-yarn-exceptions="grind --verbose test --java-version 8 \
  -e TestHBaseTimelineStorageEntities \
  -e TestHBaseTimelineStorageSchema"
 
+alias eyarn-redeploy="make helm/delete ns=$K8S_NAMESPACE && make helm/install ns=$K8S_NAMESPACE"
+
+
+
+#==============================================
 alias run-findbugs="mvn clean install -DskipTests && mvn findbugs:findbugs && mvn findbugs:gui"
 
 alias mvn-hadoop-patch="mvn -Ptest-patch clean site site:stage"

@@ -18,6 +18,10 @@ export MAVEN_OPTS='-Xmx5000m'
 export TARGETROOT=
 export MVN_NO_DOCKER=1
 
+#eYARN setup / K8S setup
+export K8S_NAMESPACE="snemeth-eyarn"
+kubectl config set-context --current --namespace=${K8S_NAMESPACE}
+
 
 #Setup PATH
 PATH=$PATH:$HOME/development/other-repos/util-scripts
@@ -28,3 +32,6 @@ then
     PATH=$PATH:$HOME/Library/Python/2.7/bin
     PATH=$PATH:/Applications/CMake.app/Contents/bin
 fi
+
+#Setup GOPATH
+GOPATH=/Users/szilardnemeth/go
