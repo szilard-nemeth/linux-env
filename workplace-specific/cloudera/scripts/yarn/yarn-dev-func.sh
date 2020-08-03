@@ -242,6 +242,16 @@ function yarn-upstream-commit-pr() {
     echo "REMEMBER to reset the author with command: 'git commit --amend --reset-author"
 }
 
+function yarn-downstream-commits() {
+    goto-cldr-hadoop
+    echo "Branch: cdpd-master, author=snemeth"
+    git log cdpd-master --author=snemeth --oneline
+    
+    echo "Branch: cdpd-master, committer=snemeth"
+    git log cdpd-master --committer=snemeth --oneline
+    cd -
+}
+
 function build-upload-yarn-to-cluster() {
     setup
     
