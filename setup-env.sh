@@ -45,10 +45,10 @@ function copy_files() {
 
 function source_scripts() {
     source_from=$1
-    src_firs_orig="$2"
-    src_first=${source_from}/${src_firs_orig}
+    src_first_orig="$2"
+    src_first=${source_from}/${src_first_orig}
     
-    if [[ ! -z ${src_firs_orig}  ]]; then
+    if [[ ! -z ${src_first_orig}  ]]; then
         echo "Sourcing files first: $src_first"
         . "$src_first"
     fi
@@ -77,6 +77,17 @@ function source_files() {
 
     echo "Searching for $marker_file_name files and sourcing them..."
     set_matched_dirs ${WORKPLACE_SPECIFIC_DIR} ${marker_file_name}
+    
+    #Source each *.sh file from matched dirs
+    #Priority: setup.sh files
+    for d in ${matched_dirs}; do
+        setup_sh="$d/setup.sh"
+        if [[ -f "$setup_sh" ]]; then
+            printf "\tSourcing setup file $setup_sh\n"
+            . "$setup_sh"
+        fi
+    done
+    
     for d in ${matched_dirs}; do
         printf "\tSourcing files from $d\n"
         for f in $(find ${d} -maxdepth 1 -iname  "*.sh"); do
