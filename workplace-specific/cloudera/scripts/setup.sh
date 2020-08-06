@@ -20,6 +20,8 @@ export MVN_NO_DOCKER=1
 
 #eYARN setup / K8S setup
 export K8S_NAMESPACE="snemeth-eyarn"
+
+echo "Setting k8s namespace to ${K8S_NAMESPACE}"
 kubectl config set-context --current --namespace=${K8S_NAMESPACE}
 
 

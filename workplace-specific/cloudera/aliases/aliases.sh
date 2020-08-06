@@ -9,6 +9,8 @@ HADOOP_DEV_DIR="$HOME/development/apache/hadoop/"
 CLOUDERA_DIR="$HOME_LINUXENV_DIR/workplace-specific/cloudera/"
 export CLOUDERA_DIR
 
+EYARN_DIR="$CLOUDERA_DEV_ROOT/yarn-operator"
+
 #goto aliases
 alias goto-cldr="cd $CLOUDERA_DEV_ROOT"
 alias goto-cldr-hadoop="cd $CLOUDERA_HADOOP_ROOT"
@@ -19,7 +21,7 @@ alias goto-hadoop-commit="cd $HOME/development/apache/hadoop-commit"
 alias goto-qecmf="cd $CLOUDERA_DEV_ROOT/qe-cmf/systest"
 alias goto-cmf="cd $CLOUDERA_DEV_ROOT/cmf"
 alias goto-yarn-tasks="cd $HOME/yarn-tasks"
-alias goto-eyarn="cd $CLOUDERA_DEV_ROOT/yarn-operator"
+alias goto-eyarn="cd $EYARN_DIR"
 
 #git specific commands
 alias gerrit-branches5="git br -r | grep gerrit | grep -e '5.1\d.*' | cut -d_ -f 2-3 | sort -u | grep -v patch"
@@ -54,8 +56,10 @@ alias grind-yarn-exceptions="grind --verbose test --java-version 8 \
  -e TestHBaseTimelineStorageEntities \
  -e TestHBaseTimelineStorageSchema"
 
-alias eyarn-redeploy="make helm/delete ns=$K8S_NAMESPACE && make helm/install ns=$K8S_NAMESPACE"
-
+#eYARN-related aliases
+alias eyarn-deploy="cd $EYARN_DIR; make helm/install ns=$K8S_NAMESPACE; cd -"
+alias eyarn-redeploy="cd $EYARN_DIR; make helm/delete ns=$K8S_NAMESPACE && make helm/install ns=$K8S_NAMESPACE; cd -"
+alias start-minikube="minikube start --cpus=4"
 
 
 #==============================================
