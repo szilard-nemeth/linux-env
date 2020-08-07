@@ -4,8 +4,10 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #cd $DIR
 
 ## LINUX-ENV ALIASES
-alias linux-env-reload="$LINUX_ENV_REPO/setup-env.sh"
-alias linux-env-todos="grep '#TODO' -r $LINUX_ENV_REPO"
+alias linuxenv-reload="$LINUX_ENV_REPO/setup-env.sh"
+alias linuxenv-todos="grep '#TODO' -r $LINUX_ENV_REPO"
+alias linuxenv-debug-on="echo \"enabled\" > ${ENV_DEBUG_SETUP_FILE}"
+alias linuxenv-debug-off="echo \"disabled\" > ${ENV_DEBUG_SETUP_FILE}"
 
 
 ## GOTO ALIASES
@@ -51,3 +53,6 @@ alias mc='LANG=en_EN.UTF-8 mc'
 #TODO create alias: resync all changes from linuxenv repo (copies all files)
 #TODO make this a function
 alias zip-files="sudo find / -iname *1564501696813_0001_01_000001* -print0 | sudo tar -czvf backup-1564501696813_0001-20190730.tar.gz --null -T -"
+
+#https://stackoverflow.com/a/49752003/1106893
+alias zsh-printcolors="for code in {000..255}; do print -P -- "$code: %F{$code}Color%f"; done"

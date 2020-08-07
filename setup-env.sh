@@ -1,23 +1,71 @@
 #!/usr/bin/env bash
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-mkdir -p $HOME/.env
-ENV_FILE_MAPPINGS=$HOME/.env/.file-mappings
-rm ${ENV_FILE_MAPPINGS}
-touch ${ENV_FILE_MAPPINGS}
 
-HOME_LINUXENV_DIR="$HOME/.linuxenv/"
-WORKPLACE_SPECIFIC_DIR="$HOME_LINUXENV_DIR/workplace-specific/"
+###############################
+function initial_setup() {
+    if test -n "$ZSH_VERSION"; then
+        PROFILE_SHELL=zsh
+    elif test -n "$BASH_VERSION"; then
+        PROFILE_SHELL=bash
+    elif test -n "$KSH_VERSION"; then
+        PROFILE_SHELL=ksh
+    elif test -n "$FCEDIT"; then
+        PROFILE_SHELL=ksh
+    elif test -n "$PS3"; then
+        PROFILE_SHELL=unknown
+    else
+        PROFILE_SHELL=sh
+    fi
+    
+    if [[ "$PROFILE_SHELL" == 'zsh' ]]; then
+       DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    elif [[ "$PROFILE_SHELL" == 'bash' ]]; then
+       DIR="$LINUX_ENV_REPO"
+    fi
+    
+    #Declare common variables
+    HOME_ENV="$HOME/.env/"
+    ENV_SETUP_STATUS="$HOME_ENV/.initial-setup-status"
+    
+    HOME_LINUXENV_DIR="$HOME/.linuxenv/"
+    WORKPLACE_SPECIFIC_DIR="$HOME_LINUXENV_DIR/workplace-specific/"
+    INFO_PREFIX="--->"
+    
+    #Invoke common functions
+    platform=$(determine_platform)
+    echo "Platform is: $platform"
+    
+    #Initial setup platforms: Only macOS is implemented
+    if [[ ${platform} == 'macOS' ]] && ! grep -q "complete" "$ENV_SETUP_STATUS"; then
+        initial_setup_macos
+    fi
+}
 
 function copy_files() {
-    IFS=' ' read -ra copy_list <<< "$@"
+    #echo "Arguments to copy files: $@"
+    
+    #Init env file mappings
+    mkdir -p $HOME/.env
+    ENV_FILE_MAPPINGS=${HOME_ENV}/.file-mappings
+    rm ${ENV_FILE_MAPPINGS}
+    touch ${ENV_FILE_MAPPINGS}
 
+    
+    if [[ "$PROFILE_SHELL" == 'zsh' ]]; then
+       IFS=' ' read -rA copy_list <<< "$@"
+       #Arrays are initialized from 1 in ZSH
+       i="1"
+    elif [[ "$PROFILE_SHELL" == 'bash' ]]; then
+       IFS=' ' read -ra copy_list <<< "$@"
+       i="0"
+    fi
+    unset IFS
+    
     if [ $((${#copy_list[@]} % 2)) -ne 0 ]; then
         echo "Illegal number of parameters, should be even!"
         exit 1
     fi
 
-    i="0"
     while [ ${i} -lt ${#copy_list[@]} ]; do
         from="${copy_list[$i]}"
         to="${copy_list[$i+1]}"
@@ -121,25 +169,25 @@ function set_matched_dirs() {
     ## matched_dirs=$(find $from_dir -name $marker_file_name -printf "%h\n")
 
     #compatible with MacOS / FreeBSD
-    matched_dirs=$(find ${from_dir} -name ${marker_file_name} -print0 | xargs -0 -n1 dirname | sort --unique)
+    matched_dirs=($(find ${from_dir} -name ${marker_file_name} -print0 | xargs -0 -n1 dirname | sort --unique))
 }
 
 function initial_setup_macos() {
-    echo "Running initial macOS setup"
+    echo "=== Running initial macOS setup ==="
     echo "Checking whether Homebrew is installed..."
     if ! hash brew 2>/dev/null; then
         echo "Homebrew not found! Installing Homebrew..."
         /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
     fi
     
-    echo "Checking whether GNU sed is available..."
+    echo "Checking whether GNU sed is installed..."
     echo "123 abc" | sed -r 's/[0-9]+/& &/' > /dev/null
     if [[ "$?" -ne 0 ]]; then
         echo "Installing GNU sed"
         brew install gnu-sed --with-default-names
     fi
     
-    echo "Checking whether npm is available..."
+    echo "Checking whether npm is installed..."
     if ! hash node 2>/dev/null; then
         brew install node;
         which node # => /usr/local/bin/node
@@ -156,7 +204,21 @@ function initial_setup_macos() {
     else
         echo "gettext is already installed"
     fi
-    echo "complete" > "${HOME}/.env/.initial-setup-status"
+    
+    echo "Checking available shells..."
+    cat /etc/shells | grep zsh
+    if [[ "$?" -ne 0 ]]; then
+        echo "Installing zsh"
+        brew install zsh
+    fi
+    
+    echo "Checking whether antigen is installed..."
+    if ! hash antigen 2>/dev/null; then
+        echo "Installing antigen"
+        brew install antigen
+    fi
+    
+    echo "complete" > "${ENV_SETUP_STATUS}"
 }
 
 function determine_platform() {
@@ -174,8 +236,15 @@ function determine_platform() {
 
 function copy_files_from_linuxenv_repo_to_home() {
     declare -a COPY_LIST=()
+    
+    #Bash
     COPY_LIST+=("$DIR/.bashrc $HOME/.bashrc")
     COPY_LIST+=("$DIR/.bash_profile $HOME/.bash_profile")
+    
+    #zsh
+    COPY_LIST+=("$DIR/.zshrc $HOME/.zshrc")
+    COPY_LIST+=("$DIR/.zprofile $HOME/.zprofile")
+    
     COPY_LIST+=("$DIR/setup-vars.sh $HOME_LINUXENV_DIR/setup-vars.sh")
     COPY_LIST+=("$DIR/dotfiles/. $HOME/")
     COPY_LIST+=("$DIR/aliases/. $HOME_LINUXENV_DIR/aliases/")
@@ -204,11 +273,8 @@ function copy_files_from_linuxenv_repo_to_home() {
     add_to_path ".add-to-path"
 }
 
-platform=$(determine_platform)
-echo "Platform is: $platform"
-if [[ ${platform} == 'macOS' ]] && ! grep -q "complete" "$HOME/.env/.initial-setup-status"; then
-    initial_setup_macos
-fi
 
-INFO_PREFIX="--->"
+#####################################
+initial_setup
 copy_files_from_linuxenv_repo_to_home
+set +x

@@ -4,6 +4,7 @@
 
 # If not running interactively, don't do anything
 [[ -z "$PS1" ]] && return
+echo "Sourcing ~/.bashrc"
 
 function setup-history() {
     # don't put duplicate lines or lines starting with space in the history.
