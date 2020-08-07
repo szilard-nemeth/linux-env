@@ -56,3 +56,11 @@ alias zip-files="sudo find / -iname *1564501696813_0001_01_000001* -print0 | sud
 
 #https://stackoverflow.com/a/49752003/1106893
 alias zsh-printcolors="for code in {000..255}; do print -P -- "$code: %F{$code}Color%f"; done"
+
+
+###WHITESPACE PIPE TRICK: https://superuser.com/a/1503113
+# SP  ' '  0x20 = · U+00B7 Middle Dot
+# TAB '\t' 0x09 = ￫ U+FFEB Halfwidth Rightwards Arrow
+# CR  '\r' 0x0D = § U+00A7 Section Sign (⏎ U+23CE also works fine)
+# LF  '\n' 0x0A = ¶ U+00B6 Pilcrow Sign (was "Paragraph Sign")
+alias whitespace="sed 's/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'"

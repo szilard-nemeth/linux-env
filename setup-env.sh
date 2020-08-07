@@ -172,6 +172,35 @@ function set_matched_dirs() {
     matched_dirs=($(find ${from_dir} -name ${marker_file_name} -print0 | xargs -0 -n1 dirname | sort --unique))
 }
 
+#TODO migrate all programs to use this function
+function brew_install() {
+    local program=$1
+    
+    brew ls --versions ${program}
+    if [[ "$?" -ne 0 ]]; then
+        echo "Installing $program with brew ..."
+        brew install ${program}
+    else
+        echo "Note: $program is already installed with brew."
+    fi
+}
+
+#TODO migrate all programs to use this function
+#TODO Optimize: brew search --casks is pretty slow: Could query multiple programs to speed up: brew search --casks prog1 prog2 progn
+#https://discourse.brew.sh/t/how-can-i-get-a-list-of-the-available-casks/6769
+function brew_cask_install() {
+    local program=$1
+    
+    brew search --casks ${program}
+    if [[ "$?" -ne 0 ]]; then
+        echo "Installing $program with brew cask..."
+        brew cask install ${program}
+    else
+        echo "Note: $program is already installed with brew cask."
+    fi
+}
+
+
 function initial_setup_macos() {
     echo "=== Running initial macOS setup ==="
     echo "Checking whether Homebrew is installed..."
@@ -218,6 +247,17 @@ function initial_setup_macos() {
         brew install antigen
     fi
     
+    echo "Checking whether kitty is installed..."
+    if ! hash kitty 2>/dev/null; then
+        echo "Installing kitty"
+        brew cask install kitty
+    fi
+    
+    echo "Installing fonts..."
+    brew_cask_install font-mononoki-nerd-font
+    brew_cask_install font-hack-nerd-font
+    brew_cask_install font-monoid-nerd-font
+    
     echo "complete" > "${ENV_SETUP_STATUS}"
 }
 
@@ -251,6 +291,10 @@ function copy_files_from_linuxenv_repo_to_home() {
     COPY_LIST+=("$DIR/scripts/. $HOME_LINUXENV_DIR/scripts")
     COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
     COPY_LIST+=("$DIR/.npmrc $HOME/.npmrc")
+    
+    #Kitty conf + theme
+    COPY_LIST+=("$DIR/config/kitty.conf $HOME/.config/kitty/kitty.conf")
+    COPY_LIST+=("$DIR/config/theme.conf $HOME/.config/kitty/theme.conf")
     
     #Can't use is-platform-macos alias here as it's not yet loaded
     if [[ ! ${platform} == 'macOS' ]]; then

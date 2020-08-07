@@ -22,6 +22,8 @@ function setup() {
     [[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)"
     
     setup-antigen
+    setup-prompt
+    setup-kitty
 }
 
 function setup-antigen() {
@@ -47,6 +49,18 @@ function setup-antigen() {
     antigen apply
 }
 
+setup-prompt() {
+    echo "Setting up prompt..."
+    SPACESHIP_TIME_SHOW=true
+}
+
+setup-kitty() {
+    autoload -Uz compinit
+    compinit
+    # Completion for kitty
+    kitty + complete setup zsh | source /dev/stdin
+
+}
 function print-welcome-screen() {
     cal;
     echo -ne "Sysinfo:";uptime;echo ""
