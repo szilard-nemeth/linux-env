@@ -18,9 +18,9 @@ function initial_setup() {
     fi
     
     if [[ "$PROFILE_SHELL" == 'zsh' ]]; then
-       DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    elif [[ "$PROFILE_SHELL" == 'bash' ]]; then
        DIR="$LINUX_ENV_REPO"
+    elif [[ "$PROFILE_SHELL" == 'bash' ]]; then
+       DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
     fi
     
     #Declare common variables
@@ -200,6 +200,19 @@ function brew_cask_install() {
     fi
 }
 
+function check_version() {
+    local program="$1"
+    local currentver=$(eval $2)
+    local requiredver="$3"
+    
+    if [ "$(printf '%s\n' "$requiredver" "$currentver" | sort -V | head -n1)" = "$requiredver" ]; then 
+        echo "$program has version >= $requiredver"
+        VERSIONCHECK_RESULT=0
+    else
+        echo "$program has version < $requiredver"
+        VERSIONCHECK_RESULT=1
+    fi
+}
 
 function initial_setup_macos() {
     echo "=== Running initial macOS setup ==="
@@ -258,6 +271,30 @@ function initial_setup_macos() {
     brew_cask_install font-hack-nerd-font
     brew_cask_install font-monoid-nerd-font
     
+    ###############################
+    echo "Installing custom shell plugins..."
+    
+    #Install colorls
+    #  colorls requires Ruby so install ruby :(
+    local RBENV_VERSION="2.7.1"
+    check_version "rbenv" "rbenv version | cut -d' ' -f1" ${RBENV_VERSION}
+    
+    if [[ "$VERSIONCHECK_RESULT" -ne 0 ]]; then
+        echo "Installing ruby for colorls"
+        brew update
+        brew install ruby-build
+        brew install rbenv
+        rbenv install ${RBENV_VERSION}
+        rbenv global ${RBENV_VERSION}
+    else
+        echo "ruby rbenv is already at proper version: $RBENV_VERSION"
+    fi
+    export PATH="$HOME/.rbenv/shims:$PATH"
+    echo "Ruby version: $(ruby -v)"
+    
+    #Colorls 
+    gem install --user-install colorls
+    
     echo "complete" > "${ENV_SETUP_STATUS}"
 }
 
@@ -281,10 +318,11 @@ function copy_files_from_linuxenv_repo_to_home() {
     COPY_LIST+=("$DIR/.bashrc $HOME/.bashrc")
     COPY_LIST+=("$DIR/.bash_profile $HOME/.bash_profile")
     
-    #zsh
+    #Zsh
     COPY_LIST+=("$DIR/.zshrc $HOME/.zshrc")
     COPY_LIST+=("$DIR/.zprofile $HOME/.zprofile")
     
+    #Common
     COPY_LIST+=("$DIR/setup-vars.sh $HOME_LINUXENV_DIR/setup-vars.sh")
     COPY_LIST+=("$DIR/dotfiles/. $HOME/")
     COPY_LIST+=("$DIR/aliases/. $HOME_LINUXENV_DIR/aliases/")

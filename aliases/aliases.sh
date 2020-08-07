@@ -42,6 +42,9 @@ alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
 
+#colorls
+alias lc='colorls -lA --sd'
+
 
 ## OTHER ALIASES
 # Add an "alert" alias for long running commands.  Use like so:
