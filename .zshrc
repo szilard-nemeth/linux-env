@@ -51,7 +51,85 @@ function setup-antigen() {
 
 setup-prompt() {
     echo "Setting up prompt..."
+    #EXAMPLE OLD PROMPT:
+    # szilardnemeth@snemeth-MBP[19:14:36] <0> @master )--( ~/development/my-repos/linux-env )
+    
+    SPACESHIP_PROMPT_ORDER=(
+      user          # Username section
+      host          # Hostname section
+      time          # Time stamps section
+      exit_code     # Exit code section
+      battery       # Battery level and status
+      dir           # Current directory section
+
+      git           # Git section (git_branch + git_status)
+      #hg            # Mercurial section (hg_branch  + hg_status)
+      package       # Package version
+      node          # Node.js section
+      ruby          # Ruby section
+      #elixir        # Elixir section
+      #xcode         # Xcode section
+      #swift         # Swift section
+      golang        # Go section
+      #php           # PHP section
+      #rust          # Rust section
+      #haskell       # Haskell Stack section
+      #julia         # Julia section
+      docker        # Docker section
+      aws           # Amazon Web Services section
+      gcloud        # Google Cloud Platform section
+      venv          # virtualenv section
+      #conda         # conda virtualenv section
+      #pyenv         # Pyenv section
+      #dotnet        # .NET section
+      #ember         # Ember.js section
+      kubectl       # Kubectl context section
+      #terraform     # Terraform workspace section
+      exec_time     # Execution time
+      line_sep      # Line break
+      vi_mode       # Vi-mode indicator
+      jobs          # Background jobs indicator
+      char          # Prompt character
+    )
+    
+    #Generic
+    SPACESHIP_PROMPT_DEFAULT_PREFIX=""
+    
+    #Username
+    SPACESHIP_USER_SHOW="always"
+    SPACESHIP_USER_PREFIX=" "
+    SPACESHIP_USER_SUFFIX=""
+    
+    #Host
+    SPACESHIP_HOST_SHOW="always"
+    SPACESHIP_HOST_PREFIX="@"
+    
+    #Time
     SPACESHIP_TIME_SHOW=true
+    SPACESHIP_TIME_PREFIX="["
+    SPACESHIP_TIME_SUFFIX="] "
+    
+    #Exit code
+    SPACESHIP_EXIT_CODE_SHOW="true"
+    SPACESHIP_EXIT_CODE_SYMBOL=""
+    SPACESHIP_EXIT_CODE_PREFIX="<"
+    SPACESHIP_EXIT_CODE_SUFFIX="> "
+    
+    #Battery
+    SPACESHIP_BATTERY_SHOW="always"
+    
+    #Dir
+    SPACESHIP_DIR_PREFIX="--( "
+    SPACESHIP_DIR_SUFFIX=" ) "
+    SPACESHIP_DIR_TRUNC=0
+    SPACESHIP_DIR_TRUNC_REPO="false"
+    
+    #Git
+    SPACESHIP_GIT_PREFIX=""
+    SPACESHIP_GIT_BRANCH_PREFIX="@"
+    
+    #Docker
+    SPACESHIP_DOCKER_PREFIX=""
 }
 
 setup-kitty() {

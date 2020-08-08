@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-
+#TODO Make setup colored
+#TODO error messages with red!!
 ###############################
 function initial_setup() {
     if test -n "$ZSH_VERSION"; then
