@@ -21,6 +21,7 @@ function setup() {
     # make less more friendly for non-text input files, see lesspipe(1)
     [[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)"
     
+    setup-history
     setup-antigen
     setup-prompt
     setup-kitty
@@ -183,8 +184,7 @@ function run-setup-scripts() {
 }
 
 #################################################################################
-setup-history
 setup
-print-welcome-screen
 set_debug
 run-setup-scripts
+print-welcome-screen
