@@ -141,8 +141,10 @@ setup-kitty() {
 
 }
 function print-welcome-screen() {
+    echo "";
+    echo "WELCOME"
     cal;
-    echo -ne "Sysinfo:";uptime;echo ""
+    echo -ne "Sysinfo: ";uptime;
     echo "";
 }
 
