@@ -30,15 +30,8 @@ alias git-rebase-trunk="git co trunk && echo 'Pulling origin/trunk...' && git pu
 alias j7='export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home'
 alias j8='export JAVA_HOME=/Library/Java//JavaVirtualMachines/jdk1.8.0_151.jdk/Contents/Home'
 
+#==============================================
 #YARN-related commands
-alias upstream-gergo="git log --grep grepas --grep 'Gergo Repas' --oneline  | wc -l"
-
-alias upstream-all-count="git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | grep 'YARN\|SUBMARINE\|HADOOP' | wc -l"
-alias upstream-all="git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | grep 'YARN\|SUBMARINE\|HADOOP'"
-alias upstream-hadoop="git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | wc -l"
-alias upstream-committed="git log --author="snemeth@apache.org" --oneline | wc -l"
-alias upstream-yarn2="echo $(($(git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | grep YARN | wc -l | tr -s ' ' | cut -d ' ' -f2) + $(git log --author=snemeth --oneline | wc -l | tr -s ' ' | cut -d ' ' -f2)))"
-
 
 alias grind-yarn="export GRIND_MAVEN_FLAGS=-Dmaven-dependency-plugin.version=2.10 && \
 rm -rf ~/development/cloudera/dist_test/env/.grind/cache/ && \
@@ -55,6 +48,7 @@ alias grind-yarn-exceptions="grind --verbose test --java-version 8 \
  -e TestHBaseTimelineStorageDomain \
  -e TestHBaseTimelineStorageEntities \
  -e TestHBaseTimelineStorageSchema"
+#==============================================
 
 #eYARN-related aliases
 alias eyarn-deploy="cd $EYARN_DIR; make helm/install ns=$K8S_NAMESPACE; cd -"

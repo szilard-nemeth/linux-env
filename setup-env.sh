@@ -160,6 +160,12 @@ function add_to_path() {
     echo "Done sourcing $marker_file_name files from $from_dir"
 }
 
+function add_to_path_directly() {
+    dir=$1
+    echo "Adding directory: $dir to PATH"
+    PATH=$PATH:${dir}
+}
+
 function set_matched_dirs() {
     local from_dir=$1
     local marker_file_name=$2
@@ -328,6 +334,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     COPY_LIST+=("$DIR/dotfiles/. $HOME/")
     COPY_LIST+=("$DIR/aliases/. $HOME_LINUXENV_DIR/aliases/")
     COPY_LIST+=("$DIR/scripts/. $HOME_LINUXENV_DIR/scripts")
+    COPY_LIST+=("$DIR/scripts/python/. $HOME_LINUXENV_DIR/scripts/python")
     COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
     COPY_LIST+=("$DIR/.npmrc $HOME/.npmrc")
     
@@ -354,6 +361,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     source_scripts ${HOME_LINUXENV_DIR}/scripts
     source_files ".source-this"
     add_to_path ".add-to-path"
+    add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/python
 }
 
 
