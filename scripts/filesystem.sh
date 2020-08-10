@@ -56,3 +56,24 @@ function extract () {
          echo "'$1' is not a valid file"
      fi
 }
+
+function diff_files_in_dirs() {
+  #EXAMPLE CALL:
+  #diff_files_in_dirs ~/development/my-repos/python/yarn-dev-func ~/development/my-repos/linux-env/workplace-specific/cloudera/scripts/yarn/python "*.py"
+  if [ $# -ne 3 ]; then
+    echo "Usage: $0 [dir1] [dir2] [filaname-pattern]"
+    echo "Example: $0 $(pwd)/ ~/somedir/ '*.py'"
+    return 1
+  fi
+
+  local dir1=$1
+  local dir2=$2
+  local filename_expr=$3
+#  set -x
+  echo "Diffing files matching name $filename_expr between dirs: $dir1 vs. $dir2"
+  for file in $(find $dir1 -maxdepth 1 -name $filename_expr -exec basename {} \;); do
+#    echo $file
+    diff "$dir1/$file" "${dir2}/${file##*/}";
+  done
+#  set +x
+}
