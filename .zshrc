@@ -21,6 +21,7 @@ function setup() {
     # make less more friendly for non-text input files, see lesspipe(1)
     [[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)"
     
+    setup-key-bindings
     setup-history
     setup-antigen
     setup-prompt
@@ -133,13 +134,19 @@ setup-prompt() {
     SPACESHIP_DOCKER_PREFIX=""
 }
 
-setup-kitty() {
+function setup-kitty() {
     autoload -Uz compinit
     compinit
     # Completion for kitty
     kitty + complete setup zsh | source /dev/stdin
 
 }
+
+function setup-key-bindings() {
+    bindkey "^[[1;3C" forward-word
+    bindkey "^[[1;3D" backward-word
+}
+
 function print-welcome-screen() {
     echo "";
     echo "WELCOME"
