@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 
+#================Setup locations================
+CLOUDERA_DEV_ROOT="$HOME/development/cloudera/"
+CLOUDERA_HADOOP_ROOT="$CLOUDERA_DEV_ROOT/hadoop/"
+HADOOP_MVN_DIR="$HOME/development/apache/hadoop-maven/"
+HADOOP_DEV_DIR="$HOME/development/apache/hadoop/"
+
+CLOUDERA_DIR="$HOME_LINUXENV_DIR/workplace-specific/cloudera/"
+export CLOUDERA_DIR
+
+EYARN_DIR="$CLOUDERA_DEV_ROOT/yarn-operator"
+#===============================================
+
 export PATH="/usr/local/opt/protobuf@2.5/bin:$PATH"
 
 ## Setup Google Cloud SDK
@@ -37,3 +49,6 @@ fi
 
 #Setup GOPATH
 GOPATH=/Users/szilardnemeth/go
+
+#Setup PYTHONPATH
+export PYTHONPATH="$CLOUDERA_DIR/scripts/yarn/python/:$PYTHONPATH"
