@@ -5,6 +5,8 @@ import re
 
 import humanize
 
+REVIEW_BRANCH_SEP = '-'
+
 LOG = logging.getLogger(__name__)
 
 
@@ -57,6 +59,22 @@ class StringUtils:
         split[-2] = increased_str
         return '.'.join(split)
 
+    @staticmethod
+    def ensure_matches_pattern(string, regex, raise_exception=False):
+        import re
+        regex_obj = re.compile(regex)
+        result = regex_obj.match(string)
+        if raise_exception and not result:
+            raise ValueError("String '{}' does not math regex pattern: {}".format(string, regex))
+        return result
+
+    @staticmethod
+    def get_matched_group(str, regex, group):
+        match = re.match(regex, str)
+        if not match or len(match.groups()) < group:
+            raise ValueError("String '{}' does not have match with group number '{}'. Regex: '{}', Match object: '{}'", str, group, regex, match)
+        return match.group(group)
+
 
 class PatchUtils:
     @staticmethod
@@ -70,6 +88,32 @@ class PatchUtils:
             last_patch_num = StringUtils.extract_patch_number_from_filename_as_str(latest_patch)
             next_patch_filename = StringUtils.get_next_patch_filename(latest_patch)
             return os.path.join(patch_dir, next_patch_filename), StringUtils.increase_numerical_str(last_patch_num)
+
+    @staticmethod
+    def get_next_review_branch_name(branches):
+        # review-YARN-10277-3
+        # review-YARN-10277-2
+        # review-YARN-10277
+        sorted_branches = sorted(branches, reverse=True)
+        if len(sorted_branches) == 0:
+            raise ValueError("Expected a list of branches with size 1 at least. List: %s", sorted_branches)
+
+        latest_branch = sorted_branches[0]
+        parts = latest_branch.split(REVIEW_BRANCH_SEP)
+
+        if len(parts) < 3:
+            raise ValueError("Expected at least 3 components (separated by '-') of branch name: {}, encountered: {}",
+                             latest_branch, len(parts))
+
+        # No branch postfix, e.g. review-YARN-10277
+        if len(parts) == 3:
+            return REVIEW_BRANCH_SEP.join(parts) + REVIEW_BRANCH_SEP + '2'
+        elif len(parts) == 4:
+            return REVIEW_BRANCH_SEP.join(parts[0:3]) + REVIEW_BRANCH_SEP + StringUtils.increase_numerical_str(parts[3])
+        else:
+            raise ValueError("Unexpected number of components (separated by '-') of branch name: {}, encountered # of components: {}",
+                             latest_branch, len(parts))
+
 
 
 class FileUtils:
@@ -88,8 +132,7 @@ class FileUtils:
     @classmethod
     def ensure_file_exists(cls, path):
         if not os.path.exists(path):
-            raise ValueError(
-                "File not found: " + path + ". You are most likely not in project root. CWD: " + os.getcwd())
+            raise ValueError("No such file or directory: {}".format(path))
 
     @classmethod
     def verify_if_dir_is_created(cls, path, raise_ex=True):
@@ -127,3 +170,7 @@ class FileUtils:
             return humanize.naturalsize(size, gnu=True)
         else:
             return str(size)
+
+    @classmethod
+    def path_basename(cls, path):
+        return os.path.basename(path)
