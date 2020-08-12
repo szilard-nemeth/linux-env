@@ -9,74 +9,8 @@ function setup() {
 #TODO PYTHONPATH DID NOT WORK
 alias yarn-save-patch="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py save_patch"
 
-#TODO script is not recognizing if branch already exist! Should delete branch or log a warning!
-##Could add new branch per patch, e.g. YARN-1234-patch001, YARN-1234-patch002
-function yarn-create-review-branch() {
-    #TODO this does not handle MAPREDUCE-XXX patches
-    setup
-    ORIG_BRANCH=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
-    PATCH_FILE=$1
-    
-    if [ "$PATCH_FILE" = "" ]; then
-        echo "Please specify a valid patch file!"
-        return 1
-    fi
-    if [ ! -f ${PATCH_FILE} ]; then
-        echo "File not found: $1, Please specify a valid patch file!"
-        return 2
-    fi
-    FILE_NAME_REGEX=".*YARN-[0-9]+.*\.patch"
-    
-    #try to match patch file to pattern and store branch name
-    if [[ ! ${PATCH_FILE} =~ $FILE_NAME_REGEX ]]; then
-        echo "Filename does not match usual patch file pattern: '$FILE_NAME_REGEX', exiting...!"
-        return 3
-    fi
-    BRANCH="review-$(echo ${PATCH_FILE} | sed -E "s/.*(YARN-[[:digit:]]+).*/\1/g")"
-    
-    #pull new changes
-    cd ${UPSTREAM_HADOOP_DIR}
-    
-    GIT_STATUS_OUT="$(git status --porcelain)"
-    if [ ! -z "$GIT_STATUS_OUT" ]; then
-        echo "git working directory is not clean, please stash or drop your changes!"
-        echo "$GIT_STATUS_OUT"
-        return 4 
-    fi
-    
-    echo "Pulling latest changes from origin/trunk...."
-    git checkout trunk && git pull --rebase origin
-    
-    if [[ ! -z $(git diff origin/trunk..trunk) ]]; then
-        echo "There is a diff between local trunk and origin/trunk! Run 'git reset origin/trunk --hard' and re-run the script! Exiting..."
-        return 5
-    fi
-    
-    #try to apply PATCH_FILE to trunk
-    git apply ${PATCH_FILE} --check
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Patch does not apply to trunk, please resolve the conflicts and run: git commit -am \"patch file: $PATCH_FILE\""
-        git checkout ${ORIG_BRANCH}
-        return 3
-    else
-        echo "Patch $PATCH_FILE applies cleanly to trunk"
-        if [ `git branch --list "$BRANCH"` ]; then
-            local review_counter=$(git branch --list "$BRANCH*" | tail -n1 | tr -d "[:blank:]" | cut -d'-' -f4)
-            review_counter=$(($review_counter+1))
-            echo "review counter: $review_counter"
-            local NEW_BRANCH="$BRANCH-$review_counter"
-            echo "There is a branch named $BRANCH already! Creating new branch as: ${NEW_BRANCH}"
-            git checkout -b ${NEW_BRANCH}
-        else
-            echo "Checking out new branch $BRANCH from trunk!"
-            git checkout -b "$BRANCH" trunk
-            
-        fi
-        git apply ${PATCH_FILE}
-        git add -A
-        git commit -m "patch file: $PATCH_FILE"
-    fi
-}
+#Example call: yarn-create-review-branch /Users/szilardnemeth/yarn-tasks/YARN-10277-test2/YARN-10277-test2.010.patch
+alias yarn-create-review-branch="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py create_review_branch"
 
 #TODO decide on the cdh branch whether this is C5 or C6 backport (remote is different)
 function yarn-backport-c6() {

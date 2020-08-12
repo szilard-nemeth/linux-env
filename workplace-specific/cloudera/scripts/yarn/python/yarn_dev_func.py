@@ -15,7 +15,7 @@ from logging.handlers import TimedRotatingFileHandler
 from git import GitCommandError
 
 from git_wrapper import GitWrapper
-from utils import FileUtils, PatchUtils
+from utils import FileUtils, PatchUtils, StringUtils
 
 ENV_CLOUDERA_HADOOP_ROOT = 'CLOUDERA_HADOOP_ROOT'
 ENV_HADOOP_DEV_DIR = 'HADOOP_DEV_DIR'
@@ -29,10 +29,11 @@ LOG = logging.getLogger(__name__)
 __author__ = 'Szilard Nemeth'
 
 PROJECT_NAME="yarn_dev_func"
-
+YARN_PATCH_FILENAME_REGEX = ".*(YARN-[0-9]+).*\.patch"
 
 class CommandType(Enum):
     SAVE_PATCH = 'save_patch'
+    CREATE_REVIEW_BRANCH = 'create_review_branch'
 
 
 class Setup:
@@ -74,9 +75,14 @@ class Setup:
         # Subparsers
         subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands', help='bla', required=True, dest='test')
 
-        # Parser 1: save_patch command
-        save_patch_parser = subparsers.add_parser('save_patch', help='Saves patch from upstream repository to yarn patches dir')
+        # Parser: save_patch command
+        save_patch_parser = subparsers.add_parser(CommandType.SAVE_PATCH.value, help='Saves patch from upstream repository to yarn patches dir')
         save_patch_parser.set_defaults(command=CommandType.SAVE_PATCH)
+
+        # Parser: create_review_branch command
+        save_patch_parser = subparsers.add_parser(CommandType.CREATE_REVIEW_BRANCH.value, help='Creates review branch from upstream patch file')
+        save_patch_parser.add_argument('patch_file', type=str, help='Path to patch file')
+        save_patch_parser.set_defaults(command=CommandType.CREATE_REVIEW_BRANCH)
 
         # Normal arguments
         parser.add_argument('-v', '--verbose', action='store_true',
@@ -85,6 +91,10 @@ class Setup:
 
         args = parser.parse_args()
         return args
+
+
+class YarnDevHighLevelFunctions:
+    pass
 
 
 class YarnDevFunc:
@@ -136,7 +146,7 @@ class YarnDevFunc:
             raise ValueError("Cannot make patch, current branch is trunk. Please use a different branch!")
         patch_branch = curr_branch
 
-        # TODO if there's no commit between trunk..branch, don't run forward
+        # TODO if there's no commit between trunk..branch, don't move forward and exit
         # TODO check if git is clean (no modified, unstaged files, etc)
         self.upstream_repo.checkout_branch('trunk')
         self.upstream_repo.pull('origin')
@@ -193,6 +203,67 @@ class YarnDevFunc:
         # Checkout old branch
         self.upstream_repo.checkout_previous_branch()
 
+    def create_review_branch(self, patch_file):
+        FileUtils.ensure_file_exists(patch_file)
+        patch_file_name = FileUtils.path_basename(patch_file)
+        matches = StringUtils.ensure_matches_pattern(patch_file_name, YARN_PATCH_FILENAME_REGEX)
+        if not matches:
+            LOG.error("Filename '%s' (full path: %s) does not match usual patch file pattern: '%s', exiting...!", patch_file_name, patch_file, YARN_PATCH_FILENAME_REGEX)
+            exit(1)
+
+        orig_branch = self.upstream_repo.get_current_branch_name()
+        LOG.info("Current branch: %s", orig_branch)
+
+        target_branch = "review-" + StringUtils.get_matched_group(patch_file, YARN_PATCH_FILENAME_REGEX, 1)
+        LOG.info("Target branch: %s", target_branch)
+
+        clean = self.upstream_repo.is_working_directory_clean()
+        if not clean:
+            LOG.error("git working directory is not clean, please stash or drop your changes")
+            exit(2)
+
+        self.upstream_repo.checkout_branch('trunk')
+        self.upstream_repo.pull('origin')
+        diff = self.upstream_repo.diff_between_refs('origin/trunk', 'trunk')
+        if diff:
+            LOG.error("There is a diff between local trunk and origin/trunk! Run 'git reset origin/trunk --hard' and re-run the script! Exiting...")
+            exit(3)
+
+        apply_result = self.upstream_repo.apply_check(patch_file, raise_exception=False)
+        if not apply_result:
+            cmd = "git apply " + patch_file
+            LOG.error("Patch does not apply to trunk, please resolve the conflicts manually. Run this command to apply the patch again: %s", cmd)
+            self.upstream_repo.checkout_previous_branch()
+            exit(4)
+
+        LOG.info("Patch %s applies cleanly to trunk", patch_file)
+
+        branch_exists = self.upstream_repo.is_branch_exist(target_branch)
+        base_ref = 'trunk'
+        if not branch_exists:
+            success = self.upstream_repo.checkout_new_branch(target_branch, base_ref)
+            if not success:
+                LOG.error("Cannot checkout new branch %s based on ref %s", target_branch, base_ref)
+                exit(5)
+            LOG.info("Checked out branch %s based on ref %s", target_branch, base_ref)
+        else:
+            branch_pattern = target_branch + "*"
+            branches = self.upstream_repo.list_branches(branch_pattern)
+            LOG.info("Found existing review branches for this patch: %s", branches)
+            target_branch = PatchUtils.get_next_review_branch_name(branches)
+            LOG.info("Creating new version of review branch as: %s", target_branch)
+            success = self.upstream_repo.checkout_new_branch(target_branch, base_ref)
+            if not success:
+                LOG.error("Cannot checkout new branch %s based on ref %s", target_branch, base_ref)
+                exit(6)
+
+        self.upstream_repo.apply_patch(patch_file, include_check=False)
+        LOG.info("Successfully applied patch: %s", patch_file)
+        commit_msg = "patch file: {}".format(patch_file)
+        self.upstream_repo.add_all_and_commit(commit_msg)
+        LOG.info("Committed changes of patch: %s with message: %s", patch_file, commit_msg)
+
+
 
 if __name__ == '__main__':
     start_time = time.time()
@@ -213,6 +284,8 @@ if __name__ == '__main__':
     command = args.command
     if command == CommandType.SAVE_PATCH:
         yarn_functions.save_patch()
+    elif command == CommandType.CREATE_REVIEW_BRANCH:
+        yarn_functions.create_review_branch(args.patch_file)
 
 
     end_time = time.time()
