@@ -12,69 +12,9 @@ alias yarn-save-patch="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; pytho
 #Example call: yarn-create-review-branch /Users/szilardnemeth/yarn-tasks/YARN-10277-test2/YARN-10277-test2.010.patch
 alias yarn-create-review-branch="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py create_review_branch"
 
-#TODO decide on the cdh branch whether this is C5 or C6 backport (remote is different)
-function yarn-backport-c6() {
-    setup
-    if [[ $# -ne 3 ]]; then
-        echo "Usage: yarn-backport-c6 [CDH-jira-number] [CDH-branch] [Upstream commit hash or commit message fragment]"
-        echo "Example: yarn-backport-c6 CDH-64201 cdh6.x YARN-7948"
-        return 1
-    fi
-    CDH_JIRA_NO=$1
-    CDH_BRANCH=$2
-    UPSTREAM_PATCH_NO=$3
-    
-    ##fetch, pull, store commit hash of upstream commit
-    cd ${UPSTREAM_HADOOP_DIR}
-    ORIG_BRANCH=$(git rev-parse --symbolic-full-name --abbrev-ref HEAD)
-    git fetch --all && git checkout trunk && git pull
-    
-    IFS=$'\n'
-    GIT_LOG_RES=($(git log --oneline --grep=${UPSTREAM_PATCH_NO}))
-    unset IFS
-    echo "git log res: ${GIT_LOG_RES[@]}"
-    if [[ ${#GIT_LOG_RES[@]} -ne 1 ]]; then 
-        echo "Multiple results found in git log of upstream repository for pattern: $UPSTREAM_PATCH_NO";
-        #restore original upstream branch
-        git checkout ${ORIG_BRANCH}
-        return 1 
-    fi
-    
-    UPSTREAM_COMMIT_HASH=$(echo ${GIT_LOG_RES} | cut -d' ' -f1)
-    #restore original upstream branch
-    git checkout ${ORIG_BRANCH}
-    
-    
-    ###do the rest of the work in the cloudera repo
-    cd ${DOWNSTREAM_HADOOP_DIR}
-    git fetch --all
-    #TODO handle if branch already exist (is it okay to silently ignore?) or should use current branch with switch?
-    git checkout -b "$CDH_JIRA_NO-$CDH_BRANCH" cauldron/${CDH_BRANCH}
-    git cherry-pick -x ${UPSTREAM_COMMIT_HASH}
-    
-    #TODO add resume functionality so that commit message rewrite can happen
-    if [ $? -ne 0 ]; then
-        #TODO print git commit and git push command, print it to a script that can continue!
-        echo "$INFO_PREFIX There were some merge conflicts, please resolve them and run: git cherry-pick --continue!"
-        return 1
-    fi
-    
-    #TODO check result of cherry-pick (could be non-zero if we have merge conflicts)
-    ##add CDH number and it will add gerrit Change-Id
-    OLD_MSG=$(git log --format=%B -n1)
-    git commit --amend -m"$CDH_JIRA_NO: $OLD_MSG"
-    
-    
-    ##run build to verify backport compiles fine
-    #TODO make an option that decides if mvn clean install should be run!
-    #mvn clean install -Pdist -DskipTests -Pnoshade  -Dmaven.javadoc.skip=true
-    
-    
-    ##push to gerrit
-    echo "Commit was successful! Run this command to push to gerrit: git push cauldron HEAD:refs/for/$CDH_BRANCH%r=shuzirra,r=adam.antal,r=pbacsko,r=kmarton,r=gandras,r=bteke"
-    #git push cauldron HEAD:refs/for/$CDH_BRANCH
-
-}
+#Generic call: yarn-backport-c6 [Upstream commit hash or commit message fragment] [CDH-jira-number] [CDH-branch]
+#Example call: yarn-backport-c6 YARN-7948 CDH-64201 CDH-64201-cdh6x
+alias yarn-backport-c6="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py backport_c6"
 
 function yarn-upstream-commit-pr() {
     if [[ $# -ne 2 ]]; then

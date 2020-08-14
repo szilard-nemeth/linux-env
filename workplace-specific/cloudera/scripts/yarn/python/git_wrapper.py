@@ -35,6 +35,20 @@ class GitWrapper:
         LOG.info("Pulling remote: %s", remote_name)
         remote.pull(progress=progress)
 
+    def fetch(self, remote_name=None, all=False):
+        progress = ProgressPrinter("fetch")
+        if not remote_name and not all:
+            raise ValueError("Please specify remote or use the 'all' switch")
+
+        if all:
+            LOG.info("Fetching all remotes...")
+            for remote in self.repo.remotes:
+                remote.fetch()
+        else:
+            LOG.info("Fetching remote: %s", remote_name)
+            remote = self.repo.remote(name=remote_name)
+            remote.fetch(progress=progress)
+
     def checkout_previous_branch(self):
         prev_branch = self.get_current_branch_name()
         self.repo.git.checkout('-')
@@ -132,6 +146,39 @@ class GitWrapper:
             LOG.exception("Failed to commit changes from index", exc_info=True)
             return False
 
+    def commit(self, amend=False, message=None):
+        kwargs = {}
+
+        if amend:
+            kwargs['amend'] = amend
+        if message:
+            kwargs['m'] = message
+        LOG.info("Running git commit with arguments: %s", kwargs)
+        self.repo.git.commit(**kwargs)
+
+    def log(self, oneline=False, grep=None, format=None, n=None):
+        kwargs = {}
+        if oneline:
+            kwargs['oneline'] = True
+        if grep:
+            kwargs['grep'] = grep
+        if format:
+            kwargs['format'] = format
+        if n:
+            kwargs['n'] = n
+        LOG.info("Running git log with arguments: %s", kwargs)
+        return self.repo.git.log(**kwargs).splitlines()
+
+    def cherry_pick(self, ref, x=False):
+        kwargs = {}
+        if x:
+            kwargs['x'] = x
+        try:
+            self.repo.git.cherry_pick(**kwargs)
+            return True
+        except GitCommandError as e:
+            LOG.exception("Failed to cherry-pick commit: " + ref, exc_info=True)
+            return False
 
 class ProgressPrinter(RemoteProgress):
     def __init__(self, operation):

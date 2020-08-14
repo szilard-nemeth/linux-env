@@ -31,9 +31,11 @@ __author__ = 'Szilard Nemeth'
 PROJECT_NAME="yarn_dev_func"
 YARN_PATCH_FILENAME_REGEX = ".*(YARN-[0-9]+).*\.patch"
 
+
 class CommandType(Enum):
     SAVE_PATCH = 'save_patch'
     CREATE_REVIEW_BRANCH = 'create_review_branch'
+    BACKPORT_C6 = "backport_c6"
 
 
 class Setup:
@@ -84,6 +86,14 @@ class Setup:
         save_patch_parser.add_argument('patch_file', type=str, help='Path to patch file')
         save_patch_parser.set_defaults(command=CommandType.CREATE_REVIEW_BRANCH)
 
+        # Parser: backport_c6 command
+        backport_c6_parser = subparsers.add_parser(CommandType.BACKPORT_C6.value, help='Backports upstream commit to C6 branch, '
+                                                                                       'Example usage: yarn-backport-c6 YARN-7948 CDH-64201 cdh6.x')
+        backport_c6_parser.add_argument('upstream_jira_id', type=str, help='Upstream jira id. Example: YARN-4567')
+        backport_c6_parser.add_argument('cdh_jira_id', type=str, help='CDH jira id. Example: CDH-4111')
+        backport_c6_parser.add_argument('cdh_branch', type=str, help='CDH branch name')
+        backport_c6_parser.set_defaults(command=CommandType.BACKPORT_C6)
+
         # Normal arguments
         parser.add_argument('-v', '--verbose', action='store_true',
                             dest='verbose', default=None, required=False,
@@ -98,6 +108,8 @@ class YarnDevHighLevelFunctions:
 
 
 class YarnDevFunc:
+    GERRIT_REVIEWER_LIST = "r=shuzirra,r=adam.antal,r=pbacsko,r=kmarton,r=gandras,r=bteke"
+
     def __init__(self, args):
         self.env = {}
         self.setup_dirs()
@@ -263,6 +275,55 @@ class YarnDevFunc:
         self.upstream_repo.add_all_and_commit(commit_msg)
         LOG.info("Committed changes of patch: %s with message: %s", patch_file, commit_msg)
 
+    def backport_c6(self, upstream_jira_id, cdh_jira_id, cdh_branch):
+        # TODO decide on the cdh branch whether this is C5 or C6 backport (remote is different)
+        curr_branch = self.upstream_repo.get_current_branch_name()
+        LOG.info("Current branch: %s", curr_branch)
+
+        self.upstream_repo.fetch(all=True)
+        self.upstream_repo.checkout_branch('trunk')
+        self.upstream_repo.pull('origin')
+
+        git_log_result = self.upstream_repo.log(oneline=True, grep=upstream_jira_id)
+        # Restore original branch in either error-case or normal case
+        self.upstream_repo.checkout_previous_branch()
+        if not git_log_result:
+            raise ValueError("No match found for upsream commit with name: %s", upstream_jira_id)
+        if len(git_log_result) > 1:
+            raise ValueError("Ambiguous upsream commit with name: %s. Results: %s", upstream_jira_id, git_log_result)
+
+        commit_hash = git_log_result[0].split(' ')[0]
+
+        # DO THE REST OF THE WORK IN THE DOWNSTREAM REPO
+        self.downstream_repo.fetch(all=True)
+
+        # TODO handle if branch already exist (is it okay to silently ignore?) or should use current branch with switch?
+        # git checkout -b "$CDH_JIRA_NO-$CDH_BRANCH" cauldron/${CDH_BRANCH}
+        self.downstream_repo.checkout_new_branch('{}-{}'.format(cdh_jira_id, cdh_branch), 'cauldron/{}'.format(cdh_branch))
+        cherry_pick_result = self.downstream_repo.cherry_pick(commit_hash, x=True)
+
+        # TODO add resume functionality so that commit message rewrite can happen
+        if not cherry_pick_result:
+            LOG.error("Failed to cherry-pick commit: %s. "
+                      "Perhaps there were some merge conflicts, "
+                      "please resolve them and run: git cherry-pick --continue", commit_hash)
+            # TODO print git commit and git push command, print it to a script that can continue!
+            exit(1)
+
+        # Add downstream (CDH jira) number as a prefix.
+        # Since it triggers a commit, it will also add gerrit Change-Id to the commit.
+        old_commit_msg = self.downstream_repo.log(format='%B', n=1)
+        self.downstream_repo.commit(amend=True, message="{}: {}".format(cdh_jira_id, old_commit_msg))
+
+        # TODO make an option that decides if mvn clean install should be run!
+        # Run build to verify backported commit compiles fine
+        # mvn clean install -Pdist -DskipTests -Pnoshade  -Dmaven.javadoc.skip=true
+
+        # Push to gerrit (intentionally commented out)
+        LOG.info("Commit was successful! "
+                 "Run this command to push to gerrit: "
+                 "git push cauldron HEAD:refs/for/{cdh_branch}%{reviewers}".format(cdh_branch=cdh_branch,
+                                                                                   reviewers=YarnDevFunc.GERRIT_REVIEWER_LIST))
 
 
 if __name__ == '__main__':
@@ -274,6 +335,8 @@ if __name__ == '__main__':
     if verbose:
         print("Args: " + str(args))
 
+    # TODO Revisit all exception handling: ValueError vs. exit() calls
+    # Methods should throw exceptions, exit should be handled in this method
     yarn_functions = YarnDevFunc(args)
     yarn_functions.init_repos()
 
@@ -286,6 +349,8 @@ if __name__ == '__main__':
         yarn_functions.save_patch()
     elif command == CommandType.CREATE_REVIEW_BRANCH:
         yarn_functions.create_review_branch(args.patch_file)
+    elif command == CommandType.BACKPORT_C6:
+        yarn_functions.backport_c6(args.upstream_jira_id, args.cdh_jira_id, args.cdh_branch)
 
 
     end_time = time.time()
