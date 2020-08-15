@@ -70,7 +70,7 @@ class Setup:
         logger.addHandler(ch)
 
     @staticmethod
-    def parse_args():
+    def parse_args(yarn_functions):
         """This function parses and return arguments passed in"""
 
         # Top-level parser
@@ -78,53 +78,56 @@ class Setup:
 
         # Subparsers
         subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands', help='bla', required=True, dest='test')
-        Setup.add_save_patch_parser(subparsers)
-        Setup.add_create_review_branch_parser(subparsers)
-        Setup.add_backport_c6_parser(subparsers)
-        Setup.add_upstream_pull_request_fetcher(subparsers)
-        Setup.add_save_diff_as_patches(subparsers)
+        Setup.add_save_patch_parser(subparsers, yarn_functions)
+        Setup.add_create_review_branch_parser(subparsers, yarn_functions)
+        Setup.add_backport_c6_parser(subparsers, yarn_functions)
+        Setup.add_upstream_pull_request_fetcher(subparsers, yarn_functions)
+        Setup.add_save_diff_as_patches(subparsers, yarn_functions)
 
         # Normal arguments
         parser.add_argument('-v', '--verbose', action='store_true',
                             dest='verbose', default=None, required=False,
                             help='More verbose log')
 
-        return parser.parse_args()
+        args = parser.parse_args()
+        if args.verbose:
+            print("Args: " + str(args))
+        return args
 
     @staticmethod
-    def add_save_patch_parser(subparsers):
+    def add_save_patch_parser(subparsers, yarn_functions):
         parser = subparsers.add_parser(CommandType.SAVE_PATCH.value,
-                                                  help='Saves patch from upstream repository to yarn patches dir')
-        parser.set_defaults(command=CommandType.SAVE_PATCH)
+                                       help='Saves patch from upstream repository to yarn patches dir')
+        parser.set_defaults(func=yarn_functions.save_patch)
 
     @staticmethod
-    def add_create_review_branch_parser(subparsers):
+    def add_create_review_branch_parser(subparsers, yarn_functions):
         parser = subparsers.add_parser(CommandType.CREATE_REVIEW_BRANCH.value,
-                                                  help='Creates review branch from upstream patch file')
+                                       help='Creates review branch from upstream patch file')
         parser.add_argument('patch_file', type=str, help='Path to patch file')
-        parser.set_defaults(command=CommandType.CREATE_REVIEW_BRANCH)
+        parser.set_defaults(func=yarn_functions.create_review_branch)
 
     @staticmethod
-    def add_backport_c6_parser(subparsers):
+    def add_backport_c6_parser(subparsers, yarn_functions):
         parser = subparsers.add_parser(CommandType.BACKPORT_C6.value,
-                                                   help='Backports upstream commit to C6 branch, '
-                                                        'Example usage: <command> YARN-7948 CDH-64201 cdh6.x')
+                                       help='Backports upstream commit to C6 branch, '
+                                            'Example usage: <command> YARN-7948 CDH-64201 cdh6.x')
         parser.add_argument('upstream_jira_id', type=str, help='Upstream jira id. Example: YARN-4567')
         parser.add_argument('cdh_jira_id', type=str, help='CDH jira id. Example: CDH-4111')
         parser.add_argument('cdh_branch', type=str, help='CDH branch name')
-        parser.set_defaults(command=CommandType.BACKPORT_C6)
+        parser.set_defaults(func=yarn_functions.backport_c6)
 
     @staticmethod
-    def add_upstream_pull_request_fetcher(subparsers):
+    def add_upstream_pull_request_fetcher(subparsers, yarn_functions):
         parser = subparsers.add_parser(CommandType.UPSTREAM_PR_FETCH.value,
                                        help='Fetches upstream changes from a repo then cherry-picks single commit.'
                                             'Example usage: <command> szilard-nemeth YARN-9999')
         parser.add_argument('github_username', type=str, help='Github username')
         parser.add_argument('remote_branch', type=str, help='Name of the remote branch.')
-        parser.set_defaults(command=CommandType.UPSTREAM_PR_FETCH)
+        parser.set_defaults(func=yarn_functions.upstream_pr_fetch)
 
     @staticmethod
-    def add_save_diff_as_patches(subparsers):
+    def add_save_diff_as_patches(subparsers, yarn_functions):
         parser = subparsers.add_parser(CommandType.SAVE_DIFF_AS_PATCHES.value,
                                        help='Diffs branches and creates patch files with git format-patch and saves them to a directory.'
                                             'Example: <command> master gpu')
@@ -132,7 +135,7 @@ class Setup:
         parser.add_argument('other_refspec', type=str, help='Git other refspec to diff with.')
         parser.add_argument('dest_basedir', type=str, help='Destination basedir.')
         parser.add_argument('dest_dir_prefix', type=str, help='Directory as prefix to export the patch files to.')
-        parser.set_defaults(command=CommandType.SAVE_DIFF_AS_PATCHES)
+        parser.set_defaults(func=yarn_functions.save_patches)
 
 
 class YarnDevHighLevelFunctions:
@@ -142,8 +145,13 @@ class YarnDevHighLevelFunctions:
 class YarnDevFunc:
     GERRIT_REVIEWER_LIST = "r=shuzirra,r=adam.antal,r=pbacsko,r=kmarton,r=gandras,r=bteke"
 
-    def __init__(self, args):
+    def __init__(self):
         self.env = {}
+        self.downstream_repo = None
+        self.upstream_repo = None
+        self.project_out_root = None
+        self.log_dir = None
+        self.yarn_patch_dir = None
         self.setup_dirs()
         self.init_repos()
 
@@ -180,7 +188,7 @@ class YarnDevFunc:
         self.downstream_repo = GitWrapper(self.env[LOADED_ENV_DOWNSTREAM_DIR])
         self.upstream_repo = GitWrapper(self.env[LOADED_ENV_UPSTREAM_DIR])
 
-    def save_patch(self):
+    def save_patch(self, args):
         # TODO add force mode: ignore whitespace issues and make backup of patch!
         # TODO add another mode: Create patch based on changes in state, not commits
         curr_branch = self.upstream_repo.get_current_branch_name()
@@ -247,7 +255,9 @@ class YarnDevFunc:
         # Checkout old branch
         self.upstream_repo.checkout_previous_branch()
 
-    def create_review_branch(self, patch_file):
+    def create_review_branch(self, args):
+        patch_file = args.patch_file
+
         FileUtils.ensure_file_exists(patch_file)
         patch_file_name = FileUtils.path_basename(patch_file)
         matches = StringUtils.ensure_matches_pattern(patch_file_name, YARN_PATCH_FILENAME_REGEX)
@@ -307,7 +317,11 @@ class YarnDevFunc:
         self.upstream_repo.add_all_and_commit(commit_msg)
         LOG.info("Committed changes of patch: %s with message: %s", patch_file, commit_msg)
 
-    def backport_c6(self, upstream_jira_id, cdh_jira_id, cdh_branch):
+    def backport_c6(self, args):
+        upstream_jira_id = args.upstream_jira_id
+        cdh_jira_id = args.cdh_jira_id
+        cdh_branch = args.cdh_branch
+
         # TODO decide on the cdh branch whether this is C5 or C6 backport (remote is different)
         curr_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
@@ -357,7 +371,11 @@ class YarnDevFunc:
                  "git push cauldron HEAD:refs/for/{cdh_branch}%{reviewers}".format(cdh_branch=cdh_branch,
                                                                                    reviewers=YarnDevFunc.GERRIT_REVIEWER_LIST))
 
-    def upstream_pr_fetch(self, github_username, remote_branch, prefix):
+    def upstream_pr_fetch(self, args):
+        github_username = args.github_username
+        remote_branch = args.remote_branch
+        prefix = args.dest_dir_prefix
+
         curr_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
 
@@ -385,7 +403,12 @@ class YarnDevFunc:
         LOG.info("REMEMBER to change the commit message with command: 'git commit --amend'")
         LOG.info("REMEMBER to reset the author with command: 'git commit --amend --reset-author")
 
-    def save_patches(self, base_refspec, other_refspec, dest_basedir, dest_dir_prefix):
+    def save_patches(self, args):
+        base_refspec = args.base_refspec
+        other_refspec = args.other_refspec
+        dest_basedir = args.dest_basedir
+        dest_dir_prefix = args.dest_dir_prefix
+
         # TODO check if git is clean (no modified, unstaged files, etc)
         repo = None
         try:
@@ -417,32 +440,17 @@ class YarnDevFunc:
 if __name__ == '__main__':
     start_time = time.time()
 
-    # Parse args
-    args = Setup.parse_args()
-    verbose = args.verbose
-    if verbose:
-        print("Args: " + str(args))
-
     # TODO Revisit all exception handling: ValueError vs. exit() calls
     # Methods should throw exceptions, exit should be handled in this method
-    yarn_functions = YarnDevFunc(args)
+    yarn_functions = YarnDevFunc()
     yarn_functions.init_repos()
 
-    # Initialize logging
-    # verbose = True if args.verbose else False
+    # Parse args, commands will be mapped to YarnDevFunc functions with argparse
+    args = Setup.parse_args(yarn_functions)
     Setup.init_logger(yarn_functions.log_dir, console_debug=False)
 
-    command = args.command
-    if command == CommandType.SAVE_PATCH:
-        yarn_functions.save_patch()
-    elif command == CommandType.CREATE_REVIEW_BRANCH:
-        yarn_functions.create_review_branch(args.patch_file)
-    elif command == CommandType.BACKPORT_C6:
-        yarn_functions.backport_c6(args.upstream_jira_id, args.cdh_jira_id, args.cdh_branch)
-    elif command == CommandType.UPSTREAM_PR_FETCH:
-        yarn_functions.upstream_pr_fetch(args.github_username, args.remote_branch, args.dest_dir_prefix)
-    elif command == CommandType.SAVE_DIFF_AS_PATCHES:
-        yarn_functions.save_patches(args.base_refspec, args.other_refspec, args.dest_basedir, args.dest_dir_prefix)
+    # Call the handler function
+    args.func(args)
 
     end_time = time.time()
     #LOG.info("Execution of script took %d seconds", end_time - start_time)
