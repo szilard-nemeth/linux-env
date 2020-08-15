@@ -1,5 +1,3 @@
-######################################################################
-#####TODO - MIGRATE THESE SCRIPTS TO PYTHON
 function yarn-upstream-commit-pr() {
     if [[ $# -ne 2 ]]; then
         echo "Usage: yarn-upstream-commit-pr [github-username] [remote-branch]"
