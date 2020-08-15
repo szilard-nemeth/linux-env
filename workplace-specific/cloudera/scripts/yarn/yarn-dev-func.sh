@@ -79,3 +79,9 @@ alias yarn-create-review-branch="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_R
 #Generic call: yarn-backport-c6 [Upstream commit hash or commit message fragment] [CDH-jira-number] [CDH-branch]
 #Example call: yarn-backport-c6 YARN-7948 CDH-64201 CDH-64201-cdh6x
 alias yarn-backport-c6="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py backport_c6"
+
+#Generic call: yarn-upstream-commit-pr [github-username] [remote-branch]
+#Example call: yarn-upstream-commit-pr szilard-nemeth YARN-9999
+alias yarn-upstream-commit-pr="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py upstream_pr_fetch"
+
+
