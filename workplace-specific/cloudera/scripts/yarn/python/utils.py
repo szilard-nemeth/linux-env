@@ -115,16 +115,18 @@ class PatchUtils:
                              latest_branch, len(parts))
 
 
-
 class FileUtils:
     @classmethod
-    def ensure_dir_created(cls, dirname):
+    def ensure_dir_created(cls, dirname, log_exception=False):
         """
     Ensure that a named directory exists; if it does not, attempt to create it.
     """
         try:
             os.makedirs(dirname)
         except OSError as e:
+            if log_exception:
+                LOG.exception("Failed to create dirs", exc_info=True)
+            # If Errno is File exists, don't raise Exception
             if e.errno != errno.EEXIST:
                 raise
         return dirname
@@ -174,3 +176,14 @@ class FileUtils:
     @classmethod
     def path_basename(cls, path):
         return os.path.basename(path)
+
+    @classmethod
+    def join_path(cls, *components):
+        return os.path.join(*components)
+
+class DateTimeUtils:
+    @staticmethod
+    def get_current_datetime(format='%Y%m%d_%H%M%S'):
+        from datetime import datetime
+        now = datetime.now()
+        return now.strftime(format)

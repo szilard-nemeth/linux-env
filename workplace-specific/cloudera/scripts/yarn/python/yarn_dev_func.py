@@ -12,10 +12,10 @@ import datetime
 import time
 from logging.handlers import TimedRotatingFileHandler
 
-from git import GitCommandError
+from git import GitCommandError, InvalidGitRepositoryError
 
 from git_wrapper import GitWrapper
-from utils import FileUtils, PatchUtils, StringUtils
+from utils import FileUtils, PatchUtils, StringUtils, DateTimeUtils
 
 LOG = logging.getLogger(__name__)
 __author__ = 'Szilard Nemeth'
@@ -37,6 +37,7 @@ class CommandType(Enum):
     CREATE_REVIEW_BRANCH = 'create_review_branch'
     BACKPORT_C6 = "backport_c6"
     UPSTREAM_PR_FETCH = "upstream_pr_fetch"
+    SAVE_DIFF_AS_PATCHES = "save_diff_as_patches"
 
 
 class Setup:
@@ -81,6 +82,7 @@ class Setup:
         Setup.add_create_review_branch_parser(subparsers)
         Setup.add_backport_c6_parser(subparsers)
         Setup.add_upstream_pull_request_fetcher(subparsers)
+        Setup.add_save_diff_as_patches(subparsers)
 
         # Normal arguments
         parser.add_argument('-v', '--verbose', action='store_true',
@@ -120,6 +122,17 @@ class Setup:
         parser.add_argument('github_username', type=str, help='Github username')
         parser.add_argument('remote_branch', type=str, help='Name of the remote branch.')
         parser.set_defaults(command=CommandType.UPSTREAM_PR_FETCH)
+
+    @staticmethod
+    def add_save_diff_as_patches(subparsers):
+        parser = subparsers.add_parser(CommandType.SAVE_DIFF_AS_PATCHES.value,
+                                       help='Diffs branches and creates patch files with git format-patch and saves them to a directory.'
+                                            'Example: <command> master gpu')
+        parser.add_argument('base_refspec', type=str, help='Git base refspec to diff with.')
+        parser.add_argument('other_refspec', type=str, help='Git other refspec to diff with.')
+        parser.add_argument('dest_basedir', type=str, help='Destination basedir.')
+        parser.add_argument('dest_dir_prefix', type=str, help='Directory as prefix to export the patch files to.')
+        parser.set_defaults(command=CommandType.SAVE_DIFF_AS_PATCHES)
 
 
 class YarnDevHighLevelFunctions:
@@ -344,7 +357,7 @@ class YarnDevFunc:
                  "git push cauldron HEAD:refs/for/{cdh_branch}%{reviewers}".format(cdh_branch=cdh_branch,
                                                                                    reviewers=YarnDevFunc.GERRIT_REVIEWER_LIST))
 
-    def upstream_pr_fetch(self, github_username, remote_branch):
+    def upstream_pr_fetch(self, github_username, remote_branch, prefix):
         curr_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
 
@@ -371,6 +384,34 @@ class YarnDevFunc:
 
         LOG.info("REMEMBER to change the commit message with command: 'git commit --amend'")
         LOG.info("REMEMBER to reset the author with command: 'git commit --amend --reset-author")
+
+    def save_patches(self, base_refspec, other_refspec, dest_basedir, dest_dir_prefix):
+        # TODO check if git is clean (no modified, unstaged files, etc)
+        repo = None
+        try:
+            repo = GitWrapper(os.getcwd())
+        except InvalidGitRepositoryError as e:
+            LOG.error("Current directory is not a git repo: %s", os.getcwd())
+            exit(1)
+
+        exists = repo.is_branch_exist(base_refspec)
+        if not exists:
+            LOG.error("Specified base refspec is not valid: %s", base_refspec)
+            exit(2)
+
+        exists = repo.is_branch_exist(other_refspec)
+        if not exists:
+            LOG.error("Specified other refspec is not valid: %s", other_refspec)
+            exit(2)
+
+        # Check if dest_basedir exists
+        dest_basedir = expanduser(dest_basedir)
+        patch_file_dest_path = FileUtils.join_path(dest_basedir, dest_dir_prefix, DateTimeUtils.get_current_datetime())
+        FileUtils.ensure_dir_created(patch_file_dest_path)
+
+        refspec = '{}..{}'.format(base_refspec, other_refspec)
+        LOG.info("Saving git patches based on refspec '%s', to directory: %s", refspec, patch_file_dest_path)
+        repo.format_patch(refspec, output_dir=patch_file_dest_path, full_index=True)
 
 
 if __name__ == '__main__':
@@ -399,7 +440,9 @@ if __name__ == '__main__':
     elif command == CommandType.BACKPORT_C6:
         yarn_functions.backport_c6(args.upstream_jira_id, args.cdh_jira_id, args.cdh_branch)
     elif command == CommandType.UPSTREAM_PR_FETCH:
-        yarn_functions.upstream_pr_fetch(args.github_username, args.remote_branch)
+        yarn_functions.upstream_pr_fetch(args.github_username, args.remote_branch, args.dest_dir_prefix)
+    elif command == CommandType.SAVE_DIFF_AS_PATCHES:
+        yarn_functions.save_patches(args.base_refspec, args.other_refspec, args.dest_basedir, args.dest_dir_prefix)
 
     end_time = time.time()
     #LOG.info("Execution of script took %d seconds", end_time - start_time)
