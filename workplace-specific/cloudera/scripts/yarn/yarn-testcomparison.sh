@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-
+#TODO MIGRATE WHOLE SCRIPT TO PYTHON
 function print-script-step() {
     echo -e "[SCRIPT-STEP] ------------------------------------------------------------------------"
     echo -e "[SCRIPT-STEP] $1"

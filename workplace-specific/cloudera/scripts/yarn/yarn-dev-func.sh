@@ -85,6 +85,10 @@ alias yarn-backport-c6="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; pyth
 #Example call: yarn-upstream-commit-pr szilard-nemeth YARN-9999
 alias yarn-upstream-commit-pr="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py upstream_pr_fetch"
 
+#Generic call: yarn-diff-patches [JIRA_ID] [branches]
+#Example call: yarn-diff-patches YARN-7913 trunk branch-3.2 branch-3.1
+alias yarn-diff-patches="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py diff_patches_of_jira"
+
 #Generic call: save-diff-as-patches [refspec-to-diff-head-with] [destination-directory-prefix]"
 #Example call: save-diff-as-patches master gpu
 #Example call: save-diff-as-patches master WIP-migrate-yarn-scripts-to-python ~/yarn-tasks/saved_patches prefix1
