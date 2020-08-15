@@ -196,6 +196,22 @@ class GitWrapper:
             LOG.exception("Failed to cherry-pick commit: " + ref, exc_info=True)
             return False
 
+    def format_patch(self, revision_range, output_dir=None, full_index=None):
+        # git format-patch ${GIT_BASE_BRANCH} --output-directory ${GIT_FORMAT_PATCH_OUTPUT_DIR} --full-index
+        args = []
+        if revision_range:
+            args.append(revision_range)
+
+        kwargs = {}
+        if output_dir:
+            kwargs['output_directory'] = output_dir
+        if full_index:
+            kwargs['full_index'] = True
+
+        # TODO these logs can be replaced with: https://gitpython.readthedocs.io/en/stable/tutorial.html#git-command-debugging-and-customization
+        LOG.info("Running git format-patch with arguments, args: %s, kwargs: %s", args, kwargs)
+        return self.repo.git.format_patch(*args, **kwargs)
+
 
 class ProgressPrinter(RemoteProgress):
     def __init__(self, operation):

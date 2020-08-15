@@ -59,7 +59,8 @@ function yarn-downstream-commits() {
 }
 
 function yarn-listupstreamversions() {
-    #TODO this will be more robust but requires switching branches: https://stackoverflow.com/questions/3545292/how-to-get-maven-project-version-to-the-bash-command-line
+    # This will be more robust but requires switching branches:
+    # https://stackoverflow.com/questions/3545292/how-to-get-maven-project-version-to-the-bash-command-line
     for branch in trunk branch-3.3 branch-3.2 branch-3.1
     do
         echo "Version on branch: $branch"
@@ -84,4 +85,7 @@ alias yarn-backport-c6="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; pyth
 #Example call: yarn-upstream-commit-pr szilard-nemeth YARN-9999
 alias yarn-upstream-commit-pr="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py upstream_pr_fetch"
 
-
+#Generic call: save-diff-as-patches [refspec-to-diff-head-with] [destination-directory-prefix]"
+#Example call: save-diff-as-patches master gpu
+#Example call: save-diff-as-patches master WIP-migrate-yarn-scripts-to-python ~/yarn-tasks/saved_patches prefix1
+alias save-diff-as-patches="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py save_diff_as_patches"
