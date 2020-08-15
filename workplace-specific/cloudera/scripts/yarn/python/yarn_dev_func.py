@@ -17,25 +17,26 @@ from git import GitCommandError
 from git_wrapper import GitWrapper
 from utils import FileUtils, PatchUtils, StringUtils
 
+LOG = logging.getLogger(__name__)
+__author__ = 'Szilard Nemeth'
+
+
 ENV_CLOUDERA_HADOOP_ROOT = 'CLOUDERA_HADOOP_ROOT'
 ENV_HADOOP_DEV_DIR = 'HADOOP_DEV_DIR'
 
 # Do not leak bad ENV variable namings into the python code
 LOADED_ENV_UPSTREAM_DIR="upstream-hadoop-dir"
 LOADED_ENV_DOWNSTREAM_DIR="downstream-hadoop-dir"
-
-LOG = logging.getLogger(__name__)
-
-__author__ = 'Szilard Nemeth'
-
 PROJECT_NAME="yarn_dev_func"
 YARN_PATCH_FILENAME_REGEX = ".*(YARN-[0-9]+).*\.patch"
+HADOOP_REPO_TEMPLATE = "https://github.com/{user}/hadoop.git"
 
 
 class CommandType(Enum):
     SAVE_PATCH = 'save_patch'
     CREATE_REVIEW_BRANCH = 'create_review_branch'
     BACKPORT_C6 = "backport_c6"
+    UPSTREAM_PR_FETCH = "upstream_pr_fetch"
 
 
 class Setup:
@@ -76,31 +77,49 @@ class Setup:
 
         # Subparsers
         subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands', help='bla', required=True, dest='test')
-
-        # Parser: save_patch command
-        save_patch_parser = subparsers.add_parser(CommandType.SAVE_PATCH.value, help='Saves patch from upstream repository to yarn patches dir')
-        save_patch_parser.set_defaults(command=CommandType.SAVE_PATCH)
-
-        # Parser: create_review_branch command
-        save_patch_parser = subparsers.add_parser(CommandType.CREATE_REVIEW_BRANCH.value, help='Creates review branch from upstream patch file')
-        save_patch_parser.add_argument('patch_file', type=str, help='Path to patch file')
-        save_patch_parser.set_defaults(command=CommandType.CREATE_REVIEW_BRANCH)
-
-        # Parser: backport_c6 command
-        backport_c6_parser = subparsers.add_parser(CommandType.BACKPORT_C6.value, help='Backports upstream commit to C6 branch, '
-                                                                                       'Example usage: yarn-backport-c6 YARN-7948 CDH-64201 cdh6.x')
-        backport_c6_parser.add_argument('upstream_jira_id', type=str, help='Upstream jira id. Example: YARN-4567')
-        backport_c6_parser.add_argument('cdh_jira_id', type=str, help='CDH jira id. Example: CDH-4111')
-        backport_c6_parser.add_argument('cdh_branch', type=str, help='CDH branch name')
-        backport_c6_parser.set_defaults(command=CommandType.BACKPORT_C6)
+        Setup.add_save_patch_parser(subparsers)
+        Setup.add_create_review_branch_parser(subparsers)
+        Setup.add_backport_c6_parser(subparsers)
+        Setup.add_upstream_pull_request_fetcher(subparsers)
 
         # Normal arguments
         parser.add_argument('-v', '--verbose', action='store_true',
                             dest='verbose', default=None, required=False,
                             help='More verbose log')
 
-        args = parser.parse_args()
-        return args
+        return parser.parse_args()
+
+    @staticmethod
+    def add_save_patch_parser(subparsers):
+        parser = subparsers.add_parser(CommandType.SAVE_PATCH.value,
+                                                  help='Saves patch from upstream repository to yarn patches dir')
+        parser.set_defaults(command=CommandType.SAVE_PATCH)
+
+    @staticmethod
+    def add_create_review_branch_parser(subparsers):
+        parser = subparsers.add_parser(CommandType.CREATE_REVIEW_BRANCH.value,
+                                                  help='Creates review branch from upstream patch file')
+        parser.add_argument('patch_file', type=str, help='Path to patch file')
+        parser.set_defaults(command=CommandType.CREATE_REVIEW_BRANCH)
+
+    @staticmethod
+    def add_backport_c6_parser(subparsers):
+        parser = subparsers.add_parser(CommandType.BACKPORT_C6.value,
+                                                   help='Backports upstream commit to C6 branch, '
+                                                        'Example usage: <command> YARN-7948 CDH-64201 cdh6.x')
+        parser.add_argument('upstream_jira_id', type=str, help='Upstream jira id. Example: YARN-4567')
+        parser.add_argument('cdh_jira_id', type=str, help='CDH jira id. Example: CDH-4111')
+        parser.add_argument('cdh_branch', type=str, help='CDH branch name')
+        parser.set_defaults(command=CommandType.BACKPORT_C6)
+
+    @staticmethod
+    def add_upstream_pull_request_fetcher(subparsers):
+        parser = subparsers.add_parser(CommandType.UPSTREAM_PR_FETCH.value,
+                                       help='Fetches upstream changes from a repo then cherry-picks single commit.'
+                                            'Example usage: <command> szilard-nemeth YARN-9999')
+        parser.add_argument('github_username', type=str, help='Github username')
+        parser.add_argument('remote_branch', type=str, help='Name of the remote branch.')
+        parser.set_defaults(command=CommandType.UPSTREAM_PR_FETCH)
 
 
 class YarnDevHighLevelFunctions:
@@ -325,6 +344,34 @@ class YarnDevFunc:
                  "git push cauldron HEAD:refs/for/{cdh_branch}%{reviewers}".format(cdh_branch=cdh_branch,
                                                                                    reviewers=YarnDevFunc.GERRIT_REVIEWER_LIST))
 
+    def upstream_pr_fetch(self, github_username, remote_branch):
+        curr_branch = self.upstream_repo.get_current_branch_name()
+        LOG.info("Current branch: %s", curr_branch)
+
+        repo_url = HADOOP_REPO_TEMPLATE.format(user=github_username)
+        success = self.upstream_repo.fetch(repo_url=repo_url, remote_name=remote_branch)
+        if not success:
+            LOG.error("Cannot fetch from remote branch: {url}/{remote}".format(url=repo_url, remote=remote_branch))
+            exit(1)
+
+        log_result = self.upstream_repo.log('FETCH_HEAD', n=10)
+        LOG.info("Printing 10 topmost commits of FETCH_HEAD:\n %s", '\n'.join(log_result))
+
+        log_result = self.upstream_repo.log("trunk..FETCH_HEAD", oneline=True)
+        LOG.info("\n\nPrinting diff of trunk..FETCH_HEAD:\n %s", '\n'.join(log_result))
+        num_commits = len(log_result)
+        if num_commits > 1:
+            LOG.error("Number of commits between trunk..FETCH_HEAD is not only one! Exiting...")
+            exit(2)
+
+        success = self.upstream_repo.cherry_pick("FETCH_HEAD")
+        if not success:
+            LOG.error("Cherry-pick failed. Exiting")
+            exit(3)
+
+        LOG.info("REMEMBER to change the commit message with command: 'git commit --amend'")
+        LOG.info("REMEMBER to reset the author with command: 'git commit --amend --reset-author")
+
 
 if __name__ == '__main__':
     start_time = time.time()
@@ -351,7 +398,8 @@ if __name__ == '__main__':
         yarn_functions.create_review_branch(args.patch_file)
     elif command == CommandType.BACKPORT_C6:
         yarn_functions.backport_c6(args.upstream_jira_id, args.cdh_jira_id, args.cdh_branch)
-
+    elif command == CommandType.UPSTREAM_PR_FETCH:
+        yarn_functions.upstream_pr_fetch(args.github_username, args.remote_branch)
 
     end_time = time.time()
     #LOG.info("Execution of script took %d seconds", end_time - start_time)

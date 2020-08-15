@@ -1,37 +1,3 @@
-function yarn-upstream-commit-pr() {
-    if [[ $# -ne 2 ]]; then
-        echo "Usage: yarn-upstream-commit-pr [github-username] [remote-branch]"
-        echo "Example: yarn-upstream-commit-pr szilard-nemeth YARN-9999"
-        echo "Example 2: yarn-upstream-commit-pr pingsutw YARN-9989"
-        return 1
-    fi
-    GITHUB_USER=$1
-    REMOTE_BRANCH=$2
-
-    git fetch https://github.com/${GITHUB_USER}/hadoop.git ${REMOTE_BRANCH}
-    if [[ $? -ne 0 ]]; then
-        echo "Cannot fetch from remote branch: $GITHUB_USER/$REMOTE_BRANCH"
-        return 1
-    fi
-
-
-    echo "Printing 10 topmost commits of FETCH_HEAD"
-    git lg FETCH_HEAD | head -n 10
-
-    echo "Printing diff of trunk..FETCH_HEAD..."
-    git log trunk..FETCH_HEAD  --oneline
-    num_commits=$(git log trunk..FETCH_HEAD  --oneline  | wc -l | tr -s ' ')
-
-    if [[ ${num_commits} -ne 1 ]]; then
-        echo "Number of commits between trunk..FETCH_HEAD is not 1! Exiting..."
-        return 2
-    fi
-
-    git cherry-pick FETCH_HEAD
-    echo "REMEMBER to change the commit message with command: 'git commit --amend'"
-    echo "REMEMBER to reset the author with command: 'git commit --amend --reset-author"
-}
-
 function save-patches() {
     setup
 

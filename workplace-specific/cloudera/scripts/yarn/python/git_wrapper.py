@@ -35,10 +35,19 @@ class GitWrapper:
         LOG.info("Pulling remote: %s", remote_name)
         remote.pull(progress=progress)
 
-    def fetch(self, remote_name=None, all=False):
+    def fetch(self, repo_url=None, remote_name=None, all=False):
         progress = ProgressPrinter("fetch")
-        if not remote_name and not all:
+        if not repo_url and not remote_name and not all:
             raise ValueError("Please specify remote or use the 'all' switch")
+
+        if repo_url:
+            try:
+                LOG.info("Fetching from provided repo URL: %s", repo_url)
+                self.repo.git.fetch(repo_url, remote_name)
+                return True
+            except GitCommandError as e:
+                LOG.exception("Git fetch failed.", exc_info=True)
+                return False
 
         if all:
             LOG.info("Fetching all remotes...")
@@ -156,7 +165,11 @@ class GitWrapper:
         LOG.info("Running git commit with arguments: %s", kwargs)
         self.repo.git.commit(**kwargs)
 
-    def log(self, oneline=False, grep=None, format=None, n=None):
+    def log(self, revision_range, oneline=False, grep=None, format=None, n=None):
+        args = []
+        if revision_range:
+            args.append(revision_range)
+
         kwargs = {}
         if oneline:
             kwargs['oneline'] = True
@@ -166,8 +179,11 @@ class GitWrapper:
             kwargs['format'] = format
         if n:
             kwargs['n'] = n
-        LOG.info("Running git log with arguments: %s", kwargs)
-        return self.repo.git.log(**kwargs).splitlines()
+            kwargs['oneline'] = True
+
+        # TODO these logs can be replaced with: https://gitpython.readthedocs.io/en/stable/tutorial.html#git-command-debugging-and-customization
+        LOG.info("Running git log with arguments, args: %s, kwargs: %s", args, kwargs)
+        return self.repo.git.log(*args, **kwargs).splitlines()
 
     def cherry_pick(self, ref, x=False):
         kwargs = {}
@@ -179,6 +195,7 @@ class GitWrapper:
         except GitCommandError as e:
             LOG.exception("Failed to cherry-pick commit: " + ref, exc_info=True)
             return False
+
 
 class ProgressPrinter(RemoteProgress):
     def __init__(self, operation):
