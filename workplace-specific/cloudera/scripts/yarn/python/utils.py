@@ -114,6 +114,17 @@ class PatchUtils:
             raise ValueError("Unexpected number of components (separated by '-') of branch name: {}, encountered # of components: {}",
                              latest_branch, len(parts))
 
+    @staticmethod
+    def save_diff_to_patch_file(diff, file):
+        if not diff or diff == "":
+            LOG.warning("Diff was empty. Patch file is not created!")
+            return
+        else:
+            diff += os.linesep
+            LOG.info("Saving diff to patch file: %s", file)
+            LOG.debug("Diff: %s", diff)
+            FileUtils.save_to_file(file, diff)
+
 
 class FileUtils:
     @classmethod
@@ -145,14 +156,17 @@ class FileUtils:
         return True
 
     @classmethod
-    def find_files(cls, basedir, regex=None, single_level=False):
+    def find_files(cls, basedir, regex=None, single_level=False, full_path_result=False):
         regex = re.compile(regex)
 
         res_files = []
         for root, dirs, files in os.walk(basedir):
             for file in files:
                 if regex.match(file):
-                    res_files.append(file)
+                    if full_path_result:
+                        res_files.append(os.path.join(basedir, file))
+                    else:
+                        res_files.append(file)
             if single_level:
                 return res_files
 

@@ -5,6 +5,7 @@ import sys
 import datetime as dt
 import logging
 import os
+import tempfile
 from enum import Enum
 
 from os.path import expanduser
@@ -38,6 +39,7 @@ class CommandType(Enum):
     BACKPORT_C6 = "backport_c6"
     UPSTREAM_PR_FETCH = "upstream_pr_fetch"
     SAVE_DIFF_AS_PATCHES = "save_diff_as_patches"
+    DIFF_PATCHES_OF_JIRA = "diff_patches_of_jira"
 
 
 class Setup:
@@ -83,6 +85,7 @@ class Setup:
         Setup.add_backport_c6_parser(subparsers, yarn_functions)
         Setup.add_upstream_pull_request_fetcher(subparsers, yarn_functions)
         Setup.add_save_diff_as_patches(subparsers, yarn_functions)
+        Setup.diff_patches_of_jira(subparsers, yarn_functions)
 
         # Normal arguments
         parser.add_argument('-v', '--verbose', action='store_true',
@@ -137,9 +140,38 @@ class Setup:
         parser.add_argument('dest_dir_prefix', type=str, help='Directory as prefix to export the patch files to.')
         parser.set_defaults(func=yarn_functions.save_patches)
 
+    @staticmethod
+    def diff_patches_of_jira(subparsers, yarn_functions):
+        parser = subparsers.add_parser(CommandType.DIFF_PATCHES_OF_JIRA.value,
+                                       help='Diffs patches of a particular jira, for the provided branches.'
+                                            'Example: YARN-7913 trunk branch-3.2 branch-3.1')
+        parser.add_argument('jira_id', type=str, help='Upstream Jira ID.')
+        parser.add_argument('branches', type=str, nargs='+', help='Check all patches on theese branches.')
+        parser.set_defaults(func=yarn_functions.diff_patches_of_jira)
+
+
 
 class YarnDevHighLevelFunctions:
     pass
+
+
+class BranchResults:
+    def __init__(self, branch_name, exists, commits, commit_hashes):
+        self.branch_name = branch_name
+        self.exists = exists
+        self.commits = commits
+        self.commit_hashes = commit_hashes
+        self.git_diff = None
+
+    @property
+    def number_of_commits(self):
+        return len(self.commits)
+
+    @property
+    def single_commit_hash(self):
+        if len(self.commit_hashes) > 1:
+            raise ValueError("This object has multiple commit hashes. The intended use of this method is when there's only one single commit hash!")
+        return self.commit_hashes[0]
 
 
 class YarnDevFunc:
@@ -226,16 +258,7 @@ class YarnDevFunc:
             raise ValueError("File paths does not match. Calculated: {}, Concatenated: {}".format(new_patch_filename, new_patch_filename_sanity))
 
         diff = self.upstream_repo.diff('trunk')
-
-        # Save diff patch to file
-        if not diff or diff == "":
-            LOG.warning("Diff was empty. Patch file is not created!")
-            return
-        else:
-            diff += os.linesep
-            LOG.info("Saving diff to patch file: %s", new_patch_filename)
-            LOG.debug("Diff: %s", diff)
-            FileUtils.save_to_file(new_patch_filename, diff)
+        PatchUtils.save_diff_to_patch_file(diff, new_patch_filename)
 
         LOG.info("Created patch file: %s [ size: %s ]", new_patch_filename, FileUtils.get_file_size(new_patch_filename))
 
@@ -436,6 +459,69 @@ class YarnDevFunc:
         LOG.info("Saving git patches based on refspec '%s', to directory: %s", refspec, patch_file_dest_path)
         repo.format_patch(refspec, output_dir=patch_file_dest_path, full_index=True)
 
+    def diff_patches_of_jira(self, args):
+        """
+THIS SCRIPT ASSUMES EACH PROVIDED BRANCH WITH PARAMETERS (e.g. trunk, 3.2, 3.1) has the given commit committed
+Example workflow:
+1. git log --oneline trunk | grep YARN-10028
+* 13cea0412c1 - YARN-10028. Integrate the new abstract log servlet to the JobHistory server. Contributed by Adam Antal 24 hours ago) <Szilard Nemeth>
+
+2. git diff 13cea0412c1..13cea0412c1^ > /tmp/YARN-10028-trunk.diff
+3. git checkout branch-3.2
+4. git apply ~/Downloads/YARN-10028.branch-3.2.001.patch
+5. git diff > /tmp/YARN-10028-branch-32.diff
+6. diff -Bibw /tmp/YARN-10028-trunk.diff /tmp/YARN-10028-branch-32.diff
+        :param args:
+        :return:
+        """
+        jira_id = args.jira_id
+        branches = args.branches
+        tmpdirname = "/tmp/yarndiffer"
+        FileUtils.ensure_dir_created(tmpdirname)
+
+        branch_results = {}
+        for branch in branches:
+            LOG.info("Processing branch: %s", branch)
+
+            exists = self.upstream_repo.is_branch_exist(branch)
+            commits = self.upstream_repo.log(branch, grep=jira_id, oneline=True)
+            commit_hashes = [c.split(' ')[0] for c in commits]
+            branch_result = BranchResults(branch, exists, commits, commit_hashes)
+            branch_results[branch] = branch_result
+
+            # Only store diff if number of matched commits for this branch is 1
+            if branch_result.number_of_commits == 1:
+                commit_hash = branch_result.single_commit_hash
+                # TODO create diff_with_parent helper method to GitWrapper
+                diff = self.upstream_repo.diff_between_refs(commit_hash + "^", commit_hash)
+                branch_result.git_diff = diff
+
+                diff_filename = "{}-{}.diff".format(jira_id, branch)
+                PatchUtils.save_diff_to_patch_file(diff, FileUtils.join_path(tmpdirname, diff_filename))
+
+        # Validate results
+        branch_does_not_exist = [v.branch_name for k, v in branch_results.items() if not v.exists]
+        zero_commit = [v.branch_name for k, v in branch_results.items() if v.number_of_commits == 0]
+        multiple_commits = [v.branch_name for k, v in branch_results.items() if v.number_of_commits > 1]
+
+        if branch_does_not_exist:
+            LOG.error("Specified branches are not existing: %s", branch_does_not_exist)
+            exit(1)
+
+        if zero_commit:
+            LOG.error("Specified branches do not contain commit for Jira id: %s: %s", jira_id, zero_commit)
+            exit(1)
+
+        if multiple_commits:
+            LOG.error("Specified branches contain multiple commits for Jira id: %s: ", jira_id, multiple_commits)
+            exit(1)
+
+        LOG.info("Generated diff files: ")
+        diff_files = FileUtils.find_files(tmpdirname, jira_id + '-.*', single_level=True, full_path_result=True)
+        for f in diff_files:
+            LOG.info("%s: %s", f, FileUtils.get_file_size(f))
+
+
 
 if __name__ == '__main__':
     start_time = time.time()
@@ -453,4 +539,4 @@ if __name__ == '__main__':
     args.func(args)
 
     end_time = time.time()
-    #LOG.info("Execution of script took %d seconds", end_time - start_time)
+    # LOG.info("Execution of script took %d seconds", end_time - start_time)
