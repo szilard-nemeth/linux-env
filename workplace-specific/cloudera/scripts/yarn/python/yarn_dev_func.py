@@ -15,8 +15,9 @@ from logging.handlers import TimedRotatingFileHandler
 
 from git import GitCommandError, InvalidGitRepositoryError
 
+from command_runner import CommandRunner
 from git_wrapper import GitWrapper
-from utils import FileUtils, PatchUtils, StringUtils, DateTimeUtils, auto_str
+from utils import FileUtils, PatchUtils, StringUtils, DateTimeUtils, auto_str, JiraUtils
 
 LOG = logging.getLogger(__name__)
 __author__ = 'Szilard Nemeth'
@@ -40,6 +41,7 @@ class CommandType(Enum):
     UPSTREAM_PR_FETCH = "upstream_pr_fetch"
     SAVE_DIFF_AS_PATCHES = "save_diff_as_patches"
     DIFF_PATCHES_OF_JIRA = "diff_patches_of_jira"
+    FETCH_JIRA_UMBRELLA_DATA = "fetch_jira_umbrella_data"
 
 
 class Setup:
@@ -86,6 +88,7 @@ class Setup:
         Setup.add_upstream_pull_request_fetcher(subparsers, yarn_functions)
         Setup.add_save_diff_as_patches(subparsers, yarn_functions)
         Setup.diff_patches_of_jira(subparsers, yarn_functions)
+        Setup.add_fetch_jira_umbrella_data(subparsers, yarn_functions)
 
         # Normal arguments
         parser.add_argument('-v', '--verbose', action='store_true',
@@ -149,6 +152,14 @@ class Setup:
         parser.add_argument('branches', type=str, nargs='+', help='Check all patches on theese branches.')
         parser.set_defaults(func=yarn_functions.diff_patches_of_jira)
 
+    @staticmethod
+    def add_fetch_jira_umbrella_data(subparsers, yarn_functions):
+        parser = subparsers.add_parser(CommandType.FETCH_JIRA_UMBRELLA_DATA.value,
+                                       help='Fetches jira umbrella data for a provided Jira ID.'
+                                            'Example: fetch_jira_umbrella_data YARN-5734')
+        parser.add_argument('jira_id', type=str, help='Upstream Jira ID.')
+        parser.set_defaults(func=yarn_functions.fetch_jira_umbrella_data)
+
 
 
 class YarnDevHighLevelFunctions:
@@ -172,6 +183,35 @@ class BranchResults:
         if len(self.commit_hashes) > 1:
             raise ValueError("This object has multiple commit hashes. The intended use of this method is when there's only one single commit hash!")
         return self.commit_hashes[0]
+
+
+@auto_str
+class CommitData:
+    def __init__(self, hash, jira_id, message, date):
+        self.hash = hash
+        self.jira_id = jira_id
+        self.message = message
+        self.date = date
+
+
+@auto_str
+class JiraUmbrellaSummary:
+    def __init__(self, no_of_jiras, no_of_commits, no_of_files, commit_data_list):
+        self.no_of_jiras = no_of_jiras
+        self.no_of_commits = no_of_commits
+        self.no_of_files = no_of_files
+        self.commit_data_list = commit_data_list
+
+    def to_summary_file_str(self):
+        summary_str = "Number of jiras: {}\n".format(self.no_of_jiras)
+        summary_str += "Number of commits: {}\n".format(self.no_of_commits)
+        summary_str += "Number of files changed: {}\n".format(self.no_of_files)
+
+        summary_str += "COMMITS: \n"
+        for c_data in self.commit_data_list:
+            summary_str += "{} {}\n".format(c_data.message, c_data.date)
+
+        return summary_str
 
 
 class YarnDevFunc:
@@ -353,7 +393,7 @@ class YarnDevFunc:
         self.upstream_repo.checkout_branch('trunk')
         self.upstream_repo.pull('origin')
 
-        git_log_result = self.upstream_repo.log(oneline=True, grep=upstream_jira_id)
+        git_log_result = self.upstream_repo.log('HEAD', oneline=True, grep=upstream_jira_id)
         # Restore original branch in either error-case or normal case
         self.upstream_repo.checkout_previous_branch()
         if not git_log_result:
@@ -522,6 +562,111 @@ Example workflow:
         for f in diff_files:
             LOG.info("%s: %s", f, FileUtils.get_file_size(f))
 
+    def fetch_jira_umbrella_data(self, args):
+        jira_id = args.jira_id
+        base_tmp_dir = "/tmp/jira-umbrella-data-python"
+
+        curr_branch = self.upstream_repo.get_current_branch_name()
+        LOG.info("Current branch: %s", curr_branch)
+
+        if curr_branch != "trunk":
+            LOG.error("Current branch is not trunk. Exiting!")
+            exit(1)
+
+        result_basedir = FileUtils.join_path(base_tmp_dir, jira_id)
+        jira_html_file = FileUtils.join_path(result_basedir, "jira.html")
+        jira_list_file = FileUtils.join_path(result_basedir, "jira-list.txt")
+        commits_file = FileUtils.join_path(result_basedir, "commit-hashes.txt")
+        changed_files_file = FileUtils.join_path(result_basedir, "changed-files.txt")
+        summary_file = FileUtils.join_path(result_basedir, "summary.txt")
+        intermediate_results_file = FileUtils.join_path(result_basedir, "intermediate-results.txt")
+        FileUtils.create_files(jira_html_file, jira_list_file, commits_file, changed_files_file, summary_file, intermediate_results_file)
+
+        LOG.info("Fetching HTML of jira: %s", jira_id)
+        jira_html = JiraUtils.download_jira_html(jira_id, jira_html_file)
+        jira_ids = JiraUtils.parse_subjiras_from_umbrella_html(jira_html, jira_list_file, filter_ids=[jira_id])
+        LOG.info("Found jira IDs: %s", jira_ids)
+        piped_jira_ids = '|'.join(jira_ids)
+
+        # It's quite complex to grep for multiple jira IDs with gitpython, so let's rather call an external command
+        git_log_result = self.upstream_repo.log('HEAD', oneline=True)
+        output = self.egrep_with_cli(git_log_result, intermediate_results_file, piped_jira_ids)
+        matched_commit_list = output.split("\n")
+        LOG.info("Number of matched commits: %s", len(matched_commit_list))
+        LOG.debug("Matched commits: \n%s", '\n'.join(matched_commit_list))
+
+        # Commits in reverse order (oldest first)
+        matched_commit_list.reverse()
+        matched_commit_hashes = [c.split(' ')[0] for c in matched_commit_list]
+        FileUtils.save_to_file(commits_file, '\n'.join(matched_commit_hashes))
+
+        list_of_changed_files = []
+        for hash in matched_commit_hashes:
+            changed_files = self.upstream_repo.diff_tree(hash, no_commit_id=True, name_only=True, recursive=True)
+            list_of_changed_files.append(changed_files)
+            LOG.debug("List of changed files for commit hash '%s': %s", hash, changed_files)
+
+        LOG.info("Got %d changed files", len(list_of_changed_files))
+        # Filter dupes, flatten list of lists
+        list_of_changed_files = [y for x in list_of_changed_files for y in x]
+        list_of_changed_files = list(set(list_of_changed_files))
+        LOG.info("Got %d unique changed files", len(list_of_changed_files))
+        FileUtils.save_to_file(changed_files_file, '\n'.join(list_of_changed_files))
+
+        # Iterate over commit hashes, print the following to summary_file for each commit hash:
+        # <hash> <YARN-id> <commit date>
+        commit_data_list = []
+        for commit_str in matched_commit_list:
+            comps = commit_str.split(' ')
+            hash = comps[0]
+            commit_date = self.upstream_repo.show(hash, no_patch=True, no_notes=True, pretty='%cI')
+            commit_data_list.append(CommitData(hash=hash, jira_id=comps[1], message=' '.join(comps[2:]), date=commit_date))
+
+        summary = JiraUmbrellaSummary(len(jira_ids), len(matched_commit_hashes), len(list_of_changed_files), commit_data_list)
+        FileUtils.save_to_file(summary_file, summary.to_summary_file_str())
+
+        # Iterate over changed files, print all matching changes to the particular file
+        # Create changes file for each touched file
+        LOG.info("Recording changes of individual files...")
+        for idx, changed_file in enumerate(list_of_changed_files):
+            target_file = FileUtils.join_path(result_basedir, 'changes', os.path.basename(changed_file))
+            FileUtils.ensure_file_exists(target_file, create=True)
+
+            # NOTE: It seems impossible to call the following command with gitpython:
+            # git log --follow --oneline -- <file>
+            # Use a simple CLI command instead
+            cli_command = "cd {repo_path} && git log --follow --oneline -- {changed_file} | egrep \"{jira_list}\"".format(
+                repo_path=self.upstream_repo.repo_path,
+                changed_file=changed_file,
+                jira_list=piped_jira_ids)
+            LOG.info("[%d / %d] CLI command: %s", idx + 1, len(list_of_changed_files), cli_command)
+            output = YarnDevFunc.run_cli_command(cli_command, fail_on_empty_output=False)
+            LOG.info("Saving changes result to file: %s", target_file)
+            FileUtils.save_to_file(target_file, output)
+
+        # Print summary
+        LOG.info("=================SUMMARY=================")
+        LOG.info(summary.to_summary_file_str())
+        LOG.info("=========================================")
+
+        files = FileUtils.find_files(result_basedir, regex=".*", full_path_result=True)
+        LOG.info("All result files: \n%s", '\n'.join(files))
+
+    @staticmethod
+    def egrep_with_cli(git_log_result, file, piped_jira_ids):
+        FileUtils.save_to_file(file, '\n'.join(git_log_result))
+        cli_command = "cat {git_log_file} | egrep '{jira_list}'".format(git_log_file=file,
+                                                                        jira_list=piped_jira_ids)
+        return YarnDevFunc.run_cli_command(cli_command)
+
+    @staticmethod
+    def run_cli_command(cli_command, fail_on_empty_output=True):
+        LOG.info("Running CLI command: %s", cli_command)
+        output = CommandRunner.getoutput(cli_command)
+        if fail_on_empty_output and not output:
+            LOG.error("Command failed: %s", cli_command)
+            exit(1)
+        return output
 
 
 if __name__ == '__main__':
