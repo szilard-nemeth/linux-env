@@ -17,25 +17,37 @@ LOG = logging.getLogger(__name__)
 
 
 class TestPatchSaver(unittest.TestCase):
-    def setup_dirs(self):
-        self.project_out_root = FileUtils.join_path(expanduser("~"), "yarn_dev_func-test")
-        self.log_dir = FileUtils.join_path(self.project_out_root, 'logs')
-        self.sandbox_hadoop_repo_path = FileUtils.join_path(self.project_out_root, "sandbox_repo")
-        self.saved_patches_dir = FileUtils.join_path(self.project_out_root, 'saved-patches')
-        FileUtils.ensure_dir_created(self.project_out_root)
-        FileUtils.ensure_dir_created(self.sandbox_hadoop_repo_path)
-        FileUtils.ensure_dir_created(self.log_dir)
+    @classmethod
+    def setup_dirs(cls):
+        cls.project_out_root = FileUtils.join_path(expanduser("~"), "yarn_dev_func-test")
+        cls.log_dir = FileUtils.join_path(cls.project_out_root, 'logs')
+        cls.sandbox_hadoop_repo_path = FileUtils.join_path(cls.project_out_root, "sandbox_repo")
+        cls.saved_patches_dir = FileUtils.join_path(cls.project_out_root, 'saved-patches')
+        FileUtils.ensure_dir_created(cls.project_out_root)
+        FileUtils.ensure_dir_created(cls.sandbox_hadoop_repo_path)
+        FileUtils.ensure_dir_created(cls.log_dir)
 
-    def setUp(self):
-        self.setup_dirs()
-        Setup.init_logger(self.log_dir, console_debug=False, postfix='TEST')
+    @classmethod
+    def setUpClass(cls):
+        cls.setup_dirs()
+        Setup.init_logger(cls.log_dir, console_debug=False, postfix='TEST')
         try:
-            self.repo_wrapper = GitWrapper(self.sandbox_hadoop_repo_path)
-            self.repo = self.repo_wrapper._repo
+            cls.repo_wrapper = GitWrapper(cls.sandbox_hadoop_repo_path)
+            cls.repo = cls.repo_wrapper._repo
             LOG.info("Hadoop is already cloned.")
+            cls.checkout_trunk()
         except InvalidGitRepositoryError as e:
             LOG.info("Cloning Hadoop for the first time...")
-            Repo.clone_from(HADOOP_REPO_APACHE, self.sandbox_hadoop_repo_path, progress=ProgressPrinter("clone"))
+            Repo.clone_from(HADOOP_REPO_APACHE, cls.sandbox_hadoop_repo_path, progress=ProgressPrinter("clone"))
+
+    def tearDown(self):
+        self.checkout_trunk()
+
+    @classmethod
+    def checkout_trunk(cls):
+        default_branch = 'trunk'
+        LOG.info("[TEARDOWN] Checking out branch: %s", default_branch)
+        cls.repo.heads[default_branch].checkout()
 
     def cleanup_and_checkout_branch(self, test_branch):
         LOG.info("Reset all changes...")
@@ -43,13 +55,19 @@ class TestPatchSaver(unittest.TestCase):
         self.repo.git.clean('-xdf')
 
         LOG.info("Checkout trunk")
-        self.repo.heads.trunk.checkout()
+        self.checkout_trunk()
 
         LOG.info("Pulling trunk")
         self.repo.remotes.origin.pull()
         try:
+            LOG.info("Resetting changes on branch: %s", test_branch)
+            if test_branch in self.repo.heads:
+                self.repo.heads[test_branch].checkout()
+                self.repo.git.reset('--hard')
+                # Checkout trunk, so branch can be deleted
+                self.checkout_trunk()
             LOG.info("Removing branch: %s", test_branch)
-            self.repo.delete_head(test_branch)
+            self.repo.delete_head(test_branch, force=True)
         except GitCommandError:
             # Do nothing if branch not exists
             LOG.exception("Failed to remove branch.", exc_info=True)
