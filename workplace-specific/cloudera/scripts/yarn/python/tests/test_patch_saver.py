@@ -7,7 +7,7 @@ from git import Repo, InvalidGitRepositoryError, GitCommandError, Actor
 
 from constants import HADOOP_REPO_APACHE
 from git_wrapper import GitWrapper, ProgressPrinter
-from patch_saver import PatchSaver
+from commands.patch_saver import PatchSaver
 from utils import FileUtils
 from yarn_dev_func import Setup, YarnDevFunc
 

@@ -1,24 +1,20 @@
 #!/usr/bin/python
 
-import argparse
 import sys
-import datetime as dt
 import logging
 import os
-import tempfile
-
 
 from os.path import expanduser
 import datetime
 import time
 from logging.handlers import TimedRotatingFileHandler
 
-from git import GitCommandError, InvalidGitRepositoryError
+from git import InvalidGitRepositoryError
 
 from argparser import ArgParser
 from command_runner import CommandRunner
 from git_wrapper import GitWrapper
-from patch_saver import PatchSaver
+from commands.patch_saver import PatchSaver
 from utils import FileUtils, PatchUtils, StringUtils, DateTimeUtils, auto_str, JiraUtils
 from constants import *
 
