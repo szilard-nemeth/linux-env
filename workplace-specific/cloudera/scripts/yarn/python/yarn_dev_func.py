@@ -500,21 +500,21 @@ Example workflow:
                 PatchUtils.save_diff_to_patch_file(diff, FileUtils.join_path(tmpdirname, diff_filename))
 
         # Validate results
-        branch_does_not_exist = [v.branch_name for k, v in branch_results.items() if not v.exists]
-        zero_commit = [v.branch_name for k, v in branch_results.items() if v.number_of_commits == 0]
-        multiple_commits = [v.branch_name for k, v in branch_results.items() if v.number_of_commits > 1]
+        branch_does_not_exist = [b_res.branch_name for br, b_res in branch_results.items() if not b_res.exists]
+        zero_commit = [b_res.branch_name for br, b_res in branch_results.items() if b_res.number_of_commits == 0]
+        multiple_commits = [b_res.branch_name for br, b_res in branch_results.items() if b_res.number_of_commits > 1]
 
-        LOG.info("Branch result objects: %s", branch_results)
+        LOG.debug("Branch result objects: %s", branch_results)
         if branch_does_not_exist:
-            LOG.error("The following branches are not existing: %s", branch_does_not_exist)
+            LOG.error("The following branches are not existing for Jira id '%s': %s", branch_does_not_exist)
             exit(1)
 
         if zero_commit:
-            LOG.error("The following branches do not contain commit for Jira id: %s: %s", jira_id, zero_commit)
+            LOG.error("The following branches do not contain commit for Jira id '%s': %s", jira_id, zero_commit)
             exit(1)
 
         if multiple_commits:
-            LOG.error("The following branches contain multiple commits for Jira id: %s: ", jira_id, multiple_commits)
+            LOG.error("The following branches contain multiple commits for Jira id '%s': %s", jira_id, multiple_commits)
             exit(1)
 
         LOG.info("Generated diff files: ")
@@ -540,4 +540,5 @@ if __name__ == '__main__':
     args.func(args)
 
     end_time = time.time()
+    # TODO make a swtich to turn execution time printing on
     # LOG.info("Execution of script took %d seconds", end_time - start_time)
