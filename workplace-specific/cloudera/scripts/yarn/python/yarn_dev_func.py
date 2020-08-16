@@ -16,7 +16,7 @@ from logging.handlers import TimedRotatingFileHandler
 from git import GitCommandError, InvalidGitRepositoryError
 
 from git_wrapper import GitWrapper
-from utils import FileUtils, PatchUtils, StringUtils, DateTimeUtils
+from utils import FileUtils, PatchUtils, StringUtils, DateTimeUtils, auto_str
 
 LOG = logging.getLogger(__name__)
 __author__ = 'Szilard Nemeth'
@@ -154,7 +154,7 @@ class Setup:
 class YarnDevHighLevelFunctions:
     pass
 
-
+@auto_str
 class BranchResults:
     def __init__(self, branch_name, exists, commits, commit_hashes):
         self.branch_name = branch_name
@@ -504,16 +504,17 @@ Example workflow:
         zero_commit = [v.branch_name for k, v in branch_results.items() if v.number_of_commits == 0]
         multiple_commits = [v.branch_name for k, v in branch_results.items() if v.number_of_commits > 1]
 
+        LOG.info("Branch result objects: %s", branch_results)
         if branch_does_not_exist:
-            LOG.error("Specified branches are not existing: %s", branch_does_not_exist)
+            LOG.error("The following branches are not existing: %s", branch_does_not_exist)
             exit(1)
 
         if zero_commit:
-            LOG.error("Specified branches do not contain commit for Jira id: %s: %s", jira_id, zero_commit)
+            LOG.error("The following branches do not contain commit for Jira id: %s: %s", jira_id, zero_commit)
             exit(1)
 
         if multiple_commits:
-            LOG.error("Specified branches contain multiple commits for Jira id: %s: ", jira_id, multiple_commits)
+            LOG.error("The following branches contain multiple commits for Jira id: %s: ", jira_id, multiple_commits)
             exit(1)
 
         LOG.info("Generated diff files: ")
