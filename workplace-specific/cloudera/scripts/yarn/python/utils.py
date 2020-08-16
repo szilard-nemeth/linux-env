@@ -133,13 +133,14 @@ class PatchUtils:
     @staticmethod
     def save_diff_to_patch_file(diff, file):
         if not diff or diff == "":
-            LOG.warning("Diff was empty. Patch file is not created!")
-            return
+            LOG.error("Diff was empty. Patch file is not created!")
+            return False
         else:
             diff += os.linesep
             LOG.info("Saving diff to patch file: %s", file)
             LOG.debug("Diff: %s", diff)
             FileUtils.save_to_file(file, diff)
+            return True
 
 
 class FileUtils:
@@ -211,6 +212,12 @@ class FileUtils:
     @classmethod
     def save_to_file(cls ,file_path, contents):
         file = open(file_path, 'w')
+        file.write(contents)
+        file.close()
+
+    @classmethod
+    def append_to_file(cls, file_path, contents):
+        file = open(file_path, 'a')
         file.write(contents)
         file.close()
 

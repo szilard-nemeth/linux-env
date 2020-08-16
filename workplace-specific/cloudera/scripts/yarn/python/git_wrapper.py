@@ -9,6 +9,10 @@ class GitWrapper:
         self.repo_path = base_path
         self.repo = Repo(self.repo_path)
 
+    @property
+    def _repo(self):
+        return self.repo
+
     def get_current_branch_name(self):
         return self.repo.git.rev_parse('HEAD', symbolic_full_name=True, abbrev_ref=True)
 
@@ -258,4 +262,4 @@ class ProgressPrinter(RemoteProgress):
 
     def update(self, op_code, cur_count, max_count=None, message=''):
         percentage = cur_count / (max_count or 100.0) * 100
-        LOG.debug("Progress of git %s: %s%% (speed: %s)", self.operation, percentage, message or "-")
+        LOG.info("Progress of git %s: %s%% (speed: %s)", self.operation, percentage, message or "-")

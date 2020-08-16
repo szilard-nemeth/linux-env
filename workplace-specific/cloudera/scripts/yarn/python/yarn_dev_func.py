@@ -18,39 +18,24 @@ from git import GitCommandError, InvalidGitRepositoryError
 from argparser import ArgParser
 from command_runner import CommandRunner
 from git_wrapper import GitWrapper
+from patch_saver import PatchSaver
 from utils import FileUtils, PatchUtils, StringUtils, DateTimeUtils, auto_str, JiraUtils
-
-HEAD = 'HEAD'
-ORIGIN_TRUNK = 'origin/trunk'
-ORIGIN = 'origin'
-FETCH_HEAD = 'FETCH_HEAD'
-TRUNK = "trunk"
+from constants import *
 
 LOG = logging.getLogger(__name__)
 __author__ = 'Szilard Nemeth'
 
 
-ENV_CLOUDERA_HADOOP_ROOT = 'CLOUDERA_HADOOP_ROOT'
-ENV_HADOOP_DEV_DIR = 'HADOOP_DEV_DIR'
-
-# Do not leak bad ENV variable namings into the python code
-LOADED_ENV_UPSTREAM_DIR="upstream-hadoop-dir"
-LOADED_ENV_DOWNSTREAM_DIR="downstream-hadoop-dir"
-PROJECT_NAME="yarn_dev_func"
-YARN_PATCH_FILENAME_REGEX = ".*(YARN-[0-9]+).*\.patch"
-HADOOP_REPO_TEMPLATE = "https://github.com/{user}/hadoop.git"
-
-
 class Setup:
     @staticmethod
-    def init_logger(log_dir, console_debug=False):
+    def init_logger(log_dir, console_debug=False, postfix=""):
         # get root logger
         logger = logging.getLogger()
         logger.setLevel(logging.DEBUG)
 
         # create file handler which logs even debug messages
-        logfilename = datetime.datetime.now().strftime(
-            'yarn_dev_func-%Y_%m_%d_%H%M%S.log')
+        prefix = 'yarn_dev_func-{postfix}-'.format(postfix=postfix)
+        logfilename = datetime.datetime.now().strftime(prefix + '%Y_%m_%d_%H%M%S.log')
 
         fh = TimedRotatingFileHandler(os.path.join(log_dir, logfilename), when='midnight')
         fh.suffix = '%Y_%m_%d.log'
@@ -124,8 +109,6 @@ class JiraUmbrellaSummary:
 
 
 class YarnDevFunc:
-    GERRIT_REVIEWER_LIST = "r=shuzirra,r=adam.antal,r=pbacsko,r=kmarton,r=gandras,r=bteke"
-
     def __init__(self):
         self.env = {}
         self.downstream_repo = None
@@ -170,62 +153,8 @@ class YarnDevFunc:
         self.upstream_repo = GitWrapper(self.env[LOADED_ENV_UPSTREAM_DIR])
 
     def save_patch(self, args):
-        # TODO add force mode: ignore whitespace issues and make backup of patch!
-        # TODO add another mode: Create patch based on changes in state, not commits
-        curr_branch = self.upstream_repo.get_current_branch_name()
-        LOG.info("Current branch: %s", curr_branch)
-
-        if curr_branch == TRUNK:
-            raise ValueError("Cannot make patch, current branch is {}. Please use a different branch!".format(TRUNK))
-        patch_branch = curr_branch
-
-        # TODO if there's no commit between trunk..branch, don't move forward and exit
-        # TODO check if git is clean (no modified, unstaged files, etc)
-        self.upstream_repo.checkout_branch(TRUNK)
-        self.upstream_repo.pull(ORIGIN)
-        self.upstream_repo.checkout_previous_branch()
-        rebase_result = self.upstream_repo.rebase(TRUNK)
-        if not rebase_result:
-            raise ValueError("Rebase was not successful, see previous error messages")
-
-        self.upstream_repo.diff_check()
-        # TODO add line length check to added lines, ignore imports: 'sed -n "/^+.\{81\}/p"'
-
-        patch_dir = os.path.join(self.yarn_patch_dir, patch_branch)
-        FileUtils.ensure_dir_created(patch_dir)
-        found_patches = FileUtils.find_files(patch_dir, regex=patch_branch + '\\.\\d.*\\.patch$', single_level=True)
-        new_patch_filename, new_patch_num = PatchUtils.get_next_filename(patch_dir, found_patches)
-
-        # Double-check new filename vs. putting it altogether manually
-        new_patch_filename_sanity = os.path.join(self.yarn_patch_dir, patch_branch, patch_branch + "." + str(new_patch_num) + ".patch")
-
-        # If this is a new patch, use the appended name,
-        # Otherwise, use the generated filename
-        if new_patch_num == "001":
-            new_patch_filename = new_patch_filename_sanity
-        if new_patch_filename != new_patch_filename_sanity:
-            raise ValueError("File paths does not match. Calculated: {}, Concatenated: {}".format(new_patch_filename, new_patch_filename_sanity))
-
-        diff = self.upstream_repo.diff(TRUNK)
-        PatchUtils.save_diff_to_patch_file(diff, new_patch_filename)
-
-        LOG.info("Created patch file: %s [ size: %s ]", new_patch_filename, FileUtils.get_file_size(new_patch_filename))
-
-        # TODO replacing all whitespaces in patch file caused issues when patch applied -> Find a python lib for this
-        # sed -i 's/^\([+-].*\)[ \t]*$/\1/' $PATCH_FILE
-
-        # Sanity check: try to apply patch
-        self.upstream_repo.checkout_branch(TRUNK)
-
-        LOG.info("Trying to apply patch %s", new_patch_filename)
-        result = self.upstream_repo.apply_check(new_patch_filename)
-        if not result:
-            raise ValueError("Patch does not apply to {}! Patch file: {}".format(TRUNK, new_patch_filename))
-        else:
-            LOG.info("Patch file applies cleanly to %s. Patch file: %s", TRUNK, new_patch_filename)
-
-        # Checkout old branch
-        self.upstream_repo.checkout_previous_branch()
+        patch_saver = PatchSaver(args, self.upstream_repo, self.yarn_patch_dir)
+        return patch_saver.run()
 
     def create_review_branch(self, args):
         patch_file = args.patch_file
@@ -341,7 +270,7 @@ class YarnDevFunc:
         LOG.info("Commit was successful! "
                  "Run this command to push to gerrit: "
                  "git push cauldron HEAD:refs/for/{cdh_branch}%{reviewers}".format(cdh_branch=cdh_branch,
-                                                                                   reviewers=YarnDevFunc.GERRIT_REVIEWER_LIST))
+                                                                                   reviewers=GERRIT_REVIEWER_LIST))
 
     def upstream_pr_fetch(self, args):
         github_username = args.github_username
@@ -585,7 +514,6 @@ if __name__ == '__main__':
     # TODO Revisit all exception handling: ValueError vs. exit() calls
     # Methods should throw exceptions, exit should be handled in this method
     yarn_functions = YarnDevFunc()
-    yarn_functions.init_repos()
 
     # Parse args, commands will be mapped to YarnDevFunc functions in ArgParser.parse_args
     args = ArgParser.parse_args(yarn_functions)
