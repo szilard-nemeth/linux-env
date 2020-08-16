@@ -210,7 +210,7 @@ class FileUtils:
         return res_files
 
     @classmethod
-    def save_to_file(cls ,file_path, contents):
+    def save_to_file(cls, file_path, contents):
         file = open(file_path, 'w')
         file.write(contents)
         file.close()

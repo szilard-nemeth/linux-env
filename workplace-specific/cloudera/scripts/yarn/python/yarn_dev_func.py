@@ -13,6 +13,7 @@ from git import InvalidGitRepositoryError
 
 from argparser import ArgParser
 from command_runner import CommandRunner
+from commands.review_branch_creator import ReviewBranchCreator
 from git_wrapper import GitWrapper
 from commands.patch_saver import PatchSaver
 from utils import FileUtils, PatchUtils, StringUtils, DateTimeUtils, auto_str, JiraUtils
@@ -153,66 +154,8 @@ class YarnDevFunc:
         return patch_saver.run()
 
     def create_review_branch(self, args):
-        patch_file = args.patch_file
-
-        FileUtils.ensure_file_exists(patch_file)
-        patch_file_name = FileUtils.path_basename(patch_file)
-        matches = StringUtils.ensure_matches_pattern(patch_file_name, YARN_PATCH_FILENAME_REGEX)
-        if not matches:
-            LOG.error("Filename '%s' (full path: %s) does not match usual patch file pattern: '%s', exiting...!", patch_file_name, patch_file, YARN_PATCH_FILENAME_REGEX)
-            exit(1)
-
-        orig_branch = self.upstream_repo.get_current_branch_name()
-        LOG.info("Current branch: %s", orig_branch)
-
-        target_branch = "review-" + StringUtils.get_matched_group(patch_file, YARN_PATCH_FILENAME_REGEX, 1)
-        LOG.info("Target branch: %s", target_branch)
-
-        clean = self.upstream_repo.is_working_directory_clean()
-        if not clean:
-            LOG.error("git working directory is not clean, please stash or drop your changes")
-            exit(2)
-
-        self.upstream_repo.checkout_branch(TRUNK)
-        self.upstream_repo.pull(ORIGIN)
-        diff = self.upstream_repo.diff_between_refs(ORIGIN_TRUNK, TRUNK)
-        if diff:
-            LOG.error("There is a diff between local %s and %s! Run 'git reset %s --hard' and re-run the script! Exiting...", TRUNK, ORIGIN_TRUNK, ORIGIN_TRUNK)
-            exit(3)
-
-        apply_result = self.upstream_repo.apply_check(patch_file, raise_exception=False)
-        if not apply_result:
-            cmd = "git apply " + patch_file
-            LOG.error("Patch does not apply to %s, please resolve the conflicts manually. Run this command to apply the patch again: %s", TRUNK, cmd)
-            self.upstream_repo.checkout_previous_branch()
-            exit(4)
-
-        LOG.info("Patch %s applies cleanly to %s", patch_file, TRUNK)
-
-        branch_exists = self.upstream_repo.is_branch_exist(target_branch)
-        base_ref = TRUNK
-        if not branch_exists:
-            success = self.upstream_repo.checkout_new_branch(target_branch, base_ref)
-            if not success:
-                LOG.error("Cannot checkout new branch %s based on ref %s", target_branch, base_ref)
-                exit(5)
-            LOG.info("Checked out branch %s based on ref %s", target_branch, base_ref)
-        else:
-            branch_pattern = target_branch + "*"
-            branches = self.upstream_repo.list_branches(branch_pattern)
-            LOG.info("Found existing review branches for this patch: %s", branches)
-            target_branch = PatchUtils.get_next_review_branch_name(branches)
-            LOG.info("Creating new version of review branch as: %s", target_branch)
-            success = self.upstream_repo.checkout_new_branch(target_branch, base_ref)
-            if not success:
-                LOG.error("Cannot checkout new branch %s based on ref %s", target_branch, base_ref)
-                exit(6)
-
-        self.upstream_repo.apply_patch(patch_file, include_check=False)
-        LOG.info("Successfully applied patch: %s", patch_file)
-        commit_msg = "patch file: {}".format(patch_file)
-        self.upstream_repo.add_all_and_commit(commit_msg)
-        LOG.info("Committed changes of patch: %s with message: %s", patch_file, commit_msg)
+        review_branch_creator = ReviewBranchCreator(args, self.upstream_repo)
+        review_branch_creator.run()
 
     def backport_c6(self, args):
         upstream_jira_id = args.upstream_jira_id

@@ -120,9 +120,13 @@ class GitWrapper:
                 raise e
             return False
 
-    def diff(self, branch):
+    def diff(self, branch, cached=False):
+        kwargs = {}
+        if cached:
+            kwargs['cached'] = True
+
         LOG.info("Making diff against %s", branch)
-        return self.repo.git.diff(branch)
+        return self.repo.git.diff(branch, **kwargs)
 
     def diff_between_refs(self, ref1, ref2):
         LOG.info("Making diff: %s..%s", ref1, ref2)
