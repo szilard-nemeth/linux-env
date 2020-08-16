@@ -124,6 +124,38 @@ class GitWrapper:
         LOG.info("Making diff: %s..%s", ref1, ref2)
         return self.repo.git.diff("{}..{}".format(ref1, ref2))
 
+    def diff_tree(self, ref, no_commit_id=None, name_only=None, recursive=False):
+        args = [ref]
+
+        kwargs = {}
+        if no_commit_id:
+            kwargs['no_commit_id'] = True
+        if name_only:
+            kwargs['name_only'] = True
+        if recursive:
+            kwargs['r'] = True
+
+        # TODO these logs can be replaced with: https://gitpython.readthedocs.io/en/stable/tutorial.html#git-command-debugging-and-customization
+        LOG.info("Running git diff-tree with arguments, args: %s, kwargs: %s", args, kwargs)
+        diff_tree_results = self.repo.git.diff_tree(*args, **kwargs).splitlines()
+        return diff_tree_results
+
+    def show(self, hash, no_patch=None, no_notes=None, pretty=None):
+        args = [hash]
+
+        kwargs = {}
+        if no_patch:
+            kwargs['no_patch'] = True
+        if no_notes:
+            kwargs['no_notes'] = True
+        if pretty:
+            kwargs['pretty'] = pretty
+
+        # TODO these logs can be replaced with: https://gitpython.readthedocs.io/en/stable/tutorial.html#git-command-debugging-and-customization
+        LOG.info("Running git show with arguments, args: %s, kwargs: %s", args, kwargs)
+        result = self.repo.git.show(*args, **kwargs).splitlines()
+        return result
+
     def is_working_directory_clean(self):
         status = self.repo.git.status(porcelain=True)
         LOG.debug("Git status: %s", status)
@@ -165,7 +197,7 @@ class GitWrapper:
         LOG.info("Running git commit with arguments: %s", kwargs)
         self.repo.git.commit(**kwargs)
 
-    def log(self, revision_range, oneline=False, grep=None, format=None, n=None):
+    def log(self, revision_range, oneline=False, grep=None, format=None, n=None, return_hashes=False, follow=False):
         args = []
         if revision_range:
             args.append(revision_range)
@@ -180,10 +212,16 @@ class GitWrapper:
         if n:
             kwargs['n'] = n
             kwargs['oneline'] = True
+        if follow:
+            kwargs['follow'] = True
 
         # TODO these logs can be replaced with: https://gitpython.readthedocs.io/en/stable/tutorial.html#git-command-debugging-and-customization
         LOG.info("Running git log with arguments, args: %s, kwargs: %s", args, kwargs)
-        return self.repo.git.log(*args, **kwargs).splitlines()
+        log_result = self.repo.git.log(*args, **kwargs).splitlines()
+
+        if return_hashes:
+            return [lr.split(' ')[0] for lr in log_result]
+        return log_result
 
     def cherry_pick(self, ref, x=False):
         kwargs = {}

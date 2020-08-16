@@ -1,2 +1,3 @@
 gitpython
 humanize
+bs4

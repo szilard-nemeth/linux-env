@@ -72,6 +72,7 @@ function yarn-listupstreamversions() {
 #####ALIASES
 
 #TODO PYTHONPATH DID NOT WORK
+#TODO extract export statement and script name to variable
 alias yarn-save-patch="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py save_patch"
 
 #Example call: yarn-create-review-branch /Users/szilardnemeth/yarn-tasks/YARN-10277-test2/YARN-10277-test2.010.patch
@@ -93,3 +94,6 @@ alias yarn-diff-patches="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; pyt
 #Example call: save-diff-as-patches master gpu
 #Example call: save-diff-as-patches master WIP-migrate-yarn-scripts-to-python ~/yarn-tasks/saved_patches prefix1
 alias save-diff-as-patches="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py save_diff_as_patches"
+
+#Example call: yarn-get-umbrella-data YARN-5734
+alias yarn-get-umbrella-data="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarn_dev_func.py fetch_jira_umbrella_data"

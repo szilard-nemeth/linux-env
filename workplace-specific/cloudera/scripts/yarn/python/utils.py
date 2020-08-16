@@ -4,6 +4,8 @@ import os
 import re
 
 import humanize
+import requests
+from bs4 import BeautifulSoup
 
 REVIEW_BRANCH_SEP = '-'
 
@@ -157,9 +159,29 @@ class FileUtils:
         return dirname
 
     @classmethod
-    def ensure_file_exists(cls, path):
-        if not os.path.exists(path):
+    def ensure_file_exists(cls, path, create=False):
+        if not path:
+            raise ValueError("Path parameter should not be None or empty!")
+
+        if not create and not os.path.exists(path):
             raise ValueError("No such file or directory: {}".format(path))
+
+        path_comps = path.split(os.sep)
+        dirs = path_comps[:-1]
+        dirpath = os.sep.join(dirs)
+        if not os.path.exists(dirpath):
+            LOG.info("Creating dirs: %s", dirpath)
+            FileUtils.ensure_dir_created(dirpath, log_exception=False)
+
+        if not os.path.exists(path):
+            # Create empty file: https://stackoverflow.com/a/12654798/1106893
+            LOG.info("Creating file: %s", path)
+            open(path, 'a').close()
+
+    @classmethod
+    def create_files(cls, *files):
+        for file in files:
+            FileUtils.ensure_file_exists(file, create=True)
 
     @classmethod
     def verify_if_dir_is_created(cls, path, raise_ex=True):
@@ -178,7 +200,7 @@ class FileUtils:
             for file in files:
                 if regex.match(file):
                     if full_path_result:
-                        res_files.append(os.path.join(basedir, file))
+                        res_files.append(os.path.join(root, file))
                     else:
                         res_files.append(file)
             if single_level:
@@ -209,9 +231,35 @@ class FileUtils:
     def join_path(cls, *components):
         return os.path.join(*components)
 
+
 class DateTimeUtils:
     @staticmethod
     def get_current_datetime(format='%Y%m%d_%H%M%S'):
         from datetime import datetime
         now = datetime.now()
         return now.strftime(format)
+
+
+class JiraUtils:
+    @staticmethod
+    def download_jira_html(jira_id, to_file):
+        resp = requests.get("https://issues.apache.org/jira/browse/{jira_id}".format(jira_id=jira_id))
+        resp.raise_for_status()
+        FileUtils.save_to_file(to_file, resp.text)
+        return resp.text
+
+    @staticmethod
+    def parse_subjiras_from_umbrella_html(html_doc, to_file, filter_ids):
+        soup = BeautifulSoup(html_doc, 'html.parser')
+        issue_keys = []
+        for link in soup.find_all('a', attrs={'class': 'issue-link'}):
+            issue_keys.append(link.attrs['data-issue-key'])
+
+        if filter_ids:
+            LOG.info("Filtering ids from result list: %s", filter_ids)
+            issue_keys = [issue for issue in issue_keys if issue not in filter_ids]
+
+        # Filter dupes
+        issue_keys = list(set(issue_keys))
+        FileUtils.save_to_file(to_file, '\n'.join(issue_keys))
+        return issue_keys
