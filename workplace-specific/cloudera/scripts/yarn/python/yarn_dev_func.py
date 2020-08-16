@@ -19,6 +19,12 @@ from command_runner import CommandRunner
 from git_wrapper import GitWrapper
 from utils import FileUtils, PatchUtils, StringUtils, DateTimeUtils, auto_str, JiraUtils
 
+HEAD = 'HEAD'
+ORIGIN_TRUNK = 'origin/trunk'
+ORIGIN = 'origin'
+FETCH_HEAD = 'FETCH_HEAD'
+TRUNK = "trunk"
+
 LOG = logging.getLogger(__name__)
 __author__ = 'Szilard Nemeth'
 
@@ -266,16 +272,16 @@ class YarnDevFunc:
         curr_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
 
-        if curr_branch == "trunk":
-            raise ValueError("Cannot make patch, current branch is trunk. Please use a different branch!")
+        if curr_branch == TRUNK:
+            raise ValueError("Cannot make patch, current branch is {}. Please use a different branch!".format(TRUNK))
         patch_branch = curr_branch
 
         # TODO if there's no commit between trunk..branch, don't move forward and exit
         # TODO check if git is clean (no modified, unstaged files, etc)
-        self.upstream_repo.checkout_branch('trunk')
-        self.upstream_repo.pull('origin')
+        self.upstream_repo.checkout_branch(TRUNK)
+        self.upstream_repo.pull(ORIGIN)
         self.upstream_repo.checkout_previous_branch()
-        rebase_result = self.upstream_repo.rebase('trunk')
+        rebase_result = self.upstream_repo.rebase(TRUNK)
         if not rebase_result:
             raise ValueError("Rebase was not successful, see previous error messages")
 
@@ -297,7 +303,7 @@ class YarnDevFunc:
         if new_patch_filename != new_patch_filename_sanity:
             raise ValueError("File paths does not match. Calculated: {}, Concatenated: {}".format(new_patch_filename, new_patch_filename_sanity))
 
-        diff = self.upstream_repo.diff('trunk')
+        diff = self.upstream_repo.diff(TRUNK)
         PatchUtils.save_diff_to_patch_file(diff, new_patch_filename)
 
         LOG.info("Created patch file: %s [ size: %s ]", new_patch_filename, FileUtils.get_file_size(new_patch_filename))
@@ -306,14 +312,14 @@ class YarnDevFunc:
         # sed -i 's/^\([+-].*\)[ \t]*$/\1/' $PATCH_FILE
 
         # Sanity check: try to apply patch
-        self.upstream_repo.checkout_branch('trunk')
+        self.upstream_repo.checkout_branch(TRUNK)
 
         LOG.info("Trying to apply patch %s", new_patch_filename)
         result = self.upstream_repo.apply_check(new_patch_filename)
         if not result:
-            raise ValueError("Patch does not apply to trunk! Patch file: %s", new_patch_filename)
+            raise ValueError("Patch does not apply to {}! Patch file: {}".format(TRUNK, new_patch_filename))
         else:
-            LOG.info("Patch file applies cleanly to trunk. Patch file: %s", new_patch_filename)
+            LOG.info("Patch file applies cleanly to %s. Patch file: %s", TRUNK, new_patch_filename)
 
         # Checkout old branch
         self.upstream_repo.checkout_previous_branch()
@@ -339,24 +345,24 @@ class YarnDevFunc:
             LOG.error("git working directory is not clean, please stash or drop your changes")
             exit(2)
 
-        self.upstream_repo.checkout_branch('trunk')
-        self.upstream_repo.pull('origin')
-        diff = self.upstream_repo.diff_between_refs('origin/trunk', 'trunk')
+        self.upstream_repo.checkout_branch(TRUNK)
+        self.upstream_repo.pull(ORIGIN)
+        diff = self.upstream_repo.diff_between_refs(ORIGIN_TRUNK, TRUNK)
         if diff:
-            LOG.error("There is a diff between local trunk and origin/trunk! Run 'git reset origin/trunk --hard' and re-run the script! Exiting...")
+            LOG.error("There is a diff between local %s and %s! Run 'git reset %s --hard' and re-run the script! Exiting...", TRUNK, ORIGIN_TRUNK, ORIGIN_TRUNK)
             exit(3)
 
         apply_result = self.upstream_repo.apply_check(patch_file, raise_exception=False)
         if not apply_result:
             cmd = "git apply " + patch_file
-            LOG.error("Patch does not apply to trunk, please resolve the conflicts manually. Run this command to apply the patch again: %s", cmd)
+            LOG.error("Patch does not apply to %s, please resolve the conflicts manually. Run this command to apply the patch again: %s", TRUNK, cmd)
             self.upstream_repo.checkout_previous_branch()
             exit(4)
 
-        LOG.info("Patch %s applies cleanly to trunk", patch_file)
+        LOG.info("Patch %s applies cleanly to %s", patch_file, TRUNK)
 
         branch_exists = self.upstream_repo.is_branch_exist(target_branch)
-        base_ref = 'trunk'
+        base_ref = TRUNK
         if not branch_exists:
             success = self.upstream_repo.checkout_new_branch(target_branch, base_ref)
             if not success:
@@ -390,10 +396,10 @@ class YarnDevFunc:
         LOG.info("Current branch: %s", curr_branch)
 
         self.upstream_repo.fetch(all=True)
-        self.upstream_repo.checkout_branch('trunk')
-        self.upstream_repo.pull('origin')
+        self.upstream_repo.checkout_branch(TRUNK)
+        self.upstream_repo.pull(ORIGIN)
 
-        git_log_result = self.upstream_repo.log('HEAD', oneline=True, grep=upstream_jira_id)
+        git_log_result = self.upstream_repo.log(HEAD, oneline=True, grep=upstream_jira_id)
         # Restore original branch in either error-case or normal case
         self.upstream_repo.checkout_previous_branch()
         if not git_log_result:
@@ -448,17 +454,18 @@ class YarnDevFunc:
             LOG.error("Cannot fetch from remote branch: {url}/{remote}".format(url=repo_url, remote=remote_branch))
             exit(1)
 
-        log_result = self.upstream_repo.log('FETCH_HEAD', n=10)
-        LOG.info("Printing 10 topmost commits of FETCH_HEAD:\n %s", '\n'.join(log_result))
+        log_result = self.upstream_repo.log(FETCH_HEAD, n=10)
+        LOG.info("Printing 10 topmost commits of %s:\n %s", FETCH_HEAD, '\n'.join(log_result))
 
-        log_result = self.upstream_repo.log("trunk..FETCH_HEAD", oneline=True)
-        LOG.info("\n\nPrinting diff of trunk..FETCH_HEAD:\n %s", '\n'.join(log_result))
+        trunk_vs_fetch_head = '{}..{}'.format(TRUNK, FETCH_HEAD)
+        log_result = self.upstream_repo.log(trunk_vs_fetch_head, oneline=True)
+        LOG.info("\n\nPrinting diff of %s:\n %s", trunk_vs_fetch_head, '\n'.join(log_result))
         num_commits = len(log_result)
         if num_commits > 1:
-            LOG.error("Number of commits between trunk..FETCH_HEAD is not only one! Exiting...")
+            LOG.error("Number of commits between %s is not only one! Exiting...", trunk_vs_fetch_head)
             exit(2)
 
-        success = self.upstream_repo.cherry_pick("FETCH_HEAD")
+        success = self.upstream_repo.cherry_pick(FETCH_HEAD)
         if not success:
             LOG.error("Cherry-pick failed. Exiting")
             exit(3)
@@ -569,8 +576,8 @@ Example workflow:
         curr_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
 
-        if curr_branch != "trunk":
-            LOG.error("Current branch is not trunk. Exiting!")
+        if curr_branch != TRUNK:
+            LOG.error("Current branch is not %s. Exiting!", TRUNK)
             exit(1)
 
         result_basedir = FileUtils.join_path(base_tmp_dir, jira_id)
@@ -589,7 +596,7 @@ Example workflow:
         piped_jira_ids = '|'.join(jira_ids)
 
         # It's quite complex to grep for multiple jira IDs with gitpython, so let's rather call an external command
-        git_log_result = self.upstream_repo.log('HEAD', oneline=True)
+        git_log_result = self.upstream_repo.log(HEAD, oneline=True)
         output = self.egrep_with_cli(git_log_result, intermediate_results_file, piped_jira_ids)
         matched_commit_list = output.split("\n")
         LOG.info("Number of matched commits: %s", len(matched_commit_list))
