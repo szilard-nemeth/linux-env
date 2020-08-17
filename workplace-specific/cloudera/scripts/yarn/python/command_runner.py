@@ -1,8 +1,9 @@
+import logging
 import shlex
 import subprocess
 
-from utils import auto_str
-
+from utils import auto_str, FileUtils
+LOG = logging.getLogger(__name__)
 
 @auto_str
 class RegularCommandResult:
@@ -31,3 +32,19 @@ class CommandRunner:
         if raise_on_error and statusoutput[0] != 0:
             raise ValueError("Command failed with exit code %d. Command was: %s", statusoutput[0], command)
         return statusoutput[1]
+
+    @staticmethod
+    def egrep_with_cli(git_log_result, file, piped_jira_ids):
+        FileUtils.save_to_file(file, '\n'.join(git_log_result))
+        cli_command = "cat {git_log_file} | egrep '{jira_list}'".format(git_log_file=file,
+                                                                        jira_list=piped_jira_ids)
+        return CommandRunner.run_cli_command(cli_command)
+
+    @staticmethod
+    def run_cli_command(cli_command, fail_on_empty_output=True):
+        LOG.info("Running CLI command: %s", cli_command)
+        output = CommandRunner.getoutput(cli_command)
+        if fail_on_empty_output and not output:
+            LOG.error("Command failed: %s", cli_command)
+            exit(1)
+        return output
