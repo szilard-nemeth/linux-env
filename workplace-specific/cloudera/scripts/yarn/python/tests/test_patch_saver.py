@@ -67,7 +67,7 @@ class TestPatchSaver(unittest.TestCase):
         self.cleanup_and_checkout_branch(YARN_TEST_BRANCH)
         self.utils.add_some_file_changes(commit=True)
 
-        self.utils.set_env_vars(self.utils.sandbox_hadoop_repo_path, self.utils.sandbox_hadoop_repo_path)
+        self.utils.set_env_vars(self.utils.sandbox_repo_path, self.utils.sandbox_repo_path)
         yarn_functions = YarnDevFunc()
         yarn_functions.upstream_repo = self.repo_wrapper
         yarn_functions.yarn_patch_dir = self.saved_patches_dir

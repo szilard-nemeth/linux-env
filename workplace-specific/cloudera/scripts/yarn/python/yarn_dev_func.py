@@ -13,6 +13,7 @@ from git import InvalidGitRepositoryError
 
 from argparser import ArgParser
 from command_runner import CommandRunner
+from commands.backporter import Backporter
 from commands.review_branch_creator import ReviewBranchCreator
 from git_wrapper import GitWrapper
 from commands.patch_saver import PatchSaver
@@ -55,6 +56,7 @@ class Setup:
 
 class YarnDevHighLevelFunctions:
     pass
+
 
 @auto_str
 class BranchResults:
@@ -158,58 +160,8 @@ class YarnDevFunc:
         review_branch_creator.run()
 
     def backport_c6(self, args):
-        upstream_jira_id = args.upstream_jira_id
-        cdh_jira_id = args.cdh_jira_id
-        cdh_branch = args.cdh_branch
-
-        # TODO decide on the cdh branch whether this is C5 or C6 backport (remote is different)
-        curr_branch = self.upstream_repo.get_current_branch_name()
-        LOG.info("Current branch: %s", curr_branch)
-
-        self.upstream_repo.fetch(all=True)
-        self.upstream_repo.checkout_branch(TRUNK)
-        self.upstream_repo.pull(ORIGIN)
-
-        git_log_result = self.upstream_repo.log(HEAD, oneline=True, grep=upstream_jira_id)
-        # Restore original branch in either error-case or normal case
-        self.upstream_repo.checkout_previous_branch()
-        if not git_log_result:
-            raise ValueError("No match found for upsream commit with name: %s", upstream_jira_id)
-        if len(git_log_result) > 1:
-            raise ValueError("Ambiguous upsream commit with name: %s. Results: %s", upstream_jira_id, git_log_result)
-
-        commit_hash = git_log_result[0].split(' ')[0]
-
-        # DO THE REST OF THE WORK IN THE DOWNSTREAM REPO
-        self.downstream_repo.fetch(all=True)
-
-        # TODO handle if branch already exist (is it okay to silently ignore?) or should use current branch with switch?
-        # git checkout -b "$CDH_JIRA_NO-$CDH_BRANCH" cauldron/${CDH_BRANCH}
-        self.downstream_repo.checkout_new_branch('{}-{}'.format(cdh_jira_id, cdh_branch), 'cauldron/{}'.format(cdh_branch))
-        cherry_pick_result = self.downstream_repo.cherry_pick(commit_hash, x=True)
-
-        # TODO add resume functionality so that commit message rewrite can happen
-        if not cherry_pick_result:
-            LOG.error("Failed to cherry-pick commit: %s. "
-                      "Perhaps there were some merge conflicts, "
-                      "please resolve them and run: git cherry-pick --continue", commit_hash)
-            # TODO print git commit and git push command, print it to a script that can continue!
-            exit(1)
-
-        # Add downstream (CDH jira) number as a prefix.
-        # Since it triggers a commit, it will also add gerrit Change-Id to the commit.
-        old_commit_msg = self.downstream_repo.log(format='%B', n=1)
-        self.downstream_repo.commit(amend=True, message="{}: {}".format(cdh_jira_id, old_commit_msg))
-
-        # TODO make an option that decides if mvn clean install should be run!
-        # Run build to verify backported commit compiles fine
-        # mvn clean install -Pdist -DskipTests -Pnoshade  -Dmaven.javadoc.skip=true
-
-        # Push to gerrit (intentionally commented out)
-        LOG.info("Commit was successful! "
-                 "Run this command to push to gerrit: "
-                 "git push cauldron HEAD:refs/for/{cdh_branch}%{reviewers}".format(cdh_branch=cdh_branch,
-                                                                                   reviewers=GERRIT_REVIEWER_LIST))
+        backporter = Backporter(args, self.upstream_repo, self.downstream_repo, 'cauldron/{}'.format(args.cdh_branch))
+        backporter.run()
 
     def upstream_pr_fetch(self, args):
         github_username = args.github_username

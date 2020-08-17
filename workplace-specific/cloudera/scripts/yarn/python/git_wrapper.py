@@ -30,7 +30,11 @@ class GitWrapper:
         prev_branch = self.get_current_branch_name()
         LOG.info("Checking out new branch: %s based on ref: %s (Previous branch was: %s)", new_branch, base_ref,
                  prev_branch)
-        self.repo.git.checkout(base_ref, b=new_branch)
+        try:
+            self.repo.git.checkout(base_ref, b=new_branch)
+        except GitCommandError:
+            LOG.exception("Git checkout failed!", exc_info=True)
+            return False
         return True
 
     def pull(self, remote_name):
@@ -236,7 +240,7 @@ class GitWrapper:
         if x:
             kwargs['x'] = x
         try:
-            self.repo.git.cherry_pick(**kwargs)
+            self.repo.git.cherry_pick(ref, **kwargs)
             return True
         except GitCommandError as e:
             LOG.exception("Failed to cherry-pick commit: " + ref, exc_info=True)

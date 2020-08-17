@@ -96,7 +96,7 @@ class TestReviewBranchCreator(unittest.TestCase):
         self.cleanup_and_checkout_branch()
         self.utils.add_some_file_changes(commit=False)
 
-        self.utils.set_env_vars(self.utils.sandbox_hadoop_repo_path, self.utils.sandbox_hadoop_repo_path)
+        self.utils.set_env_vars(self.utils.sandbox_repo_path, self.utils.sandbox_repo_path)
         yarn_functions = YarnDevFunc()
         yarn_functions.upstream_repo = self.repo_wrapper
 
