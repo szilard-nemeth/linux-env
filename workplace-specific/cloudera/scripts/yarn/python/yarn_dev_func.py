@@ -16,6 +16,7 @@ from command_runner import CommandRunner
 from commands.backporter import Backporter
 from commands.format_patch_saver import FormatPatchSaver
 from commands.review_branch_creator import ReviewBranchCreator
+from commands.upstream_jira_patch_differ import UpstreamJiraPatchDiffer
 from commands.upstream_pr_fetcher import UpstreamPRFetcher
 from git_wrapper import GitWrapper
 from commands.patch_saver import PatchSaver
@@ -54,30 +55,6 @@ class Setup:
         # add the handlers to the logger
         logger.addHandler(fh)
         logger.addHandler(ch)
-
-
-class YarnDevHighLevelFunctions:
-    pass
-
-
-@auto_str
-class BranchResults:
-    def __init__(self, branch_name, exists, commits, commit_hashes):
-        self.branch_name = branch_name
-        self.exists = exists
-        self.commits = commits
-        self.commit_hashes = commit_hashes
-        self.git_diff = None
-
-    @property
-    def number_of_commits(self):
-        return len(self.commits)
-
-    @property
-    def single_commit_hash(self):
-        if len(self.commit_hashes) > 1:
-            raise ValueError("This object has multiple commit hashes. The intended use of this method is when there's only one single commit hash!")
-        return self.commit_hashes[0]
 
 
 @auto_str
@@ -135,9 +112,9 @@ class YarnDevFunc:
         downstream_hadoop_dir = os.environ[ENV_CLOUDERA_HADOOP_ROOT]
 
         if not upstream_hadoop_dir:
-            raise ValueError("Upstream hadoop dir (env var: {}) is not set!".format(ENV_HADOOP_DEV_DIR))
+            raise ValueError("Upstream Hadoop dir (env var: {}) is not set!".format(ENV_HADOOP_DEV_DIR))
         if not downstream_hadoop_dir:
-            raise ValueError("Downstream hadoop dir (env var: {}) is not set!".format(ENV_CLOUDERA_HADOOP_ROOT))
+            raise ValueError("Downstream Hadoop dir (env var: {}) is not set!".format(ENV_CLOUDERA_HADOOP_ROOT))
 
         # Verify if dirs are created
         FileUtils.verify_if_dir_is_created(downstream_hadoop_dir)
@@ -175,66 +152,21 @@ class YarnDevFunc:
 
     def diff_patches_of_jira(self, args):
         """
-THIS SCRIPT ASSUMES EACH PROVIDED BRANCH WITH PARAMETERS (e.g. trunk, 3.2, 3.1) has the given commit committed
-Example workflow:
-1. git log --oneline trunk | grep YARN-10028
-* 13cea0412c1 - YARN-10028. Integrate the new abstract log servlet to the JobHistory server. Contributed by Adam Antal 24 hours ago) <Szilard Nemeth>
+        THIS SCRIPT ASSUMES EACH PROVIDED BRANCH WITH PARAMETERS (e.g. trunk, 3.2, 3.1) has the given commit committed
+        Example workflow:
+        1. git log --oneline trunk | grep YARN-10028
+        * 13cea0412c1 - YARN-10028. Integrate the new abstract log servlet to the JobHistory server. Contributed by Adam Antal 24 hours ago) <Szilard Nemeth>
 
-2. git diff 13cea0412c1..13cea0412c1^ > /tmp/YARN-10028-trunk.diff
-3. git checkout branch-3.2
-4. git apply ~/Downloads/YARN-10028.branch-3.2.001.patch
-5. git diff > /tmp/YARN-10028-branch-32.diff
-6. diff -Bibw /tmp/YARN-10028-trunk.diff /tmp/YARN-10028-branch-32.diff
+        2. git diff 13cea0412c1..13cea0412c1^ > /tmp/YARN-10028-trunk.diff
+        3. git checkout branch-3.2
+        4. git apply ~/Downloads/YARN-10028.branch-3.2.001.patch
+        5. git diff > /tmp/YARN-10028-branch-32.diff
+        6. diff -Bibw /tmp/YARN-10028-trunk.diff /tmp/YARN-10028-branch-32.diff
         :param args:
         :return:
         """
-        jira_id = args.jira_id
-        branches = args.branches
-        tmpdirname = "/tmp/yarndiffer"
-        FileUtils.ensure_dir_created(tmpdirname)
-
-        branch_results = {}
-        for branch in branches:
-            LOG.info("Processing branch: %s", branch)
-
-            exists = self.upstream_repo.is_branch_exist(branch)
-            commits = self.upstream_repo.log(branch, grep=jira_id, oneline=True)
-            commit_hashes = [c.split(' ')[0] for c in commits]
-            branch_result = BranchResults(branch, exists, commits, commit_hashes)
-            branch_results[branch] = branch_result
-
-            # Only store diff if number of matched commits for this branch is 1
-            if branch_result.number_of_commits == 1:
-                commit_hash = branch_result.single_commit_hash
-                # TODO create diff_with_parent helper method to GitWrapper
-                diff = self.upstream_repo.diff_between_refs(commit_hash + "^", commit_hash)
-                branch_result.git_diff = diff
-
-                diff_filename = "{}-{}.diff".format(jira_id, branch)
-                PatchUtils.save_diff_to_patch_file(diff, FileUtils.join_path(tmpdirname, diff_filename))
-
-        # Validate results
-        branch_does_not_exist = [b_res.branch_name for br, b_res in branch_results.items() if not b_res.exists]
-        zero_commit = [b_res.branch_name for br, b_res in branch_results.items() if b_res.number_of_commits == 0]
-        multiple_commits = [b_res.branch_name for br, b_res in branch_results.items() if b_res.number_of_commits > 1]
-
-        LOG.debug("Branch result objects: %s", branch_results)
-        if branch_does_not_exist:
-            LOG.error("The following branches are not existing for Jira id '%s': %s", branch_does_not_exist)
-            exit(1)
-
-        if zero_commit:
-            LOG.error("The following branches do not contain commit for Jira id '%s': %s", jira_id, zero_commit)
-            exit(1)
-
-        if multiple_commits:
-            LOG.error("The following branches contain multiple commits for Jira id '%s': %s", jira_id, multiple_commits)
-            exit(1)
-
-        LOG.info("Generated diff files: ")
-        diff_files = FileUtils.find_files(tmpdirname, jira_id + '-.*', single_level=True, full_path_result=True)
-        for f in diff_files:
-            LOG.info("%s: %s", f, FileUtils.get_file_size(f))
+        patch_differ = UpstreamJiraPatchDiffer(args, self.upstream_repo)
+        patch_differ.run()
 
     def fetch_jira_umbrella_data(self, args):
         jira_id = args.jira_id
@@ -358,5 +290,5 @@ if __name__ == '__main__':
     args.func(args)
 
     end_time = time.time()
-    # TODO make a swtich to turn execution time printing on
+    # TODO make a switch to turn execution time printing on
     # LOG.info("Execution of script took %d seconds", end_time - start_time)
