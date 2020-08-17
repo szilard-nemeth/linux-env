@@ -52,11 +52,11 @@ class TestUtilities:
         try:
             self.repo_wrapper = GitWrapper(self.sandbox_hadoop_repo_path)
             self.repo = self.repo_wrapper._repo
-            LOG.info("Hadoop is already cloned.")
+            LOG.info("Repo is already cloned.")
             self.reset_changes()
             self.checkout_trunk()
         except InvalidGitRepositoryError as e:
-            LOG.info("Cloning Hadoop for the first time...")
+            LOG.info("Cloning repo for the first time...")
             Repo.clone_from(HADOOP_REPO_APACHE, self.sandbox_hadoop_repo_path, progress=ProgressPrinter("clone"))
 
     def checkout_trunk(self):
@@ -64,18 +64,18 @@ class TestUtilities:
         LOG.info("Checking out branch: %s", default_branch)
         self.repo.heads[default_branch].checkout()
     
-    def cleanup_and_checkout_test_branch(self, branch=None, remove=True):
+    def cleanup_and_checkout_test_branch(self, branch=None, remove=True, pull=True):
         if not branch:
             branch = self.test_branch
         self.reset_changes()
-        self.checkout_trunk()
-        LOG.info("Pulling origin")
-        self.repo.remotes.origin.pull()
+        if pull:
+            self.pull_to_trunk()
         try:
-            LOG.info("Resetting changes on branch: %s", branch)
             if branch in self.repo.heads:
+                LOG.info("Resetting changes on branch: %s (hard reset)", branch)
                 self.repo.heads[branch].checkout()
                 self.repo.git.reset('--hard')
+
                 # Checkout trunk, so branch can be deleted
                 self.checkout_trunk()
                 if remove:
@@ -88,11 +88,15 @@ class TestUtilities:
         LOG.info("Checking out branch: %s", branch)
         self.repo.git.checkout('-b', branch)
 
-    def reset_and_checkout_existing_branch(self, branch):
-        self.reset_changes()
+    def pull_to_trunk(self):
         self.checkout_trunk()
         LOG.info("Pulling origin")
         self.repo.remotes.origin.pull()
+
+    def reset_and_checkout_existing_branch(self, branch, pull=True):
+        self.reset_changes()
+        if pull:
+            self.pull_to_trunk()
         LOG.info("Checking out branch: %s", branch)
         self.repo.heads[branch].checkout()
 

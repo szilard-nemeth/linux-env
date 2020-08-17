@@ -26,18 +26,19 @@ class TestReviewBranchCreator(unittest.TestCase):
     def setUpClass(cls):
         cls.utils = TestUtilities(cls, YARN_TEST_BRANCH)
         cls.utils.setUpClass()
+        cls.utils.pull_to_trunk()
         cls.repo = cls.utils.repo
         cls.repo_wrapper = cls.utils.repo_wrapper
         cls.saved_patches_dir = cls.utils.saved_patches_dir
         cls.dummy_patches_dir = cls.utils.dummy_patches_dir
 
     def setUp(self):
-        self.utils.reset_and_checkout_existing_branch(TRUNK)
+        self.utils.reset_and_checkout_existing_branch(TRUNK, pull=False)
         self.utils.remove_branches(REVIEW_BRANCH)
 
-    def cleanup_and_checkout_branch(self, test_branch):
-        self.utils.cleanup_and_checkout_test_branch(branch=test_branch)
-        self.assertEqual(test_branch, str(self.repo.head.ref))
+    def cleanup_and_checkout_branch(self):
+        self.utils.cleanup_and_checkout_test_branch(pull=False)
+        self.assertEqual(YARN_TEST_BRANCH, str(self.repo.head.ref))
 
     def test_with_not_existing_patch(self):
         args = Object()
@@ -92,7 +93,7 @@ class TestReviewBranchCreator(unittest.TestCase):
         self.utils.verify_commit_message_of_branch(branch_2, COMMIT_MSG_TEMPLATE.format(file=patch_file))
 
     def test_with_normal_patch_from_yarn_dev_func(self):
-        self.cleanup_and_checkout_branch(YARN_TEST_BRANCH)
+        self.cleanup_and_checkout_branch()
         self.utils.add_some_file_changes(commit=False)
 
         self.utils.set_env_vars(self.utils.sandbox_hadoop_repo_path, self.utils.sandbox_hadoop_repo_path)

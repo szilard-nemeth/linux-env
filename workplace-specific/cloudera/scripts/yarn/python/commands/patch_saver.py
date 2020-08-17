@@ -48,7 +48,7 @@ class PatchSaver:
         if new_patch_num == "001":
             new_patch_filename = new_patch_filename_sanity
         if new_patch_filename != new_patch_filename_sanity:
-            raise ValueError("File paths does not match. Calculated: {}, Concatenated: {}".format(new_patch_filename,
+            raise ValueError("File paths do not match. Calculated: {}, Concatenated: {}".format(new_patch_filename,
                                                                                                   new_patch_filename_sanity))
 
         diff = self.repo.diff(TRUNK)

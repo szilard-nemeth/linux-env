@@ -25,12 +25,13 @@ class TestPatchSaver(unittest.TestCase):
     def setUpClass(cls):
         cls.utils = TestUtilities(cls, YARN_TEST_BRANCH)
         cls.utils.setUpClass()
+        cls.utils.pull_to_trunk()
         cls.repo = cls.utils.repo
         cls.repo_wrapper = cls.utils.repo_wrapper
         cls.saved_patches_dir = cls.utils.saved_patches_dir
 
     def cleanup_and_checkout_branch(self, test_branch):
-        self.utils.cleanup_and_checkout_test_branch()
+        self.utils.cleanup_and_checkout_test_branch(pull=False)
         self.assertEqual(test_branch, str(self.repo.head.ref))
 
     def test_save_patch_on_trunk_fails(self):
