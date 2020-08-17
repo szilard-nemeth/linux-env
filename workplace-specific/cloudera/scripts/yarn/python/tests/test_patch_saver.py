@@ -30,7 +30,7 @@ class TestPatchSaver(unittest.TestCase):
         cls.saved_patches_dir = cls.utils.saved_patches_dir
 
     def cleanup_and_checkout_branch(self, test_branch):
-        self.utils.cleanup_and_checkout_branch()
+        self.utils.cleanup_and_checkout_test_branch()
         self.assertEqual(test_branch, str(self.repo.head.ref))
 
     def test_save_patch_on_trunk_fails(self):
