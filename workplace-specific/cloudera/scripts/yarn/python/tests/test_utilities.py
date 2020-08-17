@@ -192,3 +192,19 @@ class TestUtilities:
     def prepare_git_config(self, user, email):
         self.repo.config_writer().set_value("user", "name", user).release()
         self.repo.config_writer().set_value("user", "email", email).release()
+
+    def remove_comitter_git_config(self):
+        self.repo.config_writer().set_value("user", "name", "").release()
+        self.repo.config_writer().set_value("user", "email", "").release()
+
+    def checkout_parent_of_branch(self, branch):
+        if branch not in self.repo.heads:
+            raise ValueError("Cannot find branch: {}".format(branch))
+        parent_of_branch = branch + '^'
+        self.repo.git.checkout(parent_of_branch)
+        return self.repo.git.rev_parse('--verify', HEAD)
+
+    def checkout_branch(self, branch):
+        if branch not in self.repo.heads:
+            raise ValueError("Cannot find branch: {}".format(branch))
+        self.repo.heads[branch].checkout()

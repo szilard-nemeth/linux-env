@@ -1,3 +1,4 @@
+APACHE = 'apache'
 HEAD = 'HEAD'
 ORIGIN_TRUNK = 'origin/trunk'
 ORIGIN = 'origin'
@@ -13,4 +14,4 @@ LOADED_ENV_DOWNSTREAM_DIR = "downstream-hadoop-dir"
 PROJECT_NAME = "yarn_dev_func"
 YARN_PATCH_FILENAME_REGEX = ".*(YARN-[0-9]+).*\.patch"
 HADOOP_REPO_TEMPLATE = "https://github.com/{user}/hadoop.git"
-HADOOP_REPO_APACHE = HADOOP_REPO_TEMPLATE.format(user='apache')
+HADOOP_REPO_APACHE = HADOOP_REPO_TEMPLATE.format(user=APACHE)

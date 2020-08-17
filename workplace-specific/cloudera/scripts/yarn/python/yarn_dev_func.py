@@ -15,6 +15,7 @@ from argparser import ArgParser
 from command_runner import CommandRunner
 from commands.backporter import Backporter
 from commands.review_branch_creator import ReviewBranchCreator
+from commands.upstream_pr_fetcher import UpstreamPRFetcher
 from git_wrapper import GitWrapper
 from commands.patch_saver import PatchSaver
 from utils import FileUtils, PatchUtils, StringUtils, DateTimeUtils, auto_str, JiraUtils
@@ -164,37 +165,8 @@ class YarnDevFunc:
         backporter.run()
 
     def upstream_pr_fetch(self, args):
-        github_username = args.github_username
-        remote_branch = args.remote_branch
-        prefix = args.dest_dir_prefix
-
-        curr_branch = self.upstream_repo.get_current_branch_name()
-        LOG.info("Current branch: %s", curr_branch)
-
-        repo_url = HADOOP_REPO_TEMPLATE.format(user=github_username)
-        success = self.upstream_repo.fetch(repo_url=repo_url, remote_name=remote_branch)
-        if not success:
-            LOG.error("Cannot fetch from remote branch: {url}/{remote}".format(url=repo_url, remote=remote_branch))
-            exit(1)
-
-        log_result = self.upstream_repo.log(FETCH_HEAD, n=10)
-        LOG.info("Printing 10 topmost commits of %s:\n %s", FETCH_HEAD, '\n'.join(log_result))
-
-        trunk_vs_fetch_head = '{}..{}'.format(TRUNK, FETCH_HEAD)
-        log_result = self.upstream_repo.log(trunk_vs_fetch_head, oneline=True)
-        LOG.info("\n\nPrinting diff of %s:\n %s", trunk_vs_fetch_head, '\n'.join(log_result))
-        num_commits = len(log_result)
-        if num_commits > 1:
-            LOG.error("Number of commits between %s is not only one! Exiting...", trunk_vs_fetch_head)
-            exit(2)
-
-        success = self.upstream_repo.cherry_pick(FETCH_HEAD)
-        if not success:
-            LOG.error("Cherry-pick failed. Exiting")
-            exit(3)
-
-        LOG.info("REMEMBER to change the commit message with command: 'git commit --amend'")
-        LOG.info("REMEMBER to reset the author with command: 'git commit --amend --reset-author")
+        upstream_pr_fetcher = UpstreamPRFetcher(args, self.upstream_repo, TRUNK)
+        upstream_pr_fetcher.run()
 
     def save_patches(self, args):
         base_refspec = args.base_refspec
