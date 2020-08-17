@@ -37,7 +37,7 @@ class JiraUmbrellaSummary:
         return summary_str
 
 
-class JiraUmbrellaFetcher:
+class UpstreamJiraUmbrellaFetcher:
     def __init__(self, args, upstream_repo):
         self.jira_id = args.jira_id
         self.upstream_repo = upstream_repo
@@ -133,5 +133,3 @@ class JiraUmbrellaFetcher:
 
         files = FileUtils.find_files(result_basedir, regex=".*", full_path_result=True)
         LOG.info("All result files: \n%s", '\n'.join(files))
-
-

@@ -15,7 +15,7 @@ from argparser import ArgParser
 from command_runner import CommandRunner
 from commands.backporter import Backporter
 from commands.format_patch_saver import FormatPatchSaver
-from commands.jira_umbrella_fetcher import JiraUmbrellaFetcher
+from commands.upstream_jira_umbrella_fetcher import UpstreamJiraUmbrellaFetcher
 from commands.review_branch_creator import ReviewBranchCreator
 from commands.upstream_jira_patch_differ import UpstreamJiraPatchDiffer
 from commands.upstream_pr_fetcher import UpstreamPRFetcher
@@ -141,7 +141,7 @@ class YarnDevFunc:
         patch_differ.run()
 
     def fetch_jira_umbrella_data(self, args):
-        jira_umbrella_fetcher = JiraUmbrellaFetcher(args, self.upstream_repo)
+        jira_umbrella_fetcher = UpstreamJiraUmbrellaFetcher(args, self.upstream_repo)
         jira_umbrella_fetcher.run()
 
 
