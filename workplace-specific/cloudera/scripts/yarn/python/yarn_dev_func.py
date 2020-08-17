@@ -14,6 +14,7 @@ from git import InvalidGitRepositoryError
 from argparser import ArgParser
 from command_runner import CommandRunner
 from commands.backporter import Backporter
+from commands.format_patch_saver import FormatPatchSaver
 from commands.review_branch_creator import ReviewBranchCreator
 from commands.upstream_pr_fetcher import UpstreamPRFetcher
 from git_wrapper import GitWrapper
@@ -169,37 +170,8 @@ class YarnDevFunc:
         upstream_pr_fetcher.run()
 
     def save_patches(self, args):
-        base_refspec = args.base_refspec
-        other_refspec = args.other_refspec
-        dest_basedir = args.dest_basedir
-        dest_dir_prefix = args.dest_dir_prefix
-
-        # TODO check if git is clean (no modified, unstaged files, etc)
-        repo = None
-        try:
-            repo = GitWrapper(os.getcwd())
-        except InvalidGitRepositoryError as e:
-            LOG.error("Current directory is not a git repo: %s", os.getcwd())
-            exit(1)
-
-        exists = repo.is_branch_exist(base_refspec)
-        if not exists:
-            LOG.error("Specified base refspec is not valid: %s", base_refspec)
-            exit(2)
-
-        exists = repo.is_branch_exist(other_refspec)
-        if not exists:
-            LOG.error("Specified other refspec is not valid: %s", other_refspec)
-            exit(2)
-
-        # Check if dest_basedir exists
-        dest_basedir = expanduser(dest_basedir)
-        patch_file_dest_path = FileUtils.join_path(dest_basedir, dest_dir_prefix, DateTimeUtils.get_current_datetime())
-        FileUtils.ensure_dir_created(patch_file_dest_path)
-
-        refspec = '{}..{}'.format(base_refspec, other_refspec)
-        LOG.info("Saving git patches based on refspec '%s', to directory: %s", refspec, patch_file_dest_path)
-        repo.format_patch(refspec, output_dir=patch_file_dest_path, full_index=True)
+        format_patch_saver = FormatPatchSaver(args, os.getcwd(), DateTimeUtils.get_current_datetime())
+        format_patch_saver.run()
 
     def diff_patches_of_jira(self, args):
         """

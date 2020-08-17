@@ -208,3 +208,11 @@ class TestUtilities:
         if branch not in self.repo.heads:
             raise ValueError("Cannot find branch: {}".format(branch))
         self.repo.heads[branch].checkout()
+
+    def assert_files_not_empty(self, basedir, expected_files=None):
+        found_files = FileUtils.find_files(basedir, '.*', single_level=True, full_path_result=True)
+        for f in found_files:
+            TESTCASE.assertTrue(os.path.getsize(f) > 0)
+
+        if expected_files:
+            TESTCASE.assertEqual(expected_files, len(found_files))
