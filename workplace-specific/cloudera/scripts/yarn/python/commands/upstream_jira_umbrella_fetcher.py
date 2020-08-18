@@ -19,10 +19,10 @@ class CommitData:
 
 @auto_str
 class JiraUmbrellaSummary:
-    def __init__(self, no_of_jiras, no_of_commits, no_of_files, commit_data_list):
-        self.no_of_jiras = no_of_jiras
-        self.no_of_commits = no_of_commits
-        self.no_of_files = no_of_files
+    def __init__(self, jira_ids, matched_commit_hashes, list_of_changed_files, commit_data_list):
+        self.no_of_jiras = len(jira_ids)
+        self.no_of_commits = len(matched_commit_hashes)
+        self.no_of_files = len(list_of_changed_files)
         self.commit_data_list = commit_data_list
 
     def to_summary_file_str(self):
@@ -49,8 +49,7 @@ class UpstreamJiraUmbrellaFetcher:
         LOG.info("Current branch: %s", curr_branch)
 
         if curr_branch != TRUNK:
-            LOG.error("Current branch is not %s. Exiting!", TRUNK)
-            exit(1)
+            raise ValueError("Current branch is not {}. Exiting!".format(TRUNK))
 
         result_basedir = FileUtils.join_path(base_tmp_dir, self.jira_id)
         jira_html_file = FileUtils.join_path(result_basedir, "jira.html")
@@ -65,7 +64,10 @@ class UpstreamJiraUmbrellaFetcher:
         LOG.info("Fetching HTML of jira: %s", self.jira_id)
         jira_html = JiraUtils.download_jira_html(self.jira_id, jira_html_file)
         jira_ids = JiraUtils.parse_subjiras_from_umbrella_html(jira_html, jira_list_file, filter_ids=[self.jira_id])
-        LOG.info("Found jira IDs: %s", jira_ids)
+        if not jira_ids:
+            raise ValueError("Cannot find subjiras for jira with id: {}".format(self.jira_id))
+
+        LOG.info("Found subjiras: %s", jira_ids)
         piped_jira_ids = '|'.join(jira_ids)
 
         # It's quite complex to grep for multiple jira IDs with gitpython, so let's rather call an external command
@@ -74,6 +76,9 @@ class UpstreamJiraUmbrellaFetcher:
         matched_commit_list = output.split("\n")
         LOG.info("Number of matched commits: %s", len(matched_commit_list))
         LOG.debug("Matched commits: \n%s", '\n'.join(matched_commit_list))
+
+        if not matched_commit_list:
+            raise ValueError("Cannot find any commits for jira: {}".format(self.jira_id))
 
         # Commits in reverse order (oldest first)
         matched_commit_list.reverse()
@@ -103,8 +108,7 @@ class UpstreamJiraUmbrellaFetcher:
             commit_data_list.append(
                 CommitData(c_hash=c_hash, jira_id=comps[1], message=' '.join(comps[2:]), date=commit_date))
 
-        summary = JiraUmbrellaSummary(len(jira_ids), len(matched_commit_hashes), len(list_of_changed_files),
-                                      commit_data_list)
+        summary = JiraUmbrellaSummary(jira_ids, matched_commit_hashes, list_of_changed_files, commit_data_list)
         FileUtils.save_to_file(summary_file, summary.to_summary_file_str())
 
         # Iterate over changed files, print all matching changes to the particular file
@@ -122,7 +126,7 @@ class UpstreamJiraUmbrellaFetcher:
                 changed_file=changed_file,
                 jira_list=piped_jira_ids)
             LOG.info("[%d / %d] CLI command: %s", idx + 1, len(list_of_changed_files), cli_command)
-            output = CommandRunner.run_cli_command(cli_command, fail_on_empty_output=False)
+            output = CommandRunner.run_cli_command(cli_command, fail_on_empty_output=False, print_command=False)
             LOG.info("Saving changes result to file: %s", target_file)
             FileUtils.save_to_file(target_file, output)
 

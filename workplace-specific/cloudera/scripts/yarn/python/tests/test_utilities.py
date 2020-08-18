@@ -70,6 +70,8 @@ class TestUtilities:
     
     def cleanup_and_checkout_test_branch(self, branch=None, remove=True, pull=True):
         if not branch:
+            if not self.test_branch:
+                raise ValueError("Test branch must be set!")
             branch = self.test_branch
         self.reset_changes()
         if pull:
@@ -203,6 +205,9 @@ class TestUtilities:
         parent_of_branch = branch + '^'
         self.repo.git.checkout(parent_of_branch)
         return self.repo.git.rev_parse('--verify', HEAD)
+
+    def get_hash_of_commit(self, branch):
+        return self.repo.heads[branch].commit.hexsha
 
     def checkout_branch(self, branch):
         if branch not in self.repo.heads:

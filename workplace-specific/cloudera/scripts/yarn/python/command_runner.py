@@ -41,10 +41,11 @@ class CommandRunner:
         return CommandRunner.run_cli_command(cli_command)
 
     @staticmethod
-    def run_cli_command(cli_command, fail_on_empty_output=True):
-        LOG.info("Running CLI command: %s", cli_command)
+    def run_cli_command(cli_command, fail_on_empty_output=True, print_command=True):
+        if print_command:
+            LOG.info("Running CLI command: %s", cli_command)
         output = CommandRunner.getoutput(cli_command)
         if fail_on_empty_output and not output:
-            LOG.error("Command failed: %s", cli_command)
-            exit(1)
+            # TODO throw other type of exception here, so that we can exit with code=1
+            raise ValueError("Command failed: %s", cli_command)
         return output
