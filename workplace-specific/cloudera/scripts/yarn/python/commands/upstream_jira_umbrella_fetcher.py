@@ -3,7 +3,7 @@ import os
 
 from command_runner import CommandRunner
 from constants import TRUNK, HEAD
-from utils import auto_str, FileUtils, JiraUtils, PickleUtils
+from utils import auto_str, FileUtils, JiraUtils, PickleUtils, ResultPrinter, StringUtils
 
 LOG = logging.getLogger(__name__)
 PICKLED_DATA_FILENAME = "pickled_umbrella_data.obj"
@@ -36,16 +36,35 @@ class JiraUmbrellaData:
     def no_of_files(self):
         return len(self.list_of_changed_files)
 
-    @property
-    def summary_string(self):
-        summary_str = "Number of jiras: {}\n".format(self.no_of_jiras)
+    def render_summary_string(self, result_basedir):
+        # Generate tables first, in order to know the length of the header rows
+        commit_list_table = ResultPrinter.print_table(self.commit_data_list,
+                                                      lambda commit: (commit.message, commit.date),
+                                                      header=["Row", "Commit message", "Commit date"],
+                                                      print_result=False, max_width=80, max_width_separator=' ')
+
+        files = FileUtils.find_files(result_basedir, regex=".*", full_path_result=True)
+        file_list_table = ResultPrinter.print_table(files,
+                                                    lambda file: (file,),
+                                                    header=["Row", "File"],
+                                                    print_result=False, max_width=80, max_width_separator=os.sep)
+
+        commits_header_line = StringUtils.generate_header_line("COMMITS", char='═',
+                                                               length=len(commit_list_table.split('\n')[0])) + "\n"
+        result_files_header_line = StringUtils.generate_header_line("RESULT FILES", char='═',
+                                                                    length=len(file_list_table.split('\n')[0])) + "\n"
+
+        # Generate summary string
+        summary_str = StringUtils.generate_header_line("SUMMARY", char='═',
+                                                       length=len(commit_list_table.split('\n')[0])) + "\n"
+        summary_str += "Number of jiras: {}\n".format(self.no_of_jiras)
         summary_str += "Number of commits: {}\n".format(self.no_of_commits)
         summary_str += "Number of files changed: {}\n".format(self.no_of_files)
-
-        summary_str += "COMMITS: \n"
-        for c_data in self.commit_data_list:
-            summary_str += "{} {}\n".format(c_data.message, c_data.date)
-
+        summary_str += commits_header_line
+        summary_str += commit_list_table
+        summary_str += "\n\n"
+        summary_str += result_files_header_line
+        summary_str += file_list_table
         return summary_str
 
 
@@ -192,7 +211,7 @@ class UpstreamJiraUmbrellaFetcher:
         FileUtils.save_to_file(self.changed_files_file, '\n'.join(self.data.list_of_changed_files))
 
     def write_summary_file(self):
-        FileUtils.save_to_file(self.summary_file, self.data.summary_string)
+        FileUtils.save_to_file(self.summary_file, self.data.render_summary_string(self.result_basedir))
 
     def write_all_changes_files(self):
         """
@@ -218,11 +237,7 @@ class UpstreamJiraUmbrellaFetcher:
             FileUtils.save_to_file(target_file, output)
 
     def print_summary(self):
-        LOG.info("==========================SUMMARY==========================")
-        LOG.info(self.data.summary_string)
-        LOG.info("========================RESULT FILES========================")
-        files = FileUtils.find_files(self.result_basedir, regex=".*", full_path_result=True)
-        LOG.info("All result files: \n%s", '\n'.join(files))
+        LOG.info(self.data.render_summary_string(self.result_basedir))
 
     def pickle_umbrella_data(self):
         LOG.debug("Final umbrella data object: %s", self.data)
