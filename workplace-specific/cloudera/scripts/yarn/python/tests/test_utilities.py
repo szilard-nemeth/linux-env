@@ -59,8 +59,12 @@ class TestUtilities:
         self.sandbox_repo_path = FileUtils.join_path(self.project_out_root, "sandbox_repo" + repo_postfix)
         self.saved_patches_dir = FileUtils.join_path(self.project_out_root, 'saved-patches')
         self.dummy_patches_dir = FileUtils.join_path(self.project_out_root, 'dummy-patches')
+        self.jira_umbrella_data_dir = FileUtils.join_path(self.project_out_root, 'jira-umbrella-data')
         FileUtils.ensure_dir_created(self.project_out_root)
         FileUtils.ensure_dir_created(self.sandbox_repo_path)
+        FileUtils.ensure_dir_created(self.jira_umbrella_data_dir)
+        FileUtils.ensure_dir_created(self.dummy_patches_dir)
+        FileUtils.ensure_dir_created(self.saved_patches_dir)
         FileUtils.ensure_dir_created(self.log_dir)
 
     def checkout_trunk(self):
@@ -217,7 +221,10 @@ class TestUtilities:
     def assert_files_not_empty(self, basedir, expected_files=None):
         found_files = FileUtils.find_files(basedir, '.*', single_level=True, full_path_result=True)
         for f in found_files:
-            TESTCASE.assertTrue(os.path.getsize(f) > 0)
+            self.assert_file_not_empty(f)
 
         if expected_files:
             TESTCASE.assertEqual(expected_files, len(found_files))
+
+    def assert_file_not_empty(self, f):
+        TESTCASE.assertTrue(os.path.getsize(f) > 0)

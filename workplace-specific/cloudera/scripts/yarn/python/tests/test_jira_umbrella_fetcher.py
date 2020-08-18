@@ -6,6 +6,8 @@ from constants import TRUNK
 from tests.test_utilities import TestUtilities, Object
 
 # Umbrella: OrgQueue for easy CapacityScheduler queue configuration management
+from utils import FileUtils
+
 UPSTREAM_JIRA_ID = 'YARN-5734'
 UPSTREAM_JIRA_WITH_0_SUBJIRAS = 'YARN-9629'
 UPSTREAM_JIRA_NOT_EXISTING = 'YARN-1111111'
@@ -42,30 +44,39 @@ class TestUpstreamJiraUmbrellaFetcher(unittest.TestCase):
         # Can't use self.repo.head.ref as HEAD is a detached reference
         # self.repo.head.ref would raise: TypeError: HEAD is a detached symbolic reference as it points to
         self.assertNotEqual(self.utils.get_hash_of_commit(TRUNK), self.repo.head.commit.hexsha)
-        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(), self.repo_wrapper)
+        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(), self.repo_wrapper, self.repo_wrapper)
         self.assertRaises(ValueError, umbrella_fetcher.run)
 
     def test_fetch_with_upstream_jira_that_is_not_an_umbrella_works(self):
         self.utils.checkout_trunk()
-        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(jira=UPSTREAM_JIRA_WITH_0_SUBJIRAS), self.repo_wrapper)
+        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(jira=UPSTREAM_JIRA_WITH_0_SUBJIRAS), self.repo_wrapper, self.utils.jira_umbrella_data_dir)
         umbrella_fetcher.run()
 
     def test_fetch_with_upstream_jira_not_existing(self):
         self.utils.checkout_trunk()
-        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(jira=UPSTREAM_JIRA_NOT_EXISTING), self.repo_wrapper)
+        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(jira=UPSTREAM_JIRA_NOT_EXISTING), self.repo_wrapper, self.utils.jira_umbrella_data_dir)
         self.assertRaises(ValueError, umbrella_fetcher.run)
 
     def test_fetch_with_upstream_jira_that_does_not_have_commit(self):
         self.utils.checkout_trunk()
         umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(jira=UPSTREAM_JIRA_DOES_NOT_HAVE_COMMIT),
-                                                       self.repo_wrapper)
+                                                       self.repo_wrapper, self.utils.jira_umbrella_data_dir)
         self.assertRaises(ValueError, umbrella_fetcher.run)
 
     def test_fetch_with_upstream_umbrella(self):
         self.utils.checkout_trunk()
         umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(),
-                                                       self.repo_wrapper)
+                                                       self.repo_wrapper, self.utils.jira_umbrella_data_dir)
         umbrella_fetcher.run()
+
+        # Verify files
+        patches_basedir = FileUtils.join_path(self.utils.jira_umbrella_data_dir, UPSTREAM_JIRA_ID)
+        self.utils.assert_file_not_empty(FileUtils.join_path(patches_basedir, "changed-files.txt"))
+        self.utils.assert_file_not_empty(FileUtils.join_path(patches_basedir, "commit-hashes.txt"))
+        self.utils.assert_file_not_empty(FileUtils.join_path(patches_basedir, "intermediate-results.txt"))
+        self.utils.assert_file_not_empty(FileUtils.join_path(patches_basedir, "jira-list.txt"))
+        self.utils.assert_file_not_empty(FileUtils.join_path(patches_basedir, "summary.txt"))
+        self.utils.assert_file_not_empty(FileUtils.join_path(patches_basedir, "jira.html"))
 
 
 if __name__ == '__main__':
