@@ -18,31 +18,25 @@ class JiraUmbrellaData:
         self.matched_commit_hashes = None
         self.list_of_changed_files = None
         self.commit_data_list = None
-        self.summary_string = ""
 
     @property
     def no_of_matched_commits(self):
         return len(self.matched_commit_list)
 
+    @property
+    def no_of_jiras(self):
+        return len(self.subjira_ids)
 
-@auto_str
-class CommitData:
-    def __init__(self, c_hash, jira_id, message, date):
-        self.hash = c_hash
-        self.jira_id = jira_id
-        self.message = message
-        self.date = date
+    @property
+    def no_of_commits(self):
+        return len(self.matched_commit_hashes)
 
+    @property
+    def no_of_files(self):
+        return len(self.list_of_changed_files)
 
-@auto_str
-class JiraUmbrellaSummary:
-    def __init__(self, jira_ids, matched_commit_hashes, list_of_changed_files, commit_data_list):
-        self.no_of_jiras = len(jira_ids)
-        self.no_of_commits = len(matched_commit_hashes)
-        self.no_of_files = len(list_of_changed_files)
-        self.commit_data_list = commit_data_list
-
-    def to_summary_file_str(self):
+    @property
+    def summary_string(self):
         summary_str = "Number of jiras: {}\n".format(self.no_of_jiras)
         summary_str += "Number of commits: {}\n".format(self.no_of_commits)
         summary_str += "Number of files changed: {}\n".format(self.no_of_files)
@@ -52,6 +46,15 @@ class JiraUmbrellaSummary:
             summary_str += "{} {}\n".format(c_data.message, c_data.date)
 
         return summary_str
+
+
+@auto_str
+class CommitData:
+    def __init__(self, c_hash, jira_id, message, date):
+        self.hash = c_hash
+        self.jira_id = jira_id
+        self.message = message
+        self.date = date
 
 
 class UpstreamJiraUmbrellaFetcher:
@@ -94,12 +97,12 @@ class UpstreamJiraUmbrellaFetcher:
     def fetch_jira_ids(self):
         LOG.info("Fetching HTML of jira: %s", self.jira_id)
         self.data.jira_html = JiraUtils.download_jira_html(self.jira_id, self.jira_html_file)
-        self.data.jira_ids = JiraUtils.parse_subjiras_from_umbrella_html(self.data.jira_html, self.jira_list_file,
+        self.data.subjira_ids = JiraUtils.parse_subjiras_from_umbrella_html(self.data.jira_html, self.jira_list_file,
                                                                          filter_ids=[self.jira_id])
-        if not self.data.jira_ids:
+        if not self.data.subjira_ids:
             raise ValueError("Cannot find subjiras for jira with id: {}".format(self.jira_id))
-        LOG.info("Found subjiras: %s", self.data.jira_ids)
-        self.data.subjira_ids ='|'.join(self.data.jira_ids)
+        LOG.info("Found subjiras: %s", self.data.subjira_ids)
+        self.data.piped_jira_ids ='|'.join(self.data.subjira_ids)
 
     def find_commits_based_on_jira_ids(self):
         # It's quite complex to grep for multiple jira IDs with gitpython, so let's rather call an external command
@@ -145,17 +148,12 @@ class UpstreamJiraUmbrellaFetcher:
             commit_date = self.upstream_repo.show(c_hash, no_patch=True, no_notes=True, pretty='%cI')
             self.data.commit_data_list.append(
                 CommitData(c_hash=c_hash, jira_id=comps[1], message=' '.join(comps[2:]), date=commit_date))
-        summary = JiraUmbrellaSummary(self.data.subjira_ids,
-                                      self.data.matched_commit_hashes, self.data.list_of_changed_files, self.data.commit_data_list)
-        self.data.summary_string = summary.to_summary_file_str()
         FileUtils.save_to_file(self.summary_file, self.data.summary_string)
 
     def write_all_changes_files(self):
         """
         Iterate over changed files, print all matching changes to the particular file
         Create changes file for each touched file
-        :param list_of_changed_files:
-        :param piped_jira_ids:
         :return:
         """
         LOG.info("Recording changes of individual files...")
