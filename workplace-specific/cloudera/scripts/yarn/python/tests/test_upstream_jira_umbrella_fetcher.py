@@ -95,12 +95,11 @@ class TestUpstreamJiraUmbrellaFetcher(unittest.TestCase):
 
     def test_fetch_with_upstream_umbrella_force_mode(self):
         self.utils.checkout_trunk()
+        output_dir = FileUtils.join_path(self.utils.jira_umbrella_data_dir, UPSTREAM_JIRA_ID)
+        original_mod_dates = FileUtils.get_mod_dates_of_files(output_dir, *ALL_OUTPUT_FILES)
         umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(force_mode=True),
                                                        self.repo_wrapper, self.utils.jira_umbrella_data_dir)
         umbrella_fetcher.run()
-
-        output_dir = FileUtils.join_path(self.utils.jira_umbrella_data_dir, UPSTREAM_JIRA_ID)
-        original_mod_dates = FileUtils.get_mod_dates_of_files(output_dir, *ALL_OUTPUT_FILES)
 
         # Verify files and mod dates
         for out_file in ALL_OUTPUT_FILES:
