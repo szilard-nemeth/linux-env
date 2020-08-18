@@ -253,6 +253,7 @@ class FileUtils:
 
     @classmethod
     def save_to_file(cls, file_path, contents):
+        FileUtils.ensure_file_exists(file_path, create=True)
         file = open(file_path, 'w')
         file.write(contents)
         file.close()
