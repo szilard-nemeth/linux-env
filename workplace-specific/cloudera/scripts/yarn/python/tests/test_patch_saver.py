@@ -1,16 +1,9 @@
 import logging
-import os
 import unittest
-from os.path import expanduser
 
-from git import Repo, InvalidGitRepositoryError, GitCommandError, Actor
-
-from constants import HADOOP_REPO_APACHE
-from git_wrapper import GitWrapper, ProgressPrinter
-from commands.patch_saver import PatchSaver
 from tests.test_utilities import TestUtilities
-from utils import FileUtils
-from yarn_dev_func import Setup, YarnDevFunc
+from yarndevfunc.commands.patch_saver import PatchSaver
+from yarndevfunc.yarn_dev_func import YarnDevFunc
 
 YARN_TEST_BRANCH = 'YARNTEST-1234'
 LOG = logging.getLogger(__name__)

@@ -1,7 +1,7 @@
 import logging
 
-from constants import YARN_PATCH_FILENAME_REGEX, TRUNK, ORIGIN, ORIGIN_TRUNK
-from utils import StringUtils, FileUtils, PatchUtils
+from yarndevfunc.constants import YARN_PATCH_FILENAME_REGEX, TRUNK, ORIGIN, ORIGIN_TRUNK
+from yarndevfunc.utils import StringUtils, FileUtils, PatchUtils
 
 BRANCH_PREFIX = "review-"
 

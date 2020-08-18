@@ -1,6 +1,6 @@
 import logging
 
-from constants import HADOOP_REPO_TEMPLATE, FETCH_HEAD
+from yarndevfunc.constants import HADOOP_REPO_TEMPLATE, FETCH_HEAD
 
 LOG = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 import logging
 
-from utils import FileUtils, PatchUtils
-from constants import *
+from yarndevfunc.utils import FileUtils, PatchUtils
+from yarndevfunc.constants import *
 
 LOG = logging.getLogger(__name__)
 

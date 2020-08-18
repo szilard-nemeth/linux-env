@@ -1,6 +1,6 @@
 import logging
 
-from utils import FileUtils, auto_str, PatchUtils
+from yarndevfunc.utils import FileUtils, auto_str, PatchUtils
 LOG = logging.getLogger(__name__)
 
 

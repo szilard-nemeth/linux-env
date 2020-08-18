@@ -5,10 +5,10 @@ from os.path import expanduser
 
 from git import InvalidGitRepositoryError, Repo, GitCommandError, Actor
 
-from constants import HADOOP_REPO_APACHE, HEAD, TRUNK, PROJECT_NAME, DEST_DIR_PREFIX
-from git_wrapper import GitWrapper, ProgressPrinter
-from utils import FileUtils, PatchUtils
-from yarn_dev_func import Setup
+from yarndevfunc.constants import HADOOP_REPO_APACHE, HEAD, TRUNK, PROJECT_NAME, DEST_DIR_PREFIX
+from yarndevfunc.git_wrapper import GitWrapper, ProgressPrinter
+from yarndevfunc.utils import FileUtils, PatchUtils
+from yarndevfunc.yarn_dev_func import Setup
 
 DUMMYFILE_1 = "dummyfile1"
 DUMMYFILE_2 = "dummyfile2"

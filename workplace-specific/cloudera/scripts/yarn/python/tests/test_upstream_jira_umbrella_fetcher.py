@@ -1,12 +1,12 @@
 import logging
 import unittest
 
-from commands.upstream_jira_umbrella_fetcher import UpstreamJiraUmbrellaFetcher
-from constants import TRUNK
+from yarndevfunc.commands.upstream_jira_umbrella_fetcher import UpstreamJiraUmbrellaFetcher
+from yarndevfunc.constants import TRUNK
 from tests.test_utilities import TestUtilities, Object
 
 # Umbrella: OrgQueue for easy CapacityScheduler queue configuration management
-from utils import FileUtils
+from yarndevfunc.utils import FileUtils
 
 FILE_JIRA_HTML = "jira.html"
 FILE_SUMMARY = "summary.txt"

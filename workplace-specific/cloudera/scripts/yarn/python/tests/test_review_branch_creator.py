@@ -1,11 +1,11 @@
 import logging
 import unittest
 
-from commands.review_branch_creator import ReviewBranchCreator
-from constants import TRUNK
+from yarndevfunc.commands.review_branch_creator import ReviewBranchCreator
+from yarndevfunc.constants import TRUNK
 from tests.test_utilities import TestUtilities, Object
-from utils import FileUtils
-from yarn_dev_func import YarnDevFunc
+from yarndevfunc.utils import FileUtils
+from yarndevfunc.yarn_dev_func import YarnDevFunc
 
 LOG = logging.getLogger(__name__)
 COMMIT_MSG_TEMPLATE = "patch file: {file}"

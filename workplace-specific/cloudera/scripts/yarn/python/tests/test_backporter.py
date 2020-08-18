@@ -1,13 +1,9 @@
 import logging
 import unittest
 
-from commands.backporter import Backporter
-from commands.review_branch_creator import ReviewBranchCreator
-from constants import TRUNK
 from tests.test_utilities import TestUtilities, Object
-from utils import FileUtils
-from yarn_dev_func import YarnDevFunc
-
+from yarndevfunc.commands.backporter import Backporter
+from yarndevfunc.constants import TRUNK
 
 UPSTREAM_JIRA_ID = "YARN-123456: "
 CDH_BRANCH = "cdh6x"

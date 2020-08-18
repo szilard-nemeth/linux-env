@@ -1,9 +1,9 @@
 import logging
 import os
 
-from command_runner import CommandRunner
-from constants import TRUNK, HEAD
-from utils import auto_str, FileUtils, JiraUtils, PickleUtils, ResultPrinter, StringUtils
+from yarndevfunc.command_runner import CommandRunner
+from yarndevfunc.constants import TRUNK, HEAD
+from yarndevfunc.utils import auto_str, FileUtils, JiraUtils, PickleUtils, ResultPrinter, StringUtils
 
 LOG = logging.getLogger(__name__)
 PICKLED_DATA_FILENAME = "pickled_umbrella_data.obj"

@@ -1,8 +1,8 @@
 import logging
 import unittest
 
-from commands.upstream_pr_fetcher import UpstreamPRFetcher
-from constants import APACHE, TRUNK
+from yarndevfunc.commands.upstream_pr_fetcher import UpstreamPRFetcher
+from yarndevfunc.constants import APACHE, TRUNK
 from tests.test_utilities import TestUtilities, Object
 
 LOG = logging.getLogger(__name__)

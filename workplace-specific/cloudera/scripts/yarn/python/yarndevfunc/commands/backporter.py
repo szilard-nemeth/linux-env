@@ -1,6 +1,6 @@
 import logging
 
-from constants import TRUNK, ORIGIN, HEAD, GERRIT_REVIEWER_LIST
+from yarndevfunc.constants import TRUNK, ORIGIN, HEAD, GERRIT_REVIEWER_LIST
 
 LOG = logging.getLogger(__name__)
 
