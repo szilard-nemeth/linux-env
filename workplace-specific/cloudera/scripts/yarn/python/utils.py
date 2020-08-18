@@ -6,6 +6,7 @@ import re
 import humanize
 import requests
 from bs4 import BeautifulSoup
+import pickle
 
 REVIEW_BRANCH_SEP = '-'
 
@@ -180,6 +181,10 @@ class FileUtils:
             open(path, 'a').close()
 
     @classmethod
+    def does_file_exist(cls, file):
+        return os.path.exists(file)
+
+    @classmethod
     def create_files(cls, *files):
         for file in files:
             FileUtils.ensure_file_exists(file, create=True)
@@ -238,6 +243,20 @@ class FileUtils:
     def join_path(cls, *components):
         return os.path.join(*components)
 
+    @classmethod
+    def get_mod_date_of_file(cls, file):
+        return os.path.getmtime(file)
+
+    @classmethod
+    def get_mod_dates_of_files(cls, basedir, *files):
+        result = {}
+        for f in files:
+            f = FileUtils.join_path(basedir, f)
+            if FileUtils.does_file_exist(f):
+                result[f] = FileUtils.get_mod_date_of_file(f)
+            else:
+                result[f] = None
+        return result
 
 class DateTimeUtils:
     @staticmethod
@@ -270,3 +289,17 @@ class JiraUtils:
         issue_keys = list(set(issue_keys))
         FileUtils.save_to_file(to_file, '\n'.join(issue_keys))
         return issue_keys
+
+
+class PickleUtils:
+    @staticmethod
+    def dump(data, file):
+        with open(file, 'wb') as f:
+            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+
+    @staticmethod
+    def load(file):
+        with open(file, 'rb') as f:
+            # The protocol version used is detected automatically, so we do not
+            # have to specify it.
+            return pickle.load(f)

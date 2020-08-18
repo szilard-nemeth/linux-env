@@ -100,4 +100,6 @@ class ArgParser:
                                        help='Fetches jira umbrella data for a provided Jira ID.'
                                             'Example: fetch_jira_umbrella_data YARN-5734')
         parser.add_argument('jira_id', type=str, help='Upstream Jira ID.')
+        parser.add_argument('--force-mode', action='store_true', dest='force_mode',
+                            help='Force fetching data from jira and use git log commands to find all changes.')
         parser.set_defaults(func=yarn_functions.fetch_jira_umbrella_data)

@@ -3,9 +3,10 @@ import os
 
 from command_runner import CommandRunner
 from constants import TRUNK, HEAD
-from utils import auto_str, FileUtils, JiraUtils
+from utils import auto_str, FileUtils, JiraUtils, PickleUtils
 
 LOG = logging.getLogger(__name__)
+PICKLED_DATA_FILENAME = "pickled_umbrella_data.obj"
 
 
 @auto_str
@@ -62,16 +63,35 @@ class UpstreamJiraUmbrellaFetcher:
         self.jira_id = args.jira_id
         self.upstream_repo = upstream_repo
         self.basedir = basedir
+        self.force_mode = True if args.force_mode else False
+        # These fields will be assigned when data is fetched
         self.data = None
+        self.result_basedir = None
+        self.jira_html_file = None
+        self.jira_list_file = None
+        self.commits_file = None
+        self.changed_files_file = None
+        self.summary_file = None
+        self.intermediate_results_file = None
+        self.pickled_data_file = None
 
     def run(self):
-        curr_branch = self.upstream_repo.get_current_branch_name()
-        LOG.info("Current branch: %s", curr_branch)
+        self.log_current_branch()
+        self.set_file_fields()
 
-        if curr_branch != TRUNK:
-            raise ValueError("Current branch is not {}. Exiting!".format(TRUNK))
+        if self.force_mode:
+            LOG.info("FORCE MODE is on")
+            self.do_fetch()
+        else:
+            loaded = self.load_pickled_umbrella_data()
+            if not loaded:
+                self.do_fetch()
+            else:
+                LOG.info("Loaded pickled data from: %s", self.pickled_data_file)
+                self.print_summary()
 
-        self.create_files()
+    def do_fetch(self):
+        LOG.info("Fetching jira umbrella data...")
         self.data = JiraUmbrellaData()
         self.fetch_jira_ids()
         self.find_commits_based_on_jira_ids()
@@ -80,10 +100,24 @@ class UpstreamJiraUmbrellaFetcher:
         self.write_summary_file()
         self.write_all_changes_files()
         self.print_summary()
+        self.pickle_umbrella_data()
 
-        LOG.debug("Final umbrella data object: %s", self.data)
+    def load_pickled_umbrella_data(self):
+        LOG.info("Trying to load pickled data from file: %s", self.pickled_data_file)
+        if FileUtils.does_file_exist(self.pickled_data_file):
+            self.data = PickleUtils.load(self.pickled_data_file)
+            return True
+        else:
+            LOG.info("Pickled umbrella data file not found under path: %s", self.pickled_data_file)
+            return False
 
-    def create_files(self):
+    def log_current_branch(self):
+        curr_branch = self.upstream_repo.get_current_branch_name()
+        LOG.info("Current branch: %s", curr_branch)
+        if curr_branch != TRUNK:
+            raise ValueError("Current branch is not {}. Exiting!".format(TRUNK))
+
+    def set_file_fields(self):
         self.result_basedir = FileUtils.join_path(self.basedir, self.jira_id)
         self.jira_html_file = FileUtils.join_path(self.result_basedir, "jira.html")
         self.jira_list_file = FileUtils.join_path(self.result_basedir, "jira-list.txt")
@@ -91,8 +125,7 @@ class UpstreamJiraUmbrellaFetcher:
         self.changed_files_file = FileUtils.join_path(self.result_basedir, "changed-files.txt")
         self.summary_file = FileUtils.join_path(self.result_basedir, "summary.txt")
         self.intermediate_results_file = FileUtils.join_path(self.result_basedir, "intermediate-results.txt")
-        FileUtils.create_files(self.jira_html_file, self.jira_list_file, self.commits_file, self.changed_files_file, self.summary_file,
-                               self.intermediate_results_file)
+        self.pickled_data_file = FileUtils.join_path(self.result_basedir, PICKLED_DATA_FILENAME)
 
     def fetch_jira_ids(self):
         LOG.info("Fetching HTML of jira: %s", self.jira_id)
@@ -102,7 +135,7 @@ class UpstreamJiraUmbrellaFetcher:
         if not self.data.subjira_ids:
             raise ValueError("Cannot find subjiras for jira with id: {}".format(self.jira_id))
         LOG.info("Found subjiras: %s", self.data.subjira_ids)
-        self.data.piped_jira_ids ='|'.join(self.data.subjira_ids)
+        self.data.piped_jira_ids = '|'.join(self.data.subjira_ids)
 
     def find_commits_based_on_jira_ids(self):
         # It's quite complex to grep for multiple jira IDs with gitpython, so let's rather call an external command
@@ -179,3 +212,8 @@ class UpstreamJiraUmbrellaFetcher:
         LOG.info("========================RESULT FILES========================")
         files = FileUtils.find_files(self.result_basedir, regex=".*", full_path_result=True)
         LOG.info("All result files: \n%s", '\n'.join(files))
+
+    def pickle_umbrella_data(self):
+        LOG.debug("Final umbrella data object: %s", self.data)
+        LOG.info("Dumping %s object to file %s", JiraUmbrellaData.__name__, self.pickled_data_file)
+        PickleUtils.dump(self.data, self.pickled_data_file)
