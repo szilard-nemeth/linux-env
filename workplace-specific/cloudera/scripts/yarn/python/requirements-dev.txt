@@ -2,6 +2,7 @@ flake8
 pytest>=3.6
 pytest-cov
 setuptools
+requests
 
 # Python 2
 pathlib
