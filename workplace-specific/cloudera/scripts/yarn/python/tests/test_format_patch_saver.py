@@ -2,14 +2,11 @@ import logging
 import unittest
 
 from commands.format_patch_saver import FormatPatchSaver
-from commands.patch_saver import PatchSaver
-from constants import TRUNK
+from constants import TRUNK, DEST_DIR_PREFIX
 from tests.test_utilities import TestUtilities, Object
 from utils import FileUtils, DateTimeUtils
-from yarn_dev_func import YarnDevFunc
 
 YARN_TEST_BRANCH = 'YARNTEST-1234567'
-DEST_DIR_PREFIX = "test"
 LOG = logging.getLogger(__name__)
 
 

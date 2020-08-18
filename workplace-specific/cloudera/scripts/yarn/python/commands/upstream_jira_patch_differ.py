@@ -26,14 +26,14 @@ class BranchResults:
 
 
 class UpstreamJiraPatchDiffer:
-    def __init__(self, args, upstream_repo):
+    def __init__(self, args, upstream_repo, basedir):
         self.jira_id = args.jira_id
         self.branches = args.branches
         self.upstream_repo = upstream_repo
+        self.basedir = basedir
 
     def run(self):
-        tmpdirname = "/tmp/yarndiffer"
-        FileUtils.ensure_dir_created(tmpdirname)
+        FileUtils.ensure_dir_created(self.basedir)
 
         branch_results = {}
         for branch in self.branches:
@@ -53,7 +53,7 @@ class UpstreamJiraPatchDiffer:
                 branch_result.git_diff = diff
 
                 diff_filename = "{}-{}.diff".format(self.jira_id, branch)
-                PatchUtils.save_diff_to_patch_file(diff, FileUtils.join_path(tmpdirname, diff_filename))
+                PatchUtils.save_diff_to_patch_file(diff, FileUtils.join_path(self.basedir, diff_filename))
 
         # Validate results
         branch_does_not_exist = [b_res.branch_name for br, b_res in branch_results.items() if not b_res.exists]
@@ -73,6 +73,6 @@ class UpstreamJiraPatchDiffer:
                              self.jira_id, multiple_commits)
 
         LOG.info("Generated diff files: ")
-        diff_files = FileUtils.find_files(tmpdirname, self.jira_id + '-.*', single_level=True, full_path_result=True)
+        diff_files = FileUtils.find_files(self.basedir, self.jira_id + '-.*', single_level=True, full_path_result=True)
         for f in diff_files:
             LOG.info("%s: %s", f, FileUtils.get_file_size(f))

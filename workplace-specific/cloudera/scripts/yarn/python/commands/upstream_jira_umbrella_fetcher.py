@@ -38,20 +38,19 @@ class JiraUmbrellaSummary:
 
 
 class UpstreamJiraUmbrellaFetcher:
-    def __init__(self, args, upstream_repo):
+    def __init__(self, args, upstream_repo, basedir):
         self.jira_id = args.jira_id
         self.upstream_repo = upstream_repo
+        self.basedir = basedir
 
     def run(self):
-        base_tmp_dir = "/tmp/jira-umbrella-data-python"
-
         curr_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
 
         if curr_branch != TRUNK:
             raise ValueError("Current branch is not {}. Exiting!".format(TRUNK))
 
-        result_basedir = FileUtils.join_path(base_tmp_dir, self.jira_id)
+        result_basedir = FileUtils.join_path(self.basedir, self.jira_id)
         jira_html_file = FileUtils.join_path(result_basedir, "jira.html")
         jira_list_file = FileUtils.join_path(result_basedir, "jira-list.txt")
         commits_file = FileUtils.join_path(result_basedir, "commit-hashes.txt")

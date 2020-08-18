@@ -12,6 +12,7 @@ ENV_HADOOP_DEV_DIR = 'HADOOP_DEV_DIR'
 LOADED_ENV_UPSTREAM_DIR = "upstream-hadoop-dir"
 LOADED_ENV_DOWNSTREAM_DIR = "downstream-hadoop-dir"
 PROJECT_NAME = "yarn_dev_func"
+DEST_DIR_PREFIX = "test"
 YARN_PATCH_FILENAME_REGEX = ".*(YARN-[0-9]+).*\.patch"
 HADOOP_REPO_TEMPLATE = "https://github.com/{user}/hadoop.git"
 HADOOP_REPO_APACHE = HADOOP_REPO_TEMPLATE.format(user=APACHE)

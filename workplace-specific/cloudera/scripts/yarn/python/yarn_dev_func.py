@@ -74,9 +74,12 @@ class YarnDevFunc:
         self.project_out_root = os.path.join(home, PROJECT_NAME)
         self.log_dir = os.path.join(self.project_out_root, 'logs')
         self.yarn_patch_dir = os.path.join(home, 'yarn-tasks')
+        self.jira_umbrella_data_dir = os.path.join(home, 'jira-umbrella-data')
+        self.jira_patch_differ_dir = os.path.join(home, 'jira-patch-differ')
         FileUtils.ensure_dir_created(self.project_out_root)
         FileUtils.ensure_dir_created(self.log_dir)
         FileUtils.ensure_dir_created(self.yarn_patch_dir)
+        FileUtils.ensure_dir_created(self.jira_umbrella_data_dir)
 
     def ensure_required_env_vars_are_present(self):
         import os
@@ -137,11 +140,11 @@ class YarnDevFunc:
         :param args:
         :return:
         """
-        patch_differ = UpstreamJiraPatchDiffer(args, self.upstream_repo)
+        patch_differ = UpstreamJiraPatchDiffer(args, self.upstream_repo, self.jira_patch_differ_dir)
         patch_differ.run()
 
     def fetch_jira_umbrella_data(self, args):
-        jira_umbrella_fetcher = UpstreamJiraUmbrellaFetcher(args, self.upstream_repo)
+        jira_umbrella_fetcher = UpstreamJiraUmbrellaFetcher(args, self.upstream_repo, self.jira_umbrella_data_dir)
         jira_umbrella_fetcher.run()
 
 

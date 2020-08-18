@@ -5,7 +5,7 @@ from os.path import expanduser
 
 from git import InvalidGitRepositoryError, Repo, GitCommandError, Actor
 
-from constants import HADOOP_REPO_APACHE, HEAD, TRUNK
+from constants import HADOOP_REPO_APACHE, HEAD, TRUNK, PROJECT_NAME, DEST_DIR_PREFIX
 from git_wrapper import GitWrapper, ProgressPrinter
 from utils import FileUtils, PatchUtils
 from yarn_dev_func import Setup
@@ -51,7 +51,7 @@ class TestUtilities:
             Repo.clone_from(HADOOP_REPO_APACHE, self.sandbox_repo_path, progress=ProgressPrinter("clone"))
 
     def setup_dirs(self, repo_postfix):
-        self.project_out_root = FileUtils.join_path(expanduser("~"), "yarn_dev_func-test")
+        self.project_out_root = FileUtils.join_path(expanduser("~"), PROJECT_NAME, DEST_DIR_PREFIX)
         self.log_dir = FileUtils.join_path(self.project_out_root, 'logs')
 
         if not repo_postfix:

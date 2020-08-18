@@ -7,13 +7,10 @@ from tests.test_utilities import TestUtilities, Object
 from utils import FileUtils
 from yarn_dev_func import YarnDevFunc
 
-COMMIT_MSG_TEMPLATE = "patch file: {file}"
-
-PATCH_FILENAME = "YARN-12345.001.patch"
-
-REVIEW_BRANCH = "review-YARN-12345"
-
 LOG = logging.getLogger(__name__)
+COMMIT_MSG_TEMPLATE = "patch file: {file}"
+PATCH_FILENAME = "YARN-12345.001.patch"
+REVIEW_BRANCH = "review-YARN-12345"
 YARN_TEST_BRANCH = 'YARNTEST-12345'
 
 
@@ -42,7 +39,7 @@ class TestReviewBranchCreator(unittest.TestCase):
 
     def test_with_not_existing_patch(self):
         args = Object()
-        args.patch_file = "/tmp/blablabla"
+        args.patch_file = FileUtils.join_path("tmp", "blablabla")
         review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper)
         self.assertRaises(ValueError, review_branch_creator.run)
 
