@@ -3,6 +3,7 @@ pytest>=3.6
 pytest-cov
 setuptools
 requests
+tabulate
 
 # Python 2
 pathlib
