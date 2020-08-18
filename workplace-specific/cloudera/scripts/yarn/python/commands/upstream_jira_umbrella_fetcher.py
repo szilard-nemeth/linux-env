@@ -94,8 +94,7 @@ class UpstreamJiraUmbrellaFetcher:
         LOG.info("Fetching jira umbrella data...")
         self.data = JiraUmbrellaData()
         self.fetch_jira_ids()
-        self.find_commits_based_on_jira_ids()
-        self.save_matched_commits_to_file()
+        self.find_commits_and_save_to_file()
         self.save_changed_files_to_file()
         self.write_summary_file()
         self.write_all_changes_files()
@@ -131,28 +130,52 @@ class UpstreamJiraUmbrellaFetcher:
         LOG.info("Fetching HTML of jira: %s", self.jira_id)
         self.data.jira_html = JiraUtils.download_jira_html(self.jira_id, self.jira_html_file)
         self.data.subjira_ids = JiraUtils.parse_subjiras_from_umbrella_html(self.data.jira_html, self.jira_list_file,
-                                                                         filter_ids=[self.jira_id])
+                                                                            filter_ids=[self.jira_id])
         if not self.data.subjira_ids:
             raise ValueError("Cannot find subjiras for jira with id: {}".format(self.jira_id))
         LOG.info("Found subjiras: %s", self.data.subjira_ids)
         self.data.piped_jira_ids = '|'.join(self.data.subjira_ids)
 
-    def find_commits_based_on_jira_ids(self):
+    def find_commits_and_save_to_file(self):
         # It's quite complex to grep for multiple jira IDs with gitpython, so let's rather call an external command
         # TODO query commit date with git log, so subsequent git show call can be eliminated
-        git_log_result = self.upstream_repo.log(HEAD, oneline=True)
+        git_log_result = self.upstream_repo.log(HEAD, oneline_with_date=True)
         output = CommandRunner.egrep_with_cli(git_log_result, self.intermediate_results_file, self.data.piped_jira_ids)
         self.data.matched_commit_list = output.split("\n")
-        LOG.info("Number of matched commits: %s", self.data.no_of_matched_commits)
-        LOG.debug("Matched commits: \n%s", '\n'.join(self.data.matched_commit_list))
         if not self.data.matched_commit_list:
             raise ValueError("Cannot find any commits for jira: {}".format(self.jira_id))
 
-    def save_matched_commits_to_file(self):
+        LOG.info("Number of matched commits: %s", self.data.no_of_matched_commits)
+        LOG.debug("Matched commits: \n%s", '\n'.join(self.data.matched_commit_list))
+
         # Commits in reverse order (oldest first)
         self.data.matched_commit_list.reverse()
-        self.data.matched_commit_hashes = [c.split(' ')[0] for c in self.data.matched_commit_list]
+        self.convert_to_commit_data_objects()
         FileUtils.save_to_file(self.commits_file, '\n'.join(self.data.matched_commit_hashes))
+
+    def convert_to_commit_data_objects(self):
+        """
+        Iterate over commit hashes, print the following to summary_file for each commit hash:
+        <hash> <YARN-id> <commit date>
+        :return:
+        """
+        self.data.commit_data_list = []
+        for commit_str in self.data.matched_commit_list:
+            comps = commit_str.split(' ')
+            # 1. Commit hash: It is in the first column.
+            # 2. Jira ID: Expecting the Jira ID to be the first segment of commit message, so this is the second column.
+            # 3. Commit message: From first to (last - 1) th index
+            # 4. Authored date (commit date): The very last segment is the commit date.
+            commit_hash = comps[0]
+            jira_id = comps[1]
+            commit_msg = ' '.join(comps[1:-1])
+            commit_date = comps[-1]
+            # Alternatively, this info may be requested with git show,
+            # but this requires more CLI calls, so it's not preferred.
+            # commit_date = self.upstream_repo.show(commit_hash, no_patch=True, no_notes=True, pretty='%cI')
+            self.data.commit_data_list.append(
+                CommitData(c_hash=commit_hash, jira_id=jira_id, message=commit_msg, date=commit_date))
+        self.data.matched_commit_hashes = [commit_obj.hash for commit_obj in self.data.commit_data_list]
 
     def save_changed_files_to_file(self):
         list_of_changed_files = []
@@ -169,18 +192,6 @@ class UpstreamJiraUmbrellaFetcher:
         FileUtils.save_to_file(self.changed_files_file, '\n'.join(self.data.list_of_changed_files))
 
     def write_summary_file(self):
-        """
-        Iterate over commit hashes, print the following to summary_file for each commit hash:
-        <hash> <YARN-id> <commit date>
-        :return:
-        """
-        self.data.commit_data_list = []
-        for commit_str in self.data.matched_commit_list:
-            comps = commit_str.split(' ')
-            c_hash = comps[0]
-            commit_date = self.upstream_repo.show(c_hash, no_patch=True, no_notes=True, pretty='%cI')
-            self.data.commit_data_list.append(
-                CommitData(c_hash=c_hash, jira_id=comps[1], message=' '.join(comps[2:]), date=commit_date))
         FileUtils.save_to_file(self.summary_file, self.data.summary_string)
 
     def write_all_changes_files(self):

@@ -1,6 +1,10 @@
 import logging
 from git import Repo, RemoteProgress, GitCommandError
 
+FORMAT_CODE_HASH = '%H'
+FORMAT_CODE_COMMIT_MSG = '%s'
+FORMAT_CODE_DATE_ISO_8601 = '%cI'
+
 LOG = logging.getLogger(__name__)
 
 
@@ -209,7 +213,11 @@ class GitWrapper:
         LOG.info("Running git commit with arguments: %s", kwargs)
         self.repo.git.commit(**kwargs)
 
-    def log(self, revision_range, oneline=False, grep=None, format=None, n=None, return_hashes=False, follow=False):
+    def log(self, revision_range, oneline=False, oneline_with_date=False, grep=None, format=None, n=None,
+            return_hashes=False, follow=False):
+        if oneline and oneline_with_date:
+            raise ValueError("oneline and oneline_with_date should be exclusive!")
+
         args = []
         if revision_range:
             args.append(revision_range)
@@ -217,6 +225,11 @@ class GitWrapper:
         kwargs = {}
         if oneline:
             kwargs['oneline'] = True
+        if oneline_with_date:
+            # https://git-scm.com/docs/pretty-formats
+            # Oneline format: <hash> <title line>
+            # Oneline + date format: <hash> <title line> <author date>
+            kwargs['format'] = '{} {} {}'.format(FORMAT_CODE_HASH, FORMAT_CODE_COMMIT_MSG, FORMAT_CODE_DATE_ISO_8601)
         if grep:
             kwargs['grep'] = grep
         if format:
