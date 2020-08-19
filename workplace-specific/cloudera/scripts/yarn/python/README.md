@@ -1,4 +1,4 @@
-# Hadoop reviewsync
+# YARN dev functions
 
 This project is aimed to track if patches can be applied to specified branches from Jira issues having patches as attachments.
 

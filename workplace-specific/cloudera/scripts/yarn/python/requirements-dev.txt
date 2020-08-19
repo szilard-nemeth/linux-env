@@ -4,6 +4,7 @@ pytest-cov
 setuptools
 requests
 tabulate
+pre-commit
 
 # Python 2
 pathlib
