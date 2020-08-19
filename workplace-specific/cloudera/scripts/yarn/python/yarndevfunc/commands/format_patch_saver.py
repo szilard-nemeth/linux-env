@@ -22,12 +22,15 @@ class FormatPatchSaver:
         # TODO check if git is clean (no modified, unstaged files, etc)
         try:
             repo = GitWrapper(self.working_dir)
-        except InvalidGitRepositoryError as e:
+        except InvalidGitRepositoryError:
             raise ValueError("Current working directory is not a git repo: {}".format(self.working_dir))
 
         if self.base_refspec == self.other_refspec:
-            raise ValueError("Specified base refspec '{}' is the same as other refspec '{}'"
-                             .format(self.base_refspec, self.other_refspec))
+            raise ValueError(
+                "Specified base refspec '{}' is the same as other refspec '{}'".format(
+                    self.base_refspec, self.other_refspec
+                )
+            )
 
         exists = repo.is_branch_exist(self.base_refspec)
         if not exists:
@@ -42,6 +45,6 @@ class FormatPatchSaver:
         patch_file_dest_path = FileUtils.join_path(dest_basedir, self.dest_dir_prefix, self.date_suffix)
         FileUtils.ensure_dir_created(patch_file_dest_path)
 
-        refspec = '{}..{}'.format(self.base_refspec, self.other_refspec)
+        refspec = "{}..{}".format(self.base_refspec, self.other_refspec)
         LOG.info("Saving git patches based on refspec '%s', to directory: %s", refspec, patch_file_dest_path)
         repo.format_patch(refspec, output_dir=patch_file_dest_path, full_index=True)

@@ -11,7 +11,7 @@ LOG = logging.getLogger(__name__)
 COMMIT_MSG_TEMPLATE = "patch file: {file}"
 PATCH_FILENAME = "YARN-12345.001.patch"
 REVIEW_BRANCH = "review-YARN-12345"
-YARN_TEST_BRANCH = 'YARNTEST-12345'
+YARN_TEST_BRANCH = "YARNTEST-12345"
 
 
 class TestReviewBranchCreator(unittest.TestCase):

@@ -19,14 +19,16 @@ class UpstreamPRFetcher:
         repo_url = HADOOP_REPO_TEMPLATE.format(user=self.github_username)
         success = self.upstream_repo.fetch(repo_url=repo_url, remote_name=self.remote_branch)
         if not success:
-            raise ValueError("Cannot fetch from remote branch: {url}/{remote}".format(url=repo_url, remote=self.remote_branch))
+            raise ValueError(
+                "Cannot fetch from remote branch: {url}/{remote}".format(url=repo_url, remote=self.remote_branch)
+            )
 
         log_result = self.upstream_repo.log(FETCH_HEAD, n=10)
-        LOG.info("Printing 10 topmost commits of %s:\n %s", FETCH_HEAD, '\n'.join(log_result))
+        LOG.info("Printing 10 topmost commits of %s:\n %s", FETCH_HEAD, "\n".join(log_result))
 
-        base_vs_fetch_head = '{}..{}'.format(self.base_branch, FETCH_HEAD)
+        base_vs_fetch_head = "{}..{}".format(self.base_branch, FETCH_HEAD)
         log_result = self.upstream_repo.log(base_vs_fetch_head, oneline=True)
-        LOG.info("\n\nPrinting diff of %s:\n %s", base_vs_fetch_head, '\n'.join(log_result))
+        LOG.info("\n\nPrinting diff of %s:\n %s", base_vs_fetch_head, "\n".join(log_result))
 
         num_commits = len(log_result)
         if num_commits > 1:

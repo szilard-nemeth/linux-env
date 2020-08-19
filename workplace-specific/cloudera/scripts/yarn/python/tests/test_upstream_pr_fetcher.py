@@ -72,5 +72,5 @@ class TestUpstreamPRFetcher(unittest.TestCase):
         pr_fetcher.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

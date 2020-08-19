@@ -20,8 +20,11 @@ class ReviewBranchCreator:
         patch_file_name = FileUtils.path_basename(patch_file)
         matches = StringUtils.ensure_matches_pattern(patch_file_name, YARN_PATCH_FILENAME_REGEX)
         if not matches:
-            raise ValueError("Filename '{}' (full path: {}) does not match usual patch file pattern: '{}'!"
-                             .format(patch_file_name, patch_file, YARN_PATCH_FILENAME_REGEX))
+            raise ValueError(
+                "Filename '{}' (full path: {}) does not match usual patch file pattern: '{}'!".format(
+                    patch_file_name, patch_file, YARN_PATCH_FILENAME_REGEX
+                )
+            )
 
         orig_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", orig_branch)
@@ -39,14 +42,18 @@ class ReviewBranchCreator:
         if diff:
             raise ValueError(
                 "There is a diff between local {} and {}! Run 'git reset {} --hard' and re-run the script!".format(
-                    TRUNK, ORIGIN_TRUNK, ORIGIN_TRUNK))
+                    TRUNK, ORIGIN_TRUNK, ORIGIN_TRUNK
+                )
+            )
 
         apply_result = self.upstream_repo.apply_check(patch_file, raise_exception=False)
         if not apply_result:
             self.upstream_repo.checkout_previous_branch()
             cmd = "git apply " + patch_file
-            raise ValueError("Patch does not apply to {}, please resolve the conflicts manually. "
-                             "Run this command to apply the patch again: {}".format(TRUNK, cmd))
+            raise ValueError(
+                "Patch does not apply to {}, please resolve the conflicts manually. "
+                "Run this command to apply the patch again: {}".format(TRUNK, cmd)
+            )
 
         LOG.info("Patch %s applies cleanly to %s", patch_file, TRUNK)
         branch_exists = self.upstream_repo.is_branch_exist(target_branch)

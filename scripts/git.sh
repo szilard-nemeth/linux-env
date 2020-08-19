@@ -19,3 +19,7 @@ function git-search-tags() {
         git tag --contains ${sha1}
     done
 }
+
+function git-precommit() {
+  .git/hooks/pre-commit
+}

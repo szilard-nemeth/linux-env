@@ -1,6 +1,7 @@
 import logging
 
 from yarndevfunc.utils import FileUtils, auto_str, PatchUtils
+
 LOG = logging.getLogger(__name__)
 
 
@@ -20,8 +21,10 @@ class BranchResults:
     @property
     def single_commit_hash(self):
         if len(self.commit_hashes) > 1:
-            raise ValueError("This object has multiple commit hashes. "
-                             "The intended use of this method is when there's only one single commit hash!")
+            raise ValueError(
+                "This object has multiple commit hashes. "
+                "The intended use of this method is when there's only one single commit hash!"
+            )
         return self.commit_hashes[0]
 
 
@@ -41,7 +44,7 @@ class UpstreamJiraPatchDiffer:
 
             exists = self.upstream_repo.is_branch_exist(branch)
             commits = self.upstream_repo.log(branch, grep=self.jira_id, oneline=True)
-            commit_hashes = [c.split(' ')[0] for c in commits]
+            commit_hashes = [c.split(" ")[0] for c in commits]
             branch_result = BranchResults(branch, exists, commits, commit_hashes)
             branch_results[branch] = branch_result
 
@@ -65,14 +68,16 @@ class UpstreamJiraPatchDiffer:
             raise ValueError("The following branches are not existing for Jira ID '{}': {}", branch_does_not_exist)
 
         if zero_commit:
-            raise ValueError("The following branches do not contain commit for Jira ID '{}': {}",
-                             self.jira_id, zero_commit)
+            raise ValueError(
+                "The following branches do not contain commit for Jira ID '{}': {}", self.jira_id, zero_commit
+            )
 
         if multiple_commits:
-            raise ValueError("The following branches contain multiple commits for Jira ID '{}': {}",
-                             self.jira_id, multiple_commits)
+            raise ValueError(
+                "The following branches contain multiple commits for Jira ID '{}': {}", self.jira_id, multiple_commits
+            )
 
         LOG.info("Generated diff files: ")
-        diff_files = FileUtils.find_files(self.basedir, self.jira_id + '-.*', single_level=True, full_path_result=True)
+        diff_files = FileUtils.find_files(self.basedir, self.jira_id + "-.*", single_level=True, full_path_result=True)
         for f in diff_files:
             LOG.info("%s: %s", f, FileUtils.get_file_size(f))

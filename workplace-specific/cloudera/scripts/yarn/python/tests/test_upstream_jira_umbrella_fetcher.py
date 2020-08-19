@@ -14,12 +14,19 @@ FILE_JIRA_LIST = "jira-list.txt"
 FILE_INTERMEDIATE_RESULTS = "intermediate-results.txt"
 FILE_COMMIT_HASHES = "commit-hashes.txt"
 FILE_CHANGED_FILES = "changed-files.txt"
-ALL_OUTPUT_FILES = [FILE_JIRA_HTML, FILE_SUMMARY, FILE_JIRA_LIST, FILE_INTERMEDIATE_RESULTS, FILE_COMMIT_HASHES, FILE_CHANGED_FILES]
+ALL_OUTPUT_FILES = [
+    FILE_JIRA_HTML,
+    FILE_SUMMARY,
+    FILE_JIRA_LIST,
+    FILE_INTERMEDIATE_RESULTS,
+    FILE_COMMIT_HASHES,
+    FILE_CHANGED_FILES,
+]
 
-UPSTREAM_JIRA_ID = 'YARN-5734'
-UPSTREAM_JIRA_WITH_0_SUBJIRAS = 'YARN-9629'
-UPSTREAM_JIRA_NOT_EXISTING = 'YARN-1111111'
-UPSTREAM_JIRA_DOES_NOT_HAVE_COMMIT = 'YARN-3525'
+UPSTREAM_JIRA_ID = "YARN-5734"
+UPSTREAM_JIRA_WITH_0_SUBJIRAS = "YARN-9629"
+UPSTREAM_JIRA_NOT_EXISTING = "YARN-1111111"
+UPSTREAM_JIRA_DOES_NOT_HAVE_COMMIT = "YARN-3525"
 LOG = logging.getLogger(__name__)
 
 
@@ -58,24 +65,32 @@ class TestUpstreamJiraUmbrellaFetcher(unittest.TestCase):
 
     def test_fetch_with_upstream_jira_that_is_not_an_umbrella_works(self):
         self.utils.checkout_trunk()
-        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(jira=UPSTREAM_JIRA_WITH_0_SUBJIRAS), self.repo_wrapper, self.utils.jira_umbrella_data_dir)
+        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
+            self.setup_args(jira=UPSTREAM_JIRA_WITH_0_SUBJIRAS), self.repo_wrapper, self.utils.jira_umbrella_data_dir
+        )
         umbrella_fetcher.run()
 
     def test_fetch_with_upstream_jira_not_existing(self):
         self.utils.checkout_trunk()
-        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(jira=UPSTREAM_JIRA_NOT_EXISTING), self.repo_wrapper, self.utils.jira_umbrella_data_dir)
+        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
+            self.setup_args(jira=UPSTREAM_JIRA_NOT_EXISTING), self.repo_wrapper, self.utils.jira_umbrella_data_dir
+        )
         self.assertRaises(ValueError, umbrella_fetcher.run)
 
     def test_fetch_with_upstream_jira_that_does_not_have_commit(self):
         self.utils.checkout_trunk()
-        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(jira=UPSTREAM_JIRA_DOES_NOT_HAVE_COMMIT),
-                                                       self.repo_wrapper, self.utils.jira_umbrella_data_dir)
+        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
+            self.setup_args(jira=UPSTREAM_JIRA_DOES_NOT_HAVE_COMMIT),
+            self.repo_wrapper,
+            self.utils.jira_umbrella_data_dir,
+        )
         self.assertRaises(ValueError, umbrella_fetcher.run)
 
     def test_fetch_with_upstream_umbrella_cached_mode(self):
         self.utils.checkout_trunk()
-        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(force_mode=False),
-                                                       self.repo_wrapper, self.utils.jira_umbrella_data_dir)
+        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
+            self.setup_args(force_mode=False), self.repo_wrapper, self.utils.jira_umbrella_data_dir
+        )
         # Run first, to surely have results pickled for this umbrella
         umbrella_fetcher.run()
 
@@ -97,8 +112,9 @@ class TestUpstreamJiraUmbrellaFetcher(unittest.TestCase):
         self.utils.checkout_trunk()
         output_dir = FileUtils.join_path(self.utils.jira_umbrella_data_dir, UPSTREAM_JIRA_ID)
         original_mod_dates = FileUtils.get_mod_dates_of_files(output_dir, *ALL_OUTPUT_FILES)
-        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(force_mode=True),
-                                                       self.repo_wrapper, self.utils.jira_umbrella_data_dir)
+        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
+            self.setup_args(force_mode=True), self.repo_wrapper, self.utils.jira_umbrella_data_dir
+        )
         umbrella_fetcher.run()
 
         # Verify files and mod dates
@@ -111,5 +127,5 @@ class TestUpstreamJiraUmbrellaFetcher(unittest.TestCase):
             self.assertTrue(mod_date > original_mod_dates[file], "File has not been modified: {}".format(file))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

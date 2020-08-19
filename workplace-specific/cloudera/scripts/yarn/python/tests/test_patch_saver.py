@@ -5,7 +5,7 @@ from tests.test_utilities import TestUtilities
 from yarndevfunc.commands.patch_saver import PatchSaver
 from yarndevfunc.yarn_dev_func import YarnDevFunc
 
-YARN_TEST_BRANCH = 'YARNTEST-1234'
+YARN_TEST_BRANCH = "YARNTEST-1234"
 LOG = logging.getLogger(__name__)
 
 
@@ -29,7 +29,7 @@ class TestPatchSaver(unittest.TestCase):
 
     def test_save_patch_on_trunk_fails(self):
         self.repo.heads.trunk.checkout()
-        self.assertEqual('trunk', str(self.repo.head.ref))
+        self.assertEqual("trunk", str(self.repo.head.ref))
         patch_saver = PatchSaver(object(), self.repo_wrapper, self.saved_patches_dir)
         self.assertRaises(ValueError, patch_saver.run)
 
@@ -74,5 +74,5 @@ class TestPatchSaver(unittest.TestCase):
         self.utils.does_file_contain(new_patch_file, "+dummy_changes_to_conf_2")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

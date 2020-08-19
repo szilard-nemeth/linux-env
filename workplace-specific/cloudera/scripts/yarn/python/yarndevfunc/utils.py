@@ -12,17 +12,14 @@ import pickle
 
 from tabulate import tabulate
 
-REVIEW_BRANCH_SEP = '-'
+REVIEW_BRANCH_SEP = "-"
 
 LOG = logging.getLogger(__name__)
 
 
 def auto_str(cls, with_repr=True):
     def __str__(self):
-        return '%s(%s)' % (
-            type(self).__name__,
-            ', '.join('%s=%s' % item for item in vars(self).items())
-        )
+        return "%s(%s)" % (type(self).__name__, ", ".join("%s=%s" % item for item in vars(self).items()))
 
     def __repr__(self):
         return __str__(self)
@@ -46,43 +43,45 @@ class StringUtils:
     @staticmethod
     def filter_list_by_regex(list, regex):
         import re
+
         p = re.compile(regex)
         return [s for s in list if p.match(s)]
 
     @staticmethod
     def extract_patch_number_from_filename_as_int(filename):
         # Assuming filename like: '/somedir/YARN-10277-test.0003.patch'
-        return int(filename.split('.')[-2])
+        return int(filename.split(".")[-2])
 
     @staticmethod
     def extract_patch_number_from_filename_as_str(filename):
         # Assuming filename like: '/somedir/YARN-10277-test.0003.patch'
-        return filename.split('.')[-2]
+        return filename.split(".")[-2]
 
     @staticmethod
     def count_leading_zeros(s):
         count = 0
         for i in range(len(s)):
-            if s[i] != '0':
+            if s[i] != "0":
                 return count
             count += 1
 
     @staticmethod
     def increase_numerical_str(string):
         num_zeros = StringUtils.count_leading_zeros(string)
-        format_str = '%0' + str(num_zeros + 1) + 'd'
+        format_str = "%0" + str(num_zeros + 1) + "d"
         return format_str % (int(string) + 1)
 
     @staticmethod
     def get_next_patch_filename(filename):
-        split = filename.split('.')
+        split = filename.split(".")
         increased_str = StringUtils.increase_numerical_str(split[-2])
         split[-2] = increased_str
-        return '.'.join(split)
+        return ".".join(split)
 
     @staticmethod
     def ensure_matches_pattern(string, regex, raise_exception=False):
         import re
+
         regex_obj = re.compile(regex)
         result = regex_obj.match(string)
         if raise_exception and not result:
@@ -93,11 +92,17 @@ class StringUtils:
     def get_matched_group(str, regex, group):
         match = re.match(regex, str)
         if not match or len(match.groups()) < group:
-            raise ValueError("String '{}' does not have match with group number '{}'. Regex: '{}', Match object: '{}'", str, group, regex, match)
+            raise ValueError(
+                "String '{}' does not have match with group number '{}'. Regex: '{}', Match object: '{}'",
+                str,
+                group,
+                regex,
+                match,
+            )
         return match.group(group)
 
     @staticmethod
-    def convert_string_to_multiline(string, max_line_length, separator=' '):
+    def convert_string_to_multiline(string, max_line_length, separator=" "):
         if not len(string) > max_line_length:
             return string
 
@@ -110,7 +115,7 @@ class StringUtils:
                 # Add length of part + 1 for space to current line length, if required
                 curr_line_length += len(part)
             else:
-                result += '\n'
+                result += "\n"
                 result += part
                 curr_line_length = len(part)
 
@@ -122,7 +127,7 @@ class StringUtils:
         return result
 
     @staticmethod
-    def generate_header_line(string, char='=', length=80):
+    def generate_header_line(string, char="=", length=80):
         result = ""
         fill_length = length - len(string)
         filler = char * (math.floor(fill_length / 2))
@@ -158,17 +163,23 @@ class PatchUtils:
         parts = latest_branch.split(REVIEW_BRANCH_SEP)
 
         if len(parts) < 3:
-            raise ValueError("Expected at least 3 components (separated by '-') of branch name: {}, encountered: {}",
-                             latest_branch, len(parts))
+            raise ValueError(
+                "Expected at least 3 components (separated by '-') of branch name: {}, encountered: {}",
+                latest_branch,
+                len(parts),
+            )
 
         # No branch postfix, e.g. review-YARN-10277
         if len(parts) == 3:
-            return REVIEW_BRANCH_SEP.join(parts) + REVIEW_BRANCH_SEP + '2'
+            return REVIEW_BRANCH_SEP.join(parts) + REVIEW_BRANCH_SEP + "2"
         elif len(parts) == 4:
             return REVIEW_BRANCH_SEP.join(parts[0:3]) + REVIEW_BRANCH_SEP + StringUtils.increase_numerical_str(parts[3])
         else:
-            raise ValueError("Unexpected number of components (separated by '-') of branch name: {}, encountered # of components: {}",
-                             latest_branch, len(parts))
+            raise ValueError(
+                "Unexpected number of components (separated by '-') of branch name: {}, encountered # of components: {}",
+                latest_branch,
+                len(parts),
+            )
 
     @staticmethod
     def save_diff_to_patch_file(diff, file):
@@ -217,7 +228,7 @@ class FileUtils:
         if not os.path.exists(path):
             # Create empty file: https://stackoverflow.com/a/12654798/1106893
             LOG.info("Creating file: %s", path)
-            open(path, 'a').close()
+            open(path, "a").close()
 
     @classmethod
     def does_file_exist(cls, file):
@@ -256,19 +267,20 @@ class FileUtils:
     @classmethod
     def save_to_file(cls, file_path, contents):
         FileUtils.ensure_file_exists(file_path, create=True)
-        file = open(file_path, 'w')
+        file = open(file_path, "w")
         file.write(contents)
         file.close()
 
     @classmethod
     def append_to_file(cls, file_path, contents):
-        file = open(file_path, 'a')
+        file = open(file_path, "a")
         file.write(contents)
         file.close()
 
     @classmethod
     def get_file_size(cls, file_path, human_readable=True):
         from pathlib import Path
+
         size = Path(file_path).stat().st_size
         if human_readable:
             return humanize.naturalsize(size, gnu=True)
@@ -316,13 +328,14 @@ class FileUtils:
                     shutil.rmtree(file_path)
                     LOG.debug("Successfully removed file: %s", file_path)
             except Exception as e:
-                LOG.error('Failed to delete %s. Reason: %s',file_path, e)
+                LOG.error("Failed to delete %s. Reason: %s", file_path, e)
 
 
 class DateTimeUtils:
     @staticmethod
-    def get_current_datetime(format='%Y%m%d_%H%M%S'):
+    def get_current_datetime(format="%Y%m%d_%H%M%S"):
         from datetime import datetime
+
         now = datetime.now()
         return now.strftime(format)
 
@@ -337,10 +350,10 @@ class JiraUtils:
 
     @staticmethod
     def parse_subjiras_from_umbrella_html(html_doc, to_file, filter_ids):
-        soup = BeautifulSoup(html_doc, 'html.parser')
+        soup = BeautifulSoup(html_doc, "html.parser")
         issue_keys = []
-        for link in soup.find_all('a', attrs={'class': 'issue-link'}):
-            issue_keys.append(link.attrs['data-issue-key'])
+        for link in soup.find_all("a", attrs={"class": "issue-link"}):
+            issue_keys.append(link.attrs["data-issue-key"])
 
         if filter_ids:
             LOG.info("Filtering ids from result list: %s", filter_ids)
@@ -348,19 +361,19 @@ class JiraUtils:
 
         # Filter dupes
         issue_keys = list(set(issue_keys))
-        FileUtils.save_to_file(to_file, '\n'.join(issue_keys))
+        FileUtils.save_to_file(to_file, "\n".join(issue_keys))
         return issue_keys
 
 
 class PickleUtils:
     @staticmethod
     def dump(data, file):
-        with open(file, 'wb') as f:
+        with open(file, "wb") as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
     def load(file):
-        with open(file, 'rb') as f:
+        with open(file, "rb") as f:
             # The protocol version used is detected automatically, so we do not
             # have to specify it.
             return pickle.load(f)
@@ -368,9 +381,10 @@ class PickleUtils:
 
 class ResultPrinter:
     @staticmethod
-    def print_table(data, row_callback, header, print_result=True, max_width=None, max_width_separator=' '):
-        converted_data = ResultPrinter.convert_list_data(data, row_callback, max_width=max_width,
-                                                         max_width_separator=max_width_separator)
+    def print_table(data, row_callback, header, print_result=True, max_width=None, max_width_separator=" "):
+        converted_data = ResultPrinter.convert_list_data(
+            data, row_callback, max_width=max_width, max_width_separator=max_width_separator
+        )
         tabulated = tabulate(converted_data, header, tablefmt="fancy_grid")
         if print_result:
             print(tabulated)
@@ -378,9 +392,10 @@ class ResultPrinter:
             return tabulated
 
     @staticmethod
-    def print_table_html(data, row_callback, header, print_result=True, max_width=None, max_width_separator=' '):
-        converted_data = ResultPrinter.convert_list_data(data, row_callback, max_width=max_width,
-                                                         max_width_separator=max_width_separator)
+    def print_table_html(data, row_callback, header, print_result=True, max_width=None, max_width_separator=" "):
+        converted_data = ResultPrinter.convert_list_data(
+            data, row_callback, max_width=max_width, max_width_separator=max_width_separator
+        )
         tabulated = tabulate(converted_data, header, tablefmt="html")
         if print_result:
             print(tabulated)
@@ -388,7 +403,7 @@ class ResultPrinter:
             return tabulated
 
     @staticmethod
-    def convert_list_data(src_data, row_callback, max_width=None, max_width_separator=' '):
+    def convert_list_data(src_data, row_callback, max_width=None, max_width_separator=" "):
         dest_data = []
         for idx, data_row in enumerate(src_data):
             tup = row_callback(data_row)
@@ -400,4 +415,3 @@ class ResultPrinter:
             dest_data.append(converted_row)
 
         return dest_data
-

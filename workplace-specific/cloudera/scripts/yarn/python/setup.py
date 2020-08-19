@@ -12,7 +12,7 @@ with open(path.join(this_directory, "version.py")) as f:
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
     version = version_match.group(1)
 
-with open('LICENSE') as f:
+with open("LICENSE") as f:
     license = f.read()
 
 setup(
@@ -27,10 +27,7 @@ setup(
     packages=find_packages(exclude=["tests"]),
     tests_require=["pytest"],
     install_requires=[],
-    extras_require={
-        "myst": ["myst-parser~=0.8; python_version >= '3.6'"],
-        "toml": ["toml"],
-    },
+    extras_require={"myst": ["myst-parser~=0.8; python_version >= '3.6'"], "toml": ["toml"]},
     license=license,
     classifiers=[
         "Environment :: Console",
