@@ -41,14 +41,20 @@ class TestUtilities:
         if init_logging:
             Setup.init_logger(self.log_dir, console_debug=False, postfix='TEST')
         try:
-            self.repo_wrapper = GitWrapper(self.sandbox_repo_path)
-            self.repo = self.repo_wrapper._repo
-            LOG.info("Repo is already cloned.")
-            self.reset_changes()
-            self.checkout_trunk()
+            self.setup_repo()
         except InvalidGitRepositoryError as e:
-            LOG.info("Cloning repo for the first time...")
+            LOG.info("Cloning repo '%s' for the first time...", HADOOP_REPO_APACHE)
             Repo.clone_from(HADOOP_REPO_APACHE, self.sandbox_repo_path, progress=ProgressPrinter("clone"))
+            self.setup_repo(log=False)
+
+    def setup_repo(self, log=True):
+        if log:
+            LOG.info("Repo '%s' is already cloned to path '%s'", self.repo, self.sandbox_repo_path)
+        # This call will raise InvalidGitRepositoryError in case git repo is not cloned yet to this path
+        self.repo_wrapper = GitWrapper(self.sandbox_repo_path)
+        self.repo = self.repo_wrapper._repo
+        self.reset_changes()
+        self.checkout_trunk()
 
     def setup_dirs(self, repo_postfix):
         self.project_out_root = FileUtils.join_path(expanduser("~"), PROJECT_NAME, DEST_DIR_PREFIX)
