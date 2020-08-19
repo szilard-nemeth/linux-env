@@ -3,6 +3,8 @@ import logging
 import os
 import re
 import math
+import shutil
+
 import humanize
 import requests
 from bs4 import BeautifulSoup
@@ -84,7 +86,7 @@ class StringUtils:
         regex_obj = re.compile(regex)
         result = regex_obj.match(string)
         if raise_exception and not result:
-            raise ValueError("String '{}' does not math regex pattern: {}".format(string, regex))
+            raise ValueError("String '{}' does not match regex pattern: {}".format(string, regex))
         return result
 
     @staticmethod
@@ -295,6 +297,27 @@ class FileUtils:
             else:
                 result[f] = None
         return result
+
+    @classmethod
+    def remove_files(cls, dir, pattern):
+        if not FileUtils.does_file_exist(dir):
+            LOG.warning("Directory does not exist: %s", dir)
+            return
+        for filename in os.listdir(dir):
+            file_path = os.path.join(dir, filename)
+            matches = StringUtils.ensure_matches_pattern(FileUtils.path_basename(file_path), pattern)
+            if not matches:
+                LOG.debug("Filename not matched: %s", file_path)
+                continue
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+                    LOG.debug("Successfully removed file: %s", file_path)
+            except Exception as e:
+                LOG.error('Failed to delete %s. Reason: %s',file_path, e)
+
 
 class DateTimeUtils:
     @staticmethod

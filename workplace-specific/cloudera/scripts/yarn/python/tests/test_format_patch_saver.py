@@ -6,6 +6,8 @@ from yarndevfunc.constants import TRUNK, DEST_DIR_PREFIX
 from tests.test_utilities import TestUtilities, Object
 from yarndevfunc.utils import FileUtils, DateTimeUtils
 
+FORMAT_PATCH_FILE_PREFIX = "000.*"
+
 YARN_TEST_BRANCH = 'YARNTEST-1234567'
 LOG = logging.getLogger(__name__)
 
@@ -26,6 +28,12 @@ class TestFormatPatchSaver(unittest.TestCase):
 
     def setUp(self):
         self.current_datetime = DateTimeUtils.get_current_datetime()
+        self.patches_basedir = FileUtils.join_path(self.saved_patches_dir, DEST_DIR_PREFIX, self.current_datetime)
+        self.assertIsNotNone(self.patches_basedir)
+        self.assertNotEqual(self.patches_basedir, "~")
+        self.assertNotEqual(self.patches_basedir, "/")
+        self.assertTrue(self.saved_patches_dir in self.patches_basedir)
+        FileUtils.remove_files(self.patches_basedir, FORMAT_PATCH_FILE_PREFIX)
 
     def cleanup_and_checkout_branch(self, test_branch):
         self.utils.cleanup_and_checkout_test_branch(pull=False)
@@ -63,17 +71,16 @@ class TestFormatPatchSaver(unittest.TestCase):
         format_patch_saver.run()
 
         # Verify files
-        patches_basedir = FileUtils.join_path(self.saved_patches_dir, DEST_DIR_PREFIX, self.current_datetime)
-        self.utils.assert_files_not_empty(patches_basedir, expected_files=1)
+        self.utils.assert_files_not_empty(self.patches_basedir, expected_files=1)
 
     def test_base_and_other_refs_are_valid_more_commits(self):
+        LOG.debug("Found files in patches output dir: %s", FileUtils.find_files(self.patches_basedir, regex='.*', single_level=True, full_path_result=True))
         parent_level = 5
         format_patch_saver = FormatPatchSaver(self.setup_args(base_ref=TRUNK + "^" * parent_level, other_ref=TRUNK), self.repo.working_dir, self.current_datetime)
         format_patch_saver.run()
 
         # Verify files
-        patches_basedir = FileUtils.join_path(self.saved_patches_dir, DEST_DIR_PREFIX, self.current_datetime)
-        self.utils.assert_files_not_empty(patches_basedir, expected_files=5)
+        self.utils.assert_files_not_empty(self.patches_basedir, expected_files=5)
 
 if __name__ == '__main__':
     unittest.main()

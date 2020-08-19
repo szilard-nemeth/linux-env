@@ -157,7 +157,6 @@ class UpstreamJiraUmbrellaFetcher:
 
     def find_commits_and_save_to_file(self):
         # It's quite complex to grep for multiple jira IDs with gitpython, so let's rather call an external command
-        # TODO query commit date with git log, so subsequent git show call can be eliminated
         git_log_result = self.upstream_repo.log(HEAD, oneline_with_date=True)
         output = CommandRunner.egrep_with_cli(git_log_result, self.intermediate_results_file, self.data.piped_jira_ids)
         self.data.matched_commit_list = output.split("\n")
