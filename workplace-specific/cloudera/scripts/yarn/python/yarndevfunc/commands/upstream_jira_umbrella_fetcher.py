@@ -2,7 +2,7 @@ import logging
 import os
 
 from yarndevfunc.command_runner import CommandRunner
-from yarndevfunc.constants import TRUNK, HEAD
+from yarndevfunc.constants import HEAD
 from yarndevfunc.utils import auto_str, FileUtils, JiraUtils, PickleUtils, ResultPrinter, StringUtils
 
 LOG = logging.getLogger(__name__)
@@ -90,10 +90,11 @@ class CommitData:
 
 
 class UpstreamJiraUmbrellaFetcher:
-    def __init__(self, args, upstream_repo, basedir):
+    def __init__(self, args, upstream_repo, basedir, base_branch):
         self.jira_id = args.jira_id
         self.upstream_repo = upstream_repo
         self.basedir = basedir
+        self.base_branch = base_branch
         self.force_mode = True if args.force_mode else False
         # These fields will be assigned when data is fetched
         self.data = None
@@ -144,8 +145,8 @@ class UpstreamJiraUmbrellaFetcher:
     def log_current_branch(self):
         curr_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
-        if curr_branch != TRUNK:
-            raise ValueError("Current branch is not {}. Exiting!".format(TRUNK))
+        if curr_branch != self.base_branch:
+            raise ValueError("Current branch is not {}. Exiting!".format(self.base_branch))
 
     def set_file_fields(self):
         self.result_basedir = FileUtils.join_path(self.basedir, self.jira_id)

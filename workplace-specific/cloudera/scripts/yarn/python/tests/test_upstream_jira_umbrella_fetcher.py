@@ -43,6 +43,7 @@ class TestUpstreamJiraUmbrellaFetcher(unittest.TestCase):
         cls.repo = cls.utils.repo
         cls.repo_wrapper = cls.utils.repo_wrapper
         cls.saved_patches_dir = cls.utils.saved_patches_dir
+        cls.base_branch = TRUNK
 
     def cleanup_and_checkout_branch(self, test_branch):
         self.utils.cleanup_and_checkout_test_branch(pull=False)
@@ -55,25 +56,33 @@ class TestUpstreamJiraUmbrellaFetcher(unittest.TestCase):
         return args
 
     def test_fetch_on_branch_other_than_trunk_fails(self):
-        self.utils.checkout_parent_of_branch(TRUNK)
+        self.utils.checkout_parent_of_branch(self.base_branch)
 
         # Can't use self.repo.head.ref as HEAD is a detached reference
         # self.repo.head.ref would raise: TypeError: HEAD is a detached symbolic reference as it points to
-        self.assertNotEqual(self.utils.get_hash_of_commit(TRUNK), self.repo.head.commit.hexsha)
-        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(self.setup_args(), self.repo_wrapper, self.repo_wrapper)
+        self.assertNotEqual(self.utils.get_hash_of_commit(self.base_branch), self.repo.head.commit.hexsha)
+        umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
+            self.setup_args(), self.repo_wrapper, self.repo_wrapper, self.base_branch
+        )
         self.assertRaises(ValueError, umbrella_fetcher.run)
 
     def test_fetch_with_upstream_jira_that_is_not_an_umbrella_works(self):
         self.utils.checkout_trunk()
         umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
-            self.setup_args(jira=UPSTREAM_JIRA_WITH_0_SUBJIRAS), self.repo_wrapper, self.utils.jira_umbrella_data_dir
+            self.setup_args(jira=UPSTREAM_JIRA_WITH_0_SUBJIRAS),
+            self.repo_wrapper,
+            self.utils.jira_umbrella_data_dir,
+            self.base_branch,
         )
         umbrella_fetcher.run()
 
     def test_fetch_with_upstream_jira_not_existing(self):
         self.utils.checkout_trunk()
         umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
-            self.setup_args(jira=UPSTREAM_JIRA_NOT_EXISTING), self.repo_wrapper, self.utils.jira_umbrella_data_dir
+            self.setup_args(jira=UPSTREAM_JIRA_NOT_EXISTING),
+            self.repo_wrapper,
+            self.utils.jira_umbrella_data_dir,
+            self.base_branch,
         )
         self.assertRaises(ValueError, umbrella_fetcher.run)
 
@@ -83,13 +92,14 @@ class TestUpstreamJiraUmbrellaFetcher(unittest.TestCase):
             self.setup_args(jira=UPSTREAM_JIRA_DOES_NOT_HAVE_COMMIT),
             self.repo_wrapper,
             self.utils.jira_umbrella_data_dir,
+            self.base_branch,
         )
         self.assertRaises(ValueError, umbrella_fetcher.run)
 
     def test_fetch_with_upstream_umbrella_cached_mode(self):
         self.utils.checkout_trunk()
         umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
-            self.setup_args(force_mode=False), self.repo_wrapper, self.utils.jira_umbrella_data_dir
+            self.setup_args(force_mode=False), self.repo_wrapper, self.utils.jira_umbrella_data_dir, self.base_branch
         )
         # Run first, to surely have results pickled for this umbrella
         umbrella_fetcher.run()
@@ -113,7 +123,7 @@ class TestUpstreamJiraUmbrellaFetcher(unittest.TestCase):
         output_dir = FileUtils.join_path(self.utils.jira_umbrella_data_dir, UPSTREAM_JIRA_ID)
         original_mod_dates = FileUtils.get_mod_dates_of_files(output_dir, *ALL_OUTPUT_FILES)
         umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
-            self.setup_args(force_mode=True), self.repo_wrapper, self.utils.jira_umbrella_data_dir
+            self.setup_args(force_mode=True), self.repo_wrapper, self.utils.jira_umbrella_data_dir, self.base_branch
         )
         umbrella_fetcher.run()
 

@@ -2,7 +2,7 @@ import logging
 import unittest
 
 from yarndevfunc.commands.review_branch_creator import ReviewBranchCreator
-from yarndevfunc.constants import TRUNK
+from yarndevfunc.constants import TRUNK, ORIGIN_TRUNK
 from tests.test_utilities import TestUtilities, Object
 from yarndevfunc.utils import FileUtils
 from yarndevfunc.yarn_dev_func import YarnDevFunc
@@ -12,6 +12,8 @@ COMMIT_MSG_TEMPLATE = "patch file: {file}"
 PATCH_FILENAME = "YARN-12345.001.patch"
 REVIEW_BRANCH = "review-YARN-12345"
 YARN_TEST_BRANCH = "YARNTEST-12345"
+REMOTE_BASE_BRANCH = ORIGIN_TRUNK
+BASE_BRANCH = TRUNK
 
 
 class TestReviewBranchCreator(unittest.TestCase):
@@ -30,7 +32,7 @@ class TestReviewBranchCreator(unittest.TestCase):
         cls.dummy_patches_dir = cls.utils.dummy_patches_dir
 
     def setUp(self):
-        self.utils.reset_and_checkout_existing_branch(TRUNK, pull=False)
+        self.utils.reset_and_checkout_existing_branch(BASE_BRANCH, pull=False)
         self.utils.remove_branches(REVIEW_BRANCH)
 
     def cleanup_and_checkout_branch(self):
@@ -40,7 +42,7 @@ class TestReviewBranchCreator(unittest.TestCase):
     def test_with_not_existing_patch(self):
         args = Object()
         args.patch_file = FileUtils.join_path("tmp", "blablabla")
-        review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper)
+        review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper, BASE_BRANCH, REMOTE_BASE_BRANCH)
         self.assertRaises(ValueError, review_branch_creator.run)
 
     def test_with_oddly_named_patch(self):
@@ -49,7 +51,7 @@ class TestReviewBranchCreator(unittest.TestCase):
         args = Object()
         args.patch_file = patch_file
 
-        review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper)
+        review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper, BASE_BRANCH, REMOTE_BASE_BRANCH)
         self.assertRaises(ValueError, review_branch_creator.run)
 
     def test_with_bad_patch_content(self):
@@ -58,7 +60,7 @@ class TestReviewBranchCreator(unittest.TestCase):
         args = Object()
         args.patch_file = patch_file
 
-        review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper)
+        review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper, BASE_BRANCH, REMOTE_BASE_BRANCH)
         self.assertRaises(ValueError, review_branch_creator.run)
 
     def test_with_normal_patch(self):
@@ -67,7 +69,7 @@ class TestReviewBranchCreator(unittest.TestCase):
         args = Object()
         args.patch_file = patch_file
 
-        review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper)
+        review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper, BASE_BRANCH, REMOTE_BASE_BRANCH)
         review_branch_creator.run()
 
         self.assertTrue(REVIEW_BRANCH in self.repo.heads, "Review branch does not exist: {}".format(REVIEW_BRANCH))
@@ -79,7 +81,7 @@ class TestReviewBranchCreator(unittest.TestCase):
         args = Object()
         args.patch_file = patch_file
 
-        review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper)
+        review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper, BASE_BRANCH, REMOTE_BASE_BRANCH)
         review_branch_creator.run()
         review_branch_creator.run()
 

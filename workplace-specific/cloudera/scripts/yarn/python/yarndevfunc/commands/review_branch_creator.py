@@ -1,6 +1,6 @@
 import logging
 
-from yarndevfunc.constants import YARN_PATCH_FILENAME_REGEX, TRUNK, ORIGIN, ORIGIN_TRUNK
+from yarndevfunc.constants import YARN_PATCH_FILENAME_REGEX, ORIGIN
 from yarndevfunc.utils import StringUtils, FileUtils, PatchUtils
 
 BRANCH_PREFIX = "review-"
@@ -9,9 +9,11 @@ LOG = logging.getLogger(__name__)
 
 
 class ReviewBranchCreator:
-    def __init__(self, args, upstream_repo):
+    def __init__(self, args, upstream_repo, base_branch, remote_base_branch):
         self.args = args
         self.upstream_repo = upstream_repo
+        self.base_branch = base_branch
+        self.remote_base_branch = remote_base_branch
 
     def run(self):
         patch_file = self.args.patch_file
@@ -36,13 +38,13 @@ class ReviewBranchCreator:
         if not clean:
             raise ValueError("git working directory is not clean, please stash or drop your changes")
 
-        self.upstream_repo.checkout_branch(TRUNK)
+        self.upstream_repo.checkout_branch(self.base_branch)
         self.upstream_repo.pull(ORIGIN)
-        diff = self.upstream_repo.diff_between_refs(ORIGIN_TRUNK, TRUNK)
+        diff = self.upstream_repo.diff_between_refs(self.remote_base_branch, self.base_branch)
         if diff:
             raise ValueError(
                 "There is a diff between local {} and {}! Run 'git reset {} --hard' and re-run the script!".format(
-                    TRUNK, ORIGIN_TRUNK, ORIGIN_TRUNK
+                    self.base_branch, self.remote_base_branch, self.remote_base_branch
                 )
             )
 
@@ -52,12 +54,12 @@ class ReviewBranchCreator:
             cmd = "git apply " + patch_file
             raise ValueError(
                 "Patch does not apply to {}, please resolve the conflicts manually. "
-                "Run this command to apply the patch again: {}".format(TRUNK, cmd)
+                "Run this command to apply the patch again: {}".format(self.base_branch, cmd)
             )
 
-        LOG.info("Patch %s applies cleanly to %s", patch_file, TRUNK)
+        LOG.info("Patch %s applies cleanly to %s", patch_file, self.base_branch)
         branch_exists = self.upstream_repo.is_branch_exist(target_branch)
-        base_ref = TRUNK
+        base_ref = self.base_branch
         if not branch_exists:
             success = self.upstream_repo.checkout_new_branch(target_branch, base_ref)
             if not success:

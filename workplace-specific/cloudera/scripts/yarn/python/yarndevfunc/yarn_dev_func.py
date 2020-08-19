@@ -28,6 +28,8 @@ from yarndevfunc.constants import (
 from yarndevfunc.git_wrapper import GitWrapper
 from yarndevfunc.utils import FileUtils, DateTimeUtils
 
+DEFAULT_BASE_BRANCH = TRUNK
+
 LOG = logging.getLogger(__name__)
 __author__ = "Szilard Nemeth"
 
@@ -117,19 +119,21 @@ class YarnDevFunc:
         self.upstream_repo = GitWrapper(self.env[LOADED_ENV_UPSTREAM_DIR])
 
     def save_patch(self, args):
-        patch_saver = PatchSaver(args, self.upstream_repo, self.yarn_patch_dir)
+        patch_saver = PatchSaver(args, self.upstream_repo, self.yarn_patch_dir, DEFAULT_BASE_BRANCH)
         return patch_saver.run()
 
     def create_review_branch(self, args):
-        review_branch_creator = ReviewBranchCreator(args, self.upstream_repo)
+        review_branch_creator = ReviewBranchCreator(args, self.upstream_repo, DEFAULT_BASE_BRANCH)
         review_branch_creator.run()
 
     def backport_c6(self, args):
-        backporter = Backporter(args, self.upstream_repo, self.downstream_repo, "cauldron/{}".format(args.cdh_branch))
+        backporter = Backporter(
+            args, self.upstream_repo, self.downstream_repo, "cauldron/{}".format(args.cdh_branch), DEFAULT_BASE_BRANCH
+        )
         backporter.run()
 
     def upstream_pr_fetch(self, args):
-        upstream_pr_fetcher = UpstreamPRFetcher(args, self.upstream_repo, TRUNK)
+        upstream_pr_fetcher = UpstreamPRFetcher(args, self.upstream_repo, DEFAULT_BASE_BRANCH)
         upstream_pr_fetcher.run()
 
     def save_patches(self, args):
@@ -156,7 +160,9 @@ class YarnDevFunc:
         patch_differ.run()
 
     def fetch_jira_umbrella_data(self, args):
-        jira_umbrella_fetcher = UpstreamJiraUmbrellaFetcher(args, self.upstream_repo, self.jira_umbrella_data_dir)
+        jira_umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
+            args, self.upstream_repo, self.jira_umbrella_data_dir, DEFAULT_BASE_BRANCH
+        )
         jira_umbrella_fetcher.run()
 
 

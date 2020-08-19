@@ -6,6 +6,8 @@ from yarndevfunc.constants import TRUNK, DEST_DIR_PREFIX
 from tests.test_utilities import TestUtilities, Object
 from yarndevfunc.utils import FileUtils, DateTimeUtils
 
+DEFAULT_BASE_BRANCH = TRUNK
+
 FORMAT_PATCH_FILE_PREFIX = "000.*"
 
 YARN_TEST_BRANCH = "YARNTEST-1234567"
@@ -39,7 +41,7 @@ class TestFormatPatchSaver(unittest.TestCase):
         self.utils.cleanup_and_checkout_test_branch(pull=False)
         self.assertEqual(test_branch, str(self.repo.head.ref))
 
-    def setup_args(self, base_ref=TRUNK, other_ref=TRUNK):
+    def setup_args(self, base_ref=DEFAULT_BASE_BRANCH, other_ref=DEFAULT_BASE_BRANCH):
         args = Object()
         args.base_refspec = base_ref
         args.other_refspec = other_ref
@@ -68,13 +70,17 @@ class TestFormatPatchSaver(unittest.TestCase):
 
     def test_base_and_other_refs_are_same(self):
         format_patch_saver = FormatPatchSaver(
-            self.setup_args(base_ref=TRUNK, other_ref=TRUNK), self.repo.working_dir, self.current_datetime
+            self.setup_args(base_ref=DEFAULT_BASE_BRANCH, other_ref=DEFAULT_BASE_BRANCH),
+            self.repo.working_dir,
+            self.current_datetime,
         )
         self.assertRaises(ValueError, format_patch_saver.run)
 
     def test_base_and_other_refs_are_valid(self):
         format_patch_saver = FormatPatchSaver(
-            self.setup_args(base_ref=TRUNK + "^", other_ref=TRUNK), self.repo.working_dir, self.current_datetime
+            self.setup_args(base_ref=DEFAULT_BASE_BRANCH + "^", other_ref=DEFAULT_BASE_BRANCH),
+            self.repo.working_dir,
+            self.current_datetime,
         )
         format_patch_saver.run()
 
@@ -88,7 +94,7 @@ class TestFormatPatchSaver(unittest.TestCase):
         )
         parent_level = 5
         format_patch_saver = FormatPatchSaver(
-            self.setup_args(base_ref=TRUNK + "^" * parent_level, other_ref=TRUNK),
+            self.setup_args(base_ref=DEFAULT_BASE_BRANCH + "^" * parent_level, other_ref=DEFAULT_BASE_BRANCH),
             self.repo.working_dir,
             self.current_datetime,
         )

@@ -3,6 +3,7 @@ import unittest
 
 from tests.test_utilities import TestUtilities
 from yarndevfunc.commands.patch_saver import PatchSaver
+from yarndevfunc.constants import TRUNK
 from yarndevfunc.yarn_dev_func import YarnDevFunc
 
 YARN_TEST_BRANCH = "YARNTEST-1234"
@@ -22,6 +23,7 @@ class TestPatchSaver(unittest.TestCase):
         cls.repo = cls.utils.repo
         cls.repo_wrapper = cls.utils.repo_wrapper
         cls.saved_patches_dir = cls.utils.saved_patches_dir
+        cls.base_branch = TRUNK
 
     def cleanup_and_checkout_branch(self, test_branch):
         self.utils.cleanup_and_checkout_test_branch(pull=False)
@@ -30,24 +32,24 @@ class TestPatchSaver(unittest.TestCase):
     def test_save_patch_on_trunk_fails(self):
         self.repo.heads.trunk.checkout()
         self.assertEqual("trunk", str(self.repo.head.ref))
-        patch_saver = PatchSaver(object(), self.repo_wrapper, self.saved_patches_dir)
+        patch_saver = PatchSaver(object(), self.repo_wrapper, self.saved_patches_dir, self.base_branch)
         self.assertRaises(ValueError, patch_saver.run)
 
     def test_save_patch_on_testbranch_fails_without_changes(self):
         self.cleanup_and_checkout_branch(YARN_TEST_BRANCH)
-        patch_saver = PatchSaver(object(), self.repo_wrapper, self.saved_patches_dir)
+        patch_saver = PatchSaver(object(), self.repo_wrapper, self.saved_patches_dir, self.base_branch)
         self.assertRaises(ValueError, patch_saver.run)
 
     def test_save_patch_on_testbranch_fails_with_uncommitted_changes(self):
         self.cleanup_and_checkout_branch(YARN_TEST_BRANCH)
         self.utils.add_some_file_changes(commit=False)
-        patch_saver = PatchSaver(object(), self.repo_wrapper, self.saved_patches_dir)
+        patch_saver = PatchSaver(object(), self.repo_wrapper, self.saved_patches_dir, self.base_branch)
         self.assertRaises(ValueError, patch_saver.run)
 
     def test_save_patch_on_testbranch_runs_with_committed_changes(self):
         self.cleanup_and_checkout_branch(YARN_TEST_BRANCH)
         self.utils.add_some_file_changes(commit=True)
-        patch_saver = PatchSaver(object(), self.repo_wrapper, self.saved_patches_dir)
+        patch_saver = PatchSaver(object(), self.repo_wrapper, self.saved_patches_dir, self.base_branch)
         new_patch_file = patch_saver.run()
 
         # Verify file

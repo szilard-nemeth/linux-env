@@ -5,6 +5,8 @@ from yarndevfunc.commands.upstream_pr_fetcher import UpstreamPRFetcher
 from yarndevfunc.constants import APACHE, TRUNK
 from tests.test_utilities import TestUtilities, Object
 
+DEFAULT_BRANCH = TRUNK
+
 LOG = logging.getLogger(__name__)
 
 
@@ -20,10 +22,10 @@ class TestUpstreamPRFetcher(unittest.TestCase):
         cls.utils.pull_to_trunk()
         cls.repo = cls.utils.repo
         cls.repo_wrapper = cls.utils.repo_wrapper
-        cls.base_branch = cls.utils.checkout_parent_of_branch(TRUNK)
+        cls.base_branch = cls.utils.checkout_parent_of_branch(DEFAULT_BRANCH)
 
     def setUp(self):
-        self.utils.reset_and_checkout_existing_branch(TRUNK, pull=False)
+        self.utils.reset_and_checkout_existing_branch(DEFAULT_BRANCH, pull=False)
         # Setup committer config
         self.utils.prepare_git_config("upstream_user", "upstream_email")
 
@@ -54,7 +56,7 @@ class TestUpstreamPRFetcher(unittest.TestCase):
     def test_with_valid_url_and_remote_one_commit_missing_git_config(self):
         args = Object()
         args.github_username = APACHE
-        args.remote_branch = TRUNK
+        args.remote_branch = DEFAULT_BRANCH
 
         # Intentionally remove git config
         self.utils.remove_comitter_git_config()
@@ -65,8 +67,8 @@ class TestUpstreamPRFetcher(unittest.TestCase):
     def test_with_valid_url_and_remote_one_commit_proper_git_config(self):
         args = Object()
         args.github_username = APACHE
-        args.remote_branch = TRUNK
-        self.utils.checkout_parent_of_branch(TRUNK)
+        args.remote_branch = DEFAULT_BRANCH
+        self.utils.checkout_parent_of_branch(DEFAULT_BRANCH)
 
         pr_fetcher = UpstreamPRFetcher(args, self.repo_wrapper, self.base_branch)
         pr_fetcher.run()

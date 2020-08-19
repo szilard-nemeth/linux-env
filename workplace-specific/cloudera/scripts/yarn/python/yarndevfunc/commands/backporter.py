@@ -1,12 +1,12 @@
 import logging
 
-from yarndevfunc.constants import TRUNK, ORIGIN, HEAD, GERRIT_REVIEWER_LIST
+from yarndevfunc.constants import ORIGIN, HEAD, GERRIT_REVIEWER_LIST
 
 LOG = logging.getLogger(__name__)
 
 
 class Backporter:
-    def __init__(self, args, upstream_repo, downstream_repo, cherry_pick_base_ref):
+    def __init__(self, args, upstream_repo, downstream_repo, cherry_pick_base_ref, default_branch):
         self.args = args
         self.upstream_repo = upstream_repo
         self.downstream_repo = downstream_repo
@@ -15,6 +15,7 @@ class Backporter:
         self.cdh_jira_id = self.args.cdh_jira_id
         self.cdh_branch = self.args.cdh_branch
         self.cherry_pick_base_ref = cherry_pick_base_ref
+        self.default_branch = default_branch
 
     def run(self):
         """
@@ -48,7 +49,7 @@ class Backporter:
         curr_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
         self.upstream_repo.fetch(all=True)
-        self.upstream_repo.checkout_branch(TRUNK)
+        self.upstream_repo.checkout_branch(self.default_branch)
         self.upstream_repo.pull(ORIGIN)
 
     def cherry_pick_commit(self, commit_hash):

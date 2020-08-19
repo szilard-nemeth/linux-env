@@ -29,6 +29,7 @@ class TestUtilities:
     repo = None
     log_dir = None
     sandbox_repo_path = None
+    base_branch = TRUNK
 
     def __init__(self, test_instance, test_branch):
         self.test_instance = test_instance
@@ -99,7 +100,7 @@ class TestUtilities:
                 self.repo.heads[branch].checkout()
                 self.repo.git.reset("--hard")
 
-                if branch != TRUNK:
+                if branch != self.base_branch:
                     # Checkout trunk, so branch can be deleted
                     self.checkout_trunk()
                     if remove:
@@ -109,7 +110,7 @@ class TestUtilities:
             LOG.exception("Failed to remove branch.", exc_info=True)
             pass
 
-        if branch != TRUNK:
+        if branch != self.base_branch:
             LOG.info("Checking out new branch: %s", branch)
             self.repo.git.checkout("-b", branch)
 
