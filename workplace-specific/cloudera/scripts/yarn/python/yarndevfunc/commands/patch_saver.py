@@ -1,7 +1,7 @@
 import logging
 
+from yarndevfunc.constants import TRUNK, ORIGIN
 from yarndevfunc.utils import FileUtils, PatchUtils
-from yarndevfunc.constants import *
 
 LOG = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ class PatchSaver:
 
     def run(self):
         # TODO add force mode: ignore whitespace issues and make backup of patch!
-        # TODO add another mode: Create patch based on changes in state, not commits
+        # TODO add another mode: Create patch based on changes in staged area, not commits
         curr_branch = self.repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
 
@@ -32,24 +32,27 @@ class PatchSaver:
             raise ValueError("Rebase was not successful, see previous error messages")
 
         self.repo.diff_check()
-        # TODO add line length check to added lines, ignore imports: 'sed -n "/^+.\{81\}/p"'
 
         patch_dir = FileUtils.join_path(self.patch_dir, patch_branch)
         FileUtils.ensure_dir_created(patch_dir)
-        found_patches = FileUtils.find_files(patch_dir, regex=patch_branch + '\\.\\d.*\\.patch$', single_level=True)
+        found_patches = FileUtils.find_files(patch_dir, regex=patch_branch + "\\.\\d.*\\.patch$", single_level=True)
         new_patch_filename, new_patch_num = PatchUtils.get_next_filename(patch_dir, found_patches)
 
         # Double-check new filename vs. putting it altogether manually
-        new_patch_filename_sanity = FileUtils.join_path(self.patch_dir, patch_branch,
-                                                        patch_branch + "." + str(new_patch_num) + ".patch")
+        new_patch_filename_sanity = FileUtils.join_path(
+            self.patch_dir, patch_branch, patch_branch + "." + str(new_patch_num) + ".patch"
+        )
 
         # If this is a new patch, use the appended name,
         # Otherwise, use the generated filename
         if new_patch_num == "001":
             new_patch_filename = new_patch_filename_sanity
         if new_patch_filename != new_patch_filename_sanity:
-            raise ValueError("File paths do not match. Calculated: {}, Concatenated: {}".format(new_patch_filename,
-                                                                                                  new_patch_filename_sanity))
+            raise ValueError(
+                "File paths do not match. Calculated: {}, Concatenated: {}".format(
+                    new_patch_filename, new_patch_filename_sanity
+                )
+            )
 
         diff = self.repo.diff(TRUNK)
         result = PatchUtils.save_diff_to_patch_file(diff, new_patch_filename)
@@ -57,9 +60,6 @@ class PatchSaver:
             raise ValueError("Failed to save patch. See previous error messages for details.")
 
         LOG.info("Created patch file: %s [size: %s]", new_patch_filename, FileUtils.get_file_size(new_patch_filename))
-
-        # TODO replacing all whitespaces in patch file caused issues when patch applied -> Find a python lib for this
-        # sed -i 's/^\([+-].*\)[ \t]*$/\1/' $PATCH_FILE
 
         # Sanity check: try to apply patch
         self.repo.checkout_branch(TRUNK)

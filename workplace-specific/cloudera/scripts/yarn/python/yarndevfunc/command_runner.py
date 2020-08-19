@@ -3,7 +3,9 @@ import shlex
 import subprocess
 
 from yarndevfunc.utils import auto_str, FileUtils
+
 LOG = logging.getLogger(__name__)
+
 
 @auto_str
 class RegularCommandResult:
@@ -22,7 +24,9 @@ class CommandRunner:
             args = shlex.split(command)
         else:
             args = command
-        proc = subprocess.run(args, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
+        proc = subprocess.run(
+            args, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell
+        )
         args2 = str(proc.args)
         return RegularCommandResult(command, args2, proc.stdout, proc.stderr, proc.returncode)
 
@@ -35,9 +39,8 @@ class CommandRunner:
 
     @staticmethod
     def egrep_with_cli(git_log_result, file, piped_jira_ids):
-        FileUtils.save_to_file(file, '\n'.join(git_log_result))
-        cli_command = "cat {git_log_file} | egrep '{jira_list}'".format(git_log_file=file,
-                                                                        jira_list=piped_jira_ids)
+        FileUtils.save_to_file(file, "\n".join(git_log_result))
+        cli_command = "cat {git_log_file} | egrep '{jira_list}'".format(git_log_file=file, jira_list=piped_jira_ids)
         return CommandRunner.run_cli_command(cli_command)
 
     @staticmethod
@@ -46,6 +49,5 @@ class CommandRunner:
             LOG.info("Running CLI command: %s", cli_command)
         output = CommandRunner.getoutput(cli_command)
         if fail_on_empty_output and not output:
-            # TODO throw other type of exception here, so that we can exit with code=1
             raise ValueError("Command failed: %s", cli_command)
         return output
