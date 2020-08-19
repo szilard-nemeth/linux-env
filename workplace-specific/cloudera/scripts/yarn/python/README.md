@@ -1,11 +1,11 @@
 # YARN dev functions
 
-This project is aimed to track if patches can be applied to specified branches from Jira issues having patches as attachments.
+This project contains various developer helper scripts in order to simplify everyday tasks related to Git and Apache Hadoop YARN development.
 
 ### Getting started / Setup
 
-You need to have python 2.7 and pip installed.
-Run make from the project's root directory, all python dependencies will be installed required by the project.
+You need to have python 3.8 and pip installed.
+Run make from the this directory and all python dependencies will be installed required by the project.
 
 
 ## Running the tests
