@@ -1,9 +1,9 @@
 import logging
 from git import Repo, RemoteProgress, GitCommandError
 
-FORMAT_CODE_HASH = '%H'
-FORMAT_CODE_COMMIT_MSG = '%s'
-FORMAT_CODE_DATE_ISO_8601 = '%cI'
+FORMAT_CODE_HASH = "%H"
+FORMAT_CODE_COMMIT_MSG = "%s"
+FORMAT_CODE_DATE_ISO_8601 = "%cI"
 
 LOG = logging.getLogger(__name__)
 
@@ -14,11 +14,11 @@ class GitWrapper:
         self.repo = Repo(self.repo_path)
 
     @property
-    def _repo(self):
-        return self.repo
+    def is_enabled_git_cmd_logging(self):
+        return self.repo.git.PYTHON_TRACE is not False
 
     def get_current_branch_name(self):
-        return self.repo.git.rev_parse('HEAD', symbolic_full_name=True, abbrev_ref=True)
+        return self.repo.git.rev_parse("HEAD", symbolic_full_name=True, abbrev_ref=True)
 
     def checkout_branch(self, branch):
         prev_branch = self.get_current_branch_name()
@@ -32,8 +32,9 @@ class GitWrapper:
             return False
 
         prev_branch = self.get_current_branch_name()
-        LOG.info("Checking out new branch: %s based on ref: %s (Previous branch was: %s)", new_branch, base_ref,
-                 prev_branch)
+        LOG.info(
+            "Checking out new branch: %s based on ref: %s (Previous branch was: %s)", new_branch, base_ref, prev_branch
+        )
         try:
             self.repo.git.checkout(base_ref, b=new_branch)
         except GitCommandError:
@@ -57,7 +58,7 @@ class GitWrapper:
                 LOG.info("Fetching from provided repo URL: %s", repo_url)
                 self.repo.git.fetch(repo_url, remote_name)
                 return True
-            except GitCommandError as e:
+            except GitCommandError:
                 LOG.exception("Git fetch failed.", exc_info=True)
                 return False
 
@@ -72,7 +73,7 @@ class GitWrapper:
 
     def checkout_previous_branch(self):
         prev_branch = self.get_current_branch_name()
-        self.repo.git.checkout('-')
+        self.repo.git.checkout("-")
         LOG.info("Checked out: %s (Previous branch was: %s)", self.get_current_branch_name(), prev_branch)
 
     def rebase(self, rebase_onto):
@@ -80,7 +81,7 @@ class GitWrapper:
 
         try:
             self.repo.git.rebase(rebase_onto)
-        except GitCommandError as e1:
+        except GitCommandError:
             LOG.exception("Rebase failed!", exc_info=True)
             try:
                 self.abort_rebase()
@@ -131,7 +132,7 @@ class GitWrapper:
     def diff(self, branch, cached=False):
         kwargs = {}
         if cached:
-            kwargs['cached'] = True
+            kwargs["cached"] = True
 
         LOG.info("Making diff against %s", branch)
         return self.repo.git.diff(branch, **kwargs)
@@ -145,14 +146,14 @@ class GitWrapper:
 
         kwargs = {}
         if no_commit_id:
-            kwargs['no_commit_id'] = True
+            kwargs["no_commit_id"] = True
         if name_only:
-            kwargs['name_only'] = True
+            kwargs["name_only"] = True
         if recursive:
-            kwargs['r'] = True
+            kwargs["r"] = True
 
-        # TODO these logs can be replaced with: https://gitpython.readthedocs.io/en/stable/tutorial.html#git-command-debugging-and-customization
-        LOG.info("Running git diff-tree with arguments, args: %s, kwargs: %s", args, kwargs)
+        if not self.is_enabled_git_cmd_logging:
+            LOG.info("Running git diff-tree with arguments, args: %s, kwargs: %s", args, kwargs)
         diff_tree_results = self.repo.git.diff_tree(*args, **kwargs).splitlines()
         return diff_tree_results
 
@@ -161,14 +162,14 @@ class GitWrapper:
 
         kwargs = {}
         if no_patch:
-            kwargs['no_patch'] = True
+            kwargs["no_patch"] = True
         if no_notes:
-            kwargs['no_notes'] = True
+            kwargs["no_notes"] = True
         if pretty:
-            kwargs['pretty'] = pretty
+            kwargs["pretty"] = pretty
 
-        # TODO these logs can be replaced with: https://gitpython.readthedocs.io/en/stable/tutorial.html#git-command-debugging-and-customization
-        LOG.info("Running git show with arguments, args: %s, kwargs: %s", args, kwargs)
+        if not self.is_enabled_git_cmd_logging:
+            LOG.info("Running git show with arguments, args: %s, kwargs: %s", args, kwargs)
         result = self.repo.git.show(*args, **kwargs).splitlines()
         return result
 
@@ -179,27 +180,27 @@ class GitWrapper:
 
     def is_branch_exist(self, branch):
         try:
-            self.repo.git.rev_parse('--verify', branch)
+            self.repo.git.rev_parse("--verify", branch)
             return True
-        except GitCommandError as e:
+        except GitCommandError:
             LOG.exception("Branch does not exist", exc_info=True)
             return False
 
     def list_branches(self, name):
         try:
-            branches = self.repo.git.branch('--list', name)
-            branches = branches.split('\n')
+            branches = self.repo.git.branch("--list", name)
+            branches = branches.split("\n")
             return [b.replace(" ", "") for b in branches]
-        except GitCommandError as e:
+        except GitCommandError:
             LOG.exception("Branch does not exist with name: {}".format(name), exc_info=True)
             return []
 
     def add_all_and_commit(self, commit_msg, raise_exception=False):
         try:
-            self.repo.git.add('-A')
+            self.repo.git.add("-A")
             self.repo.index.commit(commit_msg)
             return True
-        except GitCommandError as e:
+        except GitCommandError:
             LOG.exception("Failed to commit changes from index", exc_info=True)
             return False
 
@@ -207,14 +208,23 @@ class GitWrapper:
         kwargs = {}
 
         if amend:
-            kwargs['amend'] = amend
+            kwargs["amend"] = amend
         if message:
-            kwargs['m'] = message
+            kwargs["m"] = message
         LOG.info("Running git commit with arguments: %s", kwargs)
         self.repo.git.commit(**kwargs)
 
-    def log(self, revision_range, oneline=False, oneline_with_date=False, grep=None, format=None, n=None,
-            return_hashes=False, follow=False):
+    def log(
+        self,
+        revision_range,
+        oneline=False,
+        oneline_with_date=False,
+        grep=None,
+        format=None,
+        n=None,
+        return_hashes=False,
+        follow=False,
+    ):
         if oneline and oneline_with_date:
             raise ValueError("oneline and oneline_with_date should be exclusive!")
 
@@ -224,38 +234,38 @@ class GitWrapper:
 
         kwargs = {}
         if oneline:
-            kwargs['oneline'] = True
+            kwargs["oneline"] = True
         if oneline_with_date:
             # https://git-scm.com/docs/pretty-formats
             # Oneline format: <hash> <title line>
             # Oneline + date format: <hash> <title line> <author date>
-            kwargs['format'] = '{} {} {}'.format(FORMAT_CODE_HASH, FORMAT_CODE_COMMIT_MSG, FORMAT_CODE_DATE_ISO_8601)
+            kwargs["format"] = "{} {} {}".format(FORMAT_CODE_HASH, FORMAT_CODE_COMMIT_MSG, FORMAT_CODE_DATE_ISO_8601)
         if grep:
-            kwargs['grep'] = grep
+            kwargs["grep"] = grep
         if format:
-            kwargs['format'] = format
+            kwargs["format"] = format
         if n:
-            kwargs['n'] = n
-            kwargs['oneline'] = True
+            kwargs["n"] = n
+            kwargs["oneline"] = True
         if follow:
-            kwargs['follow'] = True
+            kwargs["follow"] = True
 
-        # TODO these logs can be replaced with: https://gitpython.readthedocs.io/en/stable/tutorial.html#git-command-debugging-and-customization
-        LOG.info("Running git log with arguments, args: %s, kwargs: %s", args, kwargs)
+        if not self.is_enabled_git_cmd_logging:
+            LOG.info("Running git log with arguments, args: %s, kwargs: %s", args, kwargs)
         log_result = self.repo.git.log(*args, **kwargs).splitlines()
 
         if return_hashes:
-            return [lr.split(' ')[0] for lr in log_result]
+            return [lr.split(" ")[0] for lr in log_result]
         return log_result
 
     def cherry_pick(self, ref, x=False):
         kwargs = {}
         if x:
-            kwargs['x'] = x
+            kwargs["x"] = x
         try:
             self.repo.git.cherry_pick(ref, **kwargs)
             return True
-        except GitCommandError as e:
+        except GitCommandError:
             LOG.exception("Failed to cherry-pick commit: " + ref, exc_info=True)
             return False
 
@@ -267,12 +277,12 @@ class GitWrapper:
 
         kwargs = {}
         if output_dir:
-            kwargs['output_directory'] = output_dir
+            kwargs["output_directory"] = output_dir
         if full_index:
-            kwargs['full_index'] = True
+            kwargs["full_index"] = True
 
-        # TODO these logs can be replaced with: https://gitpython.readthedocs.io/en/stable/tutorial.html#git-command-debugging-and-customization
-        LOG.info("Running git format-patch with arguments, args: %s, kwargs: %s", args, kwargs)
+        if not self.is_enabled_git_cmd_logging:
+            LOG.info("Running git format-patch with arguments, args: %s, kwargs: %s", args, kwargs)
         return self.repo.git.format_patch(*args, **kwargs)
 
 
@@ -281,6 +291,6 @@ class ProgressPrinter(RemoteProgress):
         super(ProgressPrinter, self).__init__()
         self.operation = operation
 
-    def update(self, op_code, cur_count, max_count=None, message=''):
+    def update(self, op_code, cur_count, max_count=None, message=""):
         percentage = cur_count / (max_count or 100.0) * 100
         LOG.info("Progress of git %s: %s%% (speed: %s)", self.operation, percentage, message or "-")

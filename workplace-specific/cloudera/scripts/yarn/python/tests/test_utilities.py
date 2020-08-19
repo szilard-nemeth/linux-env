@@ -14,9 +14,12 @@ DUMMYFILE_1 = "dummyfile1"
 DUMMYFILE_2 = "dummyfile2"
 
 LOG = logging.getLogger(__name__)
-YARNCONFIGURATION_PATH = "hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/java/org/apache/hadoop/yarn/conf/YarnConfiguration.java"
+YARNCONFIGURATION_PATH = (
+    "hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/java/org/apache/hadoop/yarn/conf/YarnConfiguration.java"
+)
 
-TESTCASE = unittest.TestCase('__init__')
+TESTCASE = unittest.TestCase("__init__")
+
 
 class Object(object):
     pass
@@ -38,34 +41,38 @@ class TestUtilities:
 
     def setUpClass(self, repo_postfix=None, init_logging=True):
         self.setup_dirs(repo_postfix=repo_postfix)
-        if init_logging:
-            Setup.init_logger(self.log_dir, console_debug=False, postfix='TEST')
         try:
             self.setup_repo()
-        except InvalidGitRepositoryError as e:
+            if init_logging:
+                Setup.init_logger(self.log_dir, console_debug=False, postfix="TEST", repos=[self.repo])
+            self.reset_and_checkout_trunk()
+        except InvalidGitRepositoryError:
             LOG.info("Cloning repo '%s' for the first time...", HADOOP_REPO_APACHE)
             Repo.clone_from(HADOOP_REPO_APACHE, self.sandbox_repo_path, progress=ProgressPrinter("clone"))
             self.setup_repo(log=False)
+            self.reset_and_checkout_trunk()
 
     def setup_repo(self, log=True):
-        if log:
-            LOG.info("Repo '%s' is already cloned to path '%s'", self.repo, self.sandbox_repo_path)
         # This call will raise InvalidGitRepositoryError in case git repo is not cloned yet to this path
         self.repo_wrapper = GitWrapper(self.sandbox_repo_path)
-        self.repo = self.repo_wrapper._repo
+        self.repo = self.repo_wrapper.repo
+        if log:
+            LOG.info("Repo '%s' is already cloned to path '%s'", self.repo, self.sandbox_repo_path)
+
+    def reset_and_checkout_trunk(self):
         self.reset_changes()
         self.checkout_trunk()
 
     def setup_dirs(self, repo_postfix):
         self.project_out_root = FileUtils.join_path(expanduser("~"), PROJECT_NAME, DEST_DIR_PREFIX)
-        self.log_dir = FileUtils.join_path(self.project_out_root, 'logs')
+        self.log_dir = FileUtils.join_path(self.project_out_root, "logs")
 
         if not repo_postfix:
             repo_postfix = ""
         self.sandbox_repo_path = FileUtils.join_path(self.project_out_root, "sandbox_repo" + repo_postfix)
-        self.saved_patches_dir = FileUtils.join_path(self.project_out_root, 'saved-patches')
-        self.dummy_patches_dir = FileUtils.join_path(self.project_out_root, 'dummy-patches')
-        self.jira_umbrella_data_dir = FileUtils.join_path(self.project_out_root, 'jira-umbrella-data')
+        self.saved_patches_dir = FileUtils.join_path(self.project_out_root, "saved-patches")
+        self.dummy_patches_dir = FileUtils.join_path(self.project_out_root, "dummy-patches")
+        self.jira_umbrella_data_dir = FileUtils.join_path(self.project_out_root, "jira-umbrella-data")
         FileUtils.ensure_dir_created(self.project_out_root)
         FileUtils.ensure_dir_created(self.sandbox_repo_path)
         FileUtils.ensure_dir_created(self.jira_umbrella_data_dir)
@@ -74,10 +81,10 @@ class TestUtilities:
         FileUtils.ensure_dir_created(self.log_dir)
 
     def checkout_trunk(self):
-        default_branch = 'trunk'
+        default_branch = "trunk"
         LOG.info("Checking out branch: %s", default_branch)
         self.repo.heads[default_branch].checkout()
-    
+
     def cleanup_and_checkout_test_branch(self, branch=None, remove=True, pull=True):
         if not branch:
             if not self.test_branch:
@@ -90,7 +97,7 @@ class TestUtilities:
             if branch in self.repo.heads:
                 LOG.info("Resetting changes on branch: %s (hard reset)", branch)
                 self.repo.heads[branch].checkout()
-                self.repo.git.reset('--hard')
+                self.repo.git.reset("--hard")
 
                 if branch != TRUNK:
                     # Checkout trunk, so branch can be deleted
@@ -104,7 +111,7 @@ class TestUtilities:
 
         if branch != TRUNK:
             LOG.info("Checking out new branch: %s", branch)
-            self.repo.git.checkout('-b', branch)
+            self.repo.git.checkout("-b", branch)
 
         else:
             LOG.info("Checking out branch: %s", branch)
@@ -136,8 +143,8 @@ class TestUtilities:
 
     def reset_changes(self):
         LOG.info("Reset all changes...")
-        self.repo.head.reset(commit='origin/trunk', index=True, working_tree=True)
-        self.repo.git.clean('-xdf')
+        self.repo.head.reset(commit="origin/trunk", index=True, working_tree=True)
+        self.repo.git.clean("-xdf")
 
     def does_file_contain(self, file, string):
         with open(file) as f:
@@ -212,9 +219,9 @@ class TestUtilities:
     def checkout_parent_of_branch(self, branch):
         if branch not in self.repo.heads:
             raise ValueError("Cannot find branch: {}".format(branch))
-        parent_of_branch = branch + '^'
+        parent_of_branch = branch + "^"
         self.repo.git.checkout(parent_of_branch)
-        return self.repo.git.rev_parse('--verify', HEAD)
+        return self.repo.git.rev_parse("--verify", HEAD)
 
     def get_hash_of_commit(self, branch):
         return self.repo.heads[branch].commit.hexsha
@@ -225,7 +232,7 @@ class TestUtilities:
         self.repo.heads[branch].checkout()
 
     def assert_files_not_empty(self, basedir, expected_files=None):
-        found_files = FileUtils.find_files(basedir, '.*', single_level=True, full_path_result=True)
+        found_files = FileUtils.find_files(basedir, ".*", single_level=True, full_path_result=True)
         for f in found_files:
             self.assert_file_not_empty(f)
 

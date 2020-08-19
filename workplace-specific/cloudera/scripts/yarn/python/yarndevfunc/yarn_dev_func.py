@@ -17,27 +17,34 @@ from yarndevfunc.commands.review_branch_creator import ReviewBranchCreator
 from yarndevfunc.commands.upstream_jira_patch_differ import UpstreamJiraPatchDiffer
 from yarndevfunc.commands.upstream_jira_umbrella_fetcher import UpstreamJiraUmbrellaFetcher
 from yarndevfunc.commands.upstream_pr_fetcher import UpstreamPRFetcher
+from yarndevfunc.constants import (
+    PROJECT_NAME,
+    ENV_HADOOP_DEV_DIR,
+    ENV_CLOUDERA_HADOOP_ROOT,
+    LOADED_ENV_DOWNSTREAM_DIR,
+    LOADED_ENV_UPSTREAM_DIR,
+    TRUNK,
+)
 from yarndevfunc.git_wrapper import GitWrapper
 from yarndevfunc.utils import FileUtils, DateTimeUtils
-from yarndevfunc.constants import *
 
 LOG = logging.getLogger(__name__)
-__author__ = 'Szilard Nemeth'
+__author__ = "Szilard Nemeth"
 
 
 class Setup:
     @staticmethod
-    def init_logger(log_dir, console_debug=False, postfix=""):
+    def init_logger(log_dir, console_debug=False, postfix="", repos=None, verbose=False):
         # get root logger
         logger = logging.getLogger()
         logger.setLevel(logging.DEBUG)
 
         # create file handler which logs even debug messages
-        prefix = 'yarn_dev_func-{postfix}-'.format(postfix=postfix)
-        logfilename = datetime.datetime.now().strftime(prefix + '%Y_%m_%d_%H%M%S.log')
+        prefix = "yarn_dev_func-{postfix}-".format(postfix=postfix)
+        logfilename = datetime.datetime.now().strftime(prefix + "%Y_%m_%d_%H%M%S.log")
 
-        fh = TimedRotatingFileHandler(os.path.join(log_dir, logfilename), when='midnight')
-        fh.suffix = '%Y_%m_%d.log'
+        fh = TimedRotatingFileHandler(os.path.join(log_dir, logfilename), when="midnight")
+        fh.suffix = "%Y_%m_%d.log"
         fh.setLevel(logging.DEBUG)
 
         # create console handler with a higher log level
@@ -46,13 +53,22 @@ class Setup:
         if console_debug:
             ch.setLevel(logging.DEBUG)
 
-        formatter = logging.Formatter(
-            '%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
         fh.setFormatter(formatter)
         ch.setFormatter(formatter)
         # add the handlers to the logger
         logger.addHandler(fh)
         logger.addHandler(ch)
+
+        # https://gitpython.readthedocs.io/en/stable/tutorial.html#git-command-debugging-and-customization
+        # THIS WON'T WORK BECAUSE GITPYTHON MODULE IS LOADED BEFORE THIS CALL
+        # os.environ["GIT_PYTHON_TRACE"] = "1"
+        # https://github.com/gitpython-developers/GitPython/issues/222#issuecomment-68597780
+        LOG.warning("Cannot enable GIT_PYTHON_TRACE because repos list is empty!")
+        if repos:
+            for repo in repos:
+                val = "full" if verbose else "1"
+                type(repo.git).GIT_PYTHON_TRACE = val
 
 
 class YarnDevFunc:
@@ -69,10 +85,10 @@ class YarnDevFunc:
     def setup_dirs(self):
         home = expanduser("~")
         self.project_out_root = os.path.join(home, PROJECT_NAME)
-        self.log_dir = os.path.join(self.project_out_root, 'logs')
-        self.yarn_patch_dir = os.path.join(home, 'yarn-tasks')
-        self.jira_umbrella_data_dir = os.path.join(home, 'jira-umbrella-data')
-        self.jira_patch_differ_dir = os.path.join(home, 'jira-patch-differ')
+        self.log_dir = os.path.join(self.project_out_root, "logs")
+        self.yarn_patch_dir = os.path.join(home, "yarn-tasks")
+        self.jira_umbrella_data_dir = os.path.join(home, "jira-umbrella-data")
+        self.jira_patch_differ_dir = os.path.join(home, "jira-patch-differ")
         FileUtils.ensure_dir_created(self.project_out_root)
         FileUtils.ensure_dir_created(self.log_dir)
         FileUtils.ensure_dir_created(self.yarn_patch_dir)
@@ -80,6 +96,7 @@ class YarnDevFunc:
 
     def ensure_required_env_vars_are_present(self):
         import os
+
         upstream_hadoop_dir = os.environ[ENV_HADOOP_DEV_DIR]
         downstream_hadoop_dir = os.environ[ENV_CLOUDERA_HADOOP_ROOT]
 
@@ -92,10 +109,7 @@ class YarnDevFunc:
         FileUtils.verify_if_dir_is_created(downstream_hadoop_dir)
         FileUtils.verify_if_dir_is_created(upstream_hadoop_dir)
 
-        self.env = {
-            LOADED_ENV_DOWNSTREAM_DIR: downstream_hadoop_dir,
-            LOADED_ENV_UPSTREAM_DIR: upstream_hadoop_dir
-        }
+        self.env = {LOADED_ENV_DOWNSTREAM_DIR: downstream_hadoop_dir, LOADED_ENV_UPSTREAM_DIR: upstream_hadoop_dir}
 
     def init_repos(self):
         self.ensure_required_env_vars_are_present()
@@ -111,7 +125,7 @@ class YarnDevFunc:
         review_branch_creator.run()
 
     def backport_c6(self, args):
-        backporter = Backporter(args, self.upstream_repo, self.downstream_repo, 'cauldron/{}'.format(args.cdh_branch))
+        backporter = Backporter(args, self.upstream_repo, self.downstream_repo, "cauldron/{}".format(args.cdh_branch))
         backporter.run()
 
     def upstream_pr_fetch(self, args):
@@ -127,7 +141,8 @@ class YarnDevFunc:
         THIS SCRIPT ASSUMES EACH PROVIDED BRANCH WITH PARAMETERS (e.g. trunk, 3.2, 3.1) has the given commit committed
         Example workflow:
         1. git log --oneline trunk | grep YARN-10028
-        * 13cea0412c1 - YARN-10028. Integrate the new abstract log servlet to the JobHistory server. Contributed by Adam Antal 24 hours ago) <Szilard Nemeth>
+        * 13cea0412c1 - YARN-10028. Integrate the new abstract log servlet to the JobHistory server.
+        Contributed by Adam Antal 24 hours ago) <Szilard Nemeth>
 
         2. git diff 13cea0412c1..13cea0412c1^ > /tmp/YARN-10028-trunk.diff
         3. git checkout branch-3.2
@@ -145,7 +160,7 @@ class YarnDevFunc:
         jira_umbrella_fetcher.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start_time = time.time()
 
     # TODO Revisit all exception handling: ValueError vs. exit() calls
@@ -154,7 +169,12 @@ if __name__ == '__main__':
 
     # Parse args, commands will be mapped to YarnDevFunc functions in ArgParser.parse_args
     args = ArgParser.parse_args(yarn_functions)
-    Setup.init_logger(yarn_functions.log_dir, console_debug=False)
+    Setup.init_logger(
+        yarn_functions.log_dir,
+        console_debug=False,
+        repos=[yarn_functions.upstream_repo.repo, yarn_functions.downstream_repo.repo],
+        verbose=args.verbose,
+    )
 
     # Call the handler function
     args.func(args)
