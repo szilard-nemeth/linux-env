@@ -3,7 +3,7 @@ on: [push]
 
 defaults:
   run:
-    working-directory: workplace-specific/cloudera/scripts/yarn/python/
+    working-directory: ./workplace-specific/cloudera/scripts/yarn/python/
 
 jobs:
   build:
@@ -42,6 +42,8 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: pytest-results-${{ matrix.python-version }}
-          path: junit/test-results-${{ matrix.python-version }}.xml
+          # Apparently, default working directory is only used by 'run' actions, see: https://stackoverflow.com/a/58231340/1106893
+          path: ./workplace-specific/cloudera/scripts/yarn/python/junit/test-results-${{ matrix.python-version }}.xml
+          if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
         # Use always() to always run this step to publish test results when there are test failures
         if: ${{ always() }}
