@@ -6,3 +6,9 @@
 
 # My Linux / Mac environment
 
+## Install
+
+Configure precommit as described in this blogpost: https://ljvmiranda921.github.io/notebook/2018/06/21/precommits-using-black-and-flake8/
+Commands:
+1. Install precommit: `pip install pre-commit`
+2. Execute `pre-commit install` to install git hooks in your `.git/` directory.
