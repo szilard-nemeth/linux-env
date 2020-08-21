@@ -58,16 +58,24 @@ class JiraUmbrellaData:
         )
 
         commits_header_line = (
-            StringUtils.generate_header_line("COMMITS", char="═", length=len(commit_list_table.split("\n")[0])) + "\n"
+            StringUtils.generate_header_line(
+                "COMMITS", char="═", length=len(StringUtils.get_first_line_of_multiline_str(commit_list_table))
+            )
+            + "\n"
         )
         result_files_header_line = (
-            StringUtils.generate_header_line("RESULT FILES", char="═", length=len(file_list_table.split("\n")[0]))
+            StringUtils.generate_header_line(
+                "RESULT FILES", char="═", length=len(StringUtils.get_first_line_of_multiline_str(file_list_table))
+            )
             + "\n"
         )
 
         # Generate summary string
         summary_str = (
-            StringUtils.generate_header_line("SUMMARY", char="═", length=len(commit_list_table.split("\n")[0])) + "\n"
+            StringUtils.generate_header_line(
+                "SUMMARY", char="═", length=len(StringUtils.get_first_line_of_multiline_str(commit_list_table))
+            )
+            + "\n"
         )
         summary_str += "Number of jiras: {}\n".format(self.no_of_jiras)
         summary_str += "Number of commits: {}\n".format(self.no_of_commits)
@@ -87,6 +95,24 @@ class CommitData:
         self.jira_id = jira_id
         self.message = message
         self.date = date
+
+    @staticmethod
+    def from_git_log_str(git_log_str):
+        """
+        1. Commit hash: It is in the first column.
+        2. Jira ID: Expecting the Jira ID to be the first segment of commit message, so this is the second column.
+        3. Commit message: From first to (last - 1) th index
+        4. Authored date (commit date): The very last segment is the commit date.
+        :param git_log_str:
+        :return:
+        """
+        comps = git_log_str.split(COMMIT_FIELD_SEPARATOR)
+        # Alternatively, commit date may be gathered with git show,
+        # but this requires more CLI calls, so it's not the preferred way.
+        # commit_date = self.upstream_repo.show(commit_hash, no_patch=True, no_notes=True, pretty='%cI')
+        return CommitData(
+            c_hash=comps[0], jira_id=comps[1], message=COMMIT_FIELD_SEPARATOR.join(comps[1:-1]), date=comps[-1]
+        )
 
 
 class UpstreamJiraUmbrellaFetcher:
@@ -191,23 +217,9 @@ class UpstreamJiraUmbrellaFetcher:
         <hash> <YARN-id> <commit date>
         :return:
         """
-        self.data.commit_data_list = []
-        for commit_str in self.data.matched_commit_list:
-            comps = commit_str.split(COMMIT_FIELD_SEPARATOR)
-            # 1. Commit hash: It is in the first column.
-            # 2. Jira ID: Expecting the Jira ID to be the first segment of commit message, so this is the second column.
-            # 3. Commit message: From first to (last - 1) th index
-            # 4. Authored date (commit date): The very last segment is the commit date.
-            commit_hash = comps[0]
-            jira_id = comps[1]
-            commit_msg = COMMIT_FIELD_SEPARATOR.join(comps[1:-1])
-            commit_date = comps[-1]
-            # Alternatively, this info may be requested with git show,
-            # but this requires more CLI calls, so it's not preferred.
-            # commit_date = self.upstream_repo.show(commit_hash, no_patch=True, no_notes=True, pretty='%cI')
-            self.data.commit_data_list.append(
-                CommitData(c_hash=commit_hash, jira_id=jira_id, message=commit_msg, date=commit_date)
-            )
+        self.data.commit_data_list = [
+            CommitData.from_git_log_str(commit_str) for commit_str in self.data.matched_commit_list
+        ]
         self.data.matched_commit_hashes = [commit_obj.hash for commit_obj in self.data.commit_data_list]
 
     def save_changed_files_to_file(self):

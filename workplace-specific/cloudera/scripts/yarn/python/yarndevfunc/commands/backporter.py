@@ -1,6 +1,7 @@
 import logging
 
-from yarndevfunc.constants import ORIGIN, HEAD, GERRIT_REVIEWER_LIST, COMMIT_FIELD_SEPARATOR
+from yarndevfunc.constants import ORIGIN, HEAD, GERRIT_REVIEWER_LIST
+from yarndevfunc.git_wrapper import GitWrapper
 
 LOG = logging.getLogger(__name__)
 
@@ -41,8 +42,7 @@ class Backporter:
             raise ValueError(
                 "Ambiguous upsream commit with name: %s. Results: %s", self.upstream_jira_id, git_log_result
             )
-        commit_hash = git_log_result[0].split(COMMIT_FIELD_SEPARATOR)[0]
-        return commit_hash
+        return GitWrapper.extract_commit_hash_from_gitlog_result(git_log_result[0])
 
     def sync_upstream_repo(self):
         # TODO decide on the cdh branch whether this is C5 or C6 backport (remote is different)

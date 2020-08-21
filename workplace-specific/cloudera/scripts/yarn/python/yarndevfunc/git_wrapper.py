@@ -301,6 +301,14 @@ class GitWrapper:
         old_commit_msg = log_result[0]
         self.repo.git.commit(amend=True, message="{}{}".format(prefix, old_commit_msg))
 
+    @staticmethod
+    def extract_commit_hash_from_gitlog_results(results):
+        return [res.split(COMMIT_FIELD_SEPARATOR)[0] for res in results]
+
+    @staticmethod
+    def extract_commit_hash_from_gitlog_result(result):
+        return result.split(COMMIT_FIELD_SEPARATOR)[0]
+
 
 class ProgressPrinter(RemoteProgress):
     def __init__(self, operation):

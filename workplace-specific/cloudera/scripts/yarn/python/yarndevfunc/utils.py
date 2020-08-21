@@ -12,6 +12,7 @@ import pickle
 
 from tabulate import tabulate
 
+PATCH_FILE_SEPARATOR = "."
 REVIEW_BRANCH_SEP = "-"
 
 LOG = logging.getLogger(__name__)
@@ -123,24 +124,34 @@ class StringUtils:
     def list_to_multiline_string(list):
         return "\n".join(list)
 
+    @staticmethod
+    def get_first_line_of_multiline_str(multi_line_str):
+        return StringUtils.get_line_of_multi_line_str(multi_line_str, 0)
+
+    @staticmethod
+    def get_line_of_multi_line_str(multi_line_str, line_number):
+        if "\n" not in multi_line_str:
+            raise ValueError("String is not a multi line string.")
+        return multi_line_str.split("\n")[line_number]
+
 
 class PatchUtils:
     @staticmethod
     def extract_patch_number_from_filename_as_int(filename):
         # Assuming filename like: '/somedir/YARN-10277-test.0003.patch'
-        return int(filename.split(".")[-2])
+        return int(filename.split(PATCH_FILE_SEPARATOR)[-2])
 
     @staticmethod
     def extract_patch_number_from_filename_as_str(filename):
         # Assuming filename like: '/somedir/YARN-10277-test.0003.patch'
-        return filename.split(".")[-2]
+        return filename.split(PATCH_FILE_SEPARATOR)[-2]
 
     @staticmethod
     def get_next_patch_filename(filename):
-        split = filename.split(".")
+        split = filename.split(PATCH_FILE_SEPARATOR)
         increased_str = StringUtils.increase_numerical_str(split[-2])
         split[-2] = increased_str
-        return ".".join(split)
+        return PATCH_FILE_SEPARATOR.join(split)
 
     @staticmethod
     def get_next_filename(patch_dir, list_of_prev_patches):
