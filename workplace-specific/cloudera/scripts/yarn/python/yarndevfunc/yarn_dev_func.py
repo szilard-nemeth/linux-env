@@ -25,6 +25,7 @@ from yarndevfunc.constants import (
     LOADED_ENV_UPSTREAM_DIR,
     TRUNK,
     ORIGIN_TRUNK,
+    GERRIT_REVIEWER_LIST,
 )
 from yarndevfunc.git_wrapper import GitWrapper
 from yarndevfunc.utils import FileUtils, DateTimeUtils
@@ -128,8 +129,26 @@ class YarnDevFunc:
         review_branch_creator.run()
 
     def backport_c6(self, args):
+        build_cmd = (
+            "!! Remember to build project to verify the backported commit compiles !!"
+            "Run this command to build the project: {}".format(
+                "mvn clean install -Pdist -DskipTests -Pnoshade  -Dmaven.javadoc.skip=true"
+            )
+        )
+        gerrit_push_cmd = (
+            "Run this command to push to gerrit: "
+            "git push cauldron HEAD:refs/for/{cdh_branch}%{reviewers}".format(
+                cdh_branch=args.cdh_branch, reviewers=GERRIT_REVIEWER_LIST
+            )
+        )
+        post_commit_messages = [build_cmd, gerrit_push_cmd]
         backporter = Backporter(
-            args, self.upstream_repo, self.downstream_repo, "cauldron/{}".format(args.cdh_branch), DEFAULT_BASE_BRANCH
+            args,
+            self.upstream_repo,
+            self.downstream_repo,
+            "cauldron/{}".format(args.cdh_branch),
+            DEFAULT_BASE_BRANCH,
+            post_commit_messages=post_commit_messages,
         )
         backporter.run()
 

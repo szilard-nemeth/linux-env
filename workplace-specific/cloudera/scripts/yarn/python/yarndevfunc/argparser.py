@@ -74,8 +74,10 @@ class ArgParser:
             help="Backports upstream commit to C6 branch, " "Example usage: <command> YARN-7948 CDH-64201 cdh6.x",
         )
         parser.add_argument("upstream_jira_id", type=str, help="Upstream jira id. Example: YARN-4567")
-        parser.add_argument("cdh_jira_id", type=str, help="CDH jira id. Example: CDH-4111")
-        parser.add_argument("cdh_branch", type=str, help="CDH branch name")
+        # TODO rename this to downstream
+        parser.add_argument("cdh_jira_id", type=str, help="Downstream jira id. Example: CDH-4111")
+        # TODO rename this to downstream
+        parser.add_argument("cdh_branch", type=str, help="Downstream branch name")
         parser.set_defaults(func=yarn_functions.backport_c6)
 
     @staticmethod
