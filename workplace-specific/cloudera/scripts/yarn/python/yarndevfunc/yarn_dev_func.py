@@ -24,6 +24,7 @@ from yarndevfunc.constants import (
     LOADED_ENV_DOWNSTREAM_DIR,
     LOADED_ENV_UPSTREAM_DIR,
     TRUNK,
+    ORIGIN_TRUNK,
 )
 from yarndevfunc.git_wrapper import GitWrapper
 from yarndevfunc.utils import FileUtils, DateTimeUtils
@@ -123,7 +124,7 @@ class YarnDevFunc:
         return patch_saver.run()
 
     def create_review_branch(self, args):
-        review_branch_creator = ReviewBranchCreator(args, self.upstream_repo, DEFAULT_BASE_BRANCH)
+        review_branch_creator = ReviewBranchCreator(args, self.upstream_repo, DEFAULT_BASE_BRANCH, ORIGIN_TRUNK)
         review_branch_creator.run()
 
     def backport_c6(self, args):
