@@ -147,12 +147,15 @@ class PatchUtils:
         list_of_prev_patches = sorted(list_of_prev_patches, reverse=True)
         LOG.info("Found patches: %s", list_of_prev_patches)
         if len(list_of_prev_patches) == 0:
-            return os.path.join(patch_dir, "001"), "001"
+            return FileUtils.join_path(patch_dir, "001"), "001"
         else:
             latest_patch = list_of_prev_patches[0]
             last_patch_num = StringUtils.extract_patch_number_from_filename_as_str(latest_patch)
             next_patch_filename = StringUtils.get_next_patch_filename(latest_patch)
-            return os.path.join(patch_dir, next_patch_filename), StringUtils.increase_numerical_str(last_patch_num)
+            return (
+                FileUtils.join_path(patch_dir, next_patch_filename),
+                StringUtils.increase_numerical_str(last_patch_num),
+            )
 
     @staticmethod
     def get_next_review_branch_name(branches):
@@ -260,7 +263,7 @@ class FileUtils:
             for file in files:
                 if regex.match(file):
                     if full_path_result:
-                        res_files.append(os.path.join(root, file))
+                        res_files.append(FileUtils.join_path(root, file))
                     else:
                         res_files.append(file)
             if single_level:
@@ -320,7 +323,7 @@ class FileUtils:
             LOG.warning("Directory does not exist: %s", dir)
             return
         for filename in os.listdir(dir):
-            file_path = os.path.join(dir, filename)
+            file_path = FileUtils.join_path(dir, filename)
             matches = StringUtils.ensure_matches_pattern(FileUtils.path_basename(file_path), pattern)
             if not matches:
                 LOG.debug("Filename not matched: %s", file_path)

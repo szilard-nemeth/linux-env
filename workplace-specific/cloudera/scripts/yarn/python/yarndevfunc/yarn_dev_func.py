@@ -46,7 +46,7 @@ class Setup:
         prefix = "yarn_dev_func-{postfix}-".format(postfix=postfix)
         logfilename = datetime.datetime.now().strftime(prefix + "%Y_%m_%d_%H%M%S.log")
 
-        fh = TimedRotatingFileHandler(os.path.join(log_dir, logfilename), when="midnight")
+        fh = TimedRotatingFileHandler(FileUtils.join_path(log_dir, logfilename), when="midnight")
         fh.suffix = "%Y_%m_%d.log"
         fh.setLevel(logging.DEBUG)
 
@@ -87,11 +87,11 @@ class YarnDevFunc:
 
     def setup_dirs(self):
         home = expanduser("~")
-        self.project_out_root = os.path.join(home, PROJECT_NAME)
-        self.log_dir = os.path.join(self.project_out_root, "logs")
-        self.yarn_patch_dir = os.path.join(home, "yarn-tasks")
-        self.jira_umbrella_data_dir = os.path.join(home, "jira-umbrella-data")
-        self.jira_patch_differ_dir = os.path.join(home, "jira-patch-differ")
+        self.project_out_root = FileUtils.join_path(home, PROJECT_NAME)
+        self.log_dir = FileUtils.join_path(self.project_out_root, "logs")
+        self.yarn_patch_dir = FileUtils.join_path(home, "yarn-tasks")
+        self.jira_umbrella_data_dir = FileUtils.join_path(home, "jira-umbrella-data")
+        self.jira_patch_differ_dir = FileUtils.join_path(home, "jira-patch-differ")
         FileUtils.ensure_dir_created(self.project_out_root)
         FileUtils.ensure_dir_created(self.log_dir)
         FileUtils.ensure_dir_created(self.yarn_patch_dir)
