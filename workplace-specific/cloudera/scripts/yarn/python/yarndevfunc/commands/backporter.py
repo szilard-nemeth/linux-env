@@ -15,7 +15,7 @@ class Backporter:
     ----------
     args : str
         Command line arguments passed to this command.
-    downtream jira id : str
+    downtream_jira_id : str
         Jira ID of the downstream jira.
         Specified with args.
     downstream_branch : str
@@ -26,9 +26,9 @@ class Backporter:
         Specified with args.
 
     upstream_repo : GitWrapper
-        A GitWrapper, representing the upstream repository.
+        A GitWrapper object, representing the upstream repository.
     downstream_repo : GitWrapper
-        A GitWrapper, representing the downstream repository.
+        A GitWrapper object, representing the downstream repository.
     cherry_pick_base_ref : str
         A branch that is the base of the newly created downstream branch for this backport.
     default_branch : str
@@ -46,7 +46,7 @@ class Backporter:
         1. Sync upstream repository: Fetch and checkout base branch.
         2. Gather the hash of the upstream commit and set it to self.commit_hash.
         3. Fetch all remotes of the downstream repository.
-        4. Chrerry-pick the upstream commit to the downstream repository.
+        4. Cherry-pick the upstream commit to the downstream repository.
         5. Rewrite the commit message, add the downstream jira ID as a prefix.
         6. Print post-commit guidance.
     """
