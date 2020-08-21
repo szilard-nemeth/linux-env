@@ -1,6 +1,7 @@
 import logging
 
 from yarndevfunc.constants import HADOOP_REPO_TEMPLATE, FETCH_HEAD
+from yarndevfunc.utils import StringUtils
 
 LOG = logging.getLogger(__name__)
 
@@ -24,11 +25,13 @@ class UpstreamPRFetcher:
             )
 
         log_result = self.upstream_repo.log(FETCH_HEAD, n=10)
-        LOG.info("Printing 10 topmost commits of %s:\n %s", FETCH_HEAD, "\n".join(log_result))
+        LOG.info(
+            "Printing 10 topmost commits of %s:\n %s", FETCH_HEAD, StringUtils.list_to_multiline_string(log_result)
+        )
 
         base_vs_fetch_head = "{}..{}".format(self.base_branch, FETCH_HEAD)
         log_result = self.upstream_repo.log(base_vs_fetch_head, oneline=True)
-        LOG.info("\n\nPrinting diff of %s:\n %s", base_vs_fetch_head, "\n".join(log_result))
+        LOG.info("\n\nPrinting diff of %s:\n %s", base_vs_fetch_head, StringUtils.list_to_multiline_string(log_result))
 
         num_commits = len(log_result)
         if num_commits > 1:

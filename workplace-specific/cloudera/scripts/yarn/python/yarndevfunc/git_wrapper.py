@@ -255,7 +255,7 @@ class GitWrapper:
         log_result = self.repo.git.log(*args, **kwargs).splitlines()
 
         if return_hashes:
-            return [lr.split(" ")[0] for lr in log_result]
+            return [result.split(" ")[0] for result in log_result]
         return log_result
 
     def cherry_pick(self, ref, x=False):

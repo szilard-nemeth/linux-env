@@ -178,12 +178,12 @@ class UpstreamJiraUmbrellaFetcher:
             raise ValueError("Cannot find any commits for jira: {}".format(self.jira_id))
 
         LOG.info("Number of matched commits: %s", self.data.no_of_matched_commits)
-        LOG.debug("Matched commits: \n%s", "\n".join(self.data.matched_commit_list))
+        LOG.debug("Matched commits: \n%s", StringUtils.list_to_multiline_string(self.data.matched_commit_list))
 
         # Commits in reverse order (oldest first)
         self.data.matched_commit_list.reverse()
         self.convert_to_commit_data_objects()
-        FileUtils.save_to_file(self.commits_file, "\n".join(self.data.matched_commit_hashes))
+        FileUtils.save_to_file(self.commits_file, StringUtils.list_to_multiline_string(self.data.matched_commit_hashes))
 
     def convert_to_commit_data_objects(self):
         """
@@ -222,7 +222,9 @@ class UpstreamJiraUmbrellaFetcher:
         list_of_changed_files = [y for x in list_of_changed_files for y in x]
         self.data.list_of_changed_files = list(set(list_of_changed_files))
         LOG.info("Got %d unique changed files", len(self.data.list_of_changed_files))
-        FileUtils.save_to_file(self.changed_files_file, "\n".join(self.data.list_of_changed_files))
+        FileUtils.save_to_file(
+            self.changed_files_file, StringUtils.list_to_multiline_string(self.data.list_of_changed_files)
+        )
 
     def write_summary_file(self):
         FileUtils.save_to_file(self.summary_file, self.data.render_summary_string(self.result_basedir))

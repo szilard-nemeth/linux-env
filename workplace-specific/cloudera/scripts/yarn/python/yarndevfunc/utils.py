@@ -136,6 +136,10 @@ class StringUtils:
         result += filler
         return result
 
+    @staticmethod
+    def list_to_multiline_string(list):
+        return "\n".join(list)
+
 
 class PatchUtils:
     @staticmethod
@@ -361,7 +365,7 @@ class JiraUtils:
 
         # Filter dupes
         issue_keys = list(set(issue_keys))
-        FileUtils.save_to_file(to_file, "\n".join(issue_keys))
+        FileUtils.save_to_file(to_file, StringUtils.list_to_multiline_string(issue_keys))
         return issue_keys
 
 
