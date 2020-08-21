@@ -16,3 +16,4 @@ DEST_DIR_PREFIX = "test"
 YARN_PATCH_FILENAME_REGEX = ".*(YARN-[0-9]+).*\\.patch"
 HADOOP_REPO_TEMPLATE = "https://github.com/{user}/hadoop.git"
 HADOOP_REPO_APACHE = HADOOP_REPO_TEMPLATE.format(user=APACHE)
+COMMIT_FIELD_SEPARATOR = " "

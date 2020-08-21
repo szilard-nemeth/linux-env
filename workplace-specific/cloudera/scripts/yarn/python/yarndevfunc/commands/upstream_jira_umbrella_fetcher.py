@@ -2,7 +2,7 @@ import logging
 import os
 
 from yarndevfunc.command_runner import CommandRunner
-from yarndevfunc.constants import HEAD
+from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR
 from yarndevfunc.utils import auto_str, FileUtils, JiraUtils, PickleUtils, ResultPrinter, StringUtils
 
 LOG = logging.getLogger(__name__)
@@ -193,14 +193,14 @@ class UpstreamJiraUmbrellaFetcher:
         """
         self.data.commit_data_list = []
         for commit_str in self.data.matched_commit_list:
-            comps = commit_str.split(" ")
+            comps = commit_str.split(COMMIT_FIELD_SEPARATOR)
             # 1. Commit hash: It is in the first column.
             # 2. Jira ID: Expecting the Jira ID to be the first segment of commit message, so this is the second column.
             # 3. Commit message: From first to (last - 1) th index
             # 4. Authored date (commit date): The very last segment is the commit date.
             commit_hash = comps[0]
             jira_id = comps[1]
-            commit_msg = " ".join(comps[1:-1])
+            commit_msg = COMMIT_FIELD_SEPARATOR.join(comps[1:-1])
             commit_date = comps[-1]
             # Alternatively, this info may be requested with git show,
             # but this requires more CLI calls, so it's not preferred.

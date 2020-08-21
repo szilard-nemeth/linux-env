@@ -1,6 +1,8 @@
 import logging
 from git import Repo, RemoteProgress, GitCommandError
 
+from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR
+
 FORMAT_CODE_HASH = "%H"
 FORMAT_CODE_COMMIT_MSG = "%s"
 FORMAT_CODE_DATE_ISO_8601 = "%cI"
@@ -284,6 +286,18 @@ class GitWrapper:
         if not self.is_enabled_git_cmd_logging:
             LOG.info("Running git format-patch with arguments, args: %s, kwargs: %s", args, kwargs)
         return self.repo.git.format_patch(*args, **kwargs)
+
+    def rewrite_head_commit_message(self, prefix=None, postfix=None):
+        if not prefix and not postfix:
+            raise ValueError("You must provide either prefix or postfix!")
+
+        # Add downstream (CDH jira) number as a prefix.
+        # Since it triggers a commit, it will also add gerrit Change-Id to the commit.
+        log_result = self.repo.git.log(HEAD, format="%B", n=1)
+
+        # Remove commit hash and rejoin parts of commit message into one string
+        old_commit_msg = COMMIT_FIELD_SEPARATOR.join(log_result[0].split(COMMIT_FIELD_SEPARATOR)[1:])
+        self.repo.git.commit(amend=True, message="{}{}".format(prefix, old_commit_msg))
 
 
 class ProgressPrinter(RemoteProgress):

@@ -1,5 +1,6 @@
 import logging
 
+from yarndevfunc.constants import COMMIT_FIELD_SEPARATOR
 from yarndevfunc.utils import FileUtils, auto_str, PatchUtils
 
 LOG = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ class UpstreamJiraPatchDiffer:
 
             exists = self.upstream_repo.is_branch_exist(branch)
             commits = self.upstream_repo.log(branch, grep=self.jira_id, oneline=True)
-            commit_hashes = [c.split(" ")[0] for c in commits]
+            commit_hashes = [c.split(COMMIT_FIELD_SEPARATOR)[0] for c in commits]
             branch_result = BranchResults(branch, exists, commits, commit_hashes)
             branch_results[branch] = branch_result
 

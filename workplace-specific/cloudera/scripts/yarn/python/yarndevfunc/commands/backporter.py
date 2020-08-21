@@ -1,6 +1,6 @@
 import logging
 
-from yarndevfunc.constants import ORIGIN, HEAD, GERRIT_REVIEWER_LIST
+from yarndevfunc.constants import ORIGIN, HEAD, GERRIT_REVIEWER_LIST, COMMIT_FIELD_SEPARATOR
 
 LOG = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class Backporter:
             raise ValueError(
                 "Ambiguous upsream commit with name: %s. Results: %s", self.upstream_jira_id, git_log_result
             )
-        commit_hash = git_log_result[0].split(" ")[0]
+        commit_hash = git_log_result[0].split(COMMIT_FIELD_SEPARATOR)[0]
         return commit_hash
 
     def sync_upstream_repo(self):
@@ -80,13 +80,12 @@ class Backporter:
             )
 
     def rewrite_commit_message(self):
-        # Add downstream (CDH jira) number as a prefix.
-        # Since it triggers a commit, it will also add gerrit Change-Id to the commit.
-        log_result = self.downstream_repo.log(HEAD, format="%B", n=1)
-
-        # Remove commit hash and rejoin string
-        old_commit_msg = " ".join(log_result[0].split(" ")[1:])
-        self.downstream_repo.commit(amend=True, message="{}: {}".format(self.cdh_jira_id, old_commit_msg))
+        """
+        Add downstream (CDH jira) number as a prefix.
+        Since it triggers a commit, it will also add gerrit Change-Id to the commit.
+        :return:
+        """
+        self.downstream_repo.rewrite_head_commit_message(prefix="{}: ".format(self.cdh_jira_id))
 
     def post_commit_actions(self):
         build_cmd = (
