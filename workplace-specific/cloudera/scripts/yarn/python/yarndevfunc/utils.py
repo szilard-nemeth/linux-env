@@ -48,16 +48,6 @@ class StringUtils:
         return [s for s in list if p.match(s)]
 
     @staticmethod
-    def extract_patch_number_from_filename_as_int(filename):
-        # Assuming filename like: '/somedir/YARN-10277-test.0003.patch'
-        return int(filename.split(".")[-2])
-
-    @staticmethod
-    def extract_patch_number_from_filename_as_str(filename):
-        # Assuming filename like: '/somedir/YARN-10277-test.0003.patch'
-        return filename.split(".")[-2]
-
-    @staticmethod
     def count_leading_zeros(s):
         count = 0
         for i in range(len(s)):
@@ -70,13 +60,6 @@ class StringUtils:
         num_zeros = StringUtils.count_leading_zeros(string)
         format_str = "%0" + str(num_zeros + 1) + "d"
         return format_str % (int(string) + 1)
-
-    @staticmethod
-    def get_next_patch_filename(filename):
-        split = filename.split(".")
-        increased_str = StringUtils.increase_numerical_str(split[-2])
-        split[-2] = increased_str
-        return ".".join(split)
 
     @staticmethod
     def ensure_matches_pattern(string, regex, raise_exception=False):
@@ -143,6 +126,23 @@ class StringUtils:
 
 class PatchUtils:
     @staticmethod
+    def extract_patch_number_from_filename_as_int(filename):
+        # Assuming filename like: '/somedir/YARN-10277-test.0003.patch'
+        return int(filename.split(".")[-2])
+
+    @staticmethod
+    def extract_patch_number_from_filename_as_str(filename):
+        # Assuming filename like: '/somedir/YARN-10277-test.0003.patch'
+        return filename.split(".")[-2]
+
+    @staticmethod
+    def get_next_patch_filename(filename):
+        split = filename.split(".")
+        increased_str = StringUtils.increase_numerical_str(split[-2])
+        split[-2] = increased_str
+        return ".".join(split)
+
+    @staticmethod
     def get_next_filename(patch_dir, list_of_prev_patches):
         list_of_prev_patches = sorted(list_of_prev_patches, reverse=True)
         LOG.info("Found patches: %s", list_of_prev_patches)
@@ -150,8 +150,8 @@ class PatchUtils:
             return FileUtils.join_path(patch_dir, "001"), "001"
         else:
             latest_patch = list_of_prev_patches[0]
-            last_patch_num = StringUtils.extract_patch_number_from_filename_as_str(latest_patch)
-            next_patch_filename = StringUtils.get_next_patch_filename(latest_patch)
+            last_patch_num = PatchUtils.extract_patch_number_from_filename_as_str(latest_patch)
+            next_patch_filename = PatchUtils.get_next_patch_filename(latest_patch)
             return (
                 FileUtils.join_path(patch_dir, next_patch_filename),
                 StringUtils.increase_numerical_str(last_patch_num),
