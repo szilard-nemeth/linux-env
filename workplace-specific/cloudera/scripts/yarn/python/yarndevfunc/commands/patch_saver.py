@@ -37,7 +37,7 @@ class PatchSaver:
         5. Save patch file to disk.
         6. Try to apply the created patch file on top of the base branch, as sanity check.
         7. Checkout original branch.
-        """
+    """
 
     def __init__(self, args, repo, patch_dir, base_branch):
         self.args = args

@@ -26,6 +26,7 @@ from yarndevfunc.constants import (
     TRUNK,
     ORIGIN_TRUNK,
     GERRIT_REVIEWER_LIST,
+    HADOOP_REPO_TEMPLATE,
 )
 from yarndevfunc.git_wrapper import GitWrapper
 from yarndevfunc.utils import FileUtils, DateTimeUtils
@@ -153,7 +154,8 @@ class YarnDevFunc:
         backporter.run()
 
     def upstream_pr_fetch(self, args):
-        upstream_pr_fetcher = UpstreamPRFetcher(args, self.upstream_repo, DEFAULT_BASE_BRANCH)
+        remote_repo_url = HADOOP_REPO_TEMPLATE.format(user=args.github_username)
+        upstream_pr_fetcher = UpstreamPRFetcher(args, remote_repo_url, self.upstream_repo, DEFAULT_BASE_BRANCH)
         upstream_pr_fetcher.run()
 
     def save_patches(self, args):
