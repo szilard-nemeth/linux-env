@@ -13,7 +13,7 @@ class Backporter:
 
     Attributes
     ----------
-    args : str
+    args : object
         Command line arguments passed to this command.
     downtream_jira_id : str
         Jira ID of the downstream jira.

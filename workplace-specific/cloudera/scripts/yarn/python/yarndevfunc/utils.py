@@ -12,6 +12,8 @@ import pickle
 
 from tabulate import tabulate
 
+from yarndevfunc.constants import FIRST_PATCH_NUMBER
+
 PATCH_FILE_SEPARATOR = "."
 REVIEW_BRANCH_SEP = "-"
 
@@ -158,7 +160,7 @@ class PatchUtils:
         list_of_prev_patches = sorted(list_of_prev_patches, reverse=True)
         LOG.info("Found patches: %s", list_of_prev_patches)
         if len(list_of_prev_patches) == 0:
-            return FileUtils.join_path(patch_dir, "001"), "001"
+            return FileUtils.join_path(patch_dir, FIRST_PATCH_NUMBER), FIRST_PATCH_NUMBER
         else:
             latest_patch = list_of_prev_patches[0]
             last_patch_num = PatchUtils.extract_patch_number_from_filename_as_str(latest_patch)
