@@ -225,6 +225,7 @@ class GitWrapper:
         format=None,
         n=None,
         return_hashes=False,
+        return_messages=False,
         follow=False,
     ):
         if oneline and oneline_with_date:
@@ -257,7 +258,10 @@ class GitWrapper:
         log_result = self.repo.git.log(*args, **kwargs).splitlines()
 
         if return_hashes:
-            return [result.split(" ")[0] for result in log_result]
+            return [result.split(COMMIT_FIELD_SEPARATOR)[0] for result in log_result]
+        if return_messages:
+            # Remove commit hash and rejoin parts of commit message into one string
+            return [COMMIT_FIELD_SEPARATOR.join(result.split(COMMIT_FIELD_SEPARATOR)[1:]) for result in log_result]
         return log_result
 
     def cherry_pick(self, ref, x=False):
@@ -293,10 +297,8 @@ class GitWrapper:
 
         # Add downstream (CDH jira) number as a prefix.
         # Since it triggers a commit, it will also add gerrit Change-Id to the commit.
-        log_result = self.repo.git.log(HEAD, format="%B", n=1)
-
-        # Remove commit hash and rejoin parts of commit message into one string
-        old_commit_msg = COMMIT_FIELD_SEPARATOR.join(log_result[0].split(COMMIT_FIELD_SEPARATOR)[1:])
+        log_result = self.log(HEAD, format="%B", n=1, return_messages=True)
+        old_commit_msg = log_result[0]
         self.repo.git.commit(amend=True, message="{}{}".format(prefix, old_commit_msg))
 
 
