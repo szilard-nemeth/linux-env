@@ -135,6 +135,7 @@ setup-prompt() {
 }
 
 function setup-kitty() {
+    echo "Setting up kitty..."
     autoload -Uz compinit
     compinit
     # Completion for kitty
