@@ -41,3 +41,6 @@
     keepTemporaries = false
     trustExitCode = false
     keepBackup = false
+
+[pager]                                                                                                                  
+    branch = false
