@@ -1,9 +1,14 @@
 import logging
 import os
 
+from pythoncommons.file_utils import FileUtils
+from pythoncommons.jira_utils import JiraUtils
+from pythoncommons.pickle_utils import PickleUtils
+from pythoncommons.string_utils import StringUtils, auto_str
+
 from yarndevfunc.command_runner import CommandRunner
 from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR
-from yarndevfunc.utils import auto_str, FileUtils, JiraUtils, PickleUtils, ResultPrinter, StringUtils
+from yarndevfunc.utils import ResultPrinter
 
 LOG = logging.getLogger(__name__)
 PICKLED_DATA_FILENAME = "pickled_umbrella_data.obj"
@@ -186,7 +191,9 @@ class UpstreamJiraUmbrellaFetcher:
 
     def fetch_jira_ids(self):
         LOG.info("Fetching HTML of jira: %s", self.jira_id)
-        self.data.jira_html = JiraUtils.download_jira_html(self.jira_id, self.jira_html_file)
+        self.data.jira_html = JiraUtils.download_jira_html(
+            "https://issues.apache.org/jira/browse/", self.jira_id, self.jira_html_file
+        )
         self.data.subjira_ids = JiraUtils.parse_subjiras_from_umbrella_html(
             self.data.jira_html, self.jira_list_file, filter_ids=[self.jira_id]
         )

@@ -2,7 +2,8 @@ import logging
 import shlex
 import subprocess
 
-from yarndevfunc.utils import auto_str, FileUtils, StringUtils
+from pythoncommons.file_utils import FileUtils
+from pythoncommons.string_utils import auto_str, StringUtils
 
 LOG = logging.getLogger(__name__)
 

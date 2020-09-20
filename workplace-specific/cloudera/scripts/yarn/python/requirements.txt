@@ -1,5 +1,4 @@
 gitpython
 humanize
-bs4
-requests
 tabulate
+git+ssh://git@github.com/szilard-nemeth/python-commons.git

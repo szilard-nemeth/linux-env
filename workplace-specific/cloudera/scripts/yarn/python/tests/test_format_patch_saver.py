@@ -1,10 +1,12 @@
 import logging
 import unittest
 
+from pythoncommons.date_utils import DateUtils
+from pythoncommons.file_utils import FileUtils
+
 from yarndevfunc.commands.format_patch_saver import FormatPatchSaver
 from yarndevfunc.constants import TRUNK, DEST_DIR_PREFIX
 from tests.test_utilities import TestUtilities, Object
-from yarndevfunc.utils import FileUtils, DateTimeUtils
 
 DEFAULT_BASE_BRANCH = TRUNK
 
@@ -29,7 +31,7 @@ class TestFormatPatchSaver(unittest.TestCase):
         cls.saved_patches_dir = cls.utils.saved_patches_dir
 
     def setUp(self):
-        self.current_datetime = DateTimeUtils.get_current_datetime()
+        self.current_datetime = DateUtils.get_current_datetime()
         self.patches_basedir = FileUtils.join_path(self.saved_patches_dir, DEST_DIR_PREFIX, self.current_datetime)
         self.assertIsNotNone(self.patches_basedir)
         self.assertNotEqual(self.patches_basedir, "~")

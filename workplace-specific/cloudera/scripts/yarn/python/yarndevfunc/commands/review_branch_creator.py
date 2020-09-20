@@ -1,7 +1,10 @@
 import logging
 
+from pythoncommons.file_utils import FileUtils
+from pythoncommons.patch_utils import PatchUtils
+from pythoncommons.string_utils import RegexUtils
+
 from yarndevfunc.constants import YARN_PATCH_FILENAME_REGEX, ORIGIN
-from yarndevfunc.utils import StringUtils, FileUtils, PatchUtils
 
 BRANCH_PREFIX = "review-"
 
@@ -20,7 +23,7 @@ class ReviewBranchCreator:
 
         FileUtils.ensure_file_exists(patch_file, create=False)
         patch_file_name = FileUtils.path_basename(patch_file)
-        matches = StringUtils.ensure_matches_pattern(patch_file_name, YARN_PATCH_FILENAME_REGEX)
+        matches = RegexUtils.ensure_matches_pattern(patch_file_name, YARN_PATCH_FILENAME_REGEX)
         if not matches:
             raise ValueError(
                 "Filename '{}' (full path: {}) does not match usual patch file pattern: '{}'!".format(
@@ -31,7 +34,7 @@ class ReviewBranchCreator:
         orig_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", orig_branch)
 
-        target_branch = BRANCH_PREFIX + StringUtils.get_matched_group(patch_file, YARN_PATCH_FILENAME_REGEX, 1)
+        target_branch = BRANCH_PREFIX + RegexUtils.get_matched_group(patch_file, YARN_PATCH_FILENAME_REGEX, 1)
         LOG.info("Target branch: %s", target_branch)
 
         clean = self.upstream_repo.is_working_directory_clean()

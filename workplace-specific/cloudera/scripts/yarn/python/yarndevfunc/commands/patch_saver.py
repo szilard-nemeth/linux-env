@@ -1,7 +1,9 @@
 import logging
 
+from pythoncommons.file_utils import FileUtils
+from pythoncommons.patch_utils import PatchUtils
+
 from yarndevfunc.constants import ORIGIN, PATCH_FILE_REGEX, PATCH_EXTENSION, FIRST_PATCH_NUMBER
-from yarndevfunc.utils import FileUtils, PatchUtils
 
 LOG = logging.getLogger(__name__)
 

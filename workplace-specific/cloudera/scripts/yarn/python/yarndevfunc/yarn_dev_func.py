@@ -9,6 +9,9 @@ import datetime
 import time
 from logging.handlers import TimedRotatingFileHandler
 
+from pythoncommons.date_utils import DateUtils
+from pythoncommons.file_utils import FileUtils
+
 from yarndevfunc.argparser import ArgParser
 from yarndevfunc.commands.backporter import Backporter
 from yarndevfunc.commands.format_patch_saver import FormatPatchSaver
@@ -29,7 +32,6 @@ from yarndevfunc.constants import (
     HADOOP_REPO_TEMPLATE,
 )
 from yarndevfunc.git_wrapper import GitWrapper
-from yarndevfunc.utils import FileUtils, DateTimeUtils
 
 DEFAULT_BASE_BRANCH = TRUNK
 
@@ -159,7 +161,7 @@ class YarnDevFunc:
         upstream_pr_fetcher.run()
 
     def save_patches(self, args):
-        format_patch_saver = FormatPatchSaver(args, os.getcwd(), DateTimeUtils.get_current_datetime())
+        format_patch_saver = FormatPatchSaver(args, os.getcwd(), DateUtils.get_current_datetime())
         format_patch_saver.run()
 
     def diff_patches_of_jira(self, args):

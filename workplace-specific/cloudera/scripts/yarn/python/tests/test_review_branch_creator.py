@@ -1,10 +1,11 @@
 import logging
 import unittest
 
+from pythoncommons.file_utils import FileUtils
+
 from yarndevfunc.commands.review_branch_creator import ReviewBranchCreator
 from yarndevfunc.constants import TRUNK, ORIGIN_TRUNK
 from tests.test_utilities import TestUtilities, Object
-from yarndevfunc.utils import FileUtils
 from yarndevfunc.yarn_dev_func import YarnDevFunc
 
 LOG = logging.getLogger(__name__)
