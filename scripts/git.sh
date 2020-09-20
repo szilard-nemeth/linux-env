@@ -23,3 +23,13 @@ function git-search-tags() {
 function git-precommit() {
   .git/hooks/pre-commit
 }
+
+function gitconfig-private() {
+    git config user.email "szilard.nemeth88@gmail.com"
+    git config user.name "Szilard Nemeth"
+}
+
+function gitconfig-cloudera() {
+    git config user.email snemeth@cloudera.com
+    git config user.name "Szilard Nemeth"
+}
