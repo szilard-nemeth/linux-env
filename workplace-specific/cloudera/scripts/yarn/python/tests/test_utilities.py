@@ -144,6 +144,7 @@ class TestUtilities:
                 raise e
 
     def reset_changes(self):
+        # TODO Move this to GitWrapper
         LOG.info("Reset all changes...")
         self.repo.head.reset(commit="origin/trunk", index=True, working_tree=True)
         self.repo.git.clean("-xdf")

@@ -10,6 +10,7 @@ FORMAT_CODE_DATE_ISO_8601 = "%cI"
 LOG = logging.getLogger(__name__)
 
 
+# TODO These all could be moved to python-commons
 class GitWrapper:
     def __init__(self, base_path):
         self.repo_path = base_path
