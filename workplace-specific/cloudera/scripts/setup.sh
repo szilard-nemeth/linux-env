@@ -47,6 +47,8 @@ then
     PATH=$PATH:/Applications/CMake.app/Contents/bin
 fi
 
+PATH=$PATH:$HOME/.cargo/bin
+
 #Setup GOPATH
 GOPATH=/Users/szilardnemeth/go
 
