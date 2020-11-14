@@ -3,3 +3,4 @@ humanize
 tabulate
 git+https://github.com/szilard-nemeth/python-commons.git
 requests
+bs4
