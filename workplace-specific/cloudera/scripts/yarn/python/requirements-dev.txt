@@ -5,7 +5,7 @@ setuptools
 tabulate
 pre-commit
 git+https://github.com/szilard-nemeth/python-commons.git
-
+requests
 
 # Python 2
 pathlib
