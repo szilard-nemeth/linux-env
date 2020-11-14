@@ -4,7 +4,8 @@ pytest-cov
 setuptools
 tabulate
 pre-commit
-git+ssh://git@github.com/szilard-nemeth/python-commons.git
+git+https://github.com/szilard-nemeth/python-commons.git
+
 
 # Python 2
 pathlib
