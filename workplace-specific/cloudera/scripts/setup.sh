@@ -53,4 +53,4 @@ PATH=$PATH:$HOME/.cargo/bin
 GOPATH=/Users/szilardnemeth/go
 
 #Setup PYTHONPATH
-export PYTHONPATH="$CLOUDERA_DIR/scripts/yarn/python/:$PYTHONPATH"
+export PYTHONPATH="/usr/local/lib/python3.8/site-packages:$CLOUDERA_DIR/scripts/yarn/python/:$PYTHONPATH"
