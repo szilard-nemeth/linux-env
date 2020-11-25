@@ -68,9 +68,10 @@ class GitWrapper:
         if all:
             LOG.info("Fetching all remotes...")
             for remote in self.repo.remotes:
+                LOG.info("Fetching remote '%s' of repository: %s", remote, self.repo.git_dir)
                 remote.fetch()
         else:
-            LOG.info("Fetching remote: %s", remote_name)
+            LOG.info("Fetching remote '%s' of repository: %s", remote_name, self.repo.git_dir)
             remote = self.repo.remote(name=remote_name)
             remote.fetch(progress=progress)
 
@@ -295,12 +296,15 @@ class GitWrapper:
     def rewrite_head_commit_message(self, prefix=None, postfix=None):
         if not prefix and not postfix:
             raise ValueError("You must provide either prefix or postfix!")
-
+        old_commit_msg = self.get_head_commit_message()
         # Add downstream (CDH jira) number as a prefix.
         # Since it triggers a commit, it will also add gerrit Change-Id to the commit.
+        self.repo.git.commit(amend=True, message="{}{}".format(prefix, old_commit_msg))
+
+    def get_head_commit_message(self):
         log_result = self.log(HEAD, format="%B", n=1, return_messages=True)
         old_commit_msg = log_result[0]
-        self.repo.git.commit(amend=True, message="{}{}".format(prefix, old_commit_msg))
+        return old_commit_msg
 
     @staticmethod
     def extract_commit_hash_from_gitlog_results(results):
