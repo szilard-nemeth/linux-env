@@ -4,7 +4,7 @@ ORIGIN_TRUNK = "origin/trunk"
 ORIGIN = "origin"
 FETCH_HEAD = "FETCH_HEAD"
 TRUNK = "trunk"
-GERRIT_REVIEWER_LIST = "r=shuzirra,r=adam.antal,r=pbacsko,r=kmarton,r=gandras,r=bteke"
+GERRIT_REVIEWER_LIST = "r=shuzirra,r=pbacsko,r=kmarton,r=gandras,r=bteke"
 ENV_CLOUDERA_HADOOP_ROOT = "CLOUDERA_HADOOP_ROOT"
 ENV_HADOOP_DEV_DIR = "HADOOP_DEV_DIR"
 
