@@ -9,7 +9,7 @@ LOG = logging.getLogger(__name__)
 class Backporter:
     """
     A class used to backport changes from an upstream repository to a downstream repository, having an assumption
-    that the specified upstream commit is committed on the base branch.
+    that the specified upstream commit is committed on the specified upstream branch.
 
     Attributes
     ----------
@@ -31,7 +31,7 @@ class Backporter:
         A GitWrapper object, representing the downstream repository.
     cherry_pick_base_ref : str
         A branch that is the base of the newly created downstream branch for this backport.
-    default_branch : str
+    upstream_branch : str
         The upstream branch to check out, assuming that the specified commit will be already committed on this branch.
     commit_hash : str
         Hash of the commit to backport from the upstream repository.
@@ -51,25 +51,31 @@ class Backporter:
         6. Print post-commit guidance.
     """
 
-    def __init__(
-        self, args, upstream_repo, downstream_repo, cherry_pick_base_ref, default_branch, post_commit_messages=None
-    ):
+    def __init__(self, args, upstream_repo, downstream_repo, cherry_pick_base_ref, post_commit_messages=None):
         self.args = args
         # Parsed from args
         self.downstream_jira_id = self.args.cdh_jira_id
         self.downstream_branch = self.args.cdh_branch
         self.upstream_jira_id = self.args.upstream_jira_id
+        self.upstream_branch = self.args.upstream_branch
 
         self.upstream_repo = upstream_repo
         self.downstream_repo = downstream_repo
         self.cherry_pick_base_ref = cherry_pick_base_ref
-        self.default_branch = default_branch
         self.post_commit_messages = post_commit_messages
 
         # Dynamic attributes
         self.commit_hash = None
 
     def run(self):
+        LOG.info(
+            "Starting backport. \n Upstream jira ID: %s\n Upstream branch: %s\n "
+            "Downstream jira ID: %s\n Downstream branch (target): %s\n",
+            self.upstream_jira_id,
+            self.upstream_branch,
+            self.downstream_jira_id,
+            self.downstream_branch,
+        )
         self.sync_upstream_repo()
         self.get_upstream_commit_hash()
 
@@ -84,12 +90,15 @@ class Backporter:
         # Restore original branch in either error-case or normal case
         self.upstream_repo.checkout_previous_branch()
         if not git_log_result:
-            raise ValueError("Upstream commit not found with string in commit message: %s", self.upstream_jira_id)
+            raise ValueError(
+                "Upstream commit not found on branch {} "
+                "with string in commit message: {}".format(self.upstream_branch, self.upstream_jira_id)
+            )
         if len(git_log_result) > 1:
             raise ValueError(
-                "Ambiguous upsream commit with string in commit message: %s. Results: %s",
-                self.upstream_jira_id,
-                git_log_result,
+                "Ambiguous upsream commit with string in commit message: {}. Results: {}".format(
+                    self.upstream_jira_id, git_log_result
+                )
             )
         self.commit_hash = GitWrapper.extract_commit_hash_from_gitlog_result(git_log_result[0])
 
@@ -98,7 +107,7 @@ class Backporter:
         curr_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
         self.upstream_repo.fetch(all=True)
-        self.upstream_repo.checkout_branch(self.default_branch)
+        self.upstream_repo.checkout_branch(self.upstream_branch, track=True)
         self.upstream_repo.pull(ORIGIN)
 
     def cherry_pick_commit(self):

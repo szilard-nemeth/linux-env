@@ -1,6 +1,8 @@
 import argparse
 from enum import Enum
 
+from yarndevfunc.constants import TRUNK
+
 
 class CommandType(Enum):
     SAVE_PATCH = "save_patch"
@@ -74,6 +76,8 @@ class ArgParser:
             help="Backports upstream commit to C6 branch, " "Example usage: <command> YARN-7948 CDH-64201 cdh6.x",
         )
         parser.add_argument("upstream_jira_id", type=str, help="Upstream jira id. Example: YARN-4567")
+        parser.add_argument("--upstream_branch", type=str, help="Upstream branch name", required=False, default=TRUNK)
+
         # TODO rename this to downstream
         parser.add_argument("cdh_jira_id", type=str, help="Downstream jira id. Example: CDH-4111")
         # TODO rename this to downstream

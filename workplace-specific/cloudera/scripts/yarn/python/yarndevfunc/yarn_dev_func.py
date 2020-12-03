@@ -150,7 +150,6 @@ class YarnDevFunc:
             self.upstream_repo,
             self.downstream_repo,
             "cauldron/{}".format(args.cdh_branch),
-            DEFAULT_BASE_BRANCH,
             post_commit_messages=post_commit_messages,
         )
         backporter.run()

@@ -1,5 +1,6 @@
 import logging
 from git import Repo, RemoteProgress, GitCommandError
+from yarndevfunc.constants import ORIGIN
 
 from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR
 
@@ -23,10 +24,13 @@ class GitWrapper:
     def get_current_branch_name(self):
         return self.repo.git.rev_parse("HEAD", symbolic_full_name=True, abbrev_ref=True)
 
-    def checkout_branch(self, branch):
+    def checkout_branch(self, branch, track=False):
         prev_branch = self.get_current_branch_name()
         LOG.info("Checking out branch: %s (Previous branch was: %s)", branch, prev_branch)
         self.repo.git.checkout(branch)
+        if track:
+            LOG.info("Tracking branch '%s' with remote '%s'", branch, ORIGIN)
+            self.repo.git.branch("-u", ORIGIN + "/" + branch)
         # self.repo.heads.past_branch.checkout()
 
     def checkout_new_branch(self, new_branch, base_ref):
@@ -66,7 +70,7 @@ class GitWrapper:
                 return False
 
         if all:
-            LOG.info("Fetching all remotes...")
+            LOG.info("Fetching all remotes of git repo '%s'...", self.repo_path)
             for remote in self.repo.remotes:
                 LOG.info("Fetching remote '%s' of repository: %s", remote, self.repo.git_dir)
                 remote.fetch()
@@ -228,10 +232,14 @@ class GitWrapper:
         n=None,
         return_hashes=False,
         return_messages=False,
+        as_string_message=False,
         follow=False,
     ):
         if oneline and oneline_with_date:
             raise ValueError("oneline and oneline_with_date should be exclusive!")
+
+        if as_string_message and n != 1:
+            raise ValueError("as_string_message only works with option n=1")
 
         args = []
         if revision_range:
@@ -251,7 +259,6 @@ class GitWrapper:
             kwargs["format"] = format
         if n:
             kwargs["n"] = n
-            kwargs["oneline"] = True
         if follow:
             kwargs["follow"] = True
 
@@ -263,7 +270,11 @@ class GitWrapper:
             return [result.split(COMMIT_FIELD_SEPARATOR)[0] for result in log_result]
         if return_messages:
             # Remove commit hash and rejoin parts of commit message into one string
+            # TODO Below command only works for --oneline option
             return [COMMIT_FIELD_SEPARATOR.join(result.split(COMMIT_FIELD_SEPARATOR)[1:]) for result in log_result]
+
+        if as_string_message:
+            return "\n".join(log_result)
         return log_result
 
     def cherry_pick(self, ref, x=False):
@@ -302,9 +313,7 @@ class GitWrapper:
         self.repo.git.commit(amend=True, message="{}{}".format(prefix, old_commit_msg))
 
     def get_head_commit_message(self):
-        log_result = self.log(HEAD, format="%B", n=1, return_messages=True)
-        old_commit_msg = log_result[0]
-        return old_commit_msg
+        return self.log(HEAD, format="%B", n=1, as_string_message=True)
 
     @staticmethod
     def extract_commit_hash_from_gitlog_results(results):
