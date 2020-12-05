@@ -3,7 +3,7 @@ import unittest
 
 from tests.test_utilities import TestUtilities, Object
 from yarndevfunc.commands.backporter import Backporter
-from yarndevfunc.constants import TRUNK, BRANCH_3_1
+from yarndevfunc.constants import TRUNK, BRANCH_3_1, ORIGIN
 from yarndevfunc.yarn_dev_func import DEFAULT_BASE_BRANCH
 
 UPSTREAM_JIRA_ID = "YARN-123456: "
@@ -61,12 +61,12 @@ class TestBackporter(unittest.TestCase):
         args.cdh_branch = CDH_BRANCH
         return args
 
-    def cleanup_and_checkout_branch(self, branch=None):
+    def cleanup_and_checkout_branch(self, branch=None, checkout_from=None):
         if branch:
-            self.upstream_utils.cleanup_and_checkout_test_branch(pull=False, branch=branch)
+            self.upstream_utils.cleanup_and_checkout_test_branch(pull=False, branch=branch, checkout_from=checkout_from)
             self.assertEqual(branch, str(self.upstream_repo.head.ref))
         else:
-            self.upstream_utils.cleanup_and_checkout_test_branch(pull=False)
+            self.upstream_utils.cleanup_and_checkout_test_branch(pull=False, checkout_from=checkout_from)
             self.assertEqual(YARN_TEST_BRANCH, str(self.upstream_repo.head.ref))
 
     def test_with_uncommitted_should_raise_error(self):
@@ -121,7 +121,7 @@ class TestBackporter(unittest.TestCase):
         )
 
     def test_backport_from_branch31(self):
-        self.cleanup_and_checkout_branch(branch=BRANCH_3_1)
+        self.cleanup_and_checkout_branch(branch=BRANCH_3_1, checkout_from=ORIGIN + "/" + BRANCH_3_1)
         self.upstream_utils.add_some_file_changes(commit=True, commit_message_prefix=UPSTREAM_JIRA_ID)
         args = self.setup_args()
         args.upstream_branch = BRANCH_3_1

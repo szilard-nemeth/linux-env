@@ -87,7 +87,7 @@ class TestUtilities:
         LOG.info("Checking out branch: %s", default_branch)
         self.repo.heads[default_branch].checkout()
 
-    def cleanup_and_checkout_test_branch(self, branch=None, remove=True, pull=True):
+    def cleanup_and_checkout_test_branch(self, branch=None, remove=True, pull=True, checkout_from=None):
         if not branch:
             if not self.test_branch:
                 raise ValueError("Test branch must be set!")
@@ -97,24 +97,23 @@ class TestUtilities:
             self.pull_to_trunk()
         try:
             if branch in self.repo.heads:
-                LOG.info("Resetting changes on branch: %s (hard reset)", branch)
+                LOG.info("Resetting changes on branch (hard reset): %s", branch)
                 self.repo.heads[branch].checkout()
                 self.repo.git.reset("--hard")
 
                 if branch != self.base_branch:
-                    # Checkout trunk, so branch can be deleted
+                    # Current branch cannot be removed in git, so checkout trunk then remove branch
                     self.checkout_trunk()
                     if remove:
                         self.remove_branch(branch)
         except GitCommandError:
-            # Do nothing if branch not exists
+            # Do nothing if branch does not exist
             LOG.exception("Failed to remove branch.", exc_info=True)
             pass
 
         if branch != self.base_branch:
-            LOG.info("Checking out new branch: %s", branch)
-            self.repo.git.checkout("-b", branch)
-
+            base_ref = checkout_from if checkout_from else self.base_branch
+            self.repo_wrapper.checkout_new_branch(branch, base_ref)
         else:
             LOG.info("Checking out branch: %s", branch)
             self.checkout_trunk()
