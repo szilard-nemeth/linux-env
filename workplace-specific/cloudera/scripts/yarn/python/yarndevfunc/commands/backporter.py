@@ -171,7 +171,7 @@ class Backporter:
             self.downstream_repo.rewrite_head_commit_message(prefix="{}: ".format(self.downstream_jira_id))
 
     def print_post_commit_guidance(self):
-        LOG.info("Commit was successful!")
+        LOG.info("Backport was successful!")
         if self.post_commit_messages:
             for message in self.post_commit_messages:
                 LOG.info("{}\n".format(message))
