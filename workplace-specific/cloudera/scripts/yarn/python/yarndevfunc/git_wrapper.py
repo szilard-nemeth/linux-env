@@ -1,4 +1,6 @@
 import logging
+import os
+
 from git import Repo, RemoteProgress, GitCommandError
 from yarndevfunc.constants import ORIGIN
 
@@ -19,7 +21,13 @@ class GitWrapper:
 
     @property
     def is_enabled_git_cmd_logging(self):
-        return self.repo.git.PYTHON_TRACE is not False
+        return self.repo.git.GIT_PYTHON_TRACE is not False
+
+    def enable_debug_logging(self, full=False):
+        value = "full" if full else "1"
+        os.environ["GIT_PYTHON_TRACE"] = value
+        # https://github.com/gitpython-developers/GitPython/issues/222#issuecomment-68597780
+        type(self.repo.git).GIT_PYTHON_TRACE = value
 
     def get_current_branch_name(self):
         return self.repo.git.rev_parse("HEAD", symbolic_full_name=True, abbrev_ref=True)
@@ -53,7 +61,8 @@ class GitWrapper:
         progress = ProgressPrinter("pull")
         remote = self.repo.remote(name=remote_name)
         LOG.info("Pulling remote: %s", remote_name)
-        remote.pull(progress=progress)
+        result = remote.pull(progress=progress)
+        LOG.debug("Result of git pull: %s", result)
 
     def fetch(self, repo_url=None, remote_name=None, all=False):
         progress = ProgressPrinter("fetch")

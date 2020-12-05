@@ -42,6 +42,9 @@ class TestBackporter(unittest.TestCase):
         # Setup committer config
         cls.downstream_utils.prepare_git_config("downstream_user", "downstream_email")
 
+        # Setup debug logging of git commands
+        cls.downstream_repo_wrapper.enable_debug_logging(full=True)
+
     def setUp(self):
         self.upstream_utils.reset_and_checkout_existing_branch(YARN_TEST_BRANCH, pull=False)
 

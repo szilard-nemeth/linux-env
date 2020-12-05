@@ -108,6 +108,10 @@ class Backporter:
         LOG.info("Current branch: %s", curr_branch)
         self.upstream_repo.fetch(all=True)
         self.upstream_repo.checkout_branch(self.upstream_branch, track=True)
+
+        clean_workingdir = self.upstream_repo.is_working_directory_clean()
+        if not clean_workingdir:
+            LOG.warning("Working directory is not clean for repository: %s", self.upstream_repo.repo_path)
         self.upstream_repo.pull(ORIGIN)
 
     def cherry_pick_commit(self):
