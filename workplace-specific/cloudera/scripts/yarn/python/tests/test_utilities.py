@@ -198,14 +198,15 @@ class TestUtilities:
     def get_all_branch_names(self):
         return [br.name for br in self.repo.heads]
 
-    def verify_commit_message_of_branch(self, branch, expected_commit_message):
+    def verify_commit_message_of_branch(self, branch, expected_commit_message, verify_cherry_picked_from=False):
         commit = self.repo.heads[branch].commit
         actual_commit_message = commit.message.rstrip()
         # Example commit message: 'XXX-1234: YARN-123456: test_commit
         # (cherry picked from commit 51583ec3dbc715f9ff0c5a9b52f1cc7b607b6b26)'
 
         TESTCASE.assertIn(expected_commit_message, actual_commit_message)
-        TESTCASE.assertIn("cherry picked from commit ", actual_commit_message)
+        if verify_cherry_picked_from:
+            TESTCASE.assertIn("cherry picked from commit ", actual_commit_message)
 
     def add_remote(self, name, url):
         try:

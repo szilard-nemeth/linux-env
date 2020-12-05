@@ -116,7 +116,9 @@ class TestBackporter(unittest.TestCase):
             self.full_cdh_branch in self.downstream_repo.heads,
             "Created downstream branch does not exist: {}".format(self.full_cdh_branch),
         )
-        self.downstream_utils.verify_commit_message_of_branch(self.full_cdh_branch, expected_commit_msg)
+        self.downstream_utils.verify_commit_message_of_branch(
+            self.full_cdh_branch, expected_commit_msg, verify_cherry_picked_from=True
+        )
 
     def test_backport_from_branch31(self):
         self.cleanup_and_checkout_branch(branch=BRANCH_3_1)
@@ -134,4 +136,6 @@ class TestBackporter(unittest.TestCase):
             self.full_cdh_branch in self.downstream_repo.heads,
             "Created downstream branch does not exist: {}".format(self.full_cdh_branch),
         )
-        self.downstream_utils.verify_commit_message_of_branch(self.full_cdh_branch, expected_commit_msg)
+        self.downstream_utils.verify_commit_message_of_branch(
+            self.full_cdh_branch, expected_commit_msg, verify_cherry_picked_from=True
+        )
