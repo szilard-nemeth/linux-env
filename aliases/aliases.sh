@@ -8,6 +8,7 @@ alias linuxenv-reload="$LINUX_ENV_REPO/setup-env.sh"
 alias linuxenv-todos="grep '#TODO' -r $LINUX_ENV_REPO"
 alias linuxenv-debug-on="echo \"enabled\" > ${ENV_DEBUG_SETUP_FILE}"
 alias linuxenv-debug-off="echo \"disabled\" > ${ENV_DEBUG_SETUP_FILE}"
+alias linuxenv-edit="subl ~/development/my-repos/linux-env/"
 
 
 ## GOTO ALIASES
