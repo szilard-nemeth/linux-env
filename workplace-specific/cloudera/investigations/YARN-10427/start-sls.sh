@@ -6,7 +6,7 @@ function start() {
 	#cleanup hadoop dist dir
 	rm -rf hadoop-untarred/ && mkdir hadoop-untarred
 	cd /root/hadoop-untarred;
-	tar xvzf /root/hadoop-3.1.1.7.2.7.0-SNAPSHOT.tar.gz
+	tar xzf /root/hadoop-3.1.1.7.2.7.0-SNAPSHOT.tar.gz
 
 	HADOOP_ROOT="/root/hadoop-untarred/hadoop-3.1.1.7.2.7.0-SNAPSHOT/"
 	ETC_HADOOP_DIR="$HADOOP_ROOT/etc/hadoop/"
