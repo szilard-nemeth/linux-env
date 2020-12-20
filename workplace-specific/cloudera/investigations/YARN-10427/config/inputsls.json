@@ -1,0 +1,261 @@
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 0,
+  "job.queue.name": "sls_queue_1",
+  "job.id": "job_1",
+  "job.user": "default",
+  "job.tasks": [
+    {
+      "count": 10,
+      "container.host": "/default-rack/node1",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 5120,
+      "container.vcores": 1,
+      "container.priority": 20,
+      "container.type": "map"
+    },
+    {
+      "count": 10,
+      "container.host": "/default-rack/node1",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 10240,
+      "container.vcores": 1,
+      "container.priority": 10,
+      "container.type": "reduce"
+    }
+  ]
+}
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 25000,
+  "job.queue.name": "sls_queue_2",
+  "job.id": "job_2",
+  "job.user": "default",
+  "job.tasks": [{
+      "count": 20,
+      "container.host": "/default-rack/node2",
+      "container.duration.ms": 25000,
+      "container.memory-mb": 5120,
+      "container.vcores": 1,
+      "container.priority": 20,
+      "container.type": "map"
+    },
+    {
+      "count": 20,
+      "container.host": "/default-rack/node2",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 10240,
+      "container.vcores": 1,
+      "container.priority": 10,
+      "container.type": "reduce"
+    }
+  ]
+}
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 50000,
+  "job.queue.name": "sls_queue_3",
+  "job.id": "job_3",
+  "job.user": "default",
+  "job.tasks": [{
+      "count": 30,
+      "container.host": "/default-rack/node3",
+      "container.duration.ms": 25000,
+      "container.memory-mb": 5120,
+      "container.vcores": 1,
+      "container.priority": 20,
+      "container.type": "map"
+    },
+    {
+      "count": 30,
+      "container.host": "/default-rack/node3",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 10240,
+      "container.vcores": 1,
+      "container.priority": 10,
+      "container.type": "reduce"
+    }
+  ]
+}
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 50000,
+  "job.queue.name": "sls_queue_1",
+  "job.id": "job_4",
+  "job.user": "default",
+  "job.tasks": [{
+      "count": 40,
+      "container.host": "/default-rack/node1",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 5120,
+      "container.vcores": 1,
+      "container.priority": 20,
+      "container.type": "map"
+    },
+    {
+      "count": 40,
+      "container.host": "/default-rack/node1",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 10240,
+      "container.vcores": 1,
+      "container.priority": 10,
+      "container.type": "reduce"
+    }
+  ]
+}
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 55000,
+  "job.queue.name": "sls_queue_2",
+  "job.id": "job_5",
+  "job.user": "default",
+  "job.tasks": [{
+      "count": 50,
+      "container.host": "/default-rack/node2",
+      "container.duration.ms": 25000,
+      "container.memory-mb": 5120,
+      "container.vcores": 1,
+      "container.priority": 20,
+      "container.type": "map"
+    },
+    {
+      "count": 50,
+      "container.host": "/default-rack/node2",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 10240,
+      "container.vcores": 1,
+      "container.priority": 10,
+      "container.type": "reduce"
+    }
+  ]
+}
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 60000,
+  "job.queue.name": "sls_queue_3",
+  "job.id": "job_6",
+  "job.user": "default",
+  "job.tasks": [{
+      "count": 60,
+      "container.host": "/default-rack/node3",
+      "container.duration.ms": 25000,
+      "container.memory-mb": 5120,
+      "container.vcores": 1,
+      "container.priority": 20,
+      "container.type": "map"
+    },
+    {
+      "count": 60,
+      "container.host": "/default-rack/node3",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 10240,
+      "container.vcores": 1,
+      "container.priority": 10,
+      "container.type": "reduce"
+    }
+  ]
+}
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 70000,
+  "job.queue.name": "sls_queue_1",
+  "job.id": "job_7",
+  "job.user": "default",
+  "job.tasks": [{
+      "count": 70,
+      "container.host": "/default-rack/node2",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 5120,
+      "container.vcores": 1,
+      "container.priority": 20,
+      "container.type": "map"
+    },
+    {
+      "count": 70,
+      "container.host": "/default-rack/node2",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 10240,
+      "container.vcores": 1,
+      "container.priority": 10,
+      "container.type": "reduce"
+    }
+  ]
+}
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 80000,
+  "job.queue.name": "sls_queue_2",
+  "job.id": "job_8",
+  "job.user": "default",
+  "job.tasks": [{
+      "count": 80,
+      "container.host": "/default-rack/node2",
+      "container.duration.ms": 25000,
+      "container.memory-mb": 5120,
+      "container.vcores": 1,
+      "container.priority": 20,
+      "container.type": "map"
+    },
+    {
+      "count": 80,
+      "container.host": "/default-rack/node2",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 10240,
+      "container.vcores": 1,
+      "container.priority": 10,
+      "container.type": "reduce"
+    }
+  ]
+}
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 90000,
+  "job.queue.name": "sls_queue_3",
+  "job.id": "job_9",
+  "job.user": "default",
+  "job.tasks": [{
+      "count": 90,
+      "container.host": "/default-rack/node1",
+      "container.duration.ms": 25000,
+      "container.memory-mb": 5120,
+      "container.vcores": 1,
+      "container.priority": 20,
+      "container.type": "map"
+    },
+    {
+      "count": 90,
+      "container.host": "/default-rack/node1",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 10240,
+      "container.vcores": 1,
+      "container.priority": 10,
+      "container.type": "reduce"
+    }
+  ]
+}
+{
+  "am.type": "mapreduce",
+  "job.start.ms": 100000,
+  "job.queue.name": "sls_queue_1",
+  "job.id": "job_10",
+  "job.user": "default",
+  "job.tasks": [{
+      "count": 100,
+      "container.host": "/default-rack/node3",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 5120,
+      "container.vcores": 1,
+      "container.priority": 20,
+      "container.type": "map"
+    },
+    {
+      "count": 100,
+      "container.host": "/default-rack/node3",
+      "container.duration.ms": 50000,
+      "container.memory-mb": 10240,
+      "container.vcores": 1,
+      "container.priority": 10,
+      "container.type": "reduce"
+    }
+  ]
+}
