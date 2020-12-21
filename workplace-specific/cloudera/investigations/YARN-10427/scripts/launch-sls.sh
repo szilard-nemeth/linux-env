@@ -1,7 +1,6 @@
 . ./setup-vars.sh
 
 set -e
-set -x
 echo "Syncing SLS config files to remote host: $CLUSTER_HOST1..."
 ssh $CLUSTER_HOST1 "mkdir -p $REMOTE_BASEDIR/config"
 scp -r $INVESTIGATION_BASEDIR/config $CLUSTER_HOST1:$REMOTE_BASEDIR/

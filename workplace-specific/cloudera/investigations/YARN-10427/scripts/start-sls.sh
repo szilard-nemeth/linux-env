@@ -2,7 +2,6 @@
 
 
 function start-sls() {
-	set -x
 	set -e
 	echo "Arguments:"
 	echo $@

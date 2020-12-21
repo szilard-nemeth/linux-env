@@ -1,7 +1,6 @@
 #!/bin/bash
 . ./setup-vars.sh
 
-set -x
 sls_dirname=$(ssh $CLUSTER_HOST1 "ls -td -- $REMOTE_BASEDIR/logs/slsrun* | head -n 1")
 #TODO exit with error if sls_dirname is empty
 
