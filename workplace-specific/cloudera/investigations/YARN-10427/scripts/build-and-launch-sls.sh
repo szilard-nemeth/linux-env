@@ -2,6 +2,7 @@
 
 . ./setup-vars.sh
 set -e
+set -x
 echo "Building Hadoop in build root: $HADOOP_BUILD_ROOT"
 cd $HADOOP_BUILD_ROOT
 $MVN_BUILD_COMMAND
