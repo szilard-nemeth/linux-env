@@ -2,6 +2,9 @@
 
 
 function start() {
+	#TODO pass hadoop version as first parameter
+	#TODO pass investigation basedir as second parameter
+
 	echo "STARTING SLS SCRIPT..."
 	#cleanup hadoop dist dir
 	rm -rf hadoop-untarred/ && mkdir hadoop-untarred

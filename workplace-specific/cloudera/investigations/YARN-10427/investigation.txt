@@ -9,12 +9,6 @@ ps auxww | grep -i resourceman
 JAVA_HOME=/usr/java/jdk1.8.0_231
 
 2. Stop YARN Service: Stop all RMs / NMs
-
-3. Copy Hadoop dist to cluster
-scp ./hadoop-dist/target/hadoop-3.1.1.7.2.7.0-SNAPSHOT.tar.gz root@snemeth-fips2-1.vpc.cloudera.com:
-
-4. Copy start script to cluster:
-scp ~/Downloads/YARN-10427/start-sls.sh root@snemeth-fips2-1.vpc.cloudera.com:YARN-10427/
 ======================================================================================
 #INVESTIGATION 1
 
@@ -33,6 +27,6 @@ grep "container_1608468573122_0002_01_000001" output.log > ./grepped/container_1
 exec 19>/tmp/sls-debug.log
 export BASH_XTRACEFD=19
 set -x
-bash -x /root/hadoop-untarred/hadoop-3.1.1.7.2.7.0-SNAPSHOT/share/hadoop/tools/sls/bin/slsrun.sh --tracetype=SLS --tracelocation=/root/YARN-10427/inputsls.json --output-dir=/root/sls-run-1 --print-simulation --track-jobs=job_1,job_2,job_3,job_4,job_5,job_6,job_7,job_8,job_9,job_10
+<SLS-COMMAND>
 set +x
 exec 19>&-
