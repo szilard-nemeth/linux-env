@@ -3,10 +3,13 @@
 
 function start-sls() {
 	set -x
+	set -e
+	echo "Arguments:"
+	echo $@
 	if [ $# -ne 2 ]; then
-    	echo "Usage: $0 [hadoop-version] [investigation basedor]"
-    	echo "Example: $0 $(pwd)/ 3.3.0 '/root/YARN-10427'"
-    	return 1
+    	echo "Usage: $0 [hadoop-version] [investigation basedir]"
+    	echo "Example: $0 $(pwd)/ 3.3.0 /root/YARN-10427"
+    	exit 1
   	fi
   	
   	HADOOP_VERSION="$1"
@@ -15,9 +18,9 @@ function start-sls() {
 	
 	#Cleanup
 	HADOOP_DIR=$INVESTIGATION_BASEDIR/hadoop-untarred
-	echo "Removing & Recreating Hadoop-dist dir: $"
-	rm -rf $HADOOP_DIR && mkdir $HADOOP_DIR && cd HADOOP_DIR;
-	echo "Extracting Hadoop-dist to "
+	echo "Removing & Recreating Hadoop-dist dir: $HADOOP_DIR"
+	rm -rf $HADOOP_DIR && mkdir $HADOOP_DIR && cd $HADOOP_DIR;
+	echo "Extracting Hadoop-dist to $HADOOP_DIR/"
 	tar xzf $INVESTIGATION_BASEDIR/hadoop-$HADOOP_VERSION.tar.gz
 
 
@@ -38,8 +41,8 @@ function start-sls() {
 	#Create SLS log folder and output.log file
 	CURRDATE="$(date +%Y%m%d_%H%M%S)";
 	SLS_OUT="$LOGS_DIR/slsrun-out-$CURRDATE";
-	SLS_LOG="$LOGS_DIR/slsrun-out-$CURRDATE/output.log";
-	mkdir -p /root/slsrun-out-$CURRDATE;
+	SLS_LOG="$SLS_OUT/output.log";
+	mkdir -p $SLS_OUT;
 	touch $SLS_LOG;
 
 	JAVA_HOME_VAL="/usr/java/jdk1.8.0_231"
@@ -60,7 +63,7 @@ function copy-config-to-hadoop-dir() {
 }
 
 function grep-in-latest-logs() {
-	LATEST_SLS_OUT_DIR=$(ls -td -- /root/slsrun* | head -n 1)
+	LATEST_SLS_OUT_DIR=$(ls -td -- $LOGS_DIR/slsrun* | head -n 1)
 	SLS_LOG_FILE="$LATEST_SLS_OUT_DIR/output.log"
 	cd $LATEST_SLS_OUT_DIR
 	mkdir ./grepped
@@ -79,5 +82,5 @@ function grep-in-latest-logs() {
 }
 
 
-start-sls
+start-sls "$@"
 grep-in-latest-logs
