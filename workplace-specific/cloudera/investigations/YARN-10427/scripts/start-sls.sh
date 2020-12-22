@@ -78,6 +78,10 @@ function grep-in-latest-logs() {
 	grep "$full_app_id" $SLS_LOG_FILE > ./grepped/$full_app_id.log
 	grep "$simple_app_id" $SLS_LOG_FILE  > ./grepped/$simple_app_id.log
 	grep "$am_container_id" $SLS_LOG_FILE > ./grepped/$am_container_id.log
+
+	grep "Application application_.*_.* is shutting down. lastStep Stacktrace" $SLS_LOG_FILE > ./grepped/apps-shuttingdown.log
+	grep "AMSIM details for application" $SLS_LOG_FILE > ./grepped/amsimulator-details.log
+	grep "Executing step:.*for application:" $SLS_LOG_FILE > ./grepped/executing-taskrunner-steps.log
 }
 
 
