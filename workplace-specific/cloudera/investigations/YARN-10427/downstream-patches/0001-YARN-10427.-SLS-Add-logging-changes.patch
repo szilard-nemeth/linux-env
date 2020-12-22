@@ -1,0 +1,342 @@
+From fc65d4656149d79839bc94657072ab7bfabbecfb Mon Sep 17 00:00:00 2001
+From: Szilard Nemeth <snemeth@cloudera.com>
+Date: Tue, 22 Dec 2020 10:43:58 +0100
+Subject: [PATCH 2/2] YARN-10427. SLS: Add logging changes
+
+Change-Id: I458016bd6c4b0c6ca39a45373223bd374a75f465
+---
+ hadoop-project/pom.xml                        |  2 +-
+ .../org/apache/hadoop/yarn/sls/SLSRunner.java |  1 +
+ .../yarn/sls/appmaster/AMSimulator.java       |  3 +-
+ .../hadoop/yarn/sls/nodemanager/NodeInfo.java | 23 +++++++++
+ .../yarn/sls/scheduler/RMNodeWrapper.java     | 19 +++++++
+ .../hadoop/yarn/sls/scheduler/TaskRunner.java | 50 +++++++++++++++++--
+ .../rmnode/UpdatedContainerInfo.java          |  8 +++
+ .../scheduler/AbstractYarnScheduler.java      |  7 +++
+ 8 files changed, 108 insertions(+), 5 deletions(-)
+
+diff --git a/hadoop-project/pom.xml b/hadoop-project/pom.xml
+index d3f301b35fc..d8b1b16b6b2 100644
+--- a/hadoop-project/pom.xml
++++ b/hadoop-project/pom.xml
+@@ -58,7 +58,7 @@
+     <java.security.egd>file:///dev/urandom</java.security.egd>
+ 
+     <!-- avro version -->
+-    <avro.version>1.8.2.7.2.7.0-SNAPSHOT</avro.version>
++    <avro.version>1.7.7</avro.version>
+ 
+     <!-- jersey version -->
+     <jersey.version>1.19.4</jersey.version>
+diff --git a/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/SLSRunner.java b/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/SLSRunner.java
+index 44aaf7484e4..b4063ae7239 100644
+--- a/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/SLSRunner.java
++++ b/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/SLSRunner.java
+@@ -817,6 +817,7 @@ private void printSimulationInfo() {
+         nodeManagerResource.getResourceValue(ResourceInformation.VCORES_URI));
+     simulateInfoMap.put("Number of applications", numAMs);
+     simulateInfoMap.put("Number of tasks", numTasks);
++    //TODO typo
+     simulateInfoMap.put("Average tasks per applicaion",
+             (int)(Math.ceil((numTasks + 0.0) / numAMs)));
+     simulateInfoMap.put("Number of queues", queueAppNumMap.size());
+diff --git a/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/appmaster/AMSimulator.java b/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/appmaster/AMSimulator.java
+index aa6cf8932fc..3e1afbdfee8 100644
+--- a/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/appmaster/AMSimulator.java
++++ b/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/appmaster/AMSimulator.java
+@@ -218,7 +218,8 @@ public void middleStep() throws Exception {
+ 
+   @Override
+   public void lastStep() throws Exception {
+-    LOG.info("Application {} is shutting down.", appId);
++    LOG.info(String.format("Application %s is shutting down. lastStep " +
++        "Stacktrace", appId), new Exception());
+     // unregister tracking
+     if (isTracked) {
+       untrackApp();
+diff --git a/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/nodemanager/NodeInfo.java b/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/nodemanager/NodeInfo.java
+index 2eee3517170..31955504f24 100644
+--- a/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/nodemanager/NodeInfo.java
++++ b/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/nodemanager/NodeInfo.java
+@@ -45,11 +45,14 @@
+ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+ import org.apache.hadoop.yarn.server.resourcemanager.rmnode
+         .UpdatedContainerInfo;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
+ 
+ @Private
+ @Unstable
+ public class NodeInfo {
+   private static int NODE_ID = 0;
++  private static final Logger LOG = LoggerFactory.getLogger(NodeInfo.class);
+ 
+   public static NodeId newNodeID(String host, int port) {
+     return NodeId.newInstance(host, port);
+@@ -160,6 +163,7 @@ public void resetLastNodeHeartBeatResponse() {
+     }
+ 
+     public List<UpdatedContainerInfo> pullContainerUpdates() {
++      LOG.info("***FakeRMNodeImpl#pullContainerUpdates");
+       ArrayList<UpdatedContainerInfo> list = new ArrayList<UpdatedContainerInfo>();
+       
+       ArrayList<ContainerStatus> list2 = new ArrayList<ContainerStatus>();
+@@ -169,6 +173,7 @@ public void resetLastNodeHeartBeatResponse() {
+       }
+       list.add(new UpdatedContainerInfo(new ArrayList<ContainerStatus>(), 
+         list2));
++      LOG.info("***FakeRMNodeImpl#pullContainerUpdates, last list item: " + list.get(list.size() - 1));
+       return list;
+     }
+ 
+@@ -235,6 +240,24 @@ public RMContext getRMContext() {
+     public Resource getPhysicalResource() {
+       return null;
+     }
++
++    @Override
++    public String toString() {
++      return "FakeRMNodeImpl{" +
++          "nodeId=" + nodeId +
++          ", hostName='" + hostName + '\'' +
++          ", nodeAddr='" + nodeAddr + '\'' +
++          ", httpAddress='" + httpAddress + '\'' +
++          ", cmdPort=" + cmdPort +
++          ", perNode=" + perNode +
++          ", rackName='" + rackName + '\'' +
++          ", healthReport='" + healthReport + '\'' +
++          ", state=" + state +
++          ", toCleanUpContainers=" + toCleanUpContainers +
++          ", toCleanUpApplications=" + toCleanUpApplications +
++          ", runningApplications=" + runningApplications +
++          '}';
++    }
+   }
+ 
+   public static RMNode newNodeInfo(String rackName, String hostName,
+diff --git a/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/scheduler/RMNodeWrapper.java b/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/scheduler/RMNodeWrapper.java
+index c73fb15be00..4ff771ebd64 100644
+--- a/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/scheduler/RMNodeWrapper.java
++++ b/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/scheduler/RMNodeWrapper.java
+@@ -36,6 +36,8 @@
+ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+ import org.apache.hadoop.yarn.server.resourcemanager.rmnode
+         .UpdatedContainerInfo;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
+ 
+ import java.util.Collections;
+ import java.util.List;
+@@ -48,10 +50,13 @@
+   private RMNode node;
+   private List<UpdatedContainerInfo> updates;
+   private boolean pulled = false;
++  private static final Logger LOG = LoggerFactory.getLogger(RMNodeWrapper.class);
+   
+   public RMNodeWrapper(RMNode node) {
+     this.node = node;
+     updates = node.pullContainerUpdates();
++    LOG.info("***RMNodeWrapper constructor. updates: " + updates);
++    LOG.info("RMNode instance: " + node.getClass());
+   }
+   
+   @Override
+@@ -147,11 +152,16 @@ public void resetLastNodeHeartBeatResponse() {
+ 
+   @Override
+   public List<UpdatedContainerInfo> pullContainerUpdates() {
++    LOG.info("****RMNodeWrapper:: Pulling container updates");
+     List<UpdatedContainerInfo> list = Collections.emptyList();
+     if (! pulled) {
++      LOG.info("***RMNodeWrapper#pullContainerUpdates, pulled=false");
+       list = updates;
+       pulled = true;
++    } else {
++      LOG.info("***RMNodeWrapper#pullContainerUpdates, pulled=true");
+     }
++    LOG.info("***Resulted updates: " + list);
+     return list;    
+   }
+   
+@@ -222,4 +232,13 @@ public RMContext getRMContext() {
+   public Resource getPhysicalResource() {
+     return null;
+   }
++
++  @Override
++  public String toString() {
++    return "RMNodeWrapper{" +
++        "node=" + node +
++        ", updates=" + updates +
++        ", pulled=" + pulled +
++        '}';
++  }
+ }
+diff --git a/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/scheduler/TaskRunner.java b/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/scheduler/TaskRunner.java
+index 19cfe88d1ab..e06159c6995 100644
+--- a/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/scheduler/TaskRunner.java
++++ b/hadoop-tools/hadoop-sls/src/main/java/org/apache/hadoop/yarn/sls/scheduler/TaskRunner.java
+@@ -17,6 +17,12 @@
+  */
+ package org.apache.hadoop.yarn.sls.scheduler;
+ 
++import org.apache.hadoop.classification.InterfaceAudience.Private;
++import org.apache.hadoop.classification.InterfaceStability.Unstable;
++import org.apache.hadoop.yarn.sls.appmaster.AMSimulator;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++
+ import java.text.MessageFormat;
+ import java.util.Queue;
+ import java.util.concurrent.DelayQueue;
+@@ -24,15 +30,13 @@
+ import java.util.concurrent.ThreadPoolExecutor;
+ import java.util.concurrent.TimeUnit;
+ 
+-import org.apache.hadoop.classification.InterfaceAudience.Private;
+-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+-
+ @Private
+ @Unstable
+ public class TaskRunner {
+   @Private
+   @Unstable
+   public abstract static class Task implements Runnable, Delayed {
++    private static final Logger LOG = LoggerFactory.getLogger(Task.class);
+     private long start;
+     private long end;
+     private long nextRun;
+@@ -45,6 +49,7 @@ public Task(){}
+     
+     //values in milliseconds, start/end are milliseconds from now
+     public void init(long startTime, long endTime, long repeatInterval) {
++      logAmSimulatorInit();
+       if (endTime - startTime < 0) {
+         throw new IllegalArgumentException(MessageFormat.format(
+           "endTime[{0}] cannot be smaller than startTime[{1}]", endTime, 
+@@ -66,6 +71,7 @@ public void init(long startTime, long endTime, long repeatInterval) {
+     }
+ 
+     private void timeRebase(long now) {
++      logAmSimulatorTimeRebase(now, startTime, now + start, endTime, now + end, this.nextRun, now + start);
+       startTime = now + start;
+       endTime = now + end;
+       this.nextRun = startTime;
+@@ -85,16 +91,19 @@ private void setQueue(Queue<Task> queue) {
+     public final void run() {
+       try {
+         if (nextRun == startTime) {
++          logAmSimulatorStep("firstStep");
+           firstStep();
+           nextRun += repeatInterval;
+           if (nextRun <= endTime) {
+             queue.add(this);          
+           }
+         } else if (nextRun < endTime) {
++          logAmSimulatorStep("middleStep");
+           middleStep();
+           nextRun += repeatInterval;
+           queue.add(this);
+         } else {
++          logAmSimulatorStep("lastStep");
+           lastStep();
+         }
+       } catch (Exception e) {
+@@ -104,6 +113,41 @@ public final void run() {
+       }
+     }
+ 
++    private void logAmSimulatorStep(String step) {
++      if (this instanceof AMSimulator) {
++        AMSimulator amsim = ((AMSimulator) this);
++        LOG.debug("Executing step: {} for application: {}, AMSimulator details: {}", step, amsim.getApplicationId(), getAmSimulatorDetails());
++      }
++    }
++
++    private void logAmSimulatorInit() {
++      if (this instanceof AMSimulator) {
++        AMSimulator amsim = ((AMSimulator) this);
++        LOG.debug("Executing init for application: {}, AMSimulator details: {}", amsim.getApplicationId(), getAmSimulatorDetails());
++      }
++    }
++
++    private void logAmSimulatorTimeRebase(long now, long startTimeCurr, long startTimeNext,
++        long endTimeCurr, long endTimeNext, long nextRunCurr, long nextRunNext) {
++      if (this instanceof AMSimulator) {
++        AMSimulator amsim = ((AMSimulator) this);
++        LOG.debug("Executing TimeRebase for application: {}, now: {}, startTimeCurr: {}, startTimeNext: {}, " +
++            "endTimeCurr: {}, endTimeNext: {}, nextRunCurr: {}, nextRunNext: {}", 
++            amsim.getApplicationId(), now, startTimeCurr, startTimeNext, endTimeCurr, endTimeNext, nextRunCurr, nextRunNext);
++      }
++    }
++
++
++    private String getAmSimulatorDetails() {
++      if (this instanceof AMSimulator) {
++        AMSimulator amsim = ((AMSimulator) this);
++        return String.format("AMSIM details for application: %s, --> start: %d, end: %d, nextrun: %d, starttime: %d, endTime:" +
++                " %d, repeatInterval: %d",
++            amsim.getApplicationId(), start, end, nextRun, startTime, endTime, repeatInterval);
++      }
++      return "";
++    }
++
+     @Override
+     public long getDelay(TimeUnit unit) {
+       return unit.convert(nextRun - System.currentTimeMillis(),
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/rmnode/UpdatedContainerInfo.java b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/rmnode/UpdatedContainerInfo.java
+index 284b53665a8..1bcd43d3fbd 100644
+--- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/rmnode/UpdatedContainerInfo.java
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/rmnode/UpdatedContainerInfo.java
+@@ -42,4 +42,12 @@ public UpdatedContainerInfo(List<ContainerStatus> newlyLaunchedContainers
+   public List<ContainerStatus> getCompletedContainers() {
+     return this.completedContainers;
+   }
++
++  @Override
++  public String toString() {
++    return "UpdatedContainerInfo{" +
++        "newlyLaunchedContainers=" + newlyLaunchedContainers +
++        ", completedContainers=" + completedContainers +
++        '}';
++  }
+ }
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/AbstractYarnScheduler.java b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/AbstractYarnScheduler.java
+index 903fb075a69..cd0616c9dbe 100644
+--- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/AbstractYarnScheduler.java
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/AbstractYarnScheduler.java
+@@ -357,6 +357,7 @@ protected void containerLaunchedOnNode(
+       ContainerId containerId, SchedulerNode node) {
+     try {
+       readLock.lock();
++      LOG.info("Container launched. container: " + containerId + ", node: " + node);
+       // Get the application for the finished container
+       SchedulerApplicationAttempt application =
+           getCurrentAttemptForContainer(containerId);
+@@ -1014,17 +1015,23 @@ public SchedulerNode getNode(NodeId nodeId) {
+    */
+   private List<ContainerStatus> updateNewContainerInfo(RMNode nm,
+       SchedulerNode schedulerNode) {
++    LOG.info("***AbstractYarnScheduler#updateNewContainerInfo: nm class: " + nm.getClass() + ", NM object: " + nm.toString());
+     List<UpdatedContainerInfo> containerInfoList = nm.pullContainerUpdates();
++    LOG.info("***After nm.pullContainerUpdates::: containerInfoList: " + containerInfoList);
+     List<ContainerStatus> newlyLaunchedContainers =
+         new ArrayList<>();
+     List<ContainerStatus> completedContainers =
+         new ArrayList<>();
+ 
+     for(UpdatedContainerInfo containerInfo : containerInfoList) {
++      LOG.info("***Adding newly launched containers: " + containerInfo.getNewlyLaunchedContainers());
+       newlyLaunchedContainers
+           .addAll(containerInfo.getNewlyLaunchedContainers());
+       completedContainers.addAll(containerInfo.getCompletedContainers());
+     }
++    
++    LOG.info("***completedContainers: " + completedContainers);
++    LOG.info("***newlyLaunchedContainers: " + newlyLaunchedContainers);
+ 
+     // Processing the newly launched containers
+     for (ContainerStatus launchedContainer : newlyLaunchedContainers) {
+-- 
+2.20.1 (Apple Git-117)
+
