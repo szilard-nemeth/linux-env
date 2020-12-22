@@ -1,0 +1,23 @@
+2020-12-22 04:07:10,892 INFO appmaster.AMSimulator: Application application_1608638719822_0001 is shutting down. lastStep Stacktrace
+java.lang.Exception
+	at org.apache.hadoop.yarn.sls.appmaster.AMSimulator.lastStep(AMSimulator.java:224)
+	at org.apache.hadoop.yarn.sls.appmaster.MRAMSimulator.lastStep(MRAMSimulator.java:401)
+	at org.apache.hadoop.yarn.sls.appmaster.MRAMSimulator.processResponseQueue(MRAMSimulator.java:195)
+	at org.apache.hadoop.yarn.sls.appmaster.AMSimulator.middleStep(AMSimulator.java:212)
+	at org.apache.hadoop.yarn.sls.scheduler.TaskRunner$Task.run(TaskRunner.java:101)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+	at java.lang.Thread.run(Thread.java:748)
+2020-12-22 04:07:10,896 INFO appmaster.AMSimulator: AM container = container_1608638719822_0001_01_000001 reported to finish
+--
+2020-12-22 04:07:11,892 INFO appmaster.AMSimulator: Application application_1608638719822_0001 is shutting down. lastStep Stacktrace
+java.lang.Exception
+	at org.apache.hadoop.yarn.sls.appmaster.AMSimulator.lastStep(AMSimulator.java:224)
+	at org.apache.hadoop.yarn.sls.appmaster.MRAMSimulator.lastStep(MRAMSimulator.java:401)
+	at org.apache.hadoop.yarn.sls.scheduler.TaskRunner$Task.run(TaskRunner.java:106)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+	at java.lang.Thread.run(Thread.java:748)
+2020-12-22 04:07:11,893 INFO appmaster.AMSimulator: AM container = container_1608638719822_0001_01_000001 reported to finish
+2020-12-22 04:07:11,893 INFO resourcemanager.ApplicationMasterService: application_1608638719822_0001 unregistered successfully. 
+2020-12-22 04:07:11,892 DEBUG scheduler.TaskRunner$Task: Executing step: middleStep for application: application_1608638719822_0004, AMSimulator details: AMSIM details for application: application_1608638719822_0004, --> start: 50000, end: 1000050000, nextrun: 1608638831891, starttime: 1608638770891, endTime: 1609638770891, repeatInterval: 1000
