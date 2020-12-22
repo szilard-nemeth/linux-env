@@ -54,6 +54,7 @@ function start-sls() {
 	--output-dir=$SLS_OUT \
 	--print-simulation \
 	--track-jobs=job_1,job_2,job_3,job_4,job_5,job_6,job_7,job_8,job_9,job_10 |& tee $SLS_LOG
+	set +e
 }
 
 function copy-config-to-hadoop-dir() {
