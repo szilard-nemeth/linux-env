@@ -25,3 +25,13 @@ function setproxy(){
     else unset http_proxy;unset https_proxy;echo "e/// proxy off";
     fi
 }
+
+function net-disconnect() {
+    GW="$(sudo /sbin/route -n | awk '$1=="0.0.0.0" {print $2; exit}')"
+    sudo /sbin/route del default gw "$GW"
+    echo "$GW" > ~/.gateway
+}
+
+function net-connect() {
+    sudo /sbin/route add default gw "$(cat ~/.gateway)"
+}
