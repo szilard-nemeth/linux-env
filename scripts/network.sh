@@ -28,8 +28,10 @@ function setproxy(){
 
 function net-disconnect() {
     GW="$(sudo /sbin/route -n | awk '$1=="0.0.0.0" {print $2; exit}')"
-    sudo /sbin/route del default gw "$GW"
-    echo "$GW" > ~/.gateway
+    if [ ! -z "$GW" ]; then
+        sudo /sbin/route del default gw "$GW"
+        echo "$GW" > ~/.gateway
+    fi
 }
 
 function net-connect() {
