@@ -10,6 +10,10 @@ alias linuxenv-debug-on="echo \"enabled\" > ${ENV_DEBUG_SETUP_FILE}"
 alias linuxenv-debug-off="echo \"disabled\" > ${ENV_DEBUG_SETUP_FILE}"
 alias linuxenv-edit="subl ~/development/my-repos/linux-env/"
 
+## KNOWLEDGE BASE
+alias knowledgebase-edit="subl ~/development/my-repos/knowledge-base"
+alias knowledgebase-private-edit="subl ~/development/my-repos/knowledge-base-private"
+
 
 ## GOTO ALIASES
 alias goto-linuxenv-repo="cd $LINUX_ENV_REPO"
@@ -49,6 +53,9 @@ alias l='ls -CF'
 
 #colorls
 alias lc='colorls -lA --sd'
+
+##Aliases for my DEV projects
+alias save-tabs-android="python3 /Users/szilardnemeth/development/my-repos/google-chrome-toolkit/googlechrometoolkit/save_open_tabs_android.py"
 
 
 ## OTHER ALIASES
