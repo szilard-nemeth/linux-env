@@ -166,7 +166,7 @@ As there are not too many field updates in the lastStep method, without introduc
 .h2 Test run with the fix
 The fix patch is added [here|https://github.com/szilard-nemeth/linux-env/blob/9bd94311a900b79764d2ee26db16aed312a7fff7/workplace-specific/cloudera/investigations/YARN-10427/upstream-patches/0002-YARN-10427-Prevent-second-call-of-AMSimulator-lastSt.patch]
 It is also uploaded as an attachment to this jira, as a candidate for commit as I think it's a proper fix.
-TODO upload to jira
+TODO upload patch to jira
 The logs of the "fixed run" can be found here: https://github.com/szilard-nemeth/linux-env/tree/9bd94311a900b79764d2ee26db16aed312a7fff7/workplace-specific/cloudera/investigations/YARN-10427/fixed-logs
 
 
