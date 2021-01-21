@@ -69,11 +69,16 @@ class Backporter:
 
     def run(self):
         LOG.info(
-            "Starting backport. \n Upstream jira ID: %s\n Upstream branch: %s\n "
-            "Downstream jira ID: %s\n Downstream branch (target): %s\n",
+            "Starting backport. \n "
+            "Upstream Jira ID: %s\n "
+            "Upstream branch: %s\n "
+            "Downstream Jira ID: %s\n "
+            "Downstream ref (base): %s\n "
+            "Downstream branch (target): %s\n",
             self.upstream_jira_id,
             self.upstream_branch,
             self.downstream_jira_id,
+            self.cherry_pick_base_ref,
             self.downstream_branch,
         )
         self.sync_upstream_repo()

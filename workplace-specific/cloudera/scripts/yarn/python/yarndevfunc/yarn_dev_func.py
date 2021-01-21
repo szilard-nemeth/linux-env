@@ -145,11 +145,15 @@ class YarnDevFunc:
             )
         )
         post_commit_messages = [build_cmd, gerrit_push_cmd]
+
+        downstream_base_ref = "cauldron/{}".format(args.cdh_branch)
+        if "cdh_base_ref" in args:
+            downstream_base_ref = args.cdh_base_ref
         backporter = Backporter(
             args,
             self.upstream_repo,
             self.downstream_repo,
-            "cauldron/{}".format(args.cdh_branch),
+            downstream_base_ref,
             post_commit_messages=post_commit_messages,
         )
         backporter.run()
