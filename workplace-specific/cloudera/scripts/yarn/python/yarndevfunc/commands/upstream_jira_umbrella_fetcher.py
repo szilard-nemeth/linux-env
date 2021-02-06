@@ -8,7 +8,7 @@ from pythoncommons.pickle_utils import PickleUtils
 from pythoncommons.string_utils import StringUtils, auto_str
 
 from yarndevfunc.command_runner import CommandRunner
-from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR, REVERT, SHORT_SHA_LENGTH
+from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR, REVERT, SHORT_SHA_LENGTH, ORIGIN
 from yarndevfunc.utils import ResultPrinter
 
 LOG = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class JiraUmbrellaData:
     def no_of_files(self):
         return len(self.list_of_changed_files)
 
-    def render_summary_string(self, result_basedir):
+    def render_summary_string(self, result_basedir, extended_backport_table=False, backport_remote_filter=ORIGIN):
         # Generate tables first, in order to know the length of the header rows
         commit_list_table = ResultPrinter.print_table(
             self.upstream_commit_data_list,
@@ -64,25 +64,48 @@ class JiraUmbrellaData:
             max_width_separator=os.sep,
         )
 
-        backports_list = []
-        for bjira in self.backported_jiras.values():
-            for commit in bjira.commits:
-                backports_list.append(
-                    [
-                        bjira.jira_id,
-                        commit.commit_obj.hash[:SHORT_SHA_LENGTH],
-                        commit.commit_obj.message,
-                        commit.branches,
-                    ]
-                )
-        backport_table = ResultPrinter.print_table(
-            backports_list,
-            lambda row: row,
-            header=["Row", "Jira ID", "Hash", "Commit message", "Branches"],
-            print_result=False,
-            max_width=50,
-            max_width_separator=" ",
-        )
+        if extended_backport_table:
+            backports_list = []
+            for bjira in self.backported_jiras.values():
+                for commit in bjira.commits:
+                    backports_list.append(
+                        [
+                            bjira.jira_id,
+                            commit.commit_obj.hash[:SHORT_SHA_LENGTH],
+                            commit.commit_obj.message,
+                            commit.branches,
+                        ]
+                    )
+            backport_table = ResultPrinter.print_table(
+                backports_list,
+                lambda row: row,
+                header=["Row", "Jira ID", "Hash", "Commit message", "Branches"],
+                print_result=False,
+                max_width=50,
+                max_width_separator=" ",
+            )
+        else:
+            backports_list = []
+            for bjira in self.backported_jiras.values():
+                all_branches = []
+                for commit in bjira.commits:
+                    if commit.commit_obj.reverted:
+                        continue
+                    if not backport_remote_filter or any(backport_remote_filter in br for br in commit.branches):
+                        if backport_remote_filter:
+                            branches = list(filter(lambda br: backport_remote_filter in br, commit.branches))
+                        else:
+                            branches = commit.branches
+                        all_branches.extend(branches)
+                backports_list.append([bjira.jira_id, list(set(all_branches))])
+            backport_table = ResultPrinter.print_table(
+                backports_list,
+                lambda row: row,
+                header=["Row", "Jira ID", "Branches"],
+                print_result=False,
+                max_width=50,
+                max_width_separator=" ",
+            )
 
         # Create headers
         commits_header_line = (
