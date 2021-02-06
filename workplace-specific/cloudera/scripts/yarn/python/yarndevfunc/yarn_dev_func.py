@@ -188,7 +188,7 @@ class YarnDevFunc:
 
     def fetch_jira_umbrella_data(self, args):
         jira_umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
-            args, self.upstream_repo, self.jira_umbrella_data_dir, DEFAULT_BASE_BRANCH
+            args, self.upstream_repo, self.downstream_repo, self.jira_umbrella_data_dir, DEFAULT_BASE_BRANCH
         )
         jira_umbrella_fetcher.run()
 

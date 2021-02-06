@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 
 from pythoncommons.file_utils import FileUtils
 from pythoncommons.jira_utils import JiraUtils
@@ -7,7 +8,7 @@ from pythoncommons.pickle_utils import PickleUtils
 from pythoncommons.string_utils import StringUtils, auto_str
 
 from yarndevfunc.command_runner import CommandRunner
-from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR
+from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR, REVERT
 from yarndevfunc.utils import ResultPrinter
 
 LOG = logging.getLogger(__name__)
@@ -20,14 +21,15 @@ class JiraUmbrellaData:
         self.subjira_ids = []
         self.jira_html = None
         self.piped_jira_ids = None
-        self.matched_commit_list = None
-        self.matched_commit_hashes = None
+        self.matched_upstream_commit_list = None
+        self.matched_upstream_commit_hashes = None
         self.list_of_changed_files = None
-        self.commit_data_list = None
+        self.upstream_commit_data_list = None
+        self.backported_jiras = dict()
 
     @property
     def no_of_matched_commits(self):
-        return len(self.matched_commit_list)
+        return len(self.matched_upstream_commit_list)
 
     @property
     def no_of_jiras(self):
@@ -35,7 +37,7 @@ class JiraUmbrellaData:
 
     @property
     def no_of_commits(self):
-        return len(self.matched_commit_hashes)
+        return len(self.matched_upstream_commit_hashes)
 
     @property
     def no_of_files(self):
@@ -44,7 +46,7 @@ class JiraUmbrellaData:
     def render_summary_string(self, result_basedir):
         # Generate tables first, in order to know the length of the header rows
         commit_list_table = ResultPrinter.print_table(
-            self.commit_data_list,
+            self.upstream_commit_data_list,
             lambda commit: (commit.jira_id, commit.message, commit.date),
             header=["Row", "Jira ID", "Commit message", "Commit date"],
             print_result=False,
@@ -95,11 +97,15 @@ class JiraUmbrellaData:
 
 @auto_str
 class CommitData:
-    def __init__(self, c_hash, jira_id, message, date):
+    JIRA_ID_PATTERN = re.compile(r".*(YARN-\d+).*$")
+
+    def __init__(self, c_hash, jira_id, message, date, branches=None, reverted=False):
         self.hash = c_hash
         self.jira_id = jira_id
         self.message = message
         self.date = date
+        self.branches = branches
+        self.reverted = reverted
 
     @staticmethod
     def from_git_log_str(git_log_str):
@@ -112,20 +118,53 @@ class CommitData:
         :return:
         """
         comps = git_log_str.split(COMMIT_FIELD_SEPARATOR)
+        match = CommitData.JIRA_ID_PATTERN.search(git_log_str)
+        if not match:
+            raise ValueError(
+                "Cannot find YARN jira id in git log string: {}. Pattern was: {}".format(
+                    git_log_str, CommitData.JIRA_ID_PATTERN.pattern
+                )
+            )
+        jira_id = match.group(1)
+
+        revert_count = git_log_str.upper().count(REVERT.upper())
+        reverted = False
+        if revert_count % 2 == 1:
+            reverted = True
+
         # Alternatively, commit date may be gathered with git show,
         # but this requires more CLI calls, so it's not the preferred way.
         # commit_date = self.upstream_repo.show(commit_hash, no_patch=True, no_notes=True, pretty='%cI')
         return CommitData(
-            c_hash=comps[0], jira_id=comps[1], message=COMMIT_FIELD_SEPARATOR.join(comps[1:-1]), date=comps[-1]
+            c_hash=comps[0],
+            jira_id=jira_id,
+            message=COMMIT_FIELD_SEPARATOR.join(comps[1:-1]),
+            date=comps[-1],
+            reverted=reverted,
         )
 
 
+@auto_str
+class BackportedJira:
+    def __init__(self, jira_id, commits):
+        self.jira_id = jira_id
+        self.backported_commits = commits
+
+
+@auto_str
+class BackportedCommit:
+    def __init__(self, commit_obj, branches):
+        self.commit_obj = commit_obj
+        self.branches = branches
+
+
 class UpstreamJiraUmbrellaFetcher:
-    def __init__(self, args, upstream_repo, basedir, base_branch):
+    def __init__(self, args, upstream_repo, downstream_repo, basedir, upstream_base_branch):
         self.jira_id = args.jira_id
         self.upstream_repo = upstream_repo
+        self.downstream_repo = downstream_repo
         self.basedir = basedir
-        self.base_branch = base_branch
+        self.upstream_base_branch = upstream_base_branch
         self.force_mode = True if args.force_mode else False
         # These fields will be assigned when data is fetched
         self.data = None
@@ -157,7 +196,8 @@ class UpstreamJiraUmbrellaFetcher:
         LOG.info("Fetching jira umbrella data...")
         self.data = JiraUmbrellaData()
         self.fetch_jira_ids()
-        self.find_commits_and_save_to_file()
+        self.find_upstream_commits_and_save_to_file()
+        self.find_downstream_commits()
         self.save_changed_files_to_file()
         self.write_summary_file()
         self.write_all_changes_files()
@@ -176,8 +216,8 @@ class UpstreamJiraUmbrellaFetcher:
     def log_current_branch(self):
         curr_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
-        if curr_branch != self.base_branch:
-            raise ValueError("Current branch is not {}. Exiting!".format(self.base_branch))
+        if curr_branch != self.upstream_base_branch:
+            raise ValueError("Current branch is not {}. Exiting!".format(self.upstream_base_branch))
 
     def set_file_fields(self):
         self.result_basedir = FileUtils.join_path(self.basedir, self.jira_id)
@@ -202,36 +242,71 @@ class UpstreamJiraUmbrellaFetcher:
         LOG.info("Found subjiras: %s", self.data.subjira_ids)
         self.data.piped_jira_ids = "|".join(self.data.subjira_ids)
 
-    def find_commits_and_save_to_file(self):
+    def find_upstream_commits_and_save_to_file(self):
         # It's quite complex to grep for multiple jira IDs with gitpython, so let's rather call an external command
         git_log_result = self.upstream_repo.log(HEAD, oneline_with_date=True)
         output = CommandRunner.egrep_with_cli(git_log_result, self.intermediate_results_file, self.data.piped_jira_ids)
-        self.data.matched_commit_list = output.split("\n")
-        if not self.data.matched_commit_list:
+        self.data.matched_upstream_commit_list = output.split("\n")
+        if not self.data.matched_upstream_commit_list:
             raise ValueError("Cannot find any commits for jira: {}".format(self.jira_id))
 
         LOG.info("Number of matched commits: %s", self.data.no_of_matched_commits)
-        LOG.debug("Matched commits: \n%s", StringUtils.list_to_multiline_string(self.data.matched_commit_list))
+        LOG.debug("Matched commits: \n%s", StringUtils.list_to_multiline_string(self.data.matched_upstream_commit_list))
 
         # Commits in reverse order (oldest first)
-        self.data.matched_commit_list.reverse()
-        self.convert_to_commit_data_objects()
-        FileUtils.save_to_file(self.commits_file, StringUtils.list_to_multiline_string(self.data.matched_commit_hashes))
+        self.data.matched_upstream_commit_list.reverse()
+        self.convert_to_commit_data_objects_upstream()
+        FileUtils.save_to_file(
+            self.commits_file, StringUtils.list_to_multiline_string(self.data.matched_upstream_commit_hashes)
+        )
 
-    def convert_to_commit_data_objects(self):
+    def find_downstream_commits(self):
+        jira_ids = [commit_obj.jira_id for commit_obj in self.data.upstream_commit_data_list]
+        for idx, jira_id in enumerate(jira_ids):
+            progress = "[{} / {}] ".format(idx + 1, len(jira_ids))
+            LOG.info("%s Checking if %s is backported to downstream repo", progress, jira_id)
+            downstream_commits_for_jira = self.downstream_repo.log(HEAD, oneline_with_date=True, all=True, grep=jira_id)
+            LOG.info("%s Downstream git log result for %s: %s", progress, jira_id, downstream_commits_for_jira)
+
+            if downstream_commits_for_jira:
+                backported_commits = [
+                    BackportedCommit(CommitData.from_git_log_str(commit_str), [])
+                    for commit_str in downstream_commits_for_jira
+                ]
+                LOG.info(
+                    "Identified %d backported commits for %s:\n%s",
+                    len(backported_commits),
+                    jira_id,
+                    "\n".join(["{} {}".format(bc.commit_obj.hash, bc.commit_obj.message) for bc in backported_commits]),
+                )
+
+                backported_jira = BackportedJira(jira_id, backported_commits)
+
+                for backported_commit in backported_jira.backported_commits:
+                    chash = backported_commit.commit_obj.hash
+                    LOG.info(
+                        "%s Looking for remote branches of backported commit: %s (hash: %s)", progress, jira_id, chash
+                    )
+                    backported_commit.branches = self.downstream_repo.branch(None, recursive=True, contains=chash)
+                self.data.backported_jiras[jira_id] = backported_jira
+                LOG.info("%s Finished checking downstream backport for jira: %s", progress, jira_id)
+
+    def convert_to_commit_data_objects_upstream(self):
         """
         Iterate over commit hashes, print the following to summary_file for each commit hash:
         <hash> <YARN-id> <commit date>
         :return:
         """
-        self.data.commit_data_list = [
-            CommitData.from_git_log_str(commit_str) for commit_str in self.data.matched_commit_list
+        self.data.upstream_commit_data_list = [
+            CommitData.from_git_log_str(commit_str) for commit_str in self.data.matched_upstream_commit_list
         ]
-        self.data.matched_commit_hashes = [commit_obj.hash for commit_obj in self.data.commit_data_list]
+        self.data.matched_upstream_commit_hashes = [
+            commit_obj.hash for commit_obj in self.data.upstream_commit_data_list
+        ]
 
     def save_changed_files_to_file(self):
         list_of_changed_files = []
-        for c_hash in self.data.matched_commit_hashes:
+        for c_hash in self.data.matched_upstream_commit_hashes:
             changed_files = self.upstream_repo.diff_tree(c_hash, no_commit_id=True, name_only=True, recursive=True)
             list_of_changed_files.append(changed_files)
             LOG.debug("List of changed files for commit hash '%s': %s", c_hash, changed_files)

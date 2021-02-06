@@ -243,6 +243,7 @@ class GitWrapper:
         return_messages=False,
         as_string_message=False,
         follow=False,
+        all=False,
     ):
         if oneline and oneline_with_date:
             raise ValueError("oneline and oneline_with_date should be exclusive!")
@@ -270,6 +271,8 @@ class GitWrapper:
             kwargs["n"] = n
         if follow:
             kwargs["follow"] = True
+        if all:
+            kwargs["all"] = True
 
         if not self.is_enabled_git_cmd_logging:
             LOG.info("Running git log with arguments, args: %s, kwargs: %s", args, kwargs)
@@ -285,6 +288,23 @@ class GitWrapper:
         if as_string_message:
             return "\n".join(log_result)
         return log_result
+
+    def branch(self, refspec, recursive=False, contains=None):
+        args = []
+        if refspec:
+            args.append(refspec)
+
+        kwargs = {}
+        if recursive:
+            kwargs["r"] = True
+        if contains:
+            kwargs["contains"] = contains
+
+        lines = self.repo.git.branch(refspec, *args, **kwargs).splitlines()
+        for idx, line in enumerate(lines):
+            # Replace all whitespace with empty string
+            lines[idx] = "".join(line.split())
+        return lines
 
     def cherry_pick(self, ref, x=False):
         kwargs = {}
