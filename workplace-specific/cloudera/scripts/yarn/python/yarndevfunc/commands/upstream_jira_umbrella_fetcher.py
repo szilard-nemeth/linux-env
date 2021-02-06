@@ -45,8 +45,8 @@ class JiraUmbrellaData:
         # Generate tables first, in order to know the length of the header rows
         commit_list_table = ResultPrinter.print_table(
             self.commit_data_list,
-            lambda commit: (commit.message, commit.date),
-            header=["Row", "Commit message", "Commit date"],
+            lambda commit: (commit.jira_id, commit.message, commit.date),
+            header=["Row", "Jira ID", "Commit message", "Commit date"],
             print_result=False,
             max_width=80,
             max_width_separator=" ",
