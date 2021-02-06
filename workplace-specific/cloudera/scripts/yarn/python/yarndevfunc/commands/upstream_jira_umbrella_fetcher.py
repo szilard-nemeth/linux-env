@@ -8,7 +8,7 @@ from pythoncommons.pickle_utils import PickleUtils
 from pythoncommons.string_utils import StringUtils, auto_str
 
 from yarndevfunc.command_runner import CommandRunner
-from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR, REVERT
+from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR, REVERT, SHORT_SHA_LENGTH
 from yarndevfunc.utils import ResultPrinter
 
 LOG = logging.getLogger(__name__)
@@ -64,15 +64,44 @@ class JiraUmbrellaData:
             max_width_separator=os.sep,
         )
 
+        backports_list = []
+        for bjira in self.backported_jiras.values():
+            for commit in bjira.commits:
+                backports_list.append(
+                    [
+                        bjira.jira_id,
+                        commit.commit_obj.hash[:SHORT_SHA_LENGTH],
+                        commit.commit_obj.message,
+                        commit.branches,
+                    ]
+                )
+        backport_table = ResultPrinter.print_table(
+            backports_list,
+            lambda row: row,
+            header=["Row", "Jira ID", "Hash", "Commit message", "Branches"],
+            print_result=False,
+            max_width=50,
+            max_width_separator=" ",
+        )
+
+        # Create headers
         commits_header_line = (
             StringUtils.generate_header_line(
                 "COMMITS", char="═", length=len(StringUtils.get_first_line_of_multiline_str(commit_list_table))
             )
             + "\n"
         )
+
         result_files_header_line = (
             StringUtils.generate_header_line(
                 "RESULT FILES", char="═", length=len(StringUtils.get_first_line_of_multiline_str(file_list_table))
+            )
+            + "\n"
+        )
+
+        backport_header_line = (
+            StringUtils.generate_header_line(
+                "BACKPORTED JIRAS", char="═", length=len(StringUtils.get_first_line_of_multiline_str(backport_table))
             )
             + "\n"
         )
@@ -92,6 +121,9 @@ class JiraUmbrellaData:
         summary_str += "\n\n"
         summary_str += result_files_header_line
         summary_str += file_list_table
+        summary_str += "\n\n"
+        summary_str += backport_header_line
+        summary_str += backport_table
         return summary_str
 
 
@@ -148,7 +180,7 @@ class CommitData:
 class BackportedJira:
     def __init__(self, jira_id, commits):
         self.jira_id = jira_id
-        self.backported_commits = commits
+        self.commits = commits
 
 
 @auto_str
@@ -201,8 +233,8 @@ class UpstreamJiraUmbrellaFetcher:
         self.save_changed_files_to_file()
         self.write_summary_file()
         self.write_all_changes_files()
-        self.print_summary()
         self.pickle_umbrella_data()
+        self.print_summary()
 
     def load_pickled_umbrella_data(self):
         LOG.info("Trying to load pickled data from file: %s", self.pickled_data_file)
@@ -282,7 +314,7 @@ class UpstreamJiraUmbrellaFetcher:
 
                 backported_jira = BackportedJira(jira_id, backported_commits)
 
-                for backported_commit in backported_jira.backported_commits:
+                for backported_commit in backported_jira.commits:
                     chash = backported_commit.commit_obj.hash
                     LOG.info(
                         "%s Looking for remote branches of backported commit: %s (hash: %s)", progress, jira_id, chash

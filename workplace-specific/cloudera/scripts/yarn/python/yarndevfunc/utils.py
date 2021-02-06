@@ -32,6 +32,8 @@ class ResultPrinter:
             tup = row_callback(data_row)
             converted_row = [idx + 1]
             for t in tup:
+                if isinstance(t, list):
+                    t = ", ".join(t)
                 if max_width and isinstance(t, str):
                     t = StringUtils.convert_string_to_multiline(t, max_line_length=80, separator=max_width_separator)
                 converted_row.append(t)

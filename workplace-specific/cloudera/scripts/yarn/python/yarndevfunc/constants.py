@@ -26,3 +26,4 @@ FIRST_PATCH_NUMBER = "001"
 
 # Git constants
 REVERT = "Revert"
+SHORT_SHA_LENGTH = 7  # https://stackoverflow.com/a/18134919/1106893
