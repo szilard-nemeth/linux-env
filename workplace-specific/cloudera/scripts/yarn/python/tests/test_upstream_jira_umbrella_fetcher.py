@@ -94,6 +94,7 @@ class TestUpstreamJiraUmbrellaFetcher(unittest.TestCase):
         umbrella_fetcher = UpstreamJiraUmbrellaFetcher(
             self.setup_args(jira=UPSTREAM_JIRA_DOES_NOT_HAVE_COMMIT),
             self.repo_wrapper,
+            self.repo_wrapper,
             self.utils.jira_umbrella_data_dir,
             self.base_branch,
         )
