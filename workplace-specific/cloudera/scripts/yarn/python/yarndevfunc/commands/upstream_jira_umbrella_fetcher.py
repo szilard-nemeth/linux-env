@@ -10,9 +10,15 @@ from pythoncommons.string_utils import StringUtils, auto_str
 from yarndevfunc.command_runner import CommandRunner
 from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR, REVERT, SHORT_SHA_LENGTH, ORIGIN
 from yarndevfunc.utils import ResultPrinter
+from enum import Enum
 
 LOG = logging.getLogger(__name__)
 PICKLED_DATA_FILENAME = "pickled_umbrella_data.obj"
+
+
+class ExecutionMode(Enum):
+    AUTO_BRANCH_MODE = "auto_branch_mode"
+    MANUAL_BRANCH_MODE = "manual_branch_mode"
 
 
 @auto_str
@@ -25,6 +31,8 @@ class JiraUmbrellaData:
         self.matched_upstream_commit_hashes = None
         self.list_of_changed_files = None
         self.upstream_commit_data_list = None
+        self.execution_mode = None
+        self.downstream_branches = None
         self.backported_jiras = dict()
 
     @property
@@ -43,7 +51,7 @@ class JiraUmbrellaData:
     def no_of_files(self):
         return len(self.list_of_changed_files)
 
-    def render_summary_string(self, result_basedir, extended_backport_table=True, backport_remote_filter=ORIGIN):
+    def render_summary_string(self, result_basedir, extended_backport_table=False, backport_remote_filter=ORIGIN):
         # Generate tables first, in order to know the length of the header rows
         commit_list_table = ResultPrinter.print_table(
             self.upstream_commit_data_list,
@@ -86,24 +94,49 @@ class JiraUmbrellaData:
                 max_width_separator=" ",
             )
         else:
-            backports_list = []
-            for bjira in self.backported_jiras.values():
-                all_branches = []
-                for commit in bjira.commits:
-                    if commit.commit_obj.reverted:
-                        continue
-                    branches = self.filter_branches(backport_remote_filter, commit.branches)
-                    if branches:
-                        all_branches.extend(branches)
-                backports_list.append([bjira.jira_id, list(set(all_branches))])
-            backport_table = ResultPrinter.print_table(
-                backports_list,
-                lambda row: row,
-                header=["Row", "Jira ID", "Branches"],
-                print_result=False,
-                max_width=50,
-                max_width_separator=" ",
-            )
+            if self.execution_mode == ExecutionMode.AUTO_BRANCH_MODE:
+                backports_list = []
+                for bjira in self.backported_jiras.values():
+                    all_branches = []
+                    for commit in bjira.commits:
+                        if commit.commit_obj.reverted:
+                            continue
+                        branches = self.filter_branches(backport_remote_filter, commit.branches)
+                        if branches:
+                            all_branches.extend(branches)
+                    backports_list.append([bjira.jira_id, list(set(all_branches))])
+                backport_table = ResultPrinter.print_table(
+                    backports_list,
+                    lambda row: row,
+                    header=["Row", "Jira ID", "Branches"],
+                    print_result=False,
+                    max_width=50,
+                    max_width_separator=" ",
+                )
+            elif self.execution_mode == ExecutionMode.MANUAL_BRANCH_MODE:
+                backports_list = []
+                for bjira in self.backported_jiras.values():
+                    all_branches = set([br for c in bjira.commits for br in c.branches])
+                    for commit in bjira.commits:
+                        if commit.commit_obj.reverted:
+                            continue
+                    backport_present_list = []
+                    for branch in self.downstream_branches:
+                        backport_present_list.append(branch in all_branches)
+                    curr_row = [bjira.jira_id]
+                    curr_row.extend(backport_present_list)
+                    backports_list.append(curr_row)
+
+                header = ["Row", "Jira ID"]
+                header.extend(self.downstream_branches)
+                backport_table = ResultPrinter.print_table(
+                    backports_list,
+                    lambda row: row,
+                    header=header,
+                    print_result=False,
+                    max_width=50,
+                    max_width_separator=" ",
+                )
 
         # Create headers
         commits_header_line = (
@@ -221,6 +254,8 @@ class BackportedCommit:
 
 class UpstreamJiraUmbrellaFetcher:
     def __init__(self, args, upstream_repo, downstream_repo, basedir, upstream_base_branch):
+        self.execution_mode = ExecutionMode.MANUAL_BRANCH_MODE if args.branches else ExecutionMode.AUTO_BRANCH_MODE
+        self.downstream_branches = args.branches
         self.jira_id = args.jira_id
         self.upstream_repo = upstream_repo
         self.downstream_repo = downstream_repo
@@ -239,6 +274,32 @@ class UpstreamJiraUmbrellaFetcher:
         self.pickled_data_file = None
 
     def run(self):
+        LOG.info(
+            "Starting umbrella jira fetcher... \n "
+            "Upstream Jira: %s\n "
+            "Upstream repo: %s\n "
+            "Downstream repo: %s\n "
+            "Execution mode: %s\n"
+            "Downstream branches to check: %s",
+            self.jira_id,
+            self.upstream_repo.repo_path,
+            self.downstream_repo.repo_path,
+            self.execution_mode.name,
+            ", ".join(self.downstream_branches),
+        )
+
+        if self.execution_mode == ExecutionMode.MANUAL_BRANCH_MODE:
+            if not self.downstream_branches:
+                raise ValueError("Execution mode is 'manual-branch' but no branch was provided. Exiting...")
+
+            LOG.info("Manual branch execution mode, validating provided branches..")
+            for branch in self.downstream_branches:
+                if not self.downstream_repo.is_branch_exist(branch):
+                    raise ValueError(
+                        "Cannot find branch called '{}' in downstream repository {}. "
+                        "Please verify the provided branch names!"
+                    )
+
         self.log_current_branch()
         self.set_file_fields()
 
@@ -258,7 +319,12 @@ class UpstreamJiraUmbrellaFetcher:
         self.data = JiraUmbrellaData()
         self.fetch_jira_ids()
         self.find_upstream_commits_and_save_to_file()
-        self.find_downstream_commits()
+        if self.execution_mode == ExecutionMode.AUTO_BRANCH_MODE:
+            self.find_downstream_commits_auto_mode()
+        elif self.execution_mode == ExecutionMode.MANUAL_BRANCH_MODE:
+            self.find_downstream_commits_manual_mode()
+        self.data.execution_mode = self.execution_mode
+        self.data.downstream_branches = self.downstream_branches
         self.save_changed_files_to_file()
         # TODO Only render summary once, store and print later (print_summary)
         self.write_summary_file()
@@ -322,7 +388,7 @@ class UpstreamJiraUmbrellaFetcher:
             self.commits_file, StringUtils.list_to_multiline_string(self.data.matched_upstream_commit_hashes)
         )
 
-    def find_downstream_commits(self):
+    def find_downstream_commits_auto_mode(self):
         jira_ids = [commit_obj.jira_id for commit_obj in self.data.upstream_commit_data_list]
         for idx, jira_id in enumerate(jira_ids):
             progress = "[{} / {}] ".format(idx + 1, len(jira_ids))
@@ -355,6 +421,40 @@ class UpstreamJiraUmbrellaFetcher:
                     backported_commit.branches = self.downstream_repo.branch(None, recursive=True, contains=commit_hash)
                 self.data.backported_jiras[jira_id] = backported_jira
                 LOG.info("%s Finished checking downstream backport for jira: %s", progress, jira_id)
+
+    def find_downstream_commits_manual_mode(self):
+        for branch in self.downstream_branches:
+            git_log_result = self.downstream_repo.log(branch, oneline_with_date=True)
+            # It's quite complex to grep for multiple jira IDs with gitpython, so let's rather call an external command
+            output = CommandRunner.egrep_with_cli(
+                git_log_result, self.intermediate_results_file, self.data.piped_jira_ids
+            )
+            matched_downstream_commit_list = output.split("\n")
+            if matched_downstream_commit_list:
+                backported_commits = [
+                    BackportedCommit(CommitData.from_git_log_str(commit_str), [branch])
+                    for commit_str in matched_downstream_commit_list
+                ]
+                LOG.info(
+                    "Identified %d backported commits on branch %s:\n%s",
+                    len(backported_commits),
+                    branch,
+                    "\n".join(["{} {}".format(bc.commit_obj.hash, bc.commit_obj.message) for bc in backported_commits]),
+                )
+
+                for backported_commit in backported_commits:
+                    jira_id = backported_commit.commit_obj.jira_id
+                    if jira_id not in self.data.backported_jiras:
+                        self.data.backported_jiras[jira_id] = BackportedJira(jira_id, [backported_commit])
+                    else:
+                        self.data.backported_jiras[jira_id].commits.append(backported_commit)
+
+        # Make sure that missing backports are added as CommitData objects
+        for commit_data in self.data.upstream_commit_data_list:
+            jira_id = commit_data.jira_id
+            if jira_id not in self.data.backported_jiras:
+                LOG.debug("%s is not backported to any of the provided branches", jira_id)
+                self.data.backported_jiras[jira_id] = BackportedJira(jira_id, [])
 
     def convert_to_commit_data_objects_upstream(self):
         """

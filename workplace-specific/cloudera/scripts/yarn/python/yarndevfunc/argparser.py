@@ -136,4 +136,7 @@ class ArgParser:
             dest="force_mode",
             help="Force fetching data from jira and use git log commands to find all changes.",
         )
+        parser.add_argument(
+            "--branches", required=False, type=str, nargs="+", help="Check backports againtst these branches"
+        )
         parser.set_defaults(func=yarn_functions.fetch_jira_umbrella_data)
