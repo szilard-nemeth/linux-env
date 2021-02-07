@@ -152,7 +152,7 @@ class JiraUmbrellaData:
 
 @auto_str
 class CommitData:
-    JIRA_ID_PATTERN = re.compile(r".*(YARN-\d+).*$")
+    JIRA_ID_PATTERN = re.compile(r"(YARN-\d+)")
 
     def __init__(self, c_hash, jira_id, message, date, branches=None, reverted=False):
         self.hash = c_hash
@@ -254,6 +254,7 @@ class UpstreamJiraUmbrellaFetcher:
         self.find_upstream_commits_and_save_to_file()
         self.find_downstream_commits()
         self.save_changed_files_to_file()
+        # TODO Only render summary once, store and print later (print_summary)
         self.write_summary_file()
         self.write_all_changes_files()
         self.pickle_umbrella_data()
@@ -338,11 +339,14 @@ class UpstreamJiraUmbrellaFetcher:
                 backported_jira = BackportedJira(jira_id, backported_commits)
 
                 for backported_commit in backported_jira.commits:
-                    chash = backported_commit.commit_obj.hash
+                    commit_hash = backported_commit.commit_obj.hash
                     LOG.info(
-                        "%s Looking for remote branches of backported commit: %s (hash: %s)", progress, jira_id, chash
+                        "%s Looking for remote branches of backported commit: %s (hash: %s)",
+                        progress,
+                        jira_id,
+                        commit_hash,
                     )
-                    backported_commit.branches = self.downstream_repo.branch(None, recursive=True, contains=chash)
+                    backported_commit.branches = self.downstream_repo.branch(None, recursive=True, contains=commit_hash)
                 self.data.backported_jiras[jira_id] = backported_jira
                 LOG.info("%s Finished checking downstream backport for jira: %s", progress, jira_id)
 
