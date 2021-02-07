@@ -254,7 +254,9 @@ class BackportedCommit:
 
 class UpstreamJiraUmbrellaFetcher:
     def __init__(self, args, upstream_repo, downstream_repo, basedir, upstream_base_branch):
-        self.execution_mode = ExecutionMode.MANUAL_BRANCH_MODE if args.branches else ExecutionMode.AUTO_BRANCH_MODE
+        self.execution_mode = (
+            ExecutionMode.MANUAL_BRANCH_MODE if "branches" in args and args.branches else ExecutionMode.AUTO_BRANCH_MODE
+        )
         self.downstream_branches = args.branches
         self.jira_id = args.jira_id
         self.upstream_repo = upstream_repo
