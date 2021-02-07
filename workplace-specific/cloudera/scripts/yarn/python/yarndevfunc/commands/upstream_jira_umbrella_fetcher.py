@@ -43,7 +43,7 @@ class JiraUmbrellaData:
     def no_of_files(self):
         return len(self.list_of_changed_files)
 
-    def render_summary_string(self, result_basedir, extended_backport_table=False, backport_remote_filter=ORIGIN):
+    def render_summary_string(self, result_basedir, extended_backport_table=True, backport_remote_filter=ORIGIN):
         # Generate tables first, in order to know the length of the header rows
         commit_list_table = ResultPrinter.print_table(
             self.upstream_commit_data_list,
@@ -73,13 +73,14 @@ class JiraUmbrellaData:
                             bjira.jira_id,
                             commit.commit_obj.hash[:SHORT_SHA_LENGTH],
                             commit.commit_obj.message,
-                            commit.branches,
+                            self.filter_branches(backport_remote_filter, commit.branches),
+                            commit.commit_obj.date,
                         ]
                     )
             backport_table = ResultPrinter.print_table(
                 backports_list,
                 lambda row: row,
-                header=["Row", "Jira ID", "Hash", "Commit message", "Branches"],
+                header=["Row", "Jira ID", "Hash", "Commit message", "Branches", "Date"],
                 print_result=False,
                 max_width=50,
                 max_width_separator=" ",
@@ -91,11 +92,8 @@ class JiraUmbrellaData:
                 for commit in bjira.commits:
                     if commit.commit_obj.reverted:
                         continue
-                    if not backport_remote_filter or any(backport_remote_filter in br for br in commit.branches):
-                        if backport_remote_filter:
-                            branches = list(filter(lambda br: backport_remote_filter in br, commit.branches))
-                        else:
-                            branches = commit.branches
+                    branches = self.filter_branches(backport_remote_filter, commit.branches)
+                    if branches:
                         all_branches.extend(branches)
                 backports_list.append([bjira.jira_id, list(set(all_branches))])
             backport_table = ResultPrinter.print_table(
@@ -148,6 +146,14 @@ class JiraUmbrellaData:
         summary_str += backport_header_line
         summary_str += backport_table
         return summary_str
+
+    @staticmethod
+    def filter_branches(backport_remote_filter, branches):
+        if backport_remote_filter and any(backport_remote_filter in br for br in branches):
+            res_branches = list(filter(lambda br: backport_remote_filter in br, branches))
+        else:
+            res_branches = branches
+        return res_branches
 
 
 @auto_str
