@@ -259,7 +259,7 @@ class UpstreamJiraUmbrellaFetcher:
             if hasattr(args, "branches") and args.branches
             else ExecutionMode.AUTO_BRANCH_MODE
         )
-        self.downstream_branches = args.branches
+        self.downstream_branches = args.branches if hasattr(args, "branches") else []
         self.jira_id = args.jira_id
         self.upstream_repo = upstream_repo
         self.downstream_repo = downstream_repo
