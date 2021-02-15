@@ -402,7 +402,7 @@ class UpstreamJiraUmbrellaFetcher:
         # Example line:
         # 'bad6038a4879be7b93eb52cfb54ddfd4ce7111cd YARN-10622. Fix preemption policy to exclude childless ParentQueues.
         # Contributed by Andras Gyori 2021-02-15T14:48:42+01:00'
-        found_jira_ids = set(map(lambda x: x.split(" ")[1][:-1], normal_commit_lines))
+        found_jira_ids = set(map(lambda x: x.split(COMMIT_FIELD_SEPARATOR)[1][:-1], normal_commit_lines))
         not_found_jira_ids = set(self.data.subjira_ids).difference(found_jira_ids)
         not_found_jira_titles = [
             jira_title for jira_id, jira_title in self.data.jira_ids_and_titles.items() if jira_id in not_found_jira_ids
@@ -422,7 +422,7 @@ class UpstreamJiraUmbrellaFetcher:
             # Just a 'smart' heuristic :)
             # Reconstruct commit message by using a merged form of all words until "Contributed".
             commit_msg = ""
-            split_line = log_line.split(" ")
+            split_line = log_line.split(COMMIT_FIELD_SEPARATOR)
             commit_hash = split_line[0]
             words = split_line[1:]
             for w in words:
@@ -435,7 +435,7 @@ class UpstreamJiraUmbrellaFetcher:
             else:
                 jira_id = temp_dict[commit_msg]
                 words.insert(0, jira_id + ".")
-                modified_log_line = commit_hash + " " + " ".join(words)
+                modified_log_line = commit_hash + " " + COMMIT_FIELD_SEPARATOR.join(words)
                 LOG.debug("Adding modified log line. Original: %s, Modified: %s", log_line, modified_log_line)
                 modified_log_lines.append(modified_log_line)
         return modified_log_lines
