@@ -306,7 +306,8 @@ class UpstreamJiraUmbrellaFetcher:
 
         self.log_current_branch()
         self.set_file_fields()
-
+        self.upstream_repo.fetch(all=True)
+        self.downstream_repo.fetch(all=True)
         if self.force_mode:
             LOG.info("FORCE MODE is on")
             self.do_fetch()
@@ -479,8 +480,6 @@ class UpstreamJiraUmbrellaFetcher:
             changed_files = self.upstream_repo.diff_tree(c_hash, no_commit_id=True, name_only=True, recursive=True)
             list_of_changed_files.append(changed_files)
             LOG.debug("List of changed files for commit hash '%s': %s", c_hash, changed_files)
-        LOG.info("Got %d changed files", len(list_of_changed_files))
-
         # Filter dupes, flatten list of lists
         list_of_changed_files = [y for x in list_of_changed_files for y in x]
         self.data.list_of_changed_files = list(set(list_of_changed_files))
