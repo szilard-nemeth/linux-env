@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import sys
 
 from pythoncommons.file_utils import FileUtils
 from pythoncommons.jira_utils import JiraUtils
@@ -8,7 +9,7 @@ from pythoncommons.pickle_utils import PickleUtils
 from pythoncommons.string_utils import StringUtils, auto_str
 
 from yarndevfunc.command_runner import CommandRunner
-from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR, REVERT, SHORT_SHA_LENGTH, ORIGIN
+from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR, REVERT, SHORT_SHA_LENGTH, ORIGIN, ORIGIN_TRUNK
 from yarndevfunc.utils import ResultPrinter
 from enum import Enum
 
@@ -377,7 +378,7 @@ class UpstreamJiraUmbrellaFetcher:
 
     def find_upstream_commits_and_save_to_file(self):
         # It's quite complex to grep for multiple jira IDs with gitpython, so let's rather call an external command
-        git_log_result = self.upstream_repo.log(HEAD, oneline_with_date=True)
+        git_log_result = self.upstream_repo.log(ORIGIN_TRUNK, oneline_with_date=True)
         output = CommandRunner.egrep_with_cli(git_log_result, self.intermediate_results_file, self.data.piped_jira_ids)
         self.data.matched_upstream_commit_list = output.split("\n")
         if not self.data.matched_upstream_commit_list:
@@ -505,13 +506,30 @@ class UpstreamJiraUmbrellaFetcher:
             # NOTE: It seems impossible to call the following command with gitpython:
             # git log --follow --oneline -- <file>
             # Use a simple CLI command instead
-            cli_command = 'cd {repo_path} && git log --follow --oneline -- {changed_file} | egrep "{jira_list}"'.format(
-                repo_path=self.upstream_repo.repo_path, changed_file=changed_file, jira_list=self.data.piped_jira_ids
+            cli_command = (
+                "cd {repo_path} && git log {branch} --follow --oneline -- {changed_file} | "
+                'egrep "{jira_list}"'.format(
+                    repo_path=self.upstream_repo.repo_path,
+                    branch=ORIGIN_TRUNK,
+                    changed_file=changed_file,
+                    jira_list=self.data.piped_jira_ids,
+                )
             )
             LOG.info("[%d / %d] CLI command: %s", idx + 1, len(self.data.list_of_changed_files), cli_command)
-            output = CommandRunner.run_cli_command(cli_command, fail_on_empty_output=False, print_command=False)
-            LOG.info("Saving changes result to file: %s", target_file)
-            FileUtils.save_to_file(target_file, output)
+            output = CommandRunner.run_cli_command(
+                cli_command, fail_on_empty_output=False, print_command=False, fail_on_error=False
+            )
+
+            if output:
+                LOG.info("Saving changes result to file: %s", target_file)
+                FileUtils.save_to_file(target_file, output)
+            else:
+                LOG.error(
+                    f"Failed to detect changes of file: {changed_file}. CLI command was: {cli_command}. "
+                    f"This seems to be a programming error. Exiting..."
+                )
+                FileUtils.save_to_file(target_file, "")
+                sys.exit(1)
 
     def print_summary(self):
         LOG.info(self.data.render_summary_string(self.result_basedir))
