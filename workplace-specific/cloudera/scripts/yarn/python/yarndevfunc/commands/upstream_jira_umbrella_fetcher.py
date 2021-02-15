@@ -26,6 +26,7 @@ class ExecutionMode(Enum):
 class JiraUmbrellaData:
     def __init__(self):
         self.subjira_ids = []
+        self.jira_ids_and_titles = {}
         self.jira_html = None
         self.piped_jira_ids = None
         self.matched_upstream_commit_list = None
@@ -268,7 +269,7 @@ class UpstreamJiraUmbrellaFetcher:
         self.upstream_base_branch = upstream_base_branch
         self.force_mode = True if args.force_mode else False
         # These fields will be assigned when data is fetched
-        self.data = None
+        self.data: JiraUmbrellaData = None
         self.result_basedir = None
         self.jira_html_file = None
         self.jira_list_file = None
@@ -368,19 +369,22 @@ class UpstreamJiraUmbrellaFetcher:
         self.data.jira_html = JiraUtils.download_jira_html(
             "https://issues.apache.org/jira/browse/", self.jira_id, self.jira_html_file
         )
-        self.data.subjira_ids = JiraUtils.parse_subjiras_from_umbrella_html(
+        self.data.jira_ids_and_titles = JiraUtils.parse_subjiras_and_jira_titles_from_umbrella_html(
             self.data.jira_html, self.jira_list_file, filter_ids=[self.jira_id]
         )
+        self.data.subjira_ids = list(self.data.jira_ids_and_titles.keys())
         if not self.data.subjira_ids:
             raise ValueError("Cannot find subjiras for jira with id: {}".format(self.jira_id))
-        LOG.info("Found subjiras: %s", self.data.subjira_ids)
+        LOG.info("Found %d subjiras: %s", len(self.data.subjira_ids), self.data.subjira_ids)
         self.data.piped_jira_ids = "|".join(self.data.subjira_ids)
 
     def find_upstream_commits_and_save_to_file(self):
         # It's quite complex to grep for multiple jira IDs with gitpython, so let's rather call an external command
         git_log_result = self.upstream_repo.log(ORIGIN_TRUNK, oneline_with_date=True)
         output = CommandRunner.egrep_with_cli(git_log_result, self.intermediate_results_file, self.data.piped_jira_ids)
-        self.data.matched_upstream_commit_list = output.split("\n")
+        normal_commit_lines = output.split("\n")
+        modified_log_lines = self._find_missing_upstream_commits_by_message(git_log_result, normal_commit_lines)
+        self.data.matched_upstream_commit_list = normal_commit_lines + modified_log_lines
         if not self.data.matched_upstream_commit_list:
             raise ValueError("Cannot find any commits for jira: {}".format(self.jira_id))
 
@@ -393,6 +397,48 @@ class UpstreamJiraUmbrellaFetcher:
         FileUtils.save_to_file(
             self.commits_file, StringUtils.list_to_multiline_string(self.data.matched_upstream_commit_hashes)
         )
+
+    def _find_missing_upstream_commits_by_message(self, git_log_result, normal_commit_lines):
+        # Example line:
+        # 'bad6038a4879be7b93eb52cfb54ddfd4ce7111cd YARN-10622. Fix preemption policy to exclude childless ParentQueues.
+        # Contributed by Andras Gyori 2021-02-15T14:48:42+01:00'
+        found_jira_ids = set(map(lambda x: x.split(" ")[1][:-1], normal_commit_lines))
+        not_found_jira_ids = set(self.data.subjira_ids).difference(found_jira_ids)
+        not_found_jira_titles = [
+            jira_title for jira_id, jira_title in self.data.jira_ids_and_titles.items() if jira_id in not_found_jira_ids
+        ]
+        LOG.debug("Found jira ids in git log: %s", found_jira_ids)
+        LOG.debug("Not found jira ids in git log: %s", not_found_jira_ids)
+        LOG.debug("Trying to find commits by jira titles from git log: %s", not_found_jira_titles)
+        output = CommandRunner.egrep_with_cli(
+            git_log_result, self.intermediate_results_file, "|".join(not_found_jira_titles)
+        )
+        output_lines2 = output.split("\n")
+        # For these special commits, prepend Jira ID to commit message if it was there
+        # Create reverse-dict
+        temp_dict = {v: k for k, v in self.data.jira_ids_and_titles.items()}
+        modified_log_lines = []
+        for log_line in output_lines2:
+            # Just a 'smart' heuristic :)
+            # Reconstruct commit message by using a merged form of all words until "Contributed".
+            commit_msg = ""
+            split_line = log_line.split(" ")
+            commit_hash = split_line[0]
+            words = split_line[1:]
+            for w in words:
+                if "Contributed" in w:
+                    break
+                commit_msg += " " + w
+            commit_msg = commit_msg.lstrip()
+            if commit_msg not in temp_dict:
+                LOG.error("Cannot find Jira ID for commit by its commit message. Git log line: %s", log_line)
+            else:
+                jira_id = temp_dict[commit_msg]
+                words.insert(0, jira_id + ".")
+                modified_log_line = commit_hash + " " + " ".join(words)
+                LOG.debug("Adding modified log line. Original: %s, Modified: %s", log_line, modified_log_line)
+                modified_log_lines.append(modified_log_line)
+        return modified_log_lines
 
     def find_downstream_commits_auto_mode(self):
         jira_ids = [commit_obj.jira_id for commit_obj in self.data.upstream_commit_data_list]
