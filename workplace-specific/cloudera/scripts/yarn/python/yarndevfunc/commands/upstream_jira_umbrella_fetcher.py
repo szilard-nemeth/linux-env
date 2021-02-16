@@ -12,6 +12,7 @@ from yarndevfunc.command_runner import CommandRunner
 from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR, REVERT, SHORT_SHA_LENGTH, ORIGIN, ORIGIN_TRUNK
 from yarndevfunc.utils import ResultPrinter
 from enum import Enum
+from colr import color
 
 LOG = logging.getLogger(__name__)
 PICKLED_DATA_FILENAME = "pickled_umbrella_data.obj"
@@ -127,6 +128,7 @@ class JiraUmbrellaData:
                         backport_present_list.append(branch in all_branches)
                     curr_row = [bjira.jira_id]
                     curr_row.extend(backport_present_list)
+                    curr_row = self.colorize_row(curr_row, convert_bools=True)
                     backports_list.append(curr_row)
 
                 header = ["Row", "Jira ID"]
@@ -181,6 +183,26 @@ class JiraUmbrellaData:
         summary_str += backport_header_line
         summary_str += backport_table
         return summary_str
+
+    def colorize_row(self, curr_row, convert_bools=False):
+        res = []
+        missing_backport = False
+        if not all(curr_row[1:]):
+            missing_backport = True
+
+        # Mark first cell with red if any of the backports are missing
+        # Mark first cell with green if all backports are present
+        # Mark any bool cell with green if True, red if False
+        for idx, cell in enumerate(curr_row):
+            if (isinstance(cell, bool) and cell) or not missing_backport:
+                if convert_bools and isinstance(cell, bool):
+                    cell = "X" if cell else "-"
+                res.append(color(cell, fore="green"))
+            else:
+                if convert_bools and isinstance(cell, bool):
+                    cell = "X" if cell else "-"
+                res.append(color(cell, fore="red"))
+        return res
 
     @staticmethod
     def filter_branches(backport_remote_filter, branches):

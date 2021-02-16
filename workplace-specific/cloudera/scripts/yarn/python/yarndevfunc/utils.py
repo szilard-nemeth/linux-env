@@ -34,8 +34,6 @@ class ResultPrinter:
             for t in tup:
                 if isinstance(t, list):
                     t = ", ".join(t)
-                elif isinstance(t, bool):
-                    t = "X" if t else "-"
                 if max_width and isinstance(t, str):
                     t = StringUtils.convert_string_to_multiline(t, max_line_length=80, separator=max_width_separator)
                 converted_row.append(t)
