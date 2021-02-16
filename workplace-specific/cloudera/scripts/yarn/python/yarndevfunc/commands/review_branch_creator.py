@@ -26,9 +26,8 @@ class ReviewBranchCreator:
         matches = RegexUtils.ensure_matches_pattern(patch_file_name, YARN_PATCH_FILENAME_REGEX)
         if not matches:
             raise ValueError(
-                "Filename '{}' (full path: {}) does not match usual patch file pattern: '{}'!".format(
-                    patch_file_name, patch_file, YARN_PATCH_FILENAME_REGEX
-                )
+                f"Filename '{patch_file_name}' (full path: {patch_file}) "
+                f"does not match usual patch file pattern: '{YARN_PATCH_FILENAME_REGEX}'!"
             )
 
         orig_branch = self.upstream_repo.get_current_branch_name()
@@ -46,9 +45,8 @@ class ReviewBranchCreator:
         diff = self.upstream_repo.diff_between_refs(self.remote_base_branch, self.base_branch)
         if diff:
             raise ValueError(
-                "There is a diff between local {} and {}! Run 'git reset {} --hard' and re-run the script!".format(
-                    self.base_branch, self.remote_base_branch, self.remote_base_branch
-                )
+                f"There is a diff between local {self.base_branch} and {self.remote_base_branch}! "
+                f"Run 'git reset {self.remote_base_branch} --hard' and re-run the script!"
             )
 
         apply_result = self.upstream_repo.apply_check(patch_file, raise_exception=False)
@@ -56,8 +54,8 @@ class ReviewBranchCreator:
             self.upstream_repo.checkout_previous_branch()
             cmd = "git apply " + patch_file
             raise ValueError(
-                "Patch does not apply to {}, please resolve the conflicts manually. "
-                "Run this command to apply the patch again: {}".format(self.base_branch, cmd)
+                f"Patch does not apply to {self.base_branch}, please resolve the conflicts manually. "
+                f"Run this command to apply the patch again: {cmd}"
             )
 
         LOG.info("Patch %s applies cleanly to %s", patch_file, self.base_branch)
@@ -66,7 +64,7 @@ class ReviewBranchCreator:
         if not branch_exists:
             success = self.upstream_repo.checkout_new_branch(target_branch, base_ref)
             if not success:
-                raise ValueError("Cannot checkout new branch {} based on ref {}".format(target_branch, base_ref))
+                raise ValueError(f"Cannot checkout new branch {target_branch} based on ref {base_ref}")
             LOG.info("Checked out branch %s based on ref %s", target_branch, base_ref)
         else:
             branch_pattern = target_branch + "*"
@@ -76,10 +74,10 @@ class ReviewBranchCreator:
             LOG.info("Creating new version of review branch as: %s", target_branch)
             success = self.upstream_repo.checkout_new_branch(target_branch, base_ref)
             if not success:
-                raise ValueError("Cannot checkout new branch {} based on ref {}".format(target_branch, base_ref))
+                raise ValueError(f"Cannot checkout new branch {target_branch} based on ref {base_ref}")
 
         self.upstream_repo.apply_patch(patch_file, include_check=False)
         LOG.info("Successfully applied patch: %s", patch_file)
-        commit_msg = "patch file: {}".format(patch_file)
+        commit_msg = f"patch file: {patch_file}"
         self.upstream_repo.add_all_and_commit(commit_msg)
         LOG.info("Committed changes of patch: %s with message: %s", patch_file, commit_msg)

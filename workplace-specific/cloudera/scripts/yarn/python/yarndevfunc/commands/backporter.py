@@ -96,14 +96,13 @@ class Backporter:
         self.upstream_repo.checkout_previous_branch()
         if not git_log_result:
             raise ValueError(
-                "Upstream commit not found on branch {} "
-                "with string in commit message: {}".format(self.upstream_branch, self.upstream_jira_id)
+                f"Upstream commit not found on branch {self.upstream_branch} "
+                f"with string in commit message: {self.upstream_jira_id}"
             )
         if len(git_log_result) > 1:
             raise ValueError(
-                "Ambiguous upsream commit with string in commit message: {}. Results: {}".format(
-                    self.upstream_jira_id, git_log_result
-                )
+                f"Ambiguous upstream commit with string in commit message: {self.upstream_jira_id}. "
+                f"Results: {git_log_result}"
             )
         self.commit_hash = GitWrapper.extract_commit_hash_from_gitlog_result(git_log_result[0])
 
@@ -121,7 +120,7 @@ class Backporter:
 
     def cherry_pick_commit(self):
         # Example checkout command: git checkout -b "$CDH_JIRA_NO-$CDH_BRANCH" cauldron/${CDH_BRANCH}
-        new_branch_name = "{}-{}".format(self.downstream_jira_id, self.downstream_branch)
+        new_branch_name = f"{self.downstream_jira_id}-{self.downstream_branch}"
 
         if self.downstream_repo.is_branch_exist(new_branch_name):
             LOG.warning("Branch already exists: %s. Continuing execution", new_branch_name)
@@ -131,7 +130,7 @@ class Backporter:
             success = self.downstream_repo.checkout_new_branch(new_branch_name, self.cherry_pick_base_ref)
             if not success:
                 raise ValueError(
-                    "Cannot checkout new branch {} based on ref {}".format(new_branch_name, self.cherry_pick_base_ref)
+                    f"Cannot checkout new branch {new_branch_name} based on ref {self.cherry_pick_base_ref}"
                 )
 
         git_log_result = self.downstream_repo.log(HEAD, oneline=True, grep=self.upstream_jira_id)
@@ -148,9 +147,9 @@ class Backporter:
 
             if not cherry_pick_result:
                 raise ValueError(
-                    "Failed to cherry-pick commit: {}. "
+                    f"Failed to cherry-pick commit: {self.commit_hash}. "
                     "Perhaps there were some merge conflicts, "
-                    "please resolve them and run: git cherry-pick --continue".format(self.commit_hash)
+                    "please resolve them and run: git cherry-pick --continue"
                 )
 
     def rewrite_commit_message(self):
@@ -165,9 +164,8 @@ class Backporter:
 
         if not upstream_jira_id_in_commit_msg:
             raise ValueError(
-                "Upstream jira id should be in commit message. Current commit mesage: {}, upstream jira id: {}".format(
-                    head_commit_msg, self.upstream_jira_id
-                )
+                "Upstream jira id should be in commit message. "
+                f"Current commit mesage: {head_commit_msg}, upstream jira id: {self.upstream_jira_id}"
             )
 
         if commit_msg_starts_with_downstream_jira_id:
@@ -177,10 +175,10 @@ class Backporter:
             )
         else:
             LOG.info("Rewriting commit message. Current commit message: %s", head_commit_msg)
-            self.downstream_repo.rewrite_head_commit_message(prefix="{}: ".format(self.downstream_jira_id))
+            self.downstream_repo.rewrite_head_commit_message(prefix=f"{self.downstream_jira_id}: ")
 
     def print_post_commit_guidance(self):
         LOG.info("Backport was successful!")
         if self.post_commit_messages:
             for message in self.post_commit_messages:
-                LOG.info("{}\n".format(message))
+                LOG.info(f"{message}\n")

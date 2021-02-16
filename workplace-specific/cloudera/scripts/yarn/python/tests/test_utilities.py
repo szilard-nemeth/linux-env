@@ -152,7 +152,7 @@ class TestUtilities:
         with open(file) as f:
             if string in f.read():
                 return True
-        TESTCASE.fail("File '{}' does not contain expected string: '{}'".format(file, string))
+        TESTCASE.fail(f"File '{file}' does not contain expected string: '{string}'")
 
     def add_some_file_changes(self, commit=False, commit_message_prefix=None):
         FileUtils.save_to_file(FileUtils.join_path(self.sandbox_repo_path, DUMMYFILE_1), DUMMYFILE_1)
@@ -226,7 +226,7 @@ class TestUtilities:
 
     def checkout_parent_of_branch(self, branch):
         if branch not in self.repo.heads:
-            raise ValueError("Cannot find branch: {}".format(branch))
+            raise ValueError(f"Cannot find branch: {branch}")
         parent_of_branch = branch + "^"
         self.repo.git.checkout(parent_of_branch)
         return self.repo.git.rev_parse("--verify", HEAD)
@@ -236,7 +236,7 @@ class TestUtilities:
 
     def checkout_branch(self, branch):
         if branch not in self.repo.heads:
-            raise ValueError("Cannot find branch: {}".format(branch))
+            raise ValueError(f"Cannot find branch: {branch}")
         self.repo.heads[branch].checkout()
 
     def assert_files_not_empty(self, basedir, expected_files=None):

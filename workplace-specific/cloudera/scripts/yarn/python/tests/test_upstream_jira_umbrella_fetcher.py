@@ -146,7 +146,7 @@ class TestUpstreamJiraUmbrellaFetcher(unittest.TestCase):
         # Since we are using force-mode (non cached mode), we expect all files have a newer mod date
         new_mod_dates = FileUtils.get_mod_dates_of_files(output_dir, *ALL_OUTPUT_FILES)
         for file, mod_date in new_mod_dates.items():
-            self.assertTrue(mod_date > original_mod_dates[file], "File has not been modified: {}".format(file))
+            self.assertTrue(mod_date > original_mod_dates[file], f"File has not been modified: {file}")
 
 
 if __name__ == "__main__":

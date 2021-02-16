@@ -59,7 +59,7 @@ class UpstreamJiraPatchDiffer:
                 diff = self.upstream_repo.diff_between_refs(commit_hash + "^", commit_hash)
                 branch_result.git_diff = diff
 
-                diff_filename = "{}-{}.diff".format(self.jira_id, branch)
+                diff_filename = f"{self.jira_id}-{branch}.diff"
                 PatchUtils.save_diff_to_patch_file(diff, FileUtils.join_path(self.basedir, diff_filename))
 
         # Validate results

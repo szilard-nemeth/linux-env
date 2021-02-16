@@ -73,7 +73,7 @@ class TestReviewBranchCreator(unittest.TestCase):
         review_branch_creator = ReviewBranchCreator(args, self.repo_wrapper, BASE_BRANCH, REMOTE_BASE_BRANCH)
         review_branch_creator.run()
 
-        self.assertTrue(REVIEW_BRANCH in self.repo.heads, "Review branch does not exist: {}".format(REVIEW_BRANCH))
+        self.assertTrue(REVIEW_BRANCH in self.repo.heads, f"Review branch does not exist: {REVIEW_BRANCH}")
         self.utils.verify_commit_message_of_branch(REVIEW_BRANCH, COMMIT_MSG_TEMPLATE.format(file=patch_file))
 
     def test_with_normal_patch_two_consecutive_branches(self):
@@ -87,8 +87,8 @@ class TestReviewBranchCreator(unittest.TestCase):
         review_branch_creator.run()
 
         branch_2 = REVIEW_BRANCH + "-2"
-        self.assertTrue(REVIEW_BRANCH in self.repo.heads, "Review branch does not exist: {}".format(REVIEW_BRANCH))
-        self.assertTrue(branch_2 in self.repo.heads, "Review branch does not exist: {}".format(branch_2))
+        self.assertTrue(REVIEW_BRANCH in self.repo.heads, f"Review branch does not exist: {REVIEW_BRANCH}")
+        self.assertTrue(branch_2 in self.repo.heads, f"Review branch does not exist: {branch_2}")
         self.utils.verify_commit_message_of_branch(REVIEW_BRANCH, COMMIT_MSG_TEMPLATE.format(file=patch_file))
         self.utils.verify_commit_message_of_branch(branch_2, COMMIT_MSG_TEMPLATE.format(file=patch_file))
 
@@ -107,5 +107,5 @@ class TestReviewBranchCreator(unittest.TestCase):
 
         yarn_functions.create_review_branch(args)
 
-        self.assertTrue(REVIEW_BRANCH in self.repo.heads, "Review branch does not exist: {}".format(REVIEW_BRANCH))
+        self.assertTrue(REVIEW_BRANCH in self.repo.heads, f"Review branch does not exist: {REVIEW_BRANCH}")
         self.utils.verify_commit_message_of_branch(REVIEW_BRANCH, COMMIT_MSG_TEMPLATE.format(file=patch_file))

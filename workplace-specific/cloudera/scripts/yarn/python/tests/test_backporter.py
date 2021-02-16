@@ -37,7 +37,7 @@ class TestBackporter(unittest.TestCase):
         cls.downstream_repo = cls.downstream_utils.repo
         cls.downstream_repo_wrapper = cls.downstream_utils.repo_wrapper
 
-        cls.full_cdh_branch = "{}-{}".format(CDH_JIRA_ID, CDH_BRANCH)
+        cls.full_cdh_branch = f"{CDH_JIRA_ID}-{CDH_BRANCH}"
 
         # Setup committer config
         cls.downstream_utils.prepare_git_config("downstream_user", "downstream_email")
@@ -111,10 +111,10 @@ class TestBackporter(unittest.TestCase):
         )
         backporter.run()
 
-        expected_commit_msg = "{}: {}test_commit".format(CDH_JIRA_ID, UPSTREAM_JIRA_ID)
+        expected_commit_msg = f"{CDH_JIRA_ID}: {UPSTREAM_JIRA_ID}test_commit"
         self.assertTrue(
             self.full_cdh_branch in self.downstream_repo.heads,
-            "Created downstream branch does not exist: {}".format(self.full_cdh_branch),
+            f"Created downstream branch does not exist: {self.full_cdh_branch}",
         )
         self.downstream_utils.verify_commit_message_of_branch(
             self.full_cdh_branch, expected_commit_msg, verify_cherry_picked_from=True
@@ -131,10 +131,10 @@ class TestBackporter(unittest.TestCase):
         )
         backporter.run()
 
-        expected_commit_msg = "{}: {}test_commit".format(CDH_JIRA_ID, UPSTREAM_JIRA_ID)
+        expected_commit_msg = f"{CDH_JIRA_ID}: {UPSTREAM_JIRA_ID}test_commit"
         self.assertTrue(
             self.full_cdh_branch in self.downstream_repo.heads,
-            "Created downstream branch does not exist: {}".format(self.full_cdh_branch),
+            f"Created downstream branch does not exist: {self.full_cdh_branch}",
         )
         self.downstream_utils.verify_commit_message_of_branch(
             self.full_cdh_branch, expected_commit_msg, verify_cherry_picked_from=True

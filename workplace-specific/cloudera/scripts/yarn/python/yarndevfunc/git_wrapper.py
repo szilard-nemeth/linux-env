@@ -156,7 +156,7 @@ class GitWrapper:
 
     def diff_between_refs(self, ref1, ref2):
         LOG.info("Making diff: %s..%s", ref1, ref2)
-        return self.repo.git.diff("{}..{}".format(ref1, ref2))
+        return self.repo.git.diff(f"{ref1}..{ref2}")
 
     def diff_tree(self, ref, no_commit_id=None, name_only=None, recursive=False):
         args = [ref]
@@ -209,7 +209,7 @@ class GitWrapper:
             branches = branches.split("\n")
             return [b.replace(" ", "") for b in branches]
         except GitCommandError:
-            LOG.exception("Branch does not exist with name: {}".format(name), exc_info=True)
+            LOG.exception(f"Branch does not exist with name: {name}", exc_info=True)
             return []
 
     def add_all_and_commit(self, commit_msg, raise_exception=False):
@@ -262,7 +262,7 @@ class GitWrapper:
             # https://git-scm.com/docs/pretty-formats
             # Oneline format: <hash> <title line>
             # Oneline + date format: <hash> <title line> <author date>
-            kwargs["format"] = "{} {} {}".format(FORMAT_CODE_HASH, FORMAT_CODE_COMMIT_MSG, FORMAT_CODE_DATE_ISO_8601)
+            kwargs["format"] = f"{FORMAT_CODE_HASH} {FORMAT_CODE_COMMIT_MSG} {FORMAT_CODE_DATE_ISO_8601}"
         if grep:
             kwargs["grep"] = grep
         if format:
@@ -339,7 +339,7 @@ class GitWrapper:
         old_commit_msg = self.get_head_commit_message()
         # Add downstream (CDH jira) number as a prefix.
         # Since it triggers a commit, it will also add gerrit Change-Id to the commit.
-        self.repo.git.commit(amend=True, message="{}{}".format(prefix, old_commit_msg))
+        self.repo.git.commit(amend=True, message=f"{prefix}{old_commit_msg}")
 
     def get_head_commit_message(self):
         return self.log(HEAD, format="%B", n=1, as_string_message=True)

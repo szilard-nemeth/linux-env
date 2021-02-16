@@ -171,9 +171,9 @@ class JiraUmbrellaData:
             )
             + "\n"
         )
-        summary_str += "Number of jiras: {}\n".format(self.no_of_jiras)
-        summary_str += "Number of commits: {}\n".format(self.no_of_commits)
-        summary_str += "Number of files changed: {}\n".format(self.no_of_files)
+        summary_str += f"Number of jiras: {self.no_of_jiras}\n"
+        summary_str += f"Number of commits: {self.no_of_commits}\n"
+        summary_str += f"Number of files changed: {self.no_of_files}\n"
         summary_str += commits_header_line
         summary_str += commit_list_table
         summary_str += "\n\n"
@@ -239,9 +239,8 @@ class CommitData:
         match = CommitData.JIRA_ID_PATTERN.search(git_log_str)
         if not match:
             raise ValueError(
-                "Cannot find YARN jira id in git log string: {}. Pattern was: {}".format(
-                    git_log_str, CommitData.JIRA_ID_PATTERN.pattern
-                )
+                f"Cannot find YARN jira id in git log string: {git_log_str}. "
+                f"Pattern was: {CommitData.JIRA_ID_PATTERN.pattern}"
             )
         jira_id = match.group(1)
 
@@ -374,7 +373,7 @@ class UpstreamJiraUmbrellaFetcher:
         curr_branch = self.upstream_repo.get_current_branch_name()
         LOG.info("Current branch: %s", curr_branch)
         if curr_branch != self.upstream_base_branch:
-            raise ValueError("Current branch is not {}. Exiting!".format(self.upstream_base_branch))
+            raise ValueError(f"Current branch is not {self.upstream_base_branch}. Exiting!")
 
     def set_file_fields(self):
         self.result_basedir = FileUtils.join_path(self.basedir, self.jira_id)
@@ -396,7 +395,7 @@ class UpstreamJiraUmbrellaFetcher:
         )
         self.data.subjira_ids = list(self.data.jira_ids_and_titles.keys())
         if not self.data.subjira_ids:
-            raise ValueError("Cannot find subjiras for jira with id: {}".format(self.jira_id))
+            raise ValueError(f"Cannot find subjiras for jira with id: {self.jira_id}")
         LOG.info("Found %d subjiras: %s", len(self.data.subjira_ids), self.data.subjira_ids)
         self.data.piped_jira_ids = "|".join(self.data.subjira_ids)
 
@@ -408,7 +407,7 @@ class UpstreamJiraUmbrellaFetcher:
         modified_log_lines = self._find_missing_upstream_commits_by_message(git_log_result, normal_commit_lines)
         self.data.matched_upstream_commit_list = normal_commit_lines + modified_log_lines
         if not self.data.matched_upstream_commit_list:
-            raise ValueError("Cannot find any commits for jira: {}".format(self.jira_id))
+            raise ValueError(f"Cannot find any commits for jira: {self.jira_id}")
 
         LOG.info("Number of matched commits: %s", self.data.no_of_matched_commits)
         LOG.debug("Matched commits: \n%s", StringUtils.list_to_multiline_string(self.data.matched_upstream_commit_list))
@@ -465,7 +464,7 @@ class UpstreamJiraUmbrellaFetcher:
     def find_downstream_commits_auto_mode(self):
         jira_ids = [commit_obj.jira_id for commit_obj in self.data.upstream_commit_data_list]
         for idx, jira_id in enumerate(jira_ids):
-            progress = "[{} / {}] ".format(idx + 1, len(jira_ids))
+            progress = f"[{idx + 1} / {len(jira_ids)}] "
             LOG.info("%s Checking if %s is backported to downstream repo", progress, jira_id)
             downstream_commits_for_jira = self.downstream_repo.log(HEAD, oneline_with_date=True, all=True, grep=jira_id)
             LOG.info("%s Downstream git log result for %s: %s", progress, jira_id, downstream_commits_for_jira)
@@ -479,7 +478,7 @@ class UpstreamJiraUmbrellaFetcher:
                     "Identified %d backported commits for %s:\n%s",
                     len(backported_commits),
                     jira_id,
-                    "\n".join(["{} {}".format(bc.commit_obj.hash, bc.commit_obj.message) for bc in backported_commits]),
+                    "\n".join([f"{bc.commit_obj.hash} {bc.commit_obj.message}" for bc in backported_commits]),
                 )
 
                 backported_jira = BackportedJira(jira_id, backported_commits)
@@ -513,7 +512,7 @@ class UpstreamJiraUmbrellaFetcher:
                     "Identified %d backported commits on branch %s:\n%s",
                     len(backported_commits),
                     branch,
-                    "\n".join(["{} {}".format(bc.commit_obj.hash, bc.commit_obj.message) for bc in backported_commits]),
+                    "\n".join([f"{bc.commit_obj.hash} {bc.commit_obj.message}" for bc in backported_commits]),
                 )
 
                 for backported_commit in backported_commits:
@@ -575,13 +574,9 @@ class UpstreamJiraUmbrellaFetcher:
             # git log --follow --oneline -- <file>
             # Use a simple CLI command instead
             cli_command = (
-                "cd {repo_path} && git log {branch} --follow --oneline -- {changed_file} | "
-                'egrep "{jira_list}"'.format(
-                    repo_path=self.upstream_repo.repo_path,
-                    branch=ORIGIN_TRUNK,
-                    changed_file=changed_file,
-                    jira_list=self.data.piped_jira_ids,
-                )
+                f"cd {self.upstream_repo.repo_path} && "
+                f"git log {ORIGIN_TRUNK} --follow --oneline -- {changed_file} | "
+                f'egrep "{self.data.piped_jira_ids}"'
             )
             LOG.info("[%d / %d] CLI command: %s", idx + 1, len(self.data.list_of_changed_files), cli_command)
             output = CommandRunner.run_cli_command(

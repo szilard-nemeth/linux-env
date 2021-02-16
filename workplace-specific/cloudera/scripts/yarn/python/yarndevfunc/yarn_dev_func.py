@@ -47,7 +47,7 @@ class Setup:
         logger.setLevel(logging.DEBUG)
 
         # create file handler which logs even debug messages
-        prefix = "yarn_dev_func-{postfix}-".format(postfix=postfix)
+        prefix = f"yarn_dev_func-{postfix}-"
         logfilename = datetime.datetime.now().strftime(prefix + "%Y_%m_%d_%H%M%S.log")
 
         fh = TimedRotatingFileHandler(FileUtils.join_path(log_dir, logfilename), when="midnight")
@@ -108,9 +108,9 @@ class YarnDevFunc:
         downstream_hadoop_dir = os.environ[ENV_CLOUDERA_HADOOP_ROOT]
 
         if not upstream_hadoop_dir:
-            raise ValueError("Upstream Hadoop dir (env var: {}) is not set!".format(ENV_HADOOP_DEV_DIR))
+            raise ValueError(f"Upstream Hadoop dir (env var: {ENV_HADOOP_DEV_DIR}) is not set!")
         if not downstream_hadoop_dir:
-            raise ValueError("Downstream Hadoop dir (env var: {}) is not set!".format(ENV_CLOUDERA_HADOOP_ROOT))
+            raise ValueError(f"Downstream Hadoop dir (env var: {ENV_CLOUDERA_HADOOP_ROOT}) is not set!")
 
         # Verify if dirs are created
         FileUtils.verify_if_dir_is_created(downstream_hadoop_dir)
@@ -132,21 +132,18 @@ class YarnDevFunc:
         review_branch_creator.run()
 
     def backport_c6(self, args):
+        mvn_cmd = "mvn clean install -Pdist -DskipTests -Pnoshade  -Dmaven.javadoc.skip=true"
         build_cmd = (
             "!! Remember to build project to verify the backported commit compiles !!"
-            "Run this command to build the project: {}".format(
-                "mvn clean install -Pdist -DskipTests -Pnoshade  -Dmaven.javadoc.skip=true"
-            )
+            f"Run this command to build the project: {mvn_cmd}"
         )
         gerrit_push_cmd = (
             "Run this command to push to gerrit: "
-            "git push cauldron HEAD:refs/for/{cdh_branch}%{reviewers}".format(
-                cdh_branch=args.cdh_branch, reviewers=GERRIT_REVIEWER_LIST
-            )
+            f"git push cauldron HEAD:refs/for/{args.cdh_branch}%{GERRIT_REVIEWER_LIST}"
         )
         post_commit_messages = [build_cmd, gerrit_push_cmd]
 
-        downstream_base_ref = "cauldron/{}".format(args.cdh_branch)
+        downstream_base_ref = f"cauldron/{args.cdh_branch}"
         if "cdh_base_ref" in args:
             downstream_base_ref = args.cdh_base_ref
         backporter = Backporter(

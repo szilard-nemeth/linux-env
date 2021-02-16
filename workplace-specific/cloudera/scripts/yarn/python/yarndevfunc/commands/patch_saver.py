@@ -75,8 +75,8 @@ class PatchSaver:
         LOG.info("Current branch: %s", curr_branch)
         if curr_branch == self.base_branch:
             raise ValueError(
-                "Cannot make patch, current branch is {}. "
-                "Please use a different branch than this branch!".format(self.base_branch)
+                f"Cannot make patch, current branch is {self.base_branch}. "
+                "Please use a different branch than this branch!"
             )
         self.patch_branch = curr_branch
 
@@ -106,7 +106,7 @@ class PatchSaver:
         if new_patch_filename != new_patch_filename_sanity:
             raise ValueError(
                 "File paths do not match. "
-                "Calculated: {}, Concatenated: {}".format(new_patch_filename, new_patch_filename_sanity)
+                f"Calculated: {new_patch_filename}, Concatenated: {new_patch_filename_sanity}"
             )
         self.new_patch_filename = new_patch_filename
 
@@ -126,6 +126,6 @@ class PatchSaver:
         LOG.info("Trying to apply patch file '%s'", self.new_patch_filename)
         result = self.repo.apply_check(self.new_patch_filename)
         if not result:
-            raise ValueError("Patch file '{}' does not apply to {}!".format(self.new_patch_filename, self.base_branch))
+            raise ValueError(f"Patch file '{self.new_patch_filename}' does not apply to {self.base_branch}!")
         else:
             LOG.info("Patch file '%s' applies cleanly to %s.", self.new_patch_filename, self.base_branch)

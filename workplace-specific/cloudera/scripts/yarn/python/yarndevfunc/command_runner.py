@@ -41,7 +41,7 @@ class CommandRunner:
     @staticmethod
     def egrep_with_cli(git_log_result, file, piped_jira_ids):
         FileUtils.save_to_file(file, StringUtils.list_to_multiline_string(git_log_result))
-        cli_command = "cat {git_log_file} | egrep '{jira_list}'".format(git_log_file=file, jira_list=piped_jira_ids)
+        cli_command = f"cat {file} | egrep '{piped_jira_ids}'"
         return CommandRunner.run_cli_command(cli_command)
 
     @staticmethod

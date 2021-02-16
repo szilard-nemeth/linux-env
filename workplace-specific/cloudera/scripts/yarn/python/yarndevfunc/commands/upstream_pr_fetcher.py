@@ -57,11 +57,7 @@ class UpstreamPRFetcher:
     def fetch_and_log_commits(self):
         success = self.repo.fetch(repo_url=self.remote_repo_url, remote_name=self.remote_branch)
         if not success:
-            raise ValueError(
-                "Cannot fetch from remote branch: {url}/{remote}".format(
-                    url=self.remote_repo_url, remote=self.remote_branch
-                )
-            )
+            raise ValueError(f"Cannot fetch from remote branch: {self.remote_repo_url}/{self.remote_branch}")
         log_result = self.repo.log(FETCH_HEAD, n=self.print_n_commits)
         LOG.info(
             "Printing %d topmost commits of %s:\n %s",
@@ -70,16 +66,14 @@ class UpstreamPRFetcher:
             StringUtils.list_to_multiline_string(log_result),
         )
 
-        base_vs_fetch_head = "{}..{}".format(self.base_branch, FETCH_HEAD)
+        base_vs_fetch_head = f"{self.base_branch}..{FETCH_HEAD}"
         log_result = self.repo.log(base_vs_fetch_head, oneline=True)
         LOG.info("\n\nPrinting diff of %s:\n %s", base_vs_fetch_head, StringUtils.list_to_multiline_string(log_result))
 
         num_commits = len(log_result)
         if num_commits > self.cherry_pick_n_commits:
             raise ValueError(
-                "Number of commits between {} is more than %d! Exiting...".format(
-                    base_vs_fetch_head, self.cherry_pick_n_commits
-                )
+                f"Number of commits between {base_vs_fetch_head} is more than {self.cherry_pick_n_commits}! Exiting..."
             )
 
     def cherry_pick_commits(self):

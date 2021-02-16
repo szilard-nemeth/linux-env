@@ -73,23 +73,21 @@ class FormatPatchSaver:
             repo = GitWrapper(self.working_dir)
             self.repo = repo
         except InvalidGitRepositoryError:
-            raise ValueError("Current working directory is not a git repo: {}".format(self.working_dir))
+            raise ValueError(f"Current working directory is not a git repo: {self.working_dir}")
 
     def validate_refspecs(self):
         if self.base_refspec == self.other_refspec:
             raise ValueError(
-                "Specified base refspec '{}' is the same as other refspec '{}'".format(
-                    self.base_refspec, self.other_refspec
-                )
+                f"Specified base refspec '{self.base_refspec}' is the same as other refspec '{self.other_refspec}'"
             )
 
         exists = self.repo.is_branch_exist(self.base_refspec)
         if not exists:
-            raise ValueError("Specified base refspec is not valid: {}".format(self.base_refspec))
+            raise ValueError(f"Specified base refspec is not valid: {self.base_refspec}")
 
         exists = self.repo.is_branch_exist(self.other_refspec)
         if not exists:
-            raise ValueError("Specified other refspec is not valid: {}".format(self.base_refspec))
+            raise ValueError(f"Specified other refspec is not valid: {self.base_refspec}")
 
     def ensure_dest_dir_is_created(self):
         dest_basedir = expanduser(self.dest_basedir)
@@ -97,6 +95,6 @@ class FormatPatchSaver:
         FileUtils.ensure_dir_created(self.patch_file_dest_dir)
 
     def run_format_patch(self):
-        refspec = "{}..{}".format(self.base_refspec, self.other_refspec)
+        refspec = f"{self.base_refspec}..{self.other_refspec}"
         LOG.info("Saving git patches based on refspec '%s', to directory: %s", refspec, self.patch_file_dest_dir)
         self.repo.format_patch(refspec, output_dir=self.patch_file_dest_dir, full_index=True)
