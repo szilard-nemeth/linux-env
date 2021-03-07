@@ -144,7 +144,7 @@ class YarnDevFunc:
         post_commit_messages = [build_cmd, gerrit_push_cmd]
 
         downstream_base_ref = f"cauldron/{args.cdh_branch}"
-        if "cdh_base_ref" in args:
+        if "cdh_base_ref" in args and args.cdh_base_ref is not None:
             downstream_base_ref = args.cdh_base_ref
         backporter = Backporter(
             args,
