@@ -195,12 +195,12 @@ class GitWrapper:
         LOG.debug("Git status: %s", status)
         return False if len(status) > 0 else True
 
-    def is_branch_exist(self, branch):
+    def is_branch_exist(self, branch, exc_info=True):
         try:
             self.repo.git.rev_parse("--verify", branch)
             return True
         except GitCommandError:
-            LOG.exception("Branch does not exist", exc_info=True)
+            LOG.exception("Branch does not exist", exc_info=exc_info)
             return False
 
     def list_branches(self, name):

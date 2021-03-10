@@ -122,7 +122,7 @@ class Backporter:
         # Example checkout command: git checkout -b "$CDH_JIRA_NO-$CDH_BRANCH" cauldron/${CDH_BRANCH}
         new_branch_name = f"{self.downstream_jira_id}-{self.downstream_branch}"
 
-        if self.downstream_repo.is_branch_exist(new_branch_name):
+        if self.downstream_repo.is_branch_exist(new_branch_name, exc_info=False):
             LOG.warning("Branch already exists: %s. Continuing execution", new_branch_name)
             # Make sure branch is checked out
             self.downstream_repo.checkout_branch(new_branch_name)
