@@ -26,6 +26,7 @@ function setup() {
     setup-antigen
     setup-prompt
     setup-kitty
+    setup-sdkman
 }
 
 function setup-antigen() {
@@ -140,7 +141,15 @@ function setup-kitty() {
     compinit
     # Completion for kitty
     kitty + complete setup zsh | source /dev/stdin
+}
 
+function setup-sdkman() {
+    if [ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
+        echo "Setting up sdkman..."
+        source "$HOME/.sdkman/bin/sdkman-init.sh"
+    else
+        echo "WARN: sdkman init script does not exist at: $HOME/.sdkman/bin/sdkman-init.sh"
+    fi
 }
 
 function setup-key-bindings() {

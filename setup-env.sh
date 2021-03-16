@@ -260,6 +260,16 @@ function initial_setup_macos() {
         brew install tig
     fi
 
+    if ! hash safe-rm 2>/dev/null; then
+        echo "safe-rm not found! Installing safe-rm..."
+        brew install safe-rm
+    fi
+
+    if ! hash wget 2>/dev/null; then
+        echo "wget not found! Installing wget..."
+        brew install wget
+    fi
+
     echo "Checking available shells..."
     cat /etc/shells | grep zsh
     if [[ "$?" -ne 0 ]]; then
