@@ -44,6 +44,7 @@ PATH=$PATH:$HOME/development/cloudera/dist_test/bin
 if is-platform-macos
 then
     PATH=$PATH:$HOME/Library/Python/2.7/bin
+    PATH=$PATH:$HOME/Library/Python/3.8/bin
     PATH=$PATH:/Applications/CMake.app/Contents/bin
 fi
 
@@ -53,4 +54,4 @@ PATH=$PATH:$HOME/.cargo/bin
 GOPATH=/Users/snemeth/go
 
 #Setup PYTHONPATH
-export PYTHONPATH="/usr/local/lib/python3.8/site-packages:$CLOUDERA_DIR/scripts/yarn/python/:$PYTHONPATH"
+export PYTHONPATH="/usr/local/lib/python3.8/site-packages:$CLOUDERA_DIR/scripts/yarn/python/:$HOME/Library/Python/3.8/lib/python/site-packages/:$HOME/Library/Python/3.8/bin:$PYTHONPATH"

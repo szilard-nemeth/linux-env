@@ -11,4 +11,17 @@
 Configure precommit as described in this blogpost: https://ljvmiranda921.github.io/notebook/2018/06/21/precommits-using-black-and-flake8/
 Commands:
 1. Install precommit: `pip install pre-commit`
+2. Make sure to add pre-commit to your path. For example, on a Mac system, pre-commit is installed here: 
+   `$HOME/Library/Python/3.8/bin/pre-commit`.
 2. Execute `pre-commit install` to install git hooks in your `.git/` directory.
+
+## Troubleshooting
+
+### pre-commit installation
+In case you're facing a similar issue:
+```
+An error has occurred: InvalidManifestError: 
+=====> /<userhome>/.cache/pre-commit/repoBP08UH/.pre-commit-hooks.yaml does not exist
+Check the log at /<userhome>/.cache/pre-commit/pre-commit.log
+```
+, please run: `pre-commit autoupdate`
