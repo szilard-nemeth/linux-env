@@ -225,7 +225,10 @@ function initial_setup_macos() {
     echo "Checking whether Homebrew is installed..."
     if ! hash brew 2>/dev/null; then
         echo "Homebrew not found! Installing Homebrew..."
-        /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+        # Warning: The Ruby Homebrew installer is now deprecated and has been rewritten in
+        # Bash. Please migrate to the following command:
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+
     fi
     
     echo "Checking whether GNU sed is installed..."
