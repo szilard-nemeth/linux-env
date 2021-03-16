@@ -25,7 +25,7 @@ function timezones() {
 function reviewsync() {
     python $HOME/development/my-repos/hadoop-reviewsync/reviewsync/reviewsync.py \
     --gsheet \
-    --gsheet-client-secret "/Users/szilardnemeth/.secret/client_secret_hadoopreviewsync.json" \
+    --gsheet-client-secret "/Users/snemeth/.secret/client_secret_hadoopreviewsync.json" \
     --gsheet-spreadsheet "YARN/MR Reviews" \
     --gsheet-worksheet "Incoming" \
     --gsheet-jira-column "JIRA" \
@@ -75,7 +75,7 @@ function yarn-listupstreamversions() {
 #TODO extract export statement and script name to variable
 alias yarn-save-patch="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarndevfunc/yarn_dev_func.py save_patch"
 
-#Example call: yarn-create-review-branch /Users/szilardnemeth/yarn-tasks/YARN-10277-test2/YARN-10277-test2.010.patch
+#Example call: yarn-create-review-branch /Users/snemeth/yarn-tasks/YARN-10277-test2/YARN-10277-test2.010.patch
 alias yarn-create-review-branch="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarndevfunc/yarn_dev_func.py create_review_branch"
 
 #Generic call: yarn-backport-c6 [Upstream commit hash or commit message fragment] [CDH-jira-number] [CDH-branch]

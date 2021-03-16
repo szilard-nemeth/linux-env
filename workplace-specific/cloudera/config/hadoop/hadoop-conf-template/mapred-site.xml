@@ -1,14 +1,14 @@
 <configuration>
 <property>
   <name>yarn.app.mapreduce.am.env</name>
-  <value>HADOOP_MAPRED_HOME=/Users/szilardnemeth/development/apache/hadoop-maven/hadoop-dist/target/hadoop-$version</value>
+  <value>HADOOP_MAPRED_HOME=/Users/snemeth/development/apache/hadoop-maven/hadoop-dist/target/hadoop-$version</value>
 </property>
 <property>
   <name>mapreduce.map.env</name>
-  <value>HADOOP_MAPRED_HOME=/Users/szilardnemeth/development/apache/hadoop-maven/hadoop-dist/target/hadoop-$version</value>
+  <value>HADOOP_MAPRED_HOME=/Users/snemeth/development/apache/hadoop-maven/hadoop-dist/target/hadoop-$version</value>
 </property>
 <property>
   <name>mapreduce.reduce.env</name>
-  <value>HADOOP_MAPRED_HOME=/Users/szilardnemeth/development/apache/hadoop-maven/hadoop-dist/target/hadoop-$version</value>
+  <value>HADOOP_MAPRED_HOME=/Users/snemeth/development/apache/hadoop-maven/hadoop-dist/target/hadoop-$version</value>
 </property>
 </configuration>

@@ -20,7 +20,7 @@ function select-menu {
 
 if [ $# -ne 3 ]; then
     echo "Usage: replace-jar.sh [filename] [destination hostname] [cloudera hadoop project root>"
-    echo "Example: replace-jar.sh '*yarn*resourcemanager*jar' snemeth-sparkyarn2-1.gce.cloudera.com /Users/szilardnemeth/development/cloudera/hadoop/"
+    echo "Example: replace-jar.sh '*yarn*resourcemanager*jar' snemeth-sparkyarn2-1.gce.cloudera.com /Users/snemeth/development/cloudera/hadoop/"
     exit 1
 fi
 

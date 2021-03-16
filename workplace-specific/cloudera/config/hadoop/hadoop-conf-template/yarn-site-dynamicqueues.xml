@@ -64,6 +64,6 @@
 
     <property>
         <name>yarn.scheduler.fair.allocation.file</name>
-        <value>/Users/szilardnemeth/.linuxenv/workplace-specific/cloudera/config/hadoop/hadoop-conf/allocation.xml</value>
+        <value>/Users/snemeth/.linuxenv/workplace-specific/cloudera/config/hadoop/hadoop-conf/allocation.xml</value>
     </property>
 </configuration>

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-HADOOP_BUILD_ROOT="/Users/szilardnemeth/development/apache/hadoop"
+HADOOP_BUILD_ROOT="/Users/snemeth/development/apache/hadoop"
 INVESTIGATION_BASEDIR="$LINUX_ENV_REPO/workplace-specific/cloudera/investigations/YARN-10427"
 HADOOP_VERSION=$(cd $HADOOP_BUILD_ROOT && echo '${project.version}' | mvn help:evaluate 2> /dev/null | grep -v '^[[]')
 MVN_BUILD_COMMAND="mvn clean install -Pdist -DskipTests -Dmaven.javadoc.skip=true"

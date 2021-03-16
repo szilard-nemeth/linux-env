@@ -55,7 +55,7 @@ alias l='ls -CF'
 alias lc='colorls -lA --sd'
 
 ##Aliases for my DEV projects
-alias save-tabs-android="python3 /Users/szilardnemeth/development/my-repos/google-chrome-toolkit/googlechrometoolkit/save_open_tabs_android.py"
+alias save-tabs-android="python3 $HOME/development/my-repos/google-chrome-toolkit/googlechrometoolkit/save_open_tabs_android.py"
 
 
 ## OTHER ALIASES

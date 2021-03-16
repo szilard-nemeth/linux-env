@@ -16,12 +16,12 @@ export PATH="/usr/local/opt/protobuf@2.5/bin:$PATH"
 
 ## Setup Google Cloud SDK
 # The next line updates PATH for the Google Cloud SDK.
-if [[ -f '/Users/szilardnemeth/google-cloud-sdk/path.bash.inc' ]]; then 
+if [[ -f '/Users/snemeth/google-cloud-sdk/path.bash.inc' ]]; then 
     . '$HOME/google-cloud-sdk/path.bash.inc'; 
 fi
 
 # The next line enables shell command completion for gcloud.
-if [[ -f '/Users/szilardnemeth/google-cloud-sdk/completion.bash.inc' ]]; then 
+if [[ -f '/Users/snemeth/google-cloud-sdk/completion.bash.inc' ]]; then 
     . '$HOME/google-cloud-sdk/completion.bash.inc'; 
 fi
 
@@ -50,7 +50,7 @@ fi
 PATH=$PATH:$HOME/.cargo/bin
 
 #Setup GOPATH
-GOPATH=/Users/szilardnemeth/go
+GOPATH=/Users/snemeth/go
 
 #Setup PYTHONPATH
 export PYTHONPATH="/usr/local/lib/python3.8/site-packages:$CLOUDERA_DIR/scripts/yarn/python/:$PYTHONPATH"

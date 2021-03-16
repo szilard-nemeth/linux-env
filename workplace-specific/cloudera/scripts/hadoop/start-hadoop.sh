@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DFS_DATA_DIR=/private/tmp/hadoop-szilardnemeth/dfs/data
+DFS_DATA_DIR=/private/tmp/hadoop-snemeth/dfs/data
 if [ -d "$DFS_DATA_DIR" ]; then
   rm -rf ${DFS_DATA_DIR};
 fi

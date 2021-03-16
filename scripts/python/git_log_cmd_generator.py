@@ -4,28 +4,28 @@ import argparse
 __author__ = "Szilard Nemeth"
 
 # TEST COMMANDS & RESULTS
-# python3 /Users/szilardnemeth/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --grep grepas "Gergo Repas" --oneline --count
+# python3 $HOME/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --grep grepas "Gergo Repas" --oneline --count
 # git log --grep grepas --grep Gergo Repas --oneline | wc -l
 
-# python3 /Users/szilardnemeth/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --grep snemeth Szilard  'Szilard Nemeth' --oneline --count --final-grep 'YARN\|SUBMARINE\|HADOOP'
+# python3 $HOME/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --grep snemeth Szilard  'Szilard Nemeth' --oneline --count --final-grep 'YARN\|SUBMARINE\|HADOOP'
 # git log --grep snemeth --grep Szilard --grep Szilard Nemeth --oneline | grep YARN\|SUBMARINE\|HADOOP | wc -l
 
-# python3 /Users/szilardnemeth/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --grep snemeth Szilard  'Szilard Nemeth' --oneline --final-grep 'YARN\|SUBMARINE\|HADOOP'
+# python3 $HOME/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --grep snemeth Szilard  'Szilard Nemeth' --oneline --final-grep 'YARN\|SUBMARINE\|HADOOP'
 # git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | grep YARN\|SUBMARINE\|HADOOP
 
-# python3 /Users/szilardnemeth/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --grep snemeth Szilard  'Szilard Nemeth' --oneline --count
+# python3 $HOME/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --grep snemeth Szilard  'Szilard Nemeth' --oneline --count
 # git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | wc -l
 
-# python3 /Users/szilardnemeth/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --authors "snemeth@apache.org" --oneline --count
+# python3 $HOME/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --authors "snemeth@apache.org" --oneline --count
 # git log --author snemeth@apache.org --oneline | wc -l
 
 
 # alias upstream-yarn2="echo $(($(git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | grep YARN | wc -l | tr -s ' ' | cut -d ' ' -f2) + $(git log --author=snemeth --oneline | wc -l | tr -s ' ' | cut -d ' ' -f2)))"
 # THIS IS A COMBINED COMMAND:
-# python3 /Users/szilardnemeth/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --grep snemeth Szilard  'Szilard Nemeth' --oneline --count --trim-count
+# python3 $HOME/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --grep snemeth Szilard  'Szilard Nemeth' --oneline --count --trim-count
 # git log --grep snemeth --grep Szilard --grep 'Szilard Nemeth' --oneline | wc -l | tr -s ' ' | cut -d ' ' -f2
 # ++
-# python3 /Users/szilardnemeth/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --author snemeth --oneline --count --trim-count
+# python3 $HOME/development/my-repos/linux-env/scripts/git_log_cmd_generator.py --author snemeth --oneline --count --trim-count
 # git log --author snemeth --oneline | wc -l | tr -s ' ' | cut -d ' ' -f2
 
 
