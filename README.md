@@ -25,3 +25,4 @@ An error has occurred: InvalidManifestError:
 Check the log at /<userhome>/.cache/pre-commit/pre-commit.log
 ```
 , please run: `pre-commit autoupdate`
+More info here: https://github.com/pre-commit/pre-commit/issues/577
