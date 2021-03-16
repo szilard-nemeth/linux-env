@@ -228,7 +228,6 @@ function initial_setup_macos() {
         # Warning: The Ruby Homebrew installer is now deprecated and has been rewritten in
         # Bash. Please migrate to the following command:
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-
     fi
     
     echo "Checking whether GNU sed is installed..."
@@ -255,7 +254,12 @@ function initial_setup_macos() {
     else
         echo "gettext is already installed"
     fi
-    
+
+    if ! hash tig 2>/dev/null; then
+        echo "tig not found! Installing tig..."
+        brew install tig
+    fi
+
     echo "Checking available shells..."
     cat /etc/shells | grep zsh
     if [[ "$?" -ne 0 ]]; then
@@ -303,6 +307,7 @@ function initial_setup_macos() {
     
     #Colorls 
     gem install --user-install colorls
+    ###############################
     
     echo "complete" > "${ENV_SETUP_STATUS}"
 }
