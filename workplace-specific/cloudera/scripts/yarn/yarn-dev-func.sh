@@ -71,29 +71,34 @@ function yarn-listupstreamversions() {
 
 #####ALIASES
 
-#TODO PYTHONPATH DID NOT WORK
-#TODO extract export statement and script name to variable
-alias yarn-save-patch="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarndevfunc/yarn_dev_func.py save_patch"
+#Assuming venv is in linux-env repo's root
+LINUXENV_VENV="$LINUX_ENV_REPO/venv/"
+BIN_PYTHON="$LINUXENV_VENV/bin/python"
+
+YARN_DEV_FUNC_PY="$CLOUDERA_DIR/scripts/yarn/python/yarndevfunc/yarn_dev_func.py"
+YARN_DEV_FUNC_EXPORTS="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT"
+
+alias yarn-save-patch="$YARN_DEV_FUNC_EXPORTS; $BIN_PYTHON $YARN_DEV_FUNC_PY save_patch"
 
 #Example call: yarn-create-review-branch /Users/snemeth/yarn-tasks/YARN-10277-test2/YARN-10277-test2.010.patch
-alias yarn-create-review-branch="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarndevfunc/yarn_dev_func.py create_review_branch"
+alias yarn-create-review-branch="$YARN_DEV_FUNC_EXPORTS; $BIN_PYTHON $YARN_DEV_FUNC_PY create_review_branch"
 
 #Generic call: yarn-backport-c6 [Upstream commit hash or commit message fragment] [CDH-jira-number] [CDH-branch]
 #Example call: yarn-backport-c6 YARN-7948 CDH-64201 CDH-64201-cdh6x
-alias yarn-backport-c6="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarndevfunc/yarn_dev_func.py backport_c6"
+alias yarn-backport-c6="$YARN_DEV_FUNC_EXPORTS; $BIN_PYTHON $YARN_DEV_FUNC_PY backport_c6"
 
 #Generic call: yarn-upstream-commit-pr [github-username] [remote-branch]
 #Example call: yarn-upstream-commit-pr szilard-nemeth YARN-9999
-alias yarn-upstream-commit-pr="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarndevfunc/yarn_dev_func.py upstream_pr_fetch"
+alias yarn-upstream-commit-pr="$YARN_DEV_FUNC_EXPORTS; $BIN_PYTHON $YARN_DEV_FUNC_PY upstream_pr_fetch"
 
 #Generic call: yarn-diff-patches [JIRA_ID] [branches]
 #Example call: yarn-diff-patches YARN-7913 trunk branch-3.2 branch-3.1
-alias yarn-diff-patches="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarndevfunc/yarn_dev_func.py diff_patches_of_jira"
+alias yarn-diff-patches="$YARN_DEV_FUNC_EXPORTS; $BIN_PYTHON $YARN_DEV_FUNC_PY diff_patches_of_jira"
 
 #Generic call: save-diff-as-patches [refspec-to-diff-head-with] [destination-directory-prefix]"
 #Example call: save-diff-as-patches master gpu
 #Example call: save-diff-as-patches master WIP-migrate-yarn-scripts-to-python ~/yarn-tasks/saved_patches prefix1
-alias save-diff-as-patches="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarndevfunc/yarn_dev_func.py save_diff_as_patches"
+alias save-diff-as-patches="$YARN_DEV_FUNC_EXPORTS; $BIN_PYTHON $YARN_DEV_FUNC_PY save_diff_as_patches"
 
 #Example call: yarn-get-umbrella-data YARN-5734
-alias yarn-get-umbrella-data="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT; python3 $CLOUDERA_DIR/scripts/yarn/python/yarndevfunc/yarn_dev_func.py fetch_jira_umbrella_data"
+alias yarn-get-umbrella-data="$YARN_DEV_FUNC_EXPORTS; $BIN_PYTHON $YARN_DEV_FUNC_PY fetch_jira_umbrella_data"

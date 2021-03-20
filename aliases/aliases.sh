@@ -55,7 +55,14 @@ alias l='ls -CF'
 alias lc='colorls -lA --sd'
 
 ##Aliases for my DEV projects
-alias save-tabs-android="python3 $HOME/development/my-repos/google-chrome-toolkit/googlechrometoolkit/save_open_tabs_android.py"
+#Assuming venv is in googlechrometoolkit repo's root
+GCHROME_TOOLKIT_ROOT="$HOME/development/my-repos/google-chrome-toolkit/"
+GCHROME_TOOLKIT_MODULE_ROOT="$GCHROME_TOOLKIT_ROOT/googlechrometoolkit/"
+GCHROME_TOOLKIT_VENV="$GCHROME_TOOLKIT_ROOT/venv/"
+BIN_PYTHON="$GCHROME_TOOLKIT_VENV/bin/python"
+local SETUP_PYENV="PYTHONPATH=$GCHROME_TOOLKIT_ROOT:$PYTHONPATH"
+alias save-tabs-android="$SETUP_PYENV $BIN_PYTHON $GCHROME_TOOLKIT_MODULE_ROOT/save_open_tabs_android.py"
+alias save-chrome-history-all="$SETUP_PYENV $BIN_PYTHON $GCHROME_TOOLKIT_MODULE_ROOT/main.py --search-db-files --export-mode all"
 
 
 ## OTHER ALIASES
