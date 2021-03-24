@@ -57,13 +57,14 @@ class SummaryData(object):
 
 
 class Branches:
-    def __init__(self, basedir: str, repo: GitWrapper, branch_dict: dict):
+    def __init__(self, basedir: str, repo: GitWrapper, branch_dict: dict, fail_on_missing_jira_id=False):
         self.basedir = basedir
-        self.branch_data: Dict[BranchType, BranchData] = {}
         self.repo = repo
+        self.branch_data: Dict[BranchType, BranchData] = {}
         for br_type in BranchType:
             branch_name = branch_dict[br_type]
             self.branch_data[br_type] = BranchData(br_type, branch_name)
+        self.fail_on_missing_jira_id = fail_on_missing_jira_id
 
         # Set later
         self.merge_base: str = ""
@@ -99,6 +100,10 @@ class Branches:
                     ]
                 )
             )
+            commits_with_missing_jira_id = list(filter(lambda c: not c.jira_id, branch.commit_objs))
+            LOG.debug(f"Found commits with empty Jira ID: {commits_with_missing_jira_id}")
+            if self.fail_on_missing_jira_id:
+                raise ValueError(f"Found {len(commits_with_missing_jira_id)} commits with empty Jira ID!")
 
             for idx, commit in enumerate(branch.commit_objs):
                 branch.hash_to_commit[commit.hash] = commit
@@ -176,20 +181,31 @@ class Branches:
         self.common_commits: List[Tuple[CommitData, CommitData]] = []
         common_but_commit_msg_differs: List[Tuple[CommitData, CommitData]] = []
 
+        # TODO write these to file
+        master_commits_without_jira_id = list(filter(lambda c: not c.jira_id, master_br.commits_after_merge_base))
+        feature_commits_without_jira_id = list(filter(lambda c: not c.jira_id, feature_br.commits_after_merge_base))
+        LOG.warning(
+            f"Found {len(master_commits_without_jira_id)} master branch commits with empty Jira ID: {master_commits_without_jira_id}"
+        )
+        LOG.warning(
+            f"Found {len(feature_commits_without_jira_id)} feature branch commits with empty Jira ID: {feature_commits_without_jira_id}"
+        )
+
         for master_commit in master_br.commits_after_merge_base:
             if master_commit.jira_id in feature_br.jira_id_to_commit:
                 feature_commit = feature_br.jira_id_to_commit[master_commit.jira_id]
                 LOG.debug(
-                    "Found same commit on both branches (by Jira ID)."
-                    f"Master branch commit: {master_commit.as_oneline_string()}"
+                    "Found same commit on both branches (by Jira ID):\n"
+                    f"Master branch commit: {master_commit.as_oneline_string()}\n"
                     f"Feature branch commit: {feature_commit.as_oneline_string()}"
                 )
 
+                # TODO Handle multiple jira ids, example: "CDPD-10052. HADOOP-16932"
                 if master_commit.message != feature_commit.message:
                     # TODO Write these interesting commits to separate file
                     LOG.warning(
-                        "Jira ID is the same for commits, but commit message differs: "
-                        f"Master branch commit: {master_commit.as_oneline_string()}"
+                        "Jira ID is the same for commits, but commit message differs: \n"
+                        f"Master branch commit: {master_commit.as_oneline_string()}\n"
                         f"Feature branch commit: {feature_commit.as_oneline_string()}"
                     )
                     common_but_commit_msg_differs.append((master_commit, feature_commit))
@@ -372,15 +388,15 @@ class BranchComparator:
         # summary_str += f"Number of jiras: {self.no_of_jiras}\n"
         # summary_str += f"Number of commits: {self.no_of_commits}\n"
         # summary_str += f"Number of files changed: {self.no_of_files}\n"
-        summary_str += result_files_table
+        summary_str += str(result_files_table)
         summary_str += "\n\n"
-        summary_str += uniq_feature_commits_table
+        summary_str += str(uniq_feature_commits_table)
         summary_str += "\n\n"
-        summary_str += uniq_master_commits_table
+        summary_str += str(uniq_master_commits_table)
         summary_str += "\n\n"
-        summary_str += common_commits_table
+        summary_str += str(common_commits_table)
         summary_str += "\n\n"
-        summary_str += all_commits_table
+        summary_str += str(all_commits_table)
         summary_str += "\n\n"
         return summary_str
 
