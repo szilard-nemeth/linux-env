@@ -24,6 +24,7 @@ class BranchData:
 
         # Set later
         self.gitlog_results: List[str] = []
+        # Commit objects in reverse order (from oldest to newest)
         self.commit_objs: List[
             CommitData
         ] = []  # commits stored in a list, in order from last to first commit (descending)
@@ -87,15 +88,22 @@ class Branches:
         for br_type in BranchType:
             branch: BranchData = self.branch_data[br_type]
             branch.gitlog_results = self.repo.log(branch.name, oneline_with_date=True)
-            branch.commit_objs = [
-                CommitData.from_git_log_str(commit_str, pattern=ANY_JIRA_ID_PATTERN, allow_unmatched_jira_id=True)
-                for commit_str in branch.gitlog_results
-            ]
+            # Store commit objects in reverse order (ascending by date)
+            branch.commit_objs = list(
+                reversed(
+                    [
+                        CommitData.from_git_log_str(
+                            commit_str, pattern=ANY_JIRA_ID_PATTERN, allow_unmatched_jira_id=True
+                        )
+                        for commit_str in branch.gitlog_results
+                    ]
+                )
+            )
 
-            for idx, cd in enumerate(branch.commit_objs):
-                branch.hash_to_commit[cd.hash] = cd
-                branch.hash_to_index[cd.hash] = idx
-                branch.jira_id_to_commit[cd.jira_id] = cd
+            for idx, commit in enumerate(branch.commit_objs):
+                branch.hash_to_commit[commit.hash] = commit
+                branch.hash_to_index[commit.hash] = idx
+                branch.jira_id_to_commit[commit.jira_id] = commit
         # This must be executed after branch.hash_to_index is set
         self.get_merge_base()
 
@@ -112,7 +120,8 @@ class Branches:
     def _save_git_log_to_file(self):
         for br_type in BranchType:
             branch: BranchData = self.branch_data[br_type]
-            self.write_to_file("git log output", branch, branch.commit_objs)
+            # We would like to maintain descending order of commits in printouts
+            self.write_to_file("git log output", branch, list(reversed(branch.commit_objs)))
 
     def _save_commits_before_after_merge_base_to_file(self):
         for br_type in BranchType:
@@ -124,10 +133,10 @@ class Branches:
         merge_base = self.repo.merge_base(
             self.branch_data[BranchType.FEATURE].name, self.branch_data[BranchType.MASTER].name
         )
-        LOG.info(f"Merge base of branches: {self.merge_base}")
         if len(merge_base) > 1:
             raise ValueError(f"Ambiguous merge base: {merge_base}.")
         self.merge_base = merge_base[0]
+        LOG.info(f"Merge base of branches: {self.merge_base}")
         for br_type in BranchType:
             branch: BranchData = self.branch_data[br_type]
             branch.set_merge_base(self.merge_base.hexsha)
@@ -152,10 +161,10 @@ class Branches:
             commit2 = feature_br.commits_before_merge_base[idx]
             if commit1.hash != commit2.hash:
                 raise ValueError(
-                    f"Commit hash mismatch below merge-base commit. "
-                    f"Index: {idx}"
-                    f"Hash of {feature_br.name}: {commit2.hash}"
-                    f"Hash of {master_br.name}: {commit1.hash}"
+                    f"Commit hash mismatch below merge-base commit.\n"
+                    f"Index: {idx}\n"
+                    f"Hash of commit on {feature_br.name}: {commit2.hash}\n"
+                    f"Hash of commit on {master_br.name}: {commit1.hash}"
                 )
         LOG.info(
             f"Detected {len(master_br.commits_before_merge_base)} common commits between "
@@ -354,7 +363,7 @@ class BranchComparator:
         # Generate summary string
         summary_str = (
             StringUtils.generate_header_line(
-                "SUMMARY", char="═", length=len(StringUtils.get_first_line_of_multiline_str(common_commits_table))
+                "SUMMARY", char="═", length=len(StringUtils.get_first_line_of_multiline_str(common_commits_table.table))
             )
             + "\n"
         )
