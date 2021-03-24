@@ -246,17 +246,17 @@ class CommitData:
         :return:
         """
         comps = git_log_str.split(COMMIT_FIELD_SEPARATOR)
+        match = pattern.search(git_log_str)
 
-        if not allow_unmatched_jira_id:
-            match = pattern.search(git_log_str)
-            if not match:
+        jira_id = None
+        if not match:
+            if not allow_unmatched_jira_id:
                 raise ValueError(
                     f"Cannot find YARN jira id in git log string: {git_log_str}. "
                     f"Pattern was: {CommitData.JIRA_ID_PATTERN.pattern}"
                 )
-            jira_id = match.group(1)
         else:
-            jira_id = None
+            jira_id = match.group(1)
 
         revert_count = git_log_str.upper().count(REVERT.upper())
         reverted = False
