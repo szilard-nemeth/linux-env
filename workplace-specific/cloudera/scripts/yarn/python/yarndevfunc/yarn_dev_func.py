@@ -12,6 +12,7 @@ from logging.handlers import TimedRotatingFileHandler
 from pythoncommons.date_utils import DateUtils
 from pythoncommons.file_utils import FileUtils
 
+from commands.branch_comparator import BranchComparator
 from yarndevfunc.argparser import ArgParser
 from yarndevfunc.commands.backporter import Backporter
 from yarndevfunc.commands.format_patch_saver import FormatPatchSaver
@@ -96,10 +97,12 @@ class YarnDevFunc:
         self.yarn_patch_dir = FileUtils.join_path(home, "yarn-tasks")
         self.jira_umbrella_data_dir = FileUtils.join_path(home, "jira-umbrella-data")
         self.jira_patch_differ_dir = FileUtils.join_path(home, "jira-patch-differ")
+        self.branch_comparator_output_dir = FileUtils.join_path(home, "branch-comparator")
         FileUtils.ensure_dir_created(self.project_out_root)
         FileUtils.ensure_dir_created(self.log_dir)
         FileUtils.ensure_dir_created(self.yarn_patch_dir)
         FileUtils.ensure_dir_created(self.jira_umbrella_data_dir)
+        FileUtils.ensure_dir_created(self.branch_comparator_output_dir)
 
     def ensure_required_env_vars_are_present(self):
         import os
@@ -188,6 +191,10 @@ class YarnDevFunc:
             args, self.upstream_repo, self.downstream_repo, self.jira_umbrella_data_dir, DEFAULT_BASE_BRANCH
         )
         jira_umbrella_fetcher.run()
+
+    def compare_branches(self, args):
+        branch_comparator = BranchComparator(args, self.downstream_repo, self.branch_comparator_output_dir)
+        branch_comparator.run(args)
 
 
 if __name__ == "__main__":

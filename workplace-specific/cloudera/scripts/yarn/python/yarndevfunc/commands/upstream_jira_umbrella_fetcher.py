@@ -9,7 +9,15 @@ from pythoncommons.pickle_utils import PickleUtils
 from pythoncommons.string_utils import StringUtils, auto_str
 
 from yarndevfunc.command_runner import CommandRunner
-from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR, REVERT, SHORT_SHA_LENGTH, ORIGIN, ORIGIN_TRUNK
+from yarndevfunc.constants import (
+    HEAD,
+    COMMIT_FIELD_SEPARATOR,
+    REVERT,
+    SHORT_SHA_LENGTH,
+    ORIGIN,
+    ORIGIN_TRUNK,
+    YARN_JIRA_ID_PATTERN,
+)
 from yarndevfunc.utils import ResultPrinter
 from enum import Enum
 from colr import color
@@ -54,6 +62,8 @@ class JiraUmbrellaData:
     def no_of_files(self):
         return len(self.list_of_changed_files)
 
+    # TODO Separate this representation code from data logic
+    # TODO Figure out a way to decrease code duplication in this method
     def render_summary_string(self, result_basedir, extended_backport_table=False, backport_remote_filter=ORIGIN):
         # Generate tables first, in order to know the length of the header rows
         commit_list_table = ResultPrinter.print_table(
@@ -184,6 +194,7 @@ class JiraUmbrellaData:
         summary_str += backport_table
         return summary_str
 
+    # TODO X / - characters should be parameters
     def colorize_row(self, curr_row, convert_bools=False):
         res = []
         missing_backport = False
@@ -213,10 +224,9 @@ class JiraUmbrellaData:
         return res_branches
 
 
+# TODO move this to common module as it is used by BranchCompataror as well
 @auto_str
 class CommitData:
-    JIRA_ID_PATTERN = re.compile(r"(YARN-\d+)")
-
     def __init__(self, c_hash, jira_id, message, date, branches=None, reverted=False):
         self.hash = c_hash
         self.jira_id = jira_id
@@ -226,7 +236,7 @@ class CommitData:
         self.reverted = reverted
 
     @staticmethod
-    def from_git_log_str(git_log_str):
+    def from_git_log_str(git_log_str, pattern=YARN_JIRA_ID_PATTERN, allow_unmatched_jira_id=False):
         """
         1. Commit hash: It is in the first column.
         2. Jira ID: Expecting the Jira ID to be the first segment of commit message, so this is the second column.
@@ -236,13 +246,17 @@ class CommitData:
         :return:
         """
         comps = git_log_str.split(COMMIT_FIELD_SEPARATOR)
-        match = CommitData.JIRA_ID_PATTERN.search(git_log_str)
-        if not match:
-            raise ValueError(
-                f"Cannot find YARN jira id in git log string: {git_log_str}. "
-                f"Pattern was: {CommitData.JIRA_ID_PATTERN.pattern}"
-            )
-        jira_id = match.group(1)
+
+        if not allow_unmatched_jira_id:
+            match = pattern.search(git_log_str)
+            if not match:
+                raise ValueError(
+                    f"Cannot find YARN jira id in git log string: {git_log_str}. "
+                    f"Pattern was: {CommitData.JIRA_ID_PATTERN.pattern}"
+                )
+            jira_id = match.group(1)
+        else:
+            jira_id = None
 
         revert_count = git_log_str.upper().count(REVERT.upper())
         reverted = False
@@ -260,6 +274,9 @@ class CommitData:
             reverted=reverted,
         )
 
+    def as_oneline_string(self) -> str:
+        return f"{self.hash} {self.message}"
+
 
 @auto_str
 class BackportedJira:
@@ -275,6 +292,7 @@ class BackportedCommit:
         self.branches = branches
 
 
+# TODO Add documentation
 class UpstreamJiraUmbrellaFetcher:
     def __init__(self, args, upstream_repo, downstream_repo, basedir, upstream_base_branch):
         self.execution_mode = (
@@ -512,7 +530,7 @@ class UpstreamJiraUmbrellaFetcher:
                     "Identified %d backported commits on branch %s:\n%s",
                     len(backported_commits),
                     branch,
-                    "\n".join([f"{bc.commit_obj.hash} {bc.commit_obj.message}" for bc in backported_commits]),
+                    "\n".join([f"{bc.commit_obj.as_oneline_string()}" for bc in backported_commits]),
                 )
 
                 for backported_commit in backported_commits:

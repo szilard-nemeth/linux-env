@@ -12,6 +12,7 @@ class CommandType(Enum):
     SAVE_DIFF_AS_PATCHES = "save_diff_as_patches"
     DIFF_PATCHES_OF_JIRA = "diff_patches_of_jira"
     FETCH_JIRA_UMBRELLA_DATA = "fetch_jira_umbrella_data"
+    COMPARE_BRANCHES = "compare_branches"
 
 
 class ArgParser:
@@ -37,6 +38,7 @@ class ArgParser:
         ArgParser.add_save_diff_as_patches(subparsers, yarn_functions)
         ArgParser.diff_patches_of_jira(subparsers, yarn_functions)
         ArgParser.add_fetch_jira_umbrella_data(subparsers, yarn_functions)
+        ArgParser.add_compare_branches(subparsers, yarn_functions)
 
         # Normal arguments
         parser.add_argument(
@@ -140,3 +142,13 @@ class ArgParser:
             "--branches", required=False, type=str, nargs="+", help="Check backports againtst these branches"
         )
         parser.set_defaults(func=yarn_functions.fetch_jira_umbrella_data)
+
+    @staticmethod
+    def add_compare_branches(subparsers, yarn_functions):
+        parser = subparsers.add_parser(
+            CommandType.COMPARE_BRANCHES.value,
+            help="Compares branches." "Example: CDH-7.1-maint cdpd-master",
+        )
+        parser.add_argument("feature_branch", type=str, help="Feature branch")
+        parser.add_argument("master_branch", type=str, help="Master branch")
+        parser.set_defaults(func=yarn_functions.compare_branches)

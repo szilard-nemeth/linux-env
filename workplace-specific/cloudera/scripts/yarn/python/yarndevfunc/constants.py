@@ -1,3 +1,5 @@
+import re
+
 APACHE = "apache"
 HEAD = "HEAD"
 ORIGIN_TRUNK = "origin/trunk"
@@ -8,6 +10,8 @@ BRANCH_3_1 = "branch-3.1"
 GERRIT_REVIEWER_LIST = "r=shuzirra,r=pbacsko,r=kmarton,r=gandras,r=bteke"
 ENV_CLOUDERA_HADOOP_ROOT = "CLOUDERA_HADOOP_ROOT"
 ENV_HADOOP_DEV_DIR = "HADOOP_DEV_DIR"
+YARN_JIRA_ID_PATTERN = re.compile(r"(YARN-\d+)")
+ANY_JIRA_ID_PATTERN = re.compile(r"([A-Z]+-\d+)")
 
 # Do not leak bad ENV variable namings into the python code
 LOADED_ENV_UPSTREAM_DIR = "upstream-hadoop-dir"

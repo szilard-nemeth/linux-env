@@ -1,7 +1,8 @@
 import logging
 import os
+from typing import List
 
-from git import Repo, RemoteProgress, GitCommandError
+from git import Repo, RemoteProgress, GitCommandError, Commit
 from yarndevfunc.constants import ORIGIN
 
 from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR
@@ -195,7 +196,7 @@ class GitWrapper:
         LOG.debug("Git status: %s", status)
         return False if len(status) > 0 else True
 
-    def is_branch_exist(self, branch, exc_info=True):
+    def is_branch_exist(self, branch: str, exc_info=True):
         try:
             self.repo.git.rev_parse("--verify", branch)
             return True
@@ -340,6 +341,9 @@ class GitWrapper:
         # Add downstream (CDH jira) number as a prefix.
         # Since it triggers a commit, it will also add gerrit Change-Id to the commit.
         self.repo.git.commit(amend=True, message=f"{prefix}{old_commit_msg}")
+
+    def merge_base(self, feature_br: str, master_br: str) -> List[Commit]:
+        return self.repo.merge_base(feature_br, master_br)
 
     def get_head_commit_message(self):
         return self.log(HEAD, format="%B", n=1, as_string_message=True)
