@@ -32,8 +32,6 @@ class BranchData:
         self.commits_before_merge_base: List[CommitData] = []
         self.commits_after_merge_base: List[CommitData] = []
         self.hash_to_index: Dict[str, int] = {}  # Dict: commit hash to commit index
-        # TODO hash_to_commit is unused
-        self.hash_to_commit: Dict[str, str] = {}  # Dict: commit hash to CommitData object
         self.jira_id_to_commit: Dict[str, CommitData] = {}  # Dict: Jira ID (e.g. YARN-1234) to CommitData object
         self.unique_commits: List[CommitData] = []
         self.merge_base_idx: int = -1
@@ -43,15 +41,18 @@ class BranchData:
         return len(self.gitlog_results)
 
     def set_merge_base(self, merge_base_hash: str):
-        # TODO if hash not found throw exception
+        if merge_base_hash not in self.hash_to_index:
+            raise ValueError("Merge base cannot be found among commits. Merge base hash: " + merge_base_hash)
         self.merge_base_idx = self.hash_to_index[merge_base_hash]
-        # TODO raise exception if self.commit_objs is empty
+
+        if len(self.commit_objs) == 0:
+            raise ValueError("set_merge_base is invoked while commit list was empty!")
         self.commits_before_merge_base = self.commit_objs[: self.merge_base_idx]
         self.commits_after_merge_base = self.commit_objs[self.merge_base_idx :]
 
 
 # TODO use this class
-class SummaryData(object):
+class SummaryData:
     pass
 
 
@@ -108,7 +109,6 @@ class Branches:
                 raise ValueError(f"Found {len(commits_with_missing_jira_id)} commits with empty Jira ID!")
 
             for idx, commit in enumerate(branch.commit_objs):
-                branch.hash_to_commit[commit.hash] = commit
                 branch.hash_to_index[commit.hash] = idx
                 branch.jira_id_to_commit[commit.jira_id] = commit
         # This must be executed after branch.hash_to_index is set
@@ -256,8 +256,6 @@ class Branches:
                     f"Feature branch commit: {feature_commit.as_oneline_string()}"
                 )
 
-                # TODO Handle multiple jira ids?? example: "CDPD-10052. HADOOP-16932"
-                # TODO Handle reverts?
                 if master_commit_msg != feature_commit.message:
                     # TODO Write these special commits to separate file
                     LOG.warning(
@@ -329,8 +327,19 @@ class TableWithHeader:
         return self.header + self.table
 
 
+# TODO Handle multiple jira ids?? example: "CDPD-10052. HADOOP-16932"
+# TODO Consider revert commits?
+# TODO Stdout mode: Instead of writing to individual files, write everything to console --> Useful for automated runs!
+# TODO Run git_compare.sh and store results + diff git_compare.sh results with my script result, report if different!
+# TODO Add documentation
+# TODO Turn on Debug logging by default
+
+# TODO Fix table: ALL COMMITS (MERGED LIST)
+#  1. Weird coloring
+#  2. Only call colorize for shell outputs, not for writing to file!
+# TODO helper method to nicely print list of CommitData (\n)
+# TODO Check in logs: all results for "Jira ID is the same for commits, but commit message differs"
 class BranchComparator:
-    # TODO Add documentation
     """"""
 
     def __init__(self, args, downstream_repo, output_dir):
@@ -343,7 +352,6 @@ class BranchComparator:
         self.commit_author_exceptions = args.commit_author_exceptions
 
     def run(self, args):
-        # TODO Turn on Debug logging by default
         LOG.info(
             "Starting Branch comparator... \n "
             f"Output dir: {self.output_dir}\n"
@@ -364,22 +372,17 @@ class BranchComparator:
     def compare(self):
         self.branches.execute_git_log(print_stats=True, save_to_file=True)
         self.branches.compare(self.commit_author_exceptions)
+        self.print_and_save_summary()
 
-        # Print and save summary
+    def print_and_save_summary(self):
         summary_string = self.render_summary_string()
         LOG.info(summary_string)
         filename = FileUtils.join_path(self.output_dir, "summary.txt")
         LOG.info(f"Saving summary to file: {filename}")
         FileUtils.save_to_file(filename, summary_string)
 
-        # TODO 1. Write fancy table to console with unique commits (DO NOT INCLUDE COMMON COMMITS)
-        # TODO 2. Stdout mode: Instead of writing to individual files, write everything to console --> Useful for CDSW runs!
-        # TODO 3. Run git_compare.sh and store results + diff git_compare.sh results with my script result, report if different!
-        # TODO 4. Handle revert commits?
-
     def render_summary_string(self):
         # Generate tables first, in order to know the length of the header rows
-
         result_files_table = TableWithHeader(
             "RESULT FILES",
             ResultPrinter.print_table(
