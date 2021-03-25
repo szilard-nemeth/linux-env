@@ -22,6 +22,7 @@ class BranchData:
     def __init__(self, type: BranchType, branch_name: str):
         self.type: BranchType = type
         self.name: str = branch_name
+        self.shortname = branch_name.split("/")[1] if "/" in branch_name else branch_name
 
         # Set later
         self.gitlog_results: List[str] = []
@@ -132,8 +133,8 @@ class Branches:
     def _save_commits_before_after_merge_base_to_file(self):
         for br_type in BranchType:
             branch: BranchData = self.branch_data[br_type]
-            self.write_to_file("before merge base commits", branch, branch.commits_before_merge_base)
-            self.write_to_file("before after base commits", branch, branch.commits_after_merge_base)
+            self.write_to_file("before mergebase commits", branch, branch.commits_before_merge_base)
+            self.write_to_file("after mergebase commits", branch, branch.commits_after_merge_base)
 
     def get_merge_base(self):
         merge_base = self.repo.merge_base(
@@ -309,7 +310,7 @@ class Branches:
 
     def write_to_file(self, output_type: str, branch: BranchData, commits: List[CommitData]):
         file_prefix: str = output_type.replace(" ", "-") + "-"
-        f = self._generate_filename(self.output_dir, file_prefix, branch.name)
+        f = self._generate_filename(self.output_dir, file_prefix, branch.shortname)
         LOG.info(f"Saving {output_type} for branch {branch.type.name} to file: {f}")
         FileUtils.save_to_file(f, StringUtils.list_to_multiline_string([c.as_oneline_string() for c in commits]))
 
@@ -382,11 +383,11 @@ class BranchComparator:
         result_files_table = TableWithHeader(
             "RESULT FILES",
             ResultPrinter.print_table(
-                FileUtils.find_files(self.output_dir, regex=".*", full_path_result=True),
-                lambda file: (file,),
-                header=["Row", "File"],
+                sorted(FileUtils.find_files(self.output_dir, regex=".*", full_path_result=True)),
+                lambda file: (file, len(FileUtils.read_file(file).splitlines())),
+                header=["Row", "File", "# of lines"],
                 print_result=False,
-                max_width=80,
+                max_width=200,
                 max_width_separator=os.sep,
             ),
         )
