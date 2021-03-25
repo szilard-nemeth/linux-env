@@ -69,7 +69,7 @@ class SummaryData:
 
         # List-based data structures
         self.common_commits_before_merge_base: List[CommitData] = []
-        self.common_commits_after_merge_base: List[CommitData] = []
+        self.common_commits_after_merge_base: List[Tuple[CommitData, CommitData]] = []
 
         # Commits matched by message with missing Jira ID
         self.common_commits_matched_by_message: List[Tuple[CommitData, CommitData]] = []
@@ -295,20 +295,84 @@ class Branches:
     def _check_after_merge_base_commits(
         self, feature_br: BranchData, master_br: BranchData, commit_author_exceptions: List[str]
     ):
-        # TODO write these to file
-        self.summary.commits_with_missing_jira_id[BranchType.MASTER]: List[CommitData] = list(
-            filter(lambda c: not c.jira_id, master_br.commits_after_merge_base)
-        )
-        self.summary.commits_with_missing_jira_id[BranchType.FEATURE]: List[CommitData] = list(
-            filter(lambda c: not c.jira_id, feature_br.commits_after_merge_base)
-        )
-        LOG.warning(
-            f"Found {len(self.summary.commits_with_missing_jira_id[BranchType.MASTER])} master branch commits after merge-base with empty Jira ID: {self.summary.commits_with_missing_jira_id[BranchType.MASTER]}"
-        )
-        LOG.warning(
-            f"Found {len(self.summary.commits_with_missing_jira_id[BranchType.FEATURE])} feature branch commits after merge-base with empty Jira ID: {self.summary.commits_with_missing_jira_id[BranchType.FEATURE]}"
-        )
+        self._handle_commits_with_missing_jira_id(feature_br, master_br)
+        self._handle_commits_with_missing_jira_id_filter_author(commit_author_exceptions)
 
+        common_jira_ids: Set[str] = set()
+        common_commit_msgs: Set[str] = set()
+        # List of tuples. First item: Master branch commit obj, second item: feature branch commit obj
+        for master_commit in master_br.commits_after_merge_base:
+            master_commit_msg = master_commit.message
+            if not master_commit.jira_id:
+                # If this commit is without jira id and author was not an element of exceptional authors,
+                # then try to match commits across branches by commit message.
+                if master_commit_msg in self.summary.commits_with_missing_jira_id_filtered[BranchType.MASTER]:
+                    LOG.debug(
+                        "Trying to match commit by commit message as Jira ID is missing. Details: \n"
+                        f"Branch: master branch\n"
+                        f"Commit message: ${master_commit_msg}\n"
+                    )
+                    # Master commit message found in missing jira id list of the feature branch, record match
+                    if master_commit_msg in self.summary.commits_with_missing_jira_id_filtered[BranchType.FEATURE]:
+                        # TODO Write these special commits to separate file
+                        LOG.warning(
+                            "Found matching commit by commit message. Details: \n"
+                            f"Branch: master branch\n"
+                            f"Commit message: ${master_commit_msg}\n"
+                        )
+                        common_commit_msgs.add(master_commit_msg)
+                        commit_tuple: Tuple[CommitData, CommitData] = (
+                            master_commit,
+                            self.summary.commits_with_missing_jira_id_filtered[BranchType.FEATURE][master_commit_msg],
+                        )
+                        self.summary.common_commits_after_merge_base.append(commit_tuple)
+                        self.summary.common_commits_matched_by_message.append(commit_tuple)
+
+            elif master_commit.jira_id in feature_br.jira_id_to_commit:
+                # Normal path: Try to match commits across branches by Jira ID
+                feature_commit = feature_br.jira_id_to_commit[master_commit.jira_id]
+                LOG.debug(
+                    "Found same commit on both branches (by Jira ID):\n"
+                    f"Master branch commit: {master_commit.as_oneline_string()}\n"
+                    f"Feature branch commit: {feature_commit.as_oneline_string()}"
+                )
+
+                commit_tuple: Tuple[CommitData, CommitData] = (master_commit, feature_commit)
+                if master_commit_msg == feature_commit.message:
+                    self.summary.common_commits_matched_both.append(commit_tuple)
+                else:
+                    # TODO Write these special commits to separate file
+                    LOG.warning(
+                        "Jira ID is the same for commits, but commit message differs: \n"
+                        f"Master branch commit: {master_commit.as_oneline_string()}\n"
+                        f"Feature branch commit: {feature_commit.as_oneline_string()}"
+                    )
+                    self.summary.common_commits_matched_by_jira_id.append(commit_tuple)
+
+                # Either if commit message matched or not, count this as a common commit as Jira ID matched
+                self.summary.common_commits_after_merge_base.append(commit_tuple)
+                common_jira_ids.add(master_commit.jira_id)
+
+        master_br.unique_commits = self._filter_relevant_unique_commits(
+            master_br.commits_after_merge_base,
+            self.summary.commits_with_missing_jira_id_filtered[BranchType.MASTER],
+            common_jira_ids,
+            common_commit_msgs,
+        )
+        feature_br.unique_commits = self._filter_relevant_unique_commits(
+            feature_br.commits_after_merge_base,
+            self.summary.commits_with_missing_jira_id_filtered[BranchType.FEATURE],
+            common_jira_ids,
+            common_commit_msgs,
+        )
+        LOG.info(f"Identified {len(master_br.unique_commits)} unique commits on branch: {master_br.name}")
+        LOG.info(f"Identified {len(feature_br.unique_commits)} unique commits on branch: {feature_br.name}")
+        self.summary.unique_commits[BranchType.MASTER] = master_br.unique_commits
+        self.summary.unique_commits[BranchType.FEATURE] = feature_br.unique_commits
+        self.write_to_file("unique commits", master_br, master_br.unique_commits)
+        self.write_to_file("unique commits", feature_br, feature_br.unique_commits)
+
+    def _handle_commits_with_missing_jira_id_filter_author(self, commit_author_exceptions):
         # Create a dict of (commit message, CommitData), filtering all the commits that has author from the exceptional authors.
         # Assumption: Commit message is unique for all commits
         self.summary.commits_with_missing_jira_id_filtered[BranchType.MASTER] = dict(
@@ -338,80 +402,20 @@ class Branches:
             f"(after applied author filter: {commit_author_exceptions}): {self.summary.commits_with_missing_jira_id_filtered[BranchType.FEATURE]}"
         )
 
-        # List of tuples. First item: Master branch commit obj, second item: feature branch commit obj
-        common_commits: List[Tuple[CommitData, CommitData]] = []
-        common_jira_ids: Set[str] = set()
-        common_commit_msgs: Set[str] = set()
-        for master_commit in master_br.commits_after_merge_base:
-            master_commit_msg = master_commit.message
-            if not master_commit.jira_id:
-                # If this commit is without jira id and author was not an element of exceptional authors,
-                # then try to match commits across branches by commit message.
-                if master_commit_msg in self.summary.commits_with_missing_jira_id_filtered[BranchType.MASTER]:
-                    LOG.debug(
-                        "Trying to match commit by commit message as Jira ID is missing. Details: \n"
-                        f"Branch: master branch\n"
-                        f"Commit message: ${master_commit_msg}\n"
-                    )
-                    if master_commit_msg in self.summary.commits_with_missing_jira_id_filtered[BranchType.FEATURE]:
-                        # TODO Write these special commits to separate file
-                        LOG.warning(
-                            "Found matching commit by commit message. Details: \n"
-                            f"Branch: master branch\n"
-                            f"Commit message: ${master_commit_msg}\n"
-                        )
-                        common_commit_msgs.add(master_commit_msg)
-                        commit_tuple = (
-                            master_commit,
-                            self.summary.commits_with_missing_jira_id_filtered[BranchType.FEATURE][master_commit_msg],
-                        )
-                        common_commits.append(commit_tuple)
-                        self.summary.common_commits_matched_by_message.append(commit_tuple)
-
-            elif master_commit.jira_id in feature_br.jira_id_to_commit:
-                # Normal path: Try to match commits across branches by Jira ID
-                feature_commit = feature_br.jira_id_to_commit[master_commit.jira_id]
-                LOG.debug(
-                    "Found same commit on both branches (by Jira ID):\n"
-                    f"Master branch commit: {master_commit.as_oneline_string()}\n"
-                    f"Feature branch commit: {feature_commit.as_oneline_string()}"
-                )
-
-                commit_tuple = (master_commit, feature_commit)
-                if master_commit_msg != feature_commit.message:
-                    # TODO Write these special commits to separate file
-                    LOG.warning(
-                        "Jira ID is the same for commits, but commit message differs: \n"
-                        f"Master branch commit: {master_commit.as_oneline_string()}\n"
-                        f"Feature branch commit: {feature_commit.as_oneline_string()}"
-                    )
-                    self.summary.common_commits_matched_by_jira_id.append(commit_tuple)
-                else:
-                    self.summary.common_commits_matched_both.append(commit_tuple)
-
-                # Either if commit message matched or not, count this as a common commit as Jira ID matched
-                common_commits.append(commit_tuple)
-                common_jira_ids.add(master_commit.jira_id)
-        self.summary.common_commits_after_merge_base = common_commits
-
-        master_br.unique_commits = self._filter_relevant_unique_commits(
-            master_br.commits_after_merge_base,
-            self.summary.commits_with_missing_jira_id_filtered[BranchType.MASTER],
-            common_jira_ids,
-            common_commit_msgs,
+    def _handle_commits_with_missing_jira_id(self, feature_br, master_br):
+        # TODO write these to file
+        self.summary.commits_with_missing_jira_id[BranchType.MASTER]: List[CommitData] = list(
+            filter(lambda c: not c.jira_id, master_br.commits_after_merge_base)
         )
-        feature_br.unique_commits = self._filter_relevant_unique_commits(
-            feature_br.commits_after_merge_base,
-            self.summary.commits_with_missing_jira_id_filtered[BranchType.FEATURE],
-            common_jira_ids,
-            common_commit_msgs,
+        self.summary.commits_with_missing_jira_id[BranchType.FEATURE]: List[CommitData] = list(
+            filter(lambda c: not c.jira_id, feature_br.commits_after_merge_base)
         )
-        LOG.info(f"Identified {len(master_br.unique_commits)} unique commits on branch: {master_br.name}")
-        LOG.info(f"Identified {len(feature_br.unique_commits)} unique commits on branch: {feature_br.name}")
-        self.summary.unique_commits[BranchType.MASTER] = master_br.unique_commits
-        self.summary.unique_commits[BranchType.FEATURE] = feature_br.unique_commits
-        self.write_to_file("unique commits", master_br, master_br.unique_commits)
-        self.write_to_file("unique commits", feature_br, feature_br.unique_commits)
+        LOG.warning(
+            f"Found {len(self.summary.commits_with_missing_jira_id[BranchType.MASTER])} master branch commits after merge-base with empty Jira ID: {self.summary.commits_with_missing_jira_id[BranchType.MASTER]}"
+        )
+        LOG.warning(
+            f"Found {len(self.summary.commits_with_missing_jira_id[BranchType.FEATURE])} feature branch commits after merge-base with empty Jira ID: {self.summary.commits_with_missing_jira_id[BranchType.FEATURE]}"
+        )
 
     @staticmethod
     def _filter_relevant_unique_commits(
