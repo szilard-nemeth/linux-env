@@ -3,6 +3,7 @@ import os
 from enum import Enum
 from typing import Dict, List, Tuple, Set
 from colr import color
+from pythoncommons.date_utils import DateUtils
 from pythoncommons.file_utils import FileUtils
 from commands.upstream_jira_umbrella_fetcher import CommitData
 from constants import ANY_JIRA_ID_PATTERN
@@ -54,8 +55,8 @@ class SummaryData(object):
 
 
 class Branches:
-    def __init__(self, basedir: str, repo: GitWrapper, branch_dict: dict, fail_on_missing_jira_id=False):
-        self.basedir = basedir
+    def __init__(self, output_dir: str, repo: GitWrapper, branch_dict: dict, fail_on_missing_jira_id=False):
+        self.output_dir = output_dir
         self.repo = repo
         self.branch_data: Dict[BranchType, BranchData] = {}
         for br_type in BranchType:
@@ -308,7 +309,7 @@ class Branches:
 
     def write_to_file(self, output_type: str, branch: BranchData, commits: List[CommitData]):
         file_prefix: str = output_type.replace(" ", "-") + "-"
-        f = self._generate_filename(self.basedir, file_prefix, branch.name)
+        f = self._generate_filename(self.output_dir, file_prefix, branch.name)
         LOG.info(f"Saving {output_type} for branch {branch.type.name} to file: {f}")
         FileUtils.save_to_file(f, StringUtils.list_to_multiline_string([c.as_oneline_string() for c in commits]))
 
@@ -333,10 +334,11 @@ class BranchComparator:
 
     def __init__(self, args, downstream_repo, output_dir):
         self.repo = downstream_repo
+        dt_string = DateUtils.now_formatted("%Y%m%d_%H%M%S")
+        self.output_dir = FileUtils.ensure_dir_created(FileUtils.join_path(output_dir, f"session-{dt_string}"))
         self.branches: Branches = Branches(
-            output_dir, self.repo, {BranchType.FEATURE: args.feature_branch, BranchType.MASTER: args.master_branch}
+            self.output_dir, self.repo, {BranchType.FEATURE: args.feature_branch, BranchType.MASTER: args.master_branch}
         )
-        self.output_dir = output_dir
         self.commit_author_exceptions = args.commit_author_exceptions
 
     def run(self, args):
