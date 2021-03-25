@@ -165,7 +165,7 @@ class Branches:
 
         # Set later
         self.merge_base: CommitData = None
-        self.summary_data: SummaryData = SummaryData(self.output_dir, self.branch_data)
+        self.summary: SummaryData = SummaryData(self.output_dir, self.branch_data)
 
     def get_branch(self, br_type: BranchType) -> BranchData:
         return self.branch_data[br_type]
@@ -199,13 +199,13 @@ class Branches:
                     ]
                 )
             )
-            self.summary_data.all_commits_with_missing_jira_id[br_type] = list(
+            self.summary.all_commits_with_missing_jira_id[br_type] = list(
                 filter(lambda c: not c.jira_id, branch.commit_objs)
             )
-            LOG.debug(f"Found commits with empty Jira ID: {self.summary_data.all_commits_with_missing_jira_id}")
+            LOG.debug(f"Found commits with empty Jira ID: {self.summary.all_commits_with_missing_jira_id}")
             if self.fail_on_missing_jira_id:
                 raise ValueError(
-                    f"Found {len(self.summary_data.all_commits_with_missing_jira_id)} commits with empty Jira ID!"
+                    f"Found {len(self.summary.all_commits_with_missing_jira_id)} commits with empty Jira ID!"
                 )
 
             for idx, commit in enumerate(branch.commit_objs):
@@ -222,7 +222,7 @@ class Branches:
     def _print_stats(self):
         for br_type in BranchType:
             branch: BranchData = self.branch_data[br_type]
-            self.summary_data.number_of_commits[br_type] = branch.number_of_commits
+            self.summary.number_of_commits[br_type] = branch.number_of_commits
             LOG.info(f"Found {branch.number_of_commits} commits on {br_type.value}: {branch.name}")
 
     def _save_git_log_to_file(self):
@@ -252,7 +252,7 @@ class Branches:
             )[0],
             allow_unmatched_jira_id=True,
         )
-        self.summary_data.merge_base = self.merge_base
+        self.summary.merge_base = self.merge_base
         LOG.info(f"Merge base of branches: {self.merge_base}")
         for br_type in BranchType:
             branch: BranchData = self.branch_data[br_type]
@@ -283,9 +283,9 @@ class Branches:
                     f"Hash of commit on {feature_br.name}: {commit2.hash}\n"
                     f"Hash of commit on {master_br.name}: {commit1.hash}"
                 )
-        self.summary_data.common_commits_before_merge_base = master_br.commits_before_merge_base
+        self.summary.common_commits_before_merge_base = master_br.commits_before_merge_base
         LOG.info(
-            f"Detected {len(self.summary_data.common_commits_before_merge_base)} common commits before merge-base between "
+            f"Detected {len(self.summary.common_commits_before_merge_base)} common commits before merge-base between "
             f"'{feature_br.name}' and '{master_br.name}'"
         )
 
@@ -305,12 +305,8 @@ class Branches:
         LOG.warning(
             f"Found {len(feature_commits_without_jira_id)} feature branch commits after merge-base with empty Jira ID: {feature_commits_without_jira_id}"
         )
-        self.summary_data.after_merge_base_commits_with_missing_jira_id[
-            BranchType.MASTER
-        ] = master_commits_without_jira_id
-        self.summary_data.after_merge_base_commits_with_missing_jira_id[
-            BranchType.FEATURE
-        ] = feature_commits_without_jira_id
+        self.summary.after_merge_base_commits_with_missing_jira_id[BranchType.MASTER] = master_commits_without_jira_id
+        self.summary.after_merge_base_commits_with_missing_jira_id[BranchType.FEATURE] = feature_commits_without_jira_id
 
         # Create a dict of (commit message, CommitData), filtering all the commits that has author from the exceptional authors.
         # Assumption: Commit message is unique for all commits
@@ -334,10 +330,10 @@ class Branches:
             f"Found {len(feature_commits_without_jira_id_filtered)} feature branch commits after merge-base with empty Jira ID "
             f"(after applied author filter: {commit_author_exceptions}): {feature_commits_without_jira_id_filtered}"
         )
-        self.summary_data.after_merge_base_commits_with_missing_jira_id_filtered[
+        self.summary.after_merge_base_commits_with_missing_jira_id_filtered[
             BranchType.MASTER
         ] = master_commits_without_jira_id_filtered
-        self.summary_data.after_merge_base_commits_with_missing_jira_id_filtered[
+        self.summary.after_merge_base_commits_with_missing_jira_id_filtered[
             BranchType.FEATURE
         ] = feature_commits_without_jira_id_filtered
 
@@ -366,7 +362,7 @@ class Branches:
                         common_commit_msgs.add(master_commit_msg)
                         commit_tuple = (master_commit, feature_commits_without_jira_id_filtered[master_commit_msg])
                         common_commits.append(commit_tuple)
-                        self.summary_data.common_commits_matched_by_message.append(commit_tuple)
+                        self.summary.common_commits_matched_by_message.append(commit_tuple)
 
             elif master_commit.jira_id in feature_br.jira_id_to_commit:
                 # Normal path: Try to match commits across branches by Jira ID
@@ -385,14 +381,14 @@ class Branches:
                         f"Master branch commit: {master_commit.as_oneline_string()}\n"
                         f"Feature branch commit: {feature_commit.as_oneline_string()}"
                     )
-                    self.summary_data.common_commits_matched_by_jira_id.append(commit_tuple)
+                    self.summary.common_commits_matched_by_jira_id.append(commit_tuple)
                 else:
-                    self.summary_data.common_commits_matched_both.append(commit_tuple)
+                    self.summary.common_commits_matched_both.append(commit_tuple)
 
                 # Either if commit message matched or not, count this as a common commit as Jira ID matched
                 common_commits.append(commit_tuple)
                 common_jira_ids.add(master_commit.jira_id)
-        self.summary_data.common_commits_after_merge_base = common_commits
+        self.summary.common_commits_after_merge_base = common_commits
 
         master_br.unique_commits = self._filter_relevant_unique_commits(
             master_br.commits_after_merge_base,
@@ -408,8 +404,8 @@ class Branches:
         )
         LOG.info(f"Identified {len(master_br.unique_commits)} unique commits on branch: {master_br.name}")
         LOG.info(f"Identified {len(feature_br.unique_commits)} unique commits on branch: {feature_br.name}")
-        self.summary_data.unique_commits[BranchType.MASTER] = master_br.unique_commits
-        self.summary_data.unique_commits[BranchType.FEATURE] = feature_br.unique_commits
+        self.summary.unique_commits[BranchType.MASTER] = master_br.unique_commits
+        self.summary.unique_commits[BranchType.FEATURE] = feature_br.unique_commits
         self.write_to_file("unique commits", master_br, master_br.unique_commits)
         self.write_to_file("unique commits", feature_br, feature_br.unique_commits)
 
@@ -502,7 +498,7 @@ class BranchComparator:
         self.print_and_save_summary()
 
     def print_and_save_summary(self):
-        summary_string = BranchComparator.render_summary_string(self.branches.summary_data)
+        summary_string = BranchComparator.render_summary_string(self.branches.summary)
         LOG.info(summary_string)
         filename = FileUtils.join_path(self.output_dir, "summary.txt")
         LOG.info(f"Saving summary to file: {filename}")
