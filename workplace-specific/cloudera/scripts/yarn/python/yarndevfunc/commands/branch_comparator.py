@@ -310,7 +310,7 @@ class Branches:
     def _check_after_merge_base_commits(
         self, feature_br: BranchData, master_br: BranchData, commit_author_exceptions: List[str]
     ):
-        self._handle_commits_with_missing_jira_id(feature_br, master_br)
+        self._handle_commits_with_missing_jira_id([feature_br, master_br])
         self._handle_commits_with_missing_jira_id_filter_author(commit_author_exceptions)
 
         common_jira_ids: Set[str] = set()
@@ -391,47 +391,44 @@ class Branches:
         # Create a dict of (commit message, CommitData),
         # filtering all the commits that has author from the exceptional authors.
         # Assumption: Commit message is unique for all commits
-        self.summary.commits_with_missing_jira_id_filtered[BranchType.MASTER] = dict(
-            [
-                (c.message, c)
-                for c in filter(
-                    lambda c: c.author not in commit_author_exceptions,
-                    self.summary.commits_with_missing_jira_id[BranchType.MASTER],
-                )
-            ]
-        )
-        self.summary.commits_with_missing_jira_id_filtered[BranchType.FEATURE] = dict(
-            [
-                (c.message, c)
-                for c in filter(
-                    lambda c: c.author not in commit_author_exceptions,
-                    self.summary.commits_with_missing_jira_id[BranchType.FEATURE],
-                )
-            ]
-        )
-        LOG.warning(
-            f"Found {len(self.summary.commits_with_missing_jira_id_filtered[BranchType.MASTER])} master branch commits after merge-base with empty Jira ID "
-            f"(after applied author filter: {commit_author_exceptions}): {self.summary.commits_with_missing_jira_id_filtered[BranchType.MASTER]}"
-        )
-        LOG.warning(
-            f"Found {len(self.summary.commits_with_missing_jira_id_filtered[BranchType.FEATURE])} feature branch commits after merge-base with empty Jira ID "
-            f"(after applied author filter: {commit_author_exceptions}): {self.summary.commits_with_missing_jira_id_filtered[BranchType.FEATURE]}"
-        )
+        for br_type in BranchType:
+            self.summary.commits_with_missing_jira_id_filtered[br_type] = dict(
+                [
+                    (c.message, c)
+                    for c in filter(
+                        lambda c: c.author not in commit_author_exceptions,
+                        self.summary.commits_with_missing_jira_id[br_type],
+                    )
+                ]
+            )
+            LOG.warning(
+                f"Found {br_type.value} commits after merge-base with empty Jira ID "
+                f"(after applied author filter: {commit_author_exceptions}): "
+                f"{len(self.summary.commits_with_missing_jira_id_filtered[br_type])} "
+            )
+            LOG.debug(
+                f"Found {br_type.value} commits after merge-base with empty Jira ID "
+                f"(after applied author filter: {commit_author_exceptions}): "
+                f"{self.summary.commits_with_missing_jira_id_filtered[br_type]}"
+            )
 
-    def _handle_commits_with_missing_jira_id(self, feature_br, master_br):
+    def _handle_commits_with_missing_jira_id(self, branches: List[BranchData]):
         # TODO write these to file
-        self.summary.commits_with_missing_jira_id[BranchType.MASTER]: List[CommitData] = list(
-            filter(lambda c: not c.jira_id, master_br.commits_after_merge_base)
-        )
-        self.summary.commits_with_missing_jira_id[BranchType.FEATURE]: List[CommitData] = list(
-            filter(lambda c: not c.jira_id, feature_br.commits_after_merge_base)
-        )
-        LOG.warning(
-            f"Found {len(self.summary.commits_with_missing_jira_id[BranchType.MASTER])} master branch commits after merge-base with empty Jira ID: {self.summary.commits_with_missing_jira_id[BranchType.MASTER]}"
-        )
-        LOG.warning(
-            f"Found {len(self.summary.commits_with_missing_jira_id[BranchType.FEATURE])} feature branch commits after merge-base with empty Jira ID: {self.summary.commits_with_missing_jira_id[BranchType.FEATURE]}"
-        )
+        for br_data in branches:
+            self.summary.commits_with_missing_jira_id[br_data.type]: List[CommitData] = list(
+                filter(lambda c: not c.jira_id, br_data.commits_after_merge_base)
+            )
+
+            LOG.warning(
+                f"Found {br_data.type.value} "
+                f"commits after merge-base with empty Jira ID: "
+                f"{len(self.summary.commits_with_missing_jira_id[br_data.type])}"
+            )
+            LOG.debug(
+                f"Found {br_data.type.value} "
+                f"commits after merge-base with empty Jira ID: "
+                f"{self.summary.commits_with_missing_jira_id[br_data.type]}"
+            )
 
     @staticmethod
     def _filter_relevant_unique_commits(
