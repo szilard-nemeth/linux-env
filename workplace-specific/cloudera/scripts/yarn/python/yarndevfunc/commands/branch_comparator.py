@@ -9,7 +9,16 @@ from pythoncommons.file_utils import FileUtils
 from commands.upstream_jira_umbrella_fetcher import CommitData
 from constants import ANY_JIRA_ID_PATTERN
 from git_wrapper import GitWrapper
-from yarndevfunc.utils import StringUtils, ResultPrinter
+from yarndevfunc.utils import (
+    StringUtils,
+    ResultPrinter,
+    BoolConversionConfig,
+    ColorizeConfig,
+    ColorDescriptor,
+    MatchType,
+    Color,
+    EvaluationMethod,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -495,16 +504,13 @@ class TableWithHeader:
 # LATER TODOS
 # TODO Handle multiple jira ids?? example: "CDPD-10052. HADOOP-16932"
 # TODO Consider revert commits?
+# TODO Add documentation
 
 # IMPORTANT TODOS
 # TODO Console mode: Instead of writing to individual files, write everything to console --> Useful for automated runs!
 # TODO Run git_compare.sh and store results + diff git_compare.sh results with my script result, report if different!
-# TODO Add documentation
 # TODO Turn on Debug logging by default
-# TODO Fix table: ALL COMMITS (MERGED LIST)
-#  1. Weird coloring
-#  2. Only call colorize for shell outputs, not for writing to file!
-# TODO helper method to nicely print list of CommitData (\n)
+# TODO Helper method to nicely print list of CommitData with line breaks
 # TODO Check in logs: all results for "Jira ID is the same for commits, but commit message differs"
 class BranchComparator:
     """"""
@@ -542,11 +548,11 @@ class BranchComparator:
         self.print_and_save_summary()
 
     def print_and_save_summary(self):
-        summary_string = BranchComparator.render_summary_string(self.branches.summary)
-        LOG.info(summary_string)
+        printable_summary_str, writable_summary_str = BranchComparator.render_summary_string(self.branches.summary)
+        LOG.info(printable_summary_str)
         filename = FileUtils.join_path(self.output_dir, "summary.txt")
         LOG.info(f"Saving summary to file: {filename}")
-        FileUtils.save_to_file(filename, summary_string)
+        FileUtils.save_to_file(filename, writable_summary_str)
 
     @staticmethod
     def render_summary_string(summary_data: SummaryData):
@@ -593,53 +599,67 @@ class BranchComparator:
 
         header = ["Row", "Jira ID", "Commit message", "Commit date"]
         header.extend(summary_data.get_branch_names())
-        all_commits_table = TableWithHeader(
-            "ALL COMMITS (MERGED LIST)",
-            ResultPrinter.print_table(
-                summary_data.all_commits_presence_matrix,
-                lambda row: BranchComparator.colorize_row(row, convert_bools=True),
-                header=header,
-                print_result=False,
-                max_width=50,
-                max_width_separator=" ",
-            ),
+        colorized_table, normal_table = BranchComparator.create_all_commits_tables(
+            header, summary_data.all_commits_presence_matrix
         )
 
         # Generate summary string
-        summary_str = "\n\n" + (
+        summary_str_common = "\n\n" + (
             StringUtils.generate_header_line(
                 "SUMMARY", char="═", length=len(StringUtils.get_first_line_of_multiline_str(common_commits_table.table))
             )
             + "\n"
         )
-        summary_str += str(summary_data)
-        summary_str += "\n\n"
+        summary_str_common += str(summary_data)
+        summary_str_common += "\n\n"
 
-        # Add tables
-        tables = [result_files_table] + unique_commit_tables + [common_commits_table, all_commits_table]
-        for table in tables:
-            summary_str += str(table)
-            summary_str += "\n\n"
-        return summary_str
+        printable_tables = [result_files_table] + unique_commit_tables + [common_commits_table, colorized_table]
+        writable_tables = [result_files_table] + unique_commit_tables + [common_commits_table, normal_table]
+        return BranchComparator.generate_summary_msgs(printable_tables, writable_tables, summary_str_common)
 
-    # TODO code is duplicated - Copied from upstream_jira_umbrella_fetcher.py
     @staticmethod
-    def colorize_row(curr_row, convert_bools=False):
-        res = []
-        missing_backport = False
-        if not all(curr_row[1:]):
-            missing_backport = True
+    def generate_summary_msgs(
+        printable_tables: List[TableWithHeader], writable_tables: List[TableWithHeader], summary_str_common: str
+    ):
+        printable_summary_str: str = summary_str_common
+        writable_summary_str: str = summary_str_common
+        for table in printable_tables:
+            printable_summary_str += str(table)
+            printable_summary_str += "\n\n"
 
-        # Mark first cell with red if any of the backports are missing
-        # Mark first cell with green if all backports are present
-        # Mark any bool cell with green if True, red if False
-        for idx, cell in enumerate(curr_row):
-            if (isinstance(cell, bool) and cell) or not missing_backport:
-                if convert_bools and isinstance(cell, bool):
-                    cell = "X" if cell else "-"
-                res.append(color(cell, fore="green"))
-            else:
-                if convert_bools and isinstance(cell, bool):
-                    cell = "X" if cell else "-"
-                res.append(color(cell, fore="red"))
-        return res
+        for table in writable_tables:
+            writable_summary_str += str(table)
+            writable_summary_str += "\n\n"
+        return printable_summary_str, writable_summary_str
+
+    @staticmethod
+    def create_all_commits_tables(header, all_commits: List[List]):
+        # Adding 1 because row id will be added as first column
+        row_len = len(all_commits[0]) + 1
+        color_conf = ColorizeConfig(
+            [
+                ColorDescriptor(bool, True, Color.GREEN, MatchType.ALL, (0, row_len), (0, row_len)),
+                ColorDescriptor(bool, False, Color.RED, MatchType.ANY, (0, row_len), (0, row_len)),
+            ],
+            eval_method=EvaluationMethod.ALL,
+        )
+        colorized_table = BranchComparator._create_all_comits_table(header, all_commits, colorize_config=color_conf)
+        normal_table = BranchComparator._create_all_comits_table(header, all_commits, colorize_config=False)
+        return colorized_table, normal_table
+
+    @staticmethod
+    def _create_all_comits_table(header, all_commits, colorize_config=None):
+        table = TableWithHeader(
+            "ALL COMMITS (MERGED LIST)",
+            ResultPrinter.print_table(
+                all_commits,
+                lambda row: row,
+                header=header,
+                print_result=False,
+                max_width=100,
+                max_width_separator=" ",
+                bool_conversion_config=BoolConversionConfig(),
+                colorize_config=colorize_config,
+            ),
+        )
+        return table
