@@ -238,7 +238,7 @@ class CommitData:
 
     @staticmethod
     def from_git_log_str(
-        git_log_str, format: str, pattern=YARN_JIRA_ID_PATTERN, allow_unmatched_jira_id=False, author=None
+        git_log_str, format: str = None, pattern=YARN_JIRA_ID_PATTERN, allow_unmatched_jira_id=False, author=None
     ):
         """
         1. Commit hash: It is in the first column.
