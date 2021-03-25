@@ -189,7 +189,7 @@ class Branches:
         return self.branch_data[br_type]
 
     @staticmethod
-    def _generate_filename(basedir, prefix, branch_name) -> str:
+    def _generate_filename(basedir, prefix, branch_name="") -> str:
         return FileUtils.join_path(basedir, f"{prefix}{StringUtils.replace_special_chars(branch_name)}")
 
     def validate(self, br_type: BranchType):
@@ -310,8 +310,9 @@ class Branches:
     def _check_after_merge_base_commits(
         self, feature_br: BranchData, master_br: BranchData, commit_author_exceptions: List[str]
     ):
-        self._handle_commits_with_missing_jira_id([feature_br, master_br])
-        self._handle_commits_with_missing_jira_id_filter_author(commit_author_exceptions)
+        branches = [feature_br, master_br]
+        self._handle_commits_with_missing_jira_id(branches)
+        self._handle_commits_with_missing_jira_id_filter_author(branches, commit_author_exceptions)
 
         common_jira_ids: Set[str] = set()
         common_commit_msgs: Set[str] = set()
@@ -329,7 +330,6 @@ class Branches:
                     )
                     # Master commit message found in missing jira id list of the feature branch, record match
                     if master_commit_msg in self.summary.commits_with_missing_jira_id_filtered[BranchType.FEATURE]:
-                        # TODO Write these special commits to separate file
                         LOG.warning(
                             "Found matching commit by commit message. Details: \n"
                             f"Branch: master branch\n"
@@ -356,7 +356,6 @@ class Branches:
                 if master_commit_msg == feature_commit.message:
                     self.summary.common_commits_matched_both.append(commit_tuple)
                 else:
-                    # TODO Write these special commits to separate file
                     LOG.warning(
                         "Jira ID is the same for commits, but commit message differs: \n"
                         f"Master branch commit: {master_commit.as_oneline_string()}\n"
@@ -367,6 +366,14 @@ class Branches:
                 # Either if commit message matched or not, count this as a common commit as Jira ID matched
                 self.summary.common_commits_after_merge_base.append(commit_tuple)
                 common_jira_ids.add(master_commit.jira_id)
+
+        self.write_commit_list_to_file(
+            "commit message differs", [item for tup in self.summary.common_commits_matched_by_jira_id for item in tup]
+        )
+
+        self.write_commit_list_to_file(
+            "commits matched by message", [t[0] for t in self.summary.common_commits_matched_by_message]
+        )
 
         master_br.unique_commits = self._filter_relevant_unique_commits(
             master_br.commits_after_merge_base,
@@ -387,29 +394,33 @@ class Branches:
         self.write_to_file("unique commits", master_br, master_br.unique_commits)
         self.write_to_file("unique commits", feature_br, feature_br.unique_commits)
 
-    def _handle_commits_with_missing_jira_id_filter_author(self, commit_author_exceptions):
+    def _handle_commits_with_missing_jira_id_filter_author(self, branches: List[BranchData], commit_author_exceptions):
         # Create a dict of (commit message, CommitData),
         # filtering all the commits that has author from the exceptional authors.
         # Assumption: Commit message is unique for all commits
-        for br_type in BranchType:
-            self.summary.commits_with_missing_jira_id_filtered[br_type] = dict(
+        for br_data in branches:
+            self.summary.commits_with_missing_jira_id_filtered[br_data.type] = dict(
                 [
                     (c.message, c)
                     for c in filter(
                         lambda c: c.author not in commit_author_exceptions,
-                        self.summary.commits_with_missing_jira_id[br_type],
+                        self.summary.commits_with_missing_jira_id[br_data.type],
                     )
                 ]
             )
             LOG.warning(
-                f"Found {br_type.value} commits after merge-base with empty Jira ID "
+                f"Found {br_data.type.value} commits after merge-base with empty Jira ID "
                 f"(after applied author filter: {commit_author_exceptions}): "
-                f"{len(self.summary.commits_with_missing_jira_id_filtered[br_type])} "
+                f"{len(self.summary.commits_with_missing_jira_id_filtered[br_data.type])} "
             )
             LOG.debug(
-                f"Found {br_type.value} commits after merge-base with empty Jira ID "
+                f"Found {br_data.type.value} commits after merge-base with empty Jira ID "
                 f"(after applied author filter: {commit_author_exceptions}): "
-                f"{self.summary.commits_with_missing_jira_id_filtered[br_type]}"
+                f"{self.summary.commits_with_missing_jira_id_filtered[br_data.type]}"
+            )
+        for br_data in branches:
+            self.write_to_file(
+                "commits missing jira id filtered", br_data, self.summary.commits_with_missing_jira_id[br_data.type]
             )
 
     def _handle_commits_with_missing_jira_id(self, branches: List[BranchData]):
@@ -428,6 +439,10 @@ class Branches:
                 f"Found {br_data.type.value} "
                 f"commits after merge-base with empty Jira ID: "
                 f"{self.summary.commits_with_missing_jira_id[br_data.type]}"
+            )
+        for br_data in branches:
+            self.write_to_file(
+                "commits missing jira id", br_data, self.summary.commits_with_missing_jira_id[br_data.type]
             )
 
     @staticmethod
@@ -456,6 +471,12 @@ class Branches:
         LOG.info(f"Saving {output_type} for branch {branch.type.name} to file: {f}")
         FileUtils.save_to_file(f, StringUtils.list_to_multiline_string([c.as_oneline_string() for c in commits]))
 
+    def write_commit_list_to_file(self, output_type: str, commits: List[CommitData]):
+        file_prefix: str = output_type.replace(" ", "-") + "-"
+        f = self._generate_filename(self.output_dir, file_prefix)
+        LOG.info(f"Saving {output_type} to file: {f}")
+        FileUtils.save_to_file(f, StringUtils.list_to_multiline_string([c.as_oneline_string() for c in commits]))
+
 
 class TableWithHeader:
     def __init__(self, header_title, table: str):
@@ -471,13 +492,15 @@ class TableWithHeader:
         return self.header + self.table
 
 
+# LATER TODOS
 # TODO Handle multiple jira ids?? example: "CDPD-10052. HADOOP-16932"
 # TODO Consider revert commits?
+
+# IMPORTANT TODOS
 # TODO Console mode: Instead of writing to individual files, write everything to console --> Useful for automated runs!
 # TODO Run git_compare.sh and store results + diff git_compare.sh results with my script result, report if different!
 # TODO Add documentation
 # TODO Turn on Debug logging by default
-
 # TODO Fix table: ALL COMMITS (MERGED LIST)
 #  1. Weird coloring
 #  2. Only call colorize for shell outputs, not for writing to file!
@@ -590,6 +613,7 @@ class BranchComparator:
             + "\n"
         )
         summary_str += str(summary_data)
+        summary_str += "\n\n"
 
         # Add tables
         tables = [result_files_table] + unique_commit_tables + [common_commits_table, all_commits_table]
