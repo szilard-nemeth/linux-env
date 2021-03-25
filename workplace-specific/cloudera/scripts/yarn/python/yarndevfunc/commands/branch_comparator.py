@@ -144,13 +144,28 @@ class SummaryData:
             res += (
                 f"Number of all commits with missing Jira ID: {len(self.all_commits_with_missing_jira_id[br_type])}\n"
             )
-            res += f"Number of commits with missing Jira ID after merge-base: {len(self.commits_with_missing_jira_id[br_type])}\n"
-            res += f"Number of commits with missing Jira ID after merge-base, filtered by author exceptions: {len(self.commits_with_missing_jira_id_filtered[br_type])}\n"
+            res += (
+                f"Number of commits with missing Jira ID after merge-base: "
+                f"{len(self.commits_with_missing_jira_id[br_type])}\n"
+            )
+            res += (
+                f"Number of commits with missing Jira ID after merge-base, filtered by author exceptions: "
+                f"{len(self.commits_with_missing_jira_id_filtered[br_type])}\n"
+            )
 
         res += "\n\n=====Stats: COMMON COMMITS ACROSS BRANCHES=====\n"
-        res += f"Number of common commits with missing Jira ID, matched by commit message: {len(self.common_commits_matched_by_message)}\n"
-        res += f"Number of common commits with matching Jira ID but different commit message: {len(self.common_commits_matched_by_jira_id)}\n"
-        res += f"Number of common commits with matching Jira ID and commit message: {len(self.common_commits_matched_both)}\n"
+        res += (
+            f"Number of common commits with missing Jira ID, matched by commit message: "
+            f"{len(self.common_commits_matched_by_message)}\n"
+        )
+        res += (
+            f"Number of common commits with matching Jira ID but different commit message: "
+            f"{len(self.common_commits_matched_by_jira_id)}\n"
+        )
+        res += (
+            f"Number of common commits with matching Jira ID and commit message: "
+            f"{len(self.common_commits_matched_both)}\n"
+        )
         return res
 
 
@@ -373,7 +388,8 @@ class Branches:
         self.write_to_file("unique commits", feature_br, feature_br.unique_commits)
 
     def _handle_commits_with_missing_jira_id_filter_author(self, commit_author_exceptions):
-        # Create a dict of (commit message, CommitData), filtering all the commits that has author from the exceptional authors.
+        # Create a dict of (commit message, CommitData),
+        # filtering all the commits that has author from the exceptional authors.
         # Assumption: Commit message is unique for all commits
         self.summary.commits_with_missing_jira_id_filtered[BranchType.MASTER] = dict(
             [
