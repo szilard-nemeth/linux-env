@@ -1,7 +1,7 @@
 import logging
 import os
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Set
 from colr import color
 from pythoncommons.file_utils import FileUtils
 from commands.upstream_jira_umbrella_fetcher import CommitData
@@ -25,10 +25,12 @@ class BranchData:
         # Set later
         self.gitlog_results: List[str] = []
         # Commit objects in reverse order (from oldest to newest)
-        self.commit_objs: List[
-            CommitData
-        ] = []  # commits stored in a list, in order from last to first commit (descending)
+        # Commits stored in a list, in order from last to first commit (descending)
+        self.commit_objs: List[CommitData] = []
+        self.commits_before_merge_base: List[CommitData] = []
+        self.commits_after_merge_base: List[CommitData] = []
         self.hash_to_index: Dict[str, int] = {}  # Dict: commit hash to commit index
+        # TODO hash_to_commit is unused
         self.hash_to_commit: Dict[str, str] = {}  # Dict: commit hash to CommitData object
         self.jira_id_to_commit: Dict[str, CommitData] = {}  # Dict: Jira ID (e.g. YARN-1234) to CommitData object
         self.unique_commits: List[CommitData] = []
@@ -38,20 +40,15 @@ class BranchData:
     def number_of_commits(self):
         return len(self.gitlog_results)
 
-    @property
-    def commits_before_merge_base(self) -> List[CommitData]:
-        return self.commit_objs[: self.merge_base_idx]
-
-    @property
-    def commits_after_merge_base(self) -> List[CommitData]:
-        return self.commit_objs[self.merge_base_idx :]
-
     def set_merge_base(self, merge_base_hash: str):
         # TODO if hash not found throw exception
         self.merge_base_idx = self.hash_to_index[merge_base_hash]
+        # TODO raise exception if self.commit_objs is empty
+        self.commits_before_merge_base = self.commit_objs[: self.merge_base_idx]
+        self.commits_after_merge_base = self.commit_objs[self.merge_base_idx :]
 
 
-# TODO
+# TODO use this class
 class SummaryData(object):
     pass
 
@@ -88,13 +85,16 @@ class Branches:
     def execute_git_log(self, print_stats=True, save_to_file=True):
         for br_type in BranchType:
             branch: BranchData = self.branch_data[br_type]
-            branch.gitlog_results = self.repo.log(branch.name, oneline_with_date=True)
+            branch.gitlog_results = self.repo.log(branch.name, oneline_with_date_and_author=True)
             # Store commit objects in reverse order (ascending by date)
             branch.commit_objs = list(
                 reversed(
                     [
                         CommitData.from_git_log_str(
-                            commit_str, pattern=ANY_JIRA_ID_PATTERN, allow_unmatched_jira_id=True
+                            commit_str,
+                            format="oneline_with_date_and_author",
+                            pattern=ANY_JIRA_ID_PATTERN,
+                            allow_unmatched_jira_id=True,
                         )
                         for commit_str in branch.gitlog_results
                     ]
@@ -146,13 +146,13 @@ class Branches:
             branch: BranchData = self.branch_data[br_type]
             branch.set_merge_base(self.merge_base.hexsha)
 
-    def compare(self):
+    def compare(self, commit_author_exceptions):
         self._save_commits_before_after_merge_base_to_file()
         feature_br: BranchData = self.branch_data[BranchType.FEATURE]
         master_br: BranchData = self.branch_data[BranchType.MASTER]
 
         self._sanity_check_commits_before_merge_base(feature_br, master_br)
-        self._check_after_merge_base_commits(feature_br, master_br)
+        self._check_after_merge_base_commits(feature_br, master_br, commit_author_exceptions)
 
     def _sanity_check_commits_before_merge_base(self, feature_br: BranchData, master_br: BranchData):
         if len(master_br.commits_before_merge_base) != len(feature_br.commits_before_merge_base):
@@ -176,14 +176,19 @@ class Branches:
             f"'{feature_br.name}' and '{master_br.name}'"
         )
 
-    def _check_after_merge_base_commits(self, feature_br: BranchData, master_br: BranchData):
-        # List of tuples. First item: Master branch commit obj, second item: feature branch commit obj
-        self.common_commits: List[Tuple[CommitData, CommitData]] = []
+    def _check_after_merge_base_commits(
+        self, feature_br: BranchData, master_br: BranchData, commit_author_exceptions: List[str]
+    ):
+        # TODO do something with this list
         common_but_commit_msg_differs: List[Tuple[CommitData, CommitData]] = []
 
         # TODO write these to file
-        master_commits_without_jira_id = list(filter(lambda c: not c.jira_id, master_br.commits_after_merge_base))
-        feature_commits_without_jira_id = list(filter(lambda c: not c.jira_id, feature_br.commits_after_merge_base))
+        master_commits_without_jira_id: List[CommitData] = list(
+            filter(lambda c: not c.jira_id, master_br.commits_after_merge_base)
+        )
+        feature_commits_without_jira_id: List[CommitData] = list(
+            filter(lambda c: not c.jira_id, feature_br.commits_after_merge_base)
+        )
         LOG.warning(
             f"Found {len(master_commits_without_jira_id)} master branch commits with empty Jira ID: {master_commits_without_jira_id}"
         )
@@ -191,8 +196,57 @@ class Branches:
             f"Found {len(feature_commits_without_jira_id)} feature branch commits with empty Jira ID: {feature_commits_without_jira_id}"
         )
 
+        # Create a dict of (commit message, CommitData), filtering all the commits that has author from the exceptional authors.
+        # Assumption: Commit message is unique for all commits
+        master_commits_without_jira_id_filtered = dict(
+            [
+                (c.message, c)
+                for c in filter(lambda c: c.author not in commit_author_exceptions, master_commits_without_jira_id)
+            ]
+        )
+        feature_commits_without_jira_id_filtered = dict(
+            [
+                (c.message, c)
+                for c in filter(lambda c: c.author not in commit_author_exceptions, feature_commits_without_jira_id)
+            ]
+        )
+        LOG.warning(
+            f"Found {len(master_commits_without_jira_id_filtered)} master branch commits with empty Jira ID "
+            f"(after applied author filter: {commit_author_exceptions}): {master_commits_without_jira_id_filtered}"
+        )
+        LOG.warning(
+            f"Found {len(feature_commits_without_jira_id_filtered)} feature branch commits with empty Jira ID "
+            f"(after applied author filter: {commit_author_exceptions}): {feature_commits_without_jira_id_filtered}"
+        )
+
+        # List of tuples. First item: Master branch commit obj, second item: feature branch commit obj
+        self.common_commits: List[Tuple[CommitData, CommitData]] = []
+        common_jira_ids: Set[str] = set()
+        common_commit_msgs: Set[str] = set()
         for master_commit in master_br.commits_after_merge_base:
-            if master_commit.jira_id in feature_br.jira_id_to_commit:
+            master_commit_msg = master_commit.message
+            if not master_commit.jira_id:
+                # If this commit is without jira id and author was not an element of exceptional authors,
+                # then try to match commits across branches by commit message.
+                if master_commit_msg in master_commits_without_jira_id_filtered:
+                    LOG.debug(
+                        "Trying to match commit by commit message as Jira ID is missing. Details: \n"
+                        f"Branch: master branch\n"
+                        f"Commit message: ${master_commit_msg}\n"
+                    )
+                    if master_commit_msg in feature_commits_without_jira_id_filtered:
+                        # TODO Write these special commits to separate file
+                        LOG.warning(
+                            "Found matching commit by commit message. Details: \n"
+                            f"Branch: master branch\n"
+                            f"Commit message: ${master_commit_msg}\n"
+                        )
+                        self.common_commits.append(
+                            (master_commit, feature_commits_without_jira_id_filtered[master_commit_msg])
+                        )
+                        common_commit_msgs.add(master_commit_msg)
+            elif master_commit.jira_id in feature_br.jira_id_to_commit:
+                # Normal path: Try to match commits across branches by Jira ID
                 feature_commit = feature_br.jira_id_to_commit[master_commit.jira_id]
                 LOG.debug(
                     "Found same commit on both branches (by Jira ID):\n"
@@ -200,9 +254,10 @@ class Branches:
                     f"Feature branch commit: {feature_commit.as_oneline_string()}"
                 )
 
-                # TODO Handle multiple jira ids, example: "CDPD-10052. HADOOP-16932"
-                if master_commit.message != feature_commit.message:
-                    # TODO Write these interesting commits to separate file
+                # TODO Handle multiple jira ids?? example: "CDPD-10052. HADOOP-16932"
+                # TODO Handle reverts?
+                if master_commit_msg != feature_commit.message:
+                    # TODO Write these special commits to separate file
                     LOG.warning(
                         "Jira ID is the same for commits, but commit message differs: \n"
                         f"Master branch commit: {master_commit.as_oneline_string()}\n"
@@ -210,20 +265,46 @@ class Branches:
                     )
                     common_but_commit_msg_differs.append((master_commit, feature_commit))
 
-                # In each case, count it as common commit if Jira ID matches
+                # Either if commit message matched or not, count this as a common commit as Jira ID matched
                 self.common_commits.append((master_commit, feature_commit))
+                common_jira_ids.add(master_commit.jira_id)
 
-        common_jira_ids = set([cc[0].jira_id for cc in self.common_commits])
-        master_br.unique_commits = list(
-            filter(lambda x: x.jira_id not in common_jira_ids, master_br.commits_after_merge_base)
+        master_br.unique_commits = self._filter_relevant_unique_commits(
+            master_br.commits_after_merge_base,
+            master_commits_without_jira_id_filtered,
+            common_jira_ids,
+            common_commit_msgs,
         )
-        feature_br.unique_commits = list(
-            filter(lambda x: x.jira_id not in common_jira_ids, feature_br.commits_after_merge_base)
+        feature_br.unique_commits = self._filter_relevant_unique_commits(
+            feature_br.commits_after_merge_base,
+            feature_commits_without_jira_id_filtered,
+            common_jira_ids,
+            common_commit_msgs,
         )
         LOG.info(f"Identified {len(master_br.unique_commits)} unique commits on branch: {master_br.name}")
         LOG.info(f"Identified {len(feature_br.unique_commits)} unique commits on branch: {feature_br.name}")
         self.write_to_file("unique commits", master_br, master_br.unique_commits)
         self.write_to_file("unique commits", feature_br, feature_br.unique_commits)
+
+    @staticmethod
+    def _filter_relevant_unique_commits(
+        commits: List[CommitData], commits_without_jira_id_filtered, common_jira_ids, common_commit_msgs
+    ) -> List[CommitData]:
+        result = []
+        # 1. Values of commit list can contain commits without Jira ID
+        # and we don't want to count them as unique commits unless the commit is a
+        # special authored commit and it's not a common commit by its message
+        # 2. If Jira ID is in common_jira_ids, it's not a unique commit, either.
+        for commit in commits:
+            special_unique_commit = (
+                not commit.jira_id
+                and commit.message in commits_without_jira_id_filtered
+                and commit.message not in common_commit_msgs
+            )
+            normal_unique_commit = commit.jira_id is not None and commit.jira_id not in common_jira_ids
+            if special_unique_commit or normal_unique_commit:
+                result.append(commit)
+        return result
 
     def write_to_file(self, output_type: str, branch: BranchData, commits: List[CommitData]):
         file_prefix: str = output_type.replace(" ", "-") + "-"
@@ -256,6 +337,7 @@ class BranchComparator:
             output_dir, self.repo, {BranchType.FEATURE: args.feature_branch, BranchType.MASTER: args.master_branch}
         )
         self.output_dir = output_dir
+        self.commit_author_exceptions = args.commit_author_exceptions
 
     def run(self, args):
         LOG.info(
@@ -277,7 +359,7 @@ class BranchComparator:
 
     def compare(self):
         self.branches.execute_git_log(print_stats=True, save_to_file=True)
-        self.branches.compare()
+        self.branches.compare(self.commit_author_exceptions)
 
         # Print and save summary
         summary_string = self.render_summary_string()

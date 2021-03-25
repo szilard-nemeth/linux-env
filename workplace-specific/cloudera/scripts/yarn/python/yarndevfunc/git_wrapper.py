@@ -10,6 +10,7 @@ from yarndevfunc.constants import HEAD, COMMIT_FIELD_SEPARATOR
 FORMAT_CODE_HASH = "%H"
 FORMAT_CODE_COMMIT_MSG = "%s"
 FORMAT_CODE_DATE_ISO_8601 = "%cI"
+FORMAT_CODE_AUTHOR = "%ae"
 
 LOG = logging.getLogger(__name__)
 
@@ -175,7 +176,7 @@ class GitWrapper:
         diff_tree_results = self.repo.git.diff_tree(*args, **kwargs).splitlines()
         return diff_tree_results
 
-    def show(self, hash, no_patch=None, no_notes=None, pretty=None):
+    def show(self, hash, no_patch=None, no_notes=None, pretty=None, suppress_diff=False, format=None):
         args = [hash]
 
         kwargs = {}
@@ -185,11 +186,18 @@ class GitWrapper:
             kwargs["no_notes"] = True
         if pretty:
             kwargs["pretty"] = pretty
+        if suppress_diff:
+            kwargs["s"] = True
+        if format:
+            kwargs["format"] = format
 
         if not self.is_enabled_git_cmd_logging:
             LOG.info("Running git show with arguments, args: %s, kwargs: %s", args, kwargs)
         result = self.repo.git.show(*args, **kwargs).splitlines()
         return result
+
+    def get_author_by_hash(self, hash):
+        return self.show(hash, suppress_diff=True, format="%ae")
 
     def is_working_directory_clean(self):
         status = self.repo.git.status(porcelain=True)
@@ -237,6 +245,7 @@ class GitWrapper:
         revision_range,
         oneline=False,
         oneline_with_date=False,
+        oneline_with_date_and_author=False,
         grep=None,
         format=None,
         n=None,
@@ -259,15 +268,20 @@ class GitWrapper:
         kwargs = {}
         if oneline:
             kwargs["oneline"] = True
+
+        # https://git-scm.com/docs/pretty-formats
+        # Oneline format: <hash> <title line>
+        # Oneline + date format: <hash> <title line> <author date>
         if oneline_with_date:
-            # https://git-scm.com/docs/pretty-formats
-            # Oneline format: <hash> <title line>
-            # Oneline + date format: <hash> <title line> <author date>
             kwargs["format"] = f"{FORMAT_CODE_HASH} {FORMAT_CODE_COMMIT_MSG} {FORMAT_CODE_DATE_ISO_8601}"
-        if grep:
-            kwargs["grep"] = grep
+        if oneline_with_date_and_author:
+            kwargs[
+                "format"
+            ] = f"{FORMAT_CODE_HASH} {FORMAT_CODE_COMMIT_MSG} {FORMAT_CODE_DATE_ISO_8601} {FORMAT_CODE_AUTHOR}"
         if format:
             kwargs["format"] = format
+        if grep:
+            kwargs["grep"] = grep
         if n:
             kwargs["n"] = n
         if follow:

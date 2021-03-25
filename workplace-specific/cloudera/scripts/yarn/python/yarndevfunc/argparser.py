@@ -151,4 +151,10 @@ class ArgParser:
         )
         parser.add_argument("feature_branch", type=str, help="Feature branch")
         parser.add_argument("master_branch", type=str, help="Master branch")
+        parser.add_argument(
+            "--commit_author_exceptions",
+            type=str,
+            nargs="+",
+            help="Commits with these authors will be ignored while comparing branches",
+        )
         parser.set_defaults(func=yarn_functions.compare_branches)

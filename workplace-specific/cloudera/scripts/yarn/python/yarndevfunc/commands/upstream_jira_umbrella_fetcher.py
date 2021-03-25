@@ -227,16 +227,19 @@ class JiraUmbrellaData:
 # TODO move this to common module as it is used by BranchCompataror as well
 @auto_str
 class CommitData:
-    def __init__(self, c_hash, jira_id, message, date, branches=None, reverted=False):
+    def __init__(self, c_hash, jira_id, message, date, branches=None, reverted=False, author=None):
         self.hash = c_hash
         self.jira_id = jira_id
         self.message = message
         self.date = date
         self.branches = branches
         self.reverted = reverted
+        self.author = author
 
     @staticmethod
-    def from_git_log_str(git_log_str, pattern=YARN_JIRA_ID_PATTERN, allow_unmatched_jira_id=False):
+    def from_git_log_str(
+        git_log_str, format: str, pattern=YARN_JIRA_ID_PATTERN, allow_unmatched_jira_id=False, author=None
+    ):
         """
         1. Commit hash: It is in the first column.
         2. Jira ID: Expecting the Jira ID to be the first segment of commit message, so this is the second column.
@@ -245,6 +248,9 @@ class CommitData:
         :param git_log_str:
         :return:
         """
+        # TODO Make an enum for format strings: 'format'
+        if not format:
+            format = "oneline_with_date"
         comps = git_log_str.split(COMMIT_FIELD_SEPARATOR)
         match = pattern.search(git_log_str)
 
@@ -263,16 +269,24 @@ class CommitData:
         if revert_count % 2 == 1:
             reverted = True
 
-        # Alternatively, commit date may be gathered with git show,
+        # Alternatively, commit date and author may be gathered with git show,
         # but this requires more CLI calls, so it's not the preferred way.
         # commit_date = self.upstream_repo.show(commit_hash, no_patch=True, no_notes=True, pretty='%cI')
-        return CommitData(
-            c_hash=comps[0],
-            jira_id=jira_id,
-            message=COMMIT_FIELD_SEPARATOR.join(comps[1:-1]),
-            date=comps[-1],
-            reverted=reverted,
-        )
+        # commit_author = self.upstream_repo.show(commit_hash, suppress_diff=True, format="%ae"))
+
+        c_hash = comps[0]
+        if format == "oneline_with_date":
+            # Example: 'ceab00b0db84455da145e0545fe9be63b270b315 COMPX-3264. Fix QueueMetrics#containerAskToCount map synchronization issues 2021-03-22T02:18:52-07:00'
+            message = COMMIT_FIELD_SEPARATOR.join(comps[1:-1])
+            date = comps[-1]
+        elif format == "oneline_with_date_and_author":
+            # Example: 'ceab00b0db84455da145e0545fe9be63b270b315 COMPX-3264. Fix QueueMetrics#containerAskToCount map synchronization issues 2021-03-22T02:18:52-07:00 snemeth@cloudera.com'
+            message = COMMIT_FIELD_SEPARATOR.join(comps[1:-2])
+            date = comps[-2]
+            author = comps[-1]
+        else:
+            raise ValueError(f"Unrecognized format string: {format}")
+        return CommitData(c_hash=c_hash, jira_id=jira_id, message=message, date=date, reverted=reverted, author=author)
 
     def as_oneline_string(self) -> str:
         return f"{self.hash} {self.message}"
@@ -489,7 +503,7 @@ class UpstreamJiraUmbrellaFetcher:
 
             if downstream_commits_for_jira:
                 backported_commits = [
-                    BackportedCommit(CommitData.from_git_log_str(commit_str), [])
+                    BackportedCommit(CommitData.from_git_log_str(commit_str, format="oneline_with_date"), [])
                     for commit_str in downstream_commits_for_jira
                 ]
                 LOG.info(
@@ -523,7 +537,7 @@ class UpstreamJiraUmbrellaFetcher:
             matched_downstream_commit_list = output.split("\n")
             if matched_downstream_commit_list:
                 backported_commits = [
-                    BackportedCommit(CommitData.from_git_log_str(commit_str), [branch])
+                    BackportedCommit(CommitData.from_git_log_str(commit_str, format="oneline_with_date"), [branch])
                     for commit_str in matched_downstream_commit_list
                 ]
                 LOG.info(
@@ -554,7 +568,8 @@ class UpstreamJiraUmbrellaFetcher:
         :return:
         """
         self.data.upstream_commit_data_list = [
-            CommitData.from_git_log_str(commit_str) for commit_str in self.data.matched_upstream_commit_list
+            CommitData.from_git_log_str(commit_str, format="oneline_with_date")
+            for commit_str in self.data.matched_upstream_commit_list
         ]
         self.data.matched_upstream_commit_hashes = [
             commit_obj.hash for commit_obj in self.data.upstream_commit_data_list
