@@ -6,11 +6,11 @@ from colr import color
 from git import Commit
 from pythoncommons.date_utils import DateUtils
 from pythoncommons.file_utils import FileUtils
+from pythoncommons.string_utils import StringUtils
 from commands.upstream_jira_umbrella_fetcher import CommitData
 from constants import ANY_JIRA_ID_PATTERN
 from git_wrapper import GitWrapper
 from yarndevfunc.utils import (
-    StringUtils,
     ResultPrinter,
     BoolConversionConfig,
     ColorizeConfig,
@@ -18,7 +18,9 @@ from yarndevfunc.utils import (
     MatchType,
     Color,
     EvaluationMethod,
+    StringUtils2,
 )
+
 
 LOG = logging.getLogger(__name__)
 
@@ -229,7 +231,9 @@ class Branches:
             self.summary.all_commits_with_missing_jira_id[br_type] = list(
                 filter(lambda c: not c.jira_id, branch.commit_objs)
             )
-            LOG.debug(f"Found commits with empty Jira ID: {self.summary.all_commits_with_missing_jira_id}")
+            LOG.debug(
+                f"Found commits with empty Jira ID: {StringUtils.dict_to_multiline_string(self.summary.all_commits_with_missing_jira_id)}"
+            )
             if self.fail_on_missing_jira_id:
                 raise ValueError(
                     f"Found {len(self.summary.all_commits_with_missing_jira_id)} commits with empty Jira ID!"
@@ -425,7 +429,7 @@ class Branches:
             LOG.debug(
                 f"Found {br_data.type.value} commits after merge-base with empty Jira ID "
                 f"(after applied author filter: {commit_author_exceptions}): "
-                f"{self.summary.commits_with_missing_jira_id_filtered[br_data.type]}"
+                f"{StringUtils2.list_to_multiline_string(self.summary.commits_with_missing_jira_id_filtered[br_data.type])}"
             )
         for br_data in branches:
             self.write_to_file(
@@ -447,7 +451,7 @@ class Branches:
             LOG.debug(
                 f"Found {br_data.type.value} "
                 f"commits after merge-base with empty Jira ID: "
-                f"{self.summary.commits_with_missing_jira_id[br_data.type]}"
+                f"{StringUtils2.list_to_multiline_string(self.summary.commits_with_missing_jira_id[br_data.type])}"
             )
         for br_data in branches:
             self.write_to_file(
@@ -478,13 +482,13 @@ class Branches:
         file_prefix: str = output_type.replace(" ", "-") + "-"
         f = self._generate_filename(self.output_dir, file_prefix, branch.shortname)
         LOG.info(f"Saving {output_type} for branch {branch.type.name} to file: {f}")
-        FileUtils.save_to_file(f, StringUtils.list_to_multiline_string([c.as_oneline_string() for c in commits]))
+        FileUtils.save_to_file(f, StringUtils2.list_to_multiline_string([c.as_oneline_string() for c in commits]))
 
     def write_commit_list_to_file(self, output_type: str, commits: List[CommitData]):
         file_prefix: str = output_type.replace(" ", "-") + "-"
         f = self._generate_filename(self.output_dir, file_prefix)
         LOG.info(f"Saving {output_type} to file: {f}")
-        FileUtils.save_to_file(f, StringUtils.list_to_multiline_string([c.as_oneline_string() for c in commits]))
+        FileUtils.save_to_file(f, StringUtils2.list_to_multiline_string([c.as_oneline_string() for c in commits]))
 
 
 class TableWithHeader:
@@ -508,9 +512,8 @@ class TableWithHeader:
 
 # IMPORTANT TODOS
 # TODO Console mode: Instead of writing to individual files, write everything to console --> Useful for automated runs!
-# TODO Run git_compare.sh and store results + diff git_compare.sh results with my script result, report if different!
 # TODO Turn on Debug logging by default
-# TODO Helper method to nicely print list of CommitData with line breaks
+# TODO Run git_compare.sh and store results + diff git_compare.sh results with my script result, report if different!
 # TODO Check in logs: all results for "Jira ID is the same for commits, but commit message differs"
 class BranchComparator:
     """"""
