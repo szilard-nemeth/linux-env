@@ -208,7 +208,7 @@ if __name__ == "__main__":
     args = ArgParser.parse_args(yarn_functions)
     Setup.init_logger(
         yarn_functions.log_dir,
-        console_debug=False,
+        console_debug=args.debug,
         repos=[yarn_functions.upstream_repo.repo, yarn_functions.downstream_repo.repo],
         verbose=args.verbose,
     )

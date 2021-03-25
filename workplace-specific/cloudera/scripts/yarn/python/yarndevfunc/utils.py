@@ -128,7 +128,7 @@ class ResultPrinter:
             colorize_config=colorize_config,
         )
         conversion_result = ResultPrinter.convert_list_data(data, row_callback, conversion_config)
-        LOG.debug(f"Conversion result: {conversion_result}")
+        # LOG.debug(f"Conversion result: {conversion_result}")
         tabulated = tabulate(conversion_result.dst_data, header, tablefmt="fancy_grid")
         if print_result:
             print(tabulated)

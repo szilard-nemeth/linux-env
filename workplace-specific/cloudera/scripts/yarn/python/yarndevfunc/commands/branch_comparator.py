@@ -231,6 +231,8 @@ class Branches:
             self.summary.all_commits_with_missing_jira_id[br_type] = list(
                 filter(lambda c: not c.jira_id, branch.commit_objs)
             )
+            LOG.info(f"Found {len(self.summary.all_commits_with_missing_jira_id[br_type])} commits with empty Jira ID")
+
             LOG.debug(
                 f"Found commits with empty Jira ID: {StringUtils.dict_to_multiline_string(self.summary.all_commits_with_missing_jira_id)}"
             )
@@ -512,7 +514,6 @@ class TableWithHeader:
 
 # IMPORTANT TODOS
 # TODO Console mode: Instead of writing to individual files, write everything to console --> Useful for automated runs!
-# TODO Turn on Debug logging by default
 # TODO Run git_compare.sh and store results + diff git_compare.sh results with my script result, report if different!
 # TODO Check in logs: all results for "Jira ID is the same for commits, but commit message differs"
 class BranchComparator:
