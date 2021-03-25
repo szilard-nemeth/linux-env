@@ -63,8 +63,8 @@ class SummaryData:
         self.branch_names: Dict[BranchType, str] = {br_type: br_data.name for br_type, br_data in branch_data.items()}
         self.number_of_commits: Dict[BranchType, int] = {}
         self.all_commits_with_missing_jira_id: Dict[BranchType, List[CommitData]] = {}
-        self.after_merge_base_commits_with_missing_jira_id: Dict[BranchType, List[CommitData]] = {}
-        self.after_merge_base_commits_with_missing_jira_id_filtered: Dict[BranchType, Dict] = {}
+        self.commits_with_missing_jira_id: Dict[BranchType, List[CommitData]] = {}
+        self.commits_with_missing_jira_id_filtered: Dict[BranchType, Dict] = {}
         self.unique_commits: Dict[BranchType, List[CommitData]] = {}
 
         # List-based data structures
@@ -139,10 +139,13 @@ class SummaryData:
         res += f"Number of common commits before merge-base: {len(self.common_commits_before_merge_base)}\n"
         res += f"Number of common commits after merge-base: {len(self.common_commits_after_merge_base)}\n"
 
-        res += "\n\n=====Stats: MISSING JIRA ID=====\n"
-        res += f"Number of all commits with missing Jira ID: {len(self.all_commits_with_missing_jira_id)}\n"
-        res += f"Number of commits with missing Jira ID after merge-base: {len(self.after_merge_base_commits_with_missing_jira_id)}\n"
-        res += f"Number of commits with missing Jira ID after merge-base, filtered by author exceptions: {len(self.after_merge_base_commits_with_missing_jira_id_filtered)}\n"
+        for br_type, br_name in self.branch_names.items():
+            res += f"\n\n=====Stats: COMMITS WITH MISSING JIRA ID ON BRANCH: {br_name}=====\n"
+            res += (
+                f"Number of all commits with missing Jira ID: {len(self.all_commits_with_missing_jira_id[br_type])}\n"
+            )
+            res += f"Number of commits with missing Jira ID after merge-base: {len(self.commits_with_missing_jira_id[br_type])}\n"
+            res += f"Number of commits with missing Jira ID after merge-base, filtered by author exceptions: {len(self.commits_with_missing_jira_id_filtered[br_type])}\n"
 
         res += "\n\n=====Stats: COMMON COMMITS ACROSS BRANCHES=====\n"
         res += f"Number of common commits with missing Jira ID, matched by commit message: {len(self.common_commits_matched_by_message)}\n"
@@ -305,8 +308,8 @@ class Branches:
         LOG.warning(
             f"Found {len(feature_commits_without_jira_id)} feature branch commits after merge-base with empty Jira ID: {feature_commits_without_jira_id}"
         )
-        self.summary.after_merge_base_commits_with_missing_jira_id[BranchType.MASTER] = master_commits_without_jira_id
-        self.summary.after_merge_base_commits_with_missing_jira_id[BranchType.FEATURE] = feature_commits_without_jira_id
+        self.summary.commits_with_missing_jira_id[BranchType.MASTER] = master_commits_without_jira_id
+        self.summary.commits_with_missing_jira_id[BranchType.FEATURE] = feature_commits_without_jira_id
 
         # Create a dict of (commit message, CommitData), filtering all the commits that has author from the exceptional authors.
         # Assumption: Commit message is unique for all commits
@@ -330,10 +333,8 @@ class Branches:
             f"Found {len(feature_commits_without_jira_id_filtered)} feature branch commits after merge-base with empty Jira ID "
             f"(after applied author filter: {commit_author_exceptions}): {feature_commits_without_jira_id_filtered}"
         )
-        self.summary.after_merge_base_commits_with_missing_jira_id_filtered[
-            BranchType.MASTER
-        ] = master_commits_without_jira_id_filtered
-        self.summary.after_merge_base_commits_with_missing_jira_id_filtered[
+        self.summary.commits_with_missing_jira_id_filtered[BranchType.MASTER] = master_commits_without_jira_id_filtered
+        self.summary.commits_with_missing_jira_id_filtered[
             BranchType.FEATURE
         ] = feature_commits_without_jira_id_filtered
 
