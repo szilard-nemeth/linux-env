@@ -340,6 +340,7 @@ class BranchComparator:
         self.commit_author_exceptions = args.commit_author_exceptions
 
     def run(self, args):
+        # TODO Turn on Debug logging by default
         LOG.info(
             "Starting Branch comparator... \n "
             f"Output dir: {self.output_dir}\n"
@@ -439,12 +440,12 @@ class BranchComparator:
             elif jira_id in feature_br.jira_id_to_commit:
                 present_on_branches = [False, True]
 
-            curr_row = [jira_id, commit.message]
+            curr_row = [jira_id, commit.message, commit.date]
             curr_row.extend(present_on_branches)
             curr_row = self.colorize_row(curr_row, convert_bools=True)
             all_commits_rows.append(curr_row)
 
-        header = ["Row", "Jira ID", "Commit message"]
+        header = ["Row", "Jira ID", "Commit message", "Commit date"]
         header.extend([master_br.name, feature_br.name])
         all_commits_table = TableWithHeader(
             "ALL COMMITS (MERGED LIST)",
@@ -459,7 +460,7 @@ class BranchComparator:
         )
 
         # Generate summary string
-        summary_str = (
+        summary_str = "\n\n" + (
             StringUtils.generate_header_line(
                 "SUMMARY", char="═", length=len(StringUtils.get_first_line_of_multiline_str(common_commits_table.table))
             )
