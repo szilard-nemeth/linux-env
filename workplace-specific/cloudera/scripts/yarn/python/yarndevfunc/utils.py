@@ -1,7 +1,6 @@
 import logging
-from collections import namedtuple
 from enum import Enum
-from typing import Optional, TypeVar, Any, Union, Tuple, List
+from typing import Tuple, List
 
 from colr import color
 from pythoncommons.string_utils import StringUtils, auto_str

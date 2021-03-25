@@ -180,21 +180,29 @@ class SummaryData:
         return res
 
 
+class BranchComparatorConfig:
+    def __init__(self, output_dir: str, args):
+        self.output_dir = FileUtils.ensure_dir_created(
+            FileUtils.join_path(output_dir, f"session-{DateUtils.now_formatted('%Y%m%d_%H%M%S')}")
+        )
+        self.commit_author_exceptions = args.commit_author_exceptions
+        self.console_mode = True if "console_mode" in args and args.console_mode else False
+        self.fail_on_missing_jira_id = False
+
+
 class Branches:
-    def __init__(
-        self, output_dir: str, repo: GitWrapper, branch_dict: Dict[BranchType, str], fail_on_missing_jira_id=False
-    ):
-        self.output_dir = output_dir
+    def __init__(self, conf: BranchComparatorConfig, repo: GitWrapper, branch_dict: Dict[BranchType, str]):
+        self.conf = conf
         self.repo = repo
         self.branch_data: Dict[BranchType, BranchData] = {}
         for br_type in BranchType:
             branch_name = branch_dict[br_type]
             self.branch_data[br_type] = BranchData(br_type, branch_name)
-        self.fail_on_missing_jira_id = fail_on_missing_jira_id
+        self.fail_on_missing_jira_id = conf.fail_on_missing_jira_id
 
         # Set later
         self.merge_base: CommitData = None
-        self.summary: SummaryData = SummaryData(self.output_dir, self.branch_data)
+        self.summary: SummaryData = SummaryData(self.conf.output_dir, self.branch_data)
 
     def get_branch(self, br_type: BranchType) -> BranchData:
         return self.branch_data[br_type]
@@ -250,7 +258,7 @@ class Branches:
         if print_stats:
             self._print_stats()
         if save_to_file:
-            self._save_git_log_to_file()
+            self._write_git_log_to_file()
 
     def _print_stats(self):
         for br_type in BranchType:
@@ -258,17 +266,17 @@ class Branches:
             self.summary.number_of_commits[br_type] = branch.number_of_commits
             LOG.info(f"Found {branch.number_of_commits} commits on {br_type.value}: {branch.name}")
 
-    def _save_git_log_to_file(self):
+    def _write_git_log_to_file(self):
         for br_type in BranchType:
             branch: BranchData = self.branch_data[br_type]
             # We would like to maintain descending order of commits in printouts
-            self.write_to_file("git log output", branch, list(reversed(branch.commit_objs)))
+            self.write_to_file_or_console("git log output", branch, list(reversed(branch.commit_objs)))
 
     def _save_commits_before_after_merge_base_to_file(self):
         for br_type in BranchType:
             branch: BranchData = self.branch_data[br_type]
-            self.write_to_file("before mergebase commits", branch, branch.commits_before_merge_base)
-            self.write_to_file("after mergebase commits", branch, branch.commits_after_merge_base)
+            self.write_to_file_or_console("before mergebase commits", branch, branch.commits_before_merge_base)
+            self.write_to_file_or_console("after mergebase commits", branch, branch.commits_after_merge_base)
 
     def get_merge_base(self):
         merge_base: List[Commit] = self.repo.merge_base(
@@ -382,11 +390,11 @@ class Branches:
                 self.summary.common_commits_after_merge_base.append(commit_tuple)
                 common_jira_ids.add(master_commit.jira_id)
 
-        self.write_commit_list_to_file(
+        self.write_commit_list_to_file_or_console(
             "commit message differs", [item for tup in self.summary.common_commits_matched_by_jira_id for item in tup]
         )
 
-        self.write_commit_list_to_file(
+        self.write_commit_list_to_file_or_console(
             "commits matched by message", [t[0] for t in self.summary.common_commits_matched_by_message]
         )
 
@@ -406,8 +414,8 @@ class Branches:
         LOG.info(f"Identified {len(feature_br.unique_commits)} unique commits on branch: {feature_br.name}")
         self.summary.unique_commits[BranchType.MASTER] = master_br.unique_commits
         self.summary.unique_commits[BranchType.FEATURE] = feature_br.unique_commits
-        self.write_to_file("unique commits", master_br, master_br.unique_commits)
-        self.write_to_file("unique commits", feature_br, feature_br.unique_commits)
+        self.write_to_file_or_console("unique commits", master_br, master_br.unique_commits)
+        self.write_to_file_or_console("unique commits", feature_br, feature_br.unique_commits)
 
     def _handle_commits_with_missing_jira_id_filter_author(self, branches: List[BranchData], commit_author_exceptions):
         # Create a dict of (commit message, CommitData),
@@ -434,7 +442,7 @@ class Branches:
                 f"{StringUtils2.list_to_multiline_string(self.summary.commits_with_missing_jira_id_filtered[br_data.type])}"
             )
         for br_data in branches:
-            self.write_to_file(
+            self.write_to_file_or_console(
                 "commits missing jira id filtered", br_data, self.summary.commits_with_missing_jira_id[br_data.type]
             )
 
@@ -456,7 +464,7 @@ class Branches:
                 f"{StringUtils2.list_to_multiline_string(self.summary.commits_with_missing_jira_id[br_data.type])}"
             )
         for br_data in branches:
-            self.write_to_file(
+            self.write_to_file_or_console(
                 "commits missing jira id", br_data, self.summary.commits_with_missing_jira_id[br_data.type]
             )
 
@@ -480,17 +488,30 @@ class Branches:
                 result.append(commit)
         return result
 
-    def write_to_file(self, output_type: str, branch: BranchData, commits: List[CommitData]):
-        file_prefix: str = output_type.replace(" ", "-") + "-"
-        f = self._generate_filename(self.output_dir, file_prefix, branch.shortname)
-        LOG.info(f"Saving {output_type} for branch {branch.type.name} to file: {f}")
-        FileUtils.save_to_file(f, StringUtils2.list_to_multiline_string([c.as_oneline_string() for c in commits]))
+    def write_to_file_or_console(self, output_type: str, branch: BranchData, commits: List[CommitData]):
+        contents = StringUtils2.list_to_multiline_string([c.as_oneline_string() for c in commits])
+        if self.conf.console_mode:
+            LOG.info(f"Printing {output_type} for branch {branch.type.name}: {contents}")
+        else:
+            fn_prefix = Branches._convert_output_type_str_to_file_prefix(output_type)
+            f = self._generate_filename(self.conf.output_dir, fn_prefix, branch.shortname)
+            LOG.info(f"Saving {output_type} for branch {branch.type.name} to file: {f}")
+            FileUtils.save_to_file(f, contents)
 
-    def write_commit_list_to_file(self, output_type: str, commits: List[CommitData]):
+    def write_commit_list_to_file_or_console(self, output_type: str, commits: List[CommitData]):
+        contents = StringUtils2.list_to_multiline_string([c.as_oneline_string() for c in commits])
+        if self.conf.console_mode:
+            LOG.info(f"Printing {output_type}: {contents}")
+        else:
+            fn_prefix = Branches._convert_output_type_str_to_file_prefix(output_type)
+            f = self._generate_filename(self.conf.output_dir, fn_prefix)
+            LOG.info(f"Saving {output_type} to file: {f}")
+            FileUtils.save_to_file(f, contents)
+
+    @staticmethod
+    def _convert_output_type_str_to_file_prefix(output_type):
         file_prefix: str = output_type.replace(" ", "-") + "-"
-        f = self._generate_filename(self.output_dir, file_prefix)
-        LOG.info(f"Saving {output_type} to file: {f}")
-        FileUtils.save_to_file(f, StringUtils2.list_to_multiline_string([c.as_oneline_string() for c in commits]))
+        return file_prefix
 
 
 class TableWithHeader:
@@ -513,32 +534,35 @@ class TableWithHeader:
 # TODO Add documentation
 
 # IMPORTANT TODOS
-# TODO Console mode: Instead of writing to individual files, write everything to console --> Useful for automated runs!
 # TODO Run git_compare.sh and store results + diff git_compare.sh results with my script result, report if different!
 # TODO Check in logs: all results for "Jira ID is the same for commits, but commit message differs"
+
+
 class BranchComparator:
     """"""
 
     def __init__(self, args, downstream_repo, output_dir):
         self.repo = downstream_repo
-        dt_string = DateUtils.now_formatted("%Y%m%d_%H%M%S")
-        self.output_dir = FileUtils.ensure_dir_created(FileUtils.join_path(output_dir, f"session-{dt_string}"))
+        self.config = BranchComparatorConfig(output_dir, args)
         self.branches: Branches = Branches(
-            self.output_dir, self.repo, {BranchType.FEATURE: args.feature_branch, BranchType.MASTER: args.master_branch}
+            self.config, self.repo, {BranchType.FEATURE: args.feature_branch, BranchType.MASTER: args.master_branch}
         )
-        self.commit_author_exceptions = args.commit_author_exceptions
 
-    def run(self, args):
+    def run(self):
         LOG.info(
             "Starting Branch comparator... \n "
-            f"Output dir: {self.output_dir}\n"
-            f"Master branch: {args.master_branch}\n "
-            f"Feature branch: {args.feature_branch}\n "
+            f"Output dir: {self.config.output_dir}\n"
+            f"Master branch: {self.branches.get_branch(BranchType.MASTER).name}\n "
+            f"Feature branch: {self.branches.get_branch(BranchType.FEATURE).name}\n "
+            f"Commit author exceptions: {self.config.commit_author_exceptions}\n "
+            f"Console mode: {self.config.console_mode}\n "
         )
         self.validate_branches()
         # TODO DO NOT FETCH FOR NOW, Uncomment if finished with testing
         # self.repo.fetch(all=True)
-        self.compare()
+        print_stats = self.config.console_mode
+        save_to_file = not self.config.console_mode
+        self.compare(print_stats=print_stats, save_to_file=save_to_file)
 
     def validate_branches(self):
         both_exist = self.branches.validate(BranchType.FEATURE)
@@ -546,15 +570,15 @@ class BranchComparator:
         if not both_exist:
             raise ValueError("Both feature and master branch should be an existing branch. Exiting...")
 
-    def compare(self):
-        self.branches.execute_git_log(print_stats=True, save_to_file=True)
-        self.branches.compare(self.commit_author_exceptions)
+    def compare(self, print_stats=True, save_to_file=True):
+        self.branches.execute_git_log(print_stats=print_stats, save_to_file=save_to_file)
+        self.branches.compare(self.config.commit_author_exceptions)
         self.print_and_save_summary()
 
     def print_and_save_summary(self):
         printable_summary_str, writable_summary_str = BranchComparator.render_summary_string(self.branches.summary)
         LOG.info(printable_summary_str)
-        filename = FileUtils.join_path(self.output_dir, "summary.txt")
+        filename = FileUtils.join_path(self.config.output_dir, "summary.txt")
         LOG.info(f"Saving summary to file: {filename}")
         FileUtils.save_to_file(filename, writable_summary_str)
 

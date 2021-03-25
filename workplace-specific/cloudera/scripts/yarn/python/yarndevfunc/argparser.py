@@ -166,4 +166,9 @@ class ArgParser:
             nargs="+",
             help="Commits with these authors will be ignored while comparing branches",
         )
+        parser.add_argument(
+            "--console-mode",
+            action="store_true",
+            help="Console mode: Instead of writing output files, print everything to the console",
+        )
         parser.set_defaults(func=yarn_functions.compare_branches)

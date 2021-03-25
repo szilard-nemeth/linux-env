@@ -194,7 +194,7 @@ class YarnDevFunc:
 
     def compare_branches(self, args):
         branch_comparator = BranchComparator(args, self.downstream_repo, self.branch_comparator_output_dir)
-        branch_comparator.run(args)
+        branch_comparator.run()
 
 
 if __name__ == "__main__":
