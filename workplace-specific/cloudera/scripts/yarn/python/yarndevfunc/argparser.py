@@ -38,7 +38,7 @@ class ArgParser:
             description="valid subcommands",
             help="Available subcommands",
             required=True,
-            dest="test",
+            dest="command",
         )
         ArgParser.add_save_patch_parser(subparsers, yarn_functions)
         ArgParser.add_create_review_branch_parser(subparsers, yarn_functions)

@@ -49,7 +49,6 @@ class Setup:
         logger.setLevel(logging.DEBUG)
 
         # create file handler which logs even debug messages
-        # TODO Add postfix based on subcommand type
         prefix = f"{PROJECT_NAME}-{postfix}-"
         logfilename = datetime.datetime.now().strftime(prefix + "%Y_%m_%d_%H%M%S.log")
 
@@ -213,6 +212,7 @@ if __name__ == "__main__":
     log_file = Setup.init_logger(
         yarn_functions.log_dir,
         console_debug=args.debug,
+        postfix=args.command,
         repos=[yarn_functions.upstream_repo.repo, yarn_functions.downstream_repo.repo],
         verbose=args.verbose,
     )
