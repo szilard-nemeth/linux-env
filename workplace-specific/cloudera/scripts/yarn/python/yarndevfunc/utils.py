@@ -1,14 +1,34 @@
+import errno
 import logging
+import os
 from enum import Enum
 from typing import Tuple, List
 
 from colr import color
+from pythoncommons.file_utils import FileUtils
 from pythoncommons.string_utils import StringUtils, auto_str
 from tabulate import tabulate
 
 LOG = logging.getLogger(__name__)
 
 # TODO Move all of these classes to python-commons lib
+
+
+# TODO move to python-commons / file utils
+class FileUtils2:
+    @staticmethod
+    def create_symlink(link_name, linked_path, dest_dir):
+        link_src = linked_path
+        link_dest = FileUtils.join_path(dest_dir, link_name)
+        LOG.info("Creating symlink: %s -> %s", link_dest, link_src)
+        # os.symlink(src, dest)
+        # src: Already existing path to create the link pointing to
+        # dest: Link name
+        try:
+            os.symlink(link_src, link_dest)
+        except OSError as e:
+            if e.errno == errno.EEXIST:
+                LOG.warning("Symlink does exist, ignoring. Details: %s", str(e))
 
 
 class StringUtils2:

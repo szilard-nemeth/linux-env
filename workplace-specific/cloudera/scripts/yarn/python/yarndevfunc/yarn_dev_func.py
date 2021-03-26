@@ -13,6 +13,7 @@ from pythoncommons.date_utils import DateUtils
 from pythoncommons.file_utils import FileUtils
 
 from commands.branch_comparator import BranchComparator
+from utils import FileUtils2
 from yarndevfunc.argparser import ArgParser
 from yarndevfunc.commands.backporter import Backporter
 from yarndevfunc.commands.format_patch_saver import FormatPatchSaver
@@ -48,10 +49,12 @@ class Setup:
         logger.setLevel(logging.DEBUG)
 
         # create file handler which logs even debug messages
-        prefix = f"yarn_dev_func-{postfix}-"
+        # TODO Add postfix based on subcommand type
+        prefix = f"{PROJECT_NAME}-{postfix}-"
         logfilename = datetime.datetime.now().strftime(prefix + "%Y_%m_%d_%H%M%S.log")
 
-        fh = TimedRotatingFileHandler(FileUtils.join_path(log_dir, logfilename), when="midnight")
+        log_file = FileUtils.join_path(log_dir, logfilename)
+        fh = TimedRotatingFileHandler(log_file, when="midnight")
         fh.suffix = "%Y_%m_%d.log"
         fh.setLevel(logging.DEBUG)
 
@@ -77,6 +80,7 @@ class Setup:
             for repo in repos:
                 val = "full" if verbose else "1"
                 type(repo.git).GIT_PYTHON_TRACE = val
+        return log_file
 
 
 class YarnDevFunc:
@@ -206,13 +210,14 @@ if __name__ == "__main__":
 
     # Parse args, commands will be mapped to YarnDevFunc functions in ArgParser.parse_args
     args = ArgParser.parse_args(yarn_functions)
-    Setup.init_logger(
+    log_file = Setup.init_logger(
         yarn_functions.log_dir,
         console_debug=args.debug,
         repos=[yarn_functions.upstream_repo.repo, yarn_functions.downstream_repo.repo],
         verbose=args.verbose,
     )
 
+    FileUtils2.create_symlink("latest-log", log_file, yarn_functions.project_out_root)
     # Call the handler function
     args.func(args)
 
