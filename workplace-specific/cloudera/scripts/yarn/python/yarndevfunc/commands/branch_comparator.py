@@ -557,7 +557,7 @@ class TableWithHeader:
 class BranchComparator:
     """"""
 
-    def __init__(self, args, downstream_repo, output_dir):
+    def __init__(self, args, downstream_repo, output_dir: str):
         self.repo = downstream_repo
         self.config = BranchComparatorConfig(output_dir, args)
         self.branches: Branches = Branches(

@@ -197,7 +197,10 @@ class YarnDevFunc:
 
     def compare_branches(self, args):
         branch_comparator = BranchComparator(args, self.downstream_repo, self.branch_comparator_output_dir)
-        branch_comparator.run()
+        try:
+            branch_comparator.run()
+        finally:
+            FileUtils2.create_symlink("latest-session", branch_comparator.config.output_dir, self.project_out_root)
 
 
 if __name__ == "__main__":
