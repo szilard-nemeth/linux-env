@@ -18,6 +18,7 @@ class RegularCommandResult:
         self.exit_code = exit_code
 
 
+# TODO Move this to Python commons
 class CommandRunner:
     @staticmethod
     def run(command, shell=False, shlex_split=True):
@@ -45,10 +46,25 @@ class CommandRunner:
         return CommandRunner.run_cli_command(cli_command)
 
     @staticmethod
+    def execute_script(script: str, args: str, working_dir: str = None, output_file: str = None, use_tee=False):
+        cli_command = ""
+        if working_dir:
+            cli_command += f"cd {working_dir};"
+        cli_command += script
+        if args:
+            cli_command += " " + args
+        if output_file:
+            if use_tee:
+                cli_command += f" | tee {output_file}"
+            else:
+                cli_command += f" > {output_file}"
+        return CommandRunner.run_cli_command(cli_command)
+
+    @staticmethod
     def run_cli_command(cli_command, fail_on_empty_output=True, print_command=True, fail_on_error=True):
         if print_command:
             LOG.info("Running CLI command: %s", cli_command)
         output = CommandRunner.getoutput(cli_command, raise_on_error=fail_on_error)
         if fail_on_empty_output and not output:
             raise ValueError("Command failed: %s", cli_command)
-        return output
+        return cli_command, output

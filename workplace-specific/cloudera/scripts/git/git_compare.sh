@@ -4,6 +4,6 @@ gitlog=`git log $1 --oneline --no-merges`
 for value in $result
 do
   if ! grep -q "$value" <<< "$gitlog"; then
-    echo "$value exists in branch=$2, but not exist in $1"
+    echo "$value exists on branch=$2, but not exist on $1"
   fi
 done
