@@ -13,6 +13,7 @@ from pythoncommons.date_utils import DateUtils
 from pythoncommons.file_utils import FileUtils
 
 from commands.branch_comparator import BranchComparator
+from commands.send_latest_command_data_in_mail import SendLatestCommandDataInEmail
 from commands.zip_latest_command_data import ZipLatestCommandData
 from utils import FileUtils2
 from yarndevfunc.argparser import ArgParser, CommandType
@@ -35,6 +36,7 @@ from yarndevfunc.constants import (
     HADOOP_REPO_TEMPLATE,
     LATEST_LOG,
     LATEST_SESSION,
+    LATEST_DATA_ZIP,
 )
 from yarndevfunc.git_wrapper import GitWrapper
 
@@ -208,6 +210,11 @@ class YarnDevFunc:
     def zip_latest_command_results(self, args):
         zip_latest_cmd_data = ZipLatestCommandData(args, yarn_functions.project_out_root)
         zip_latest_cmd_data.run()
+
+    def send_latest_command_results(self, args):
+        file_to_send = FileUtils.join_path(yarn_functions.project_out_root, LATEST_DATA_ZIP)
+        send_latest_cmd_data = SendLatestCommandDataInEmail(args, file_to_send)
+        send_latest_cmd_data.run()
 
 
 if __name__ == "__main__":

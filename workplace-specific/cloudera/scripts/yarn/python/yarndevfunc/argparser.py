@@ -23,6 +23,7 @@ class CommandType(Enum):
     FETCH_JIRA_UMBRELLA_DATA = "fetch_jira_umbrella_data"
     COMPARE_BRANCHES = "compare_branches"
     ZIP_LATEST_COMMAND_DATA = "zip_latest_command_data"
+    SEND_LATEST_COMMAND_DATA = "send_latest_command_data"
 
     @staticmethod
     def from_str(val):
@@ -58,6 +59,7 @@ class ArgParser:
         ArgParser.add_fetch_jira_umbrella_data(subparsers, yarn_functions)
         ArgParser.add_compare_branches(subparsers, yarn_functions)
         ArgParser.add_zip_latest_command_data(subparsers, yarn_functions)
+        ArgParser.add_send_latest_command_data(subparsers, yarn_functions)
 
         # Normal arguments
         parser.add_argument(
@@ -203,3 +205,18 @@ class ArgParser:
             "--dest_filename", required=False, type=str, default=DEFAULT_COMMAND_DATA_FILE_NAME, help="Zip filename"
         )
         parser.set_defaults(func=yarn_functions.zip_latest_command_results)
+
+    @staticmethod
+    def add_send_latest_command_data(subparsers, yarn_functions):
+        parser = subparsers.add_parser(
+            CommandType.SEND_LATEST_COMMAND_DATA.value,
+            help="Sends latest command data in email." "Example: --dest_dir /tmp",
+        )
+        parser.add_argument("--smtp_server", required=True, type=str, help="SMPT server")
+        parser.add_argument("--smtp_port", required=True, type=str, help="SMTP port")
+        parser.add_argument("--account_user", required=True, type=str, help="Email account's user")
+        parser.add_argument("--account_password", required=True, type=str, help="Email account's password")
+        parser.add_argument("--subject", required=True, type=str, help="Subject of the email")
+        parser.add_argument("--sender", required=True, type=str, help="Sender of the email [From]")
+        parser.add_argument("--recipients", required=True, type=str, nargs="+", help="List of email recipients [To]")
+        parser.set_defaults(func=yarn_functions.send_latest_command_results)

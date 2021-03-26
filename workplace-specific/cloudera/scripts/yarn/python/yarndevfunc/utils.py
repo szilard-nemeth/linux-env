@@ -46,6 +46,15 @@ class FileUtils2:
         return FileUtils2._create_zip_file(src_files, open(filename, mode="wb"))
 
     @staticmethod
+    def extract_zip_file(file: str, path: str):
+        # Apparently, ZipFile does not resolve symlinks so let's do it manually
+        if os.path.islink(file):
+            file = os.path.realpath(file)
+        FileUtils.ensure_file_exists(file)
+        zip_file = zipfile.ZipFile(file, "r")
+        zip_file.extractall(path)
+
+    @staticmethod
     def _validate_zip_file_name(filename):
         if "." in filename:
             filename_and_ext = filename.split(".")
