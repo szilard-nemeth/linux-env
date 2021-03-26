@@ -415,11 +415,15 @@ class Branches:
                 common_jira_ids.add(master_commit.jira_id)
 
         self.write_commit_list_to_file_or_console(
-            "commit message differs", [item for tup in self.summary.common_commits_matched_by_jira_id for item in tup]
+            "commit message differs",
+            [item for tup in self.summary.common_commits_matched_by_jira_id for item in tup],
+            add_sep_to_end=False,
         )
 
         self.write_commit_list_to_file_or_console(
-            "commits matched by message", [t[0] for t in self.summary.common_commits_matched_by_message]
+            "commits matched by message",
+            [t[0] for t in self.summary.common_commits_matched_by_message],
+            add_sep_to_end=False,
         )
 
         master_br.unique_commits = self._filter_relevant_unique_commits(
@@ -522,19 +526,21 @@ class Branches:
             LOG.info(f"Saving {output_type} for branch {branch.type.name} to file: {f}")
             FileUtils.save_to_file(f, contents)
 
-    def write_commit_list_to_file_or_console(self, output_type: str, commits: List[CommitData]):
+    def write_commit_list_to_file_or_console(self, output_type: str, commits: List[CommitData], add_sep_to_end=True):
         contents = StringUtils2.list_to_multiline_string([c.as_oneline_string() for c in commits])
         if self.conf.console_mode:
             LOG.info(f"Printing {output_type}: {contents}")
         else:
-            fn_prefix = Branches._convert_output_type_str_to_file_prefix(output_type)
+            fn_prefix = Branches._convert_output_type_str_to_file_prefix(output_type, add_sep_to_end=add_sep_to_end)
             f = self._generate_filename(self.conf.output_dir, fn_prefix)
             LOG.info(f"Saving {output_type} to file: {f}")
             FileUtils.save_to_file(f, contents)
 
     @staticmethod
-    def _convert_output_type_str_to_file_prefix(output_type):
-        file_prefix: str = output_type.replace(" ", "-") + "-"
+    def _convert_output_type_str_to_file_prefix(output_type, add_sep_to_end=True):
+        file_prefix: str = output_type.replace(" ", "-")
+        if add_sep_to_end:
+            file_prefix += "-"
         return file_prefix
 
 
