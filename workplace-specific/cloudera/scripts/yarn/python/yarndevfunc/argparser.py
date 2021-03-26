@@ -1,7 +1,16 @@
-import argparse
+import logging
+import sys
 from enum import Enum
-
 from yarndevfunc.constants import TRUNK
+
+LOG = logging.getLogger(__name__)
+
+if sys.version_info[:2] >= (3, 7):
+    from argparse import ArgumentParser
+else:
+    LOG.info("Detected python version: " + str(sys.version_info[:2]))
+    LOG.info("Replacing ArgumentParser with DelegatedArgumentParser for compatibility reasons.")
+    from cdsw_compat import DelegatedArgumentParser as ArgumentParser
 
 
 class CommandType(Enum):
@@ -21,7 +30,7 @@ class ArgParser:
         """This function parses and return arguments passed in"""
 
         # Top-level parser
-        parser = argparse.ArgumentParser()
+        parser = ArgumentParser()
 
         # Subparsers
         subparsers = parser.add_subparsers(
