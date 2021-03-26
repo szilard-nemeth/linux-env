@@ -274,15 +274,20 @@ class Branches:
         # This must be executed after branch.hash_to_index is set
         self.get_merge_base()
 
+        self._record_stats_to_summary()
         if print_stats:
             self._print_stats()
         if save_to_file:
             self._write_git_log_to_file()
 
-    def _print_stats(self):
+    def _record_stats_to_summary(self):
         for br_type in BranchType:
             branch: BranchData = self.branch_data[br_type]
             self.summary.number_of_commits[br_type] = branch.number_of_commits
+
+    def _print_stats(self):
+        for br_type in BranchType:
+            branch: BranchData = self.branch_data[br_type]
             LOG.info(f"Found {branch.number_of_commits} commits on {br_type.value}: {branch.name}")
 
     def _write_git_log_to_file(self):
