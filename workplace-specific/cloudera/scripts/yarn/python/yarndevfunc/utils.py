@@ -17,9 +17,12 @@ LOG = logging.getLogger(__name__)
 # TODO move to python-commons / file utils
 class FileUtils2:
     @staticmethod
-    def create_symlink(link_name, linked_path, dest_dir):
+    def create_symlink(link_name, linked_path, dest_dir, remove_if_exists=True):
         link_src = linked_path
         link_dest = FileUtils.join_path(dest_dir, link_name)
+        if remove_if_exists and os.path.exists(link_dest):
+            os.remove(link_dest)
+
         LOG.info("Creating symlink: %s -> %s", link_dest, link_src)
         # os.symlink(src, dest)
         # src: Already existing path to create the link pointing to
