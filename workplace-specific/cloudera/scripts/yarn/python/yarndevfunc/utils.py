@@ -1,6 +1,8 @@
 import errno
 import logging
 import os
+import tempfile
+import zipfile
 from enum import Enum
 from typing import Tuple, List
 
@@ -32,6 +34,54 @@ class FileUtils2:
         except OSError as e:
             if e.errno == errno.EEXIST:
                 LOG.warning("Symlink does exist, ignoring. Details: %s", str(e))
+
+    @staticmethod
+    def create_zip_as_tmp_file(src_files: List[str], filename: str):
+        filename, suffix = FileUtils2._validate_zip_file_name(filename)
+        tmp_file = tempfile.NamedTemporaryFile(prefix=filename, suffix=suffix, delete=False)
+        return FileUtils2._create_zip_file(src_files, tmp_file)
+
+    @staticmethod
+    def create_zip_file(src_files: List[str], filename: str):
+        return FileUtils2._create_zip_file(src_files, open(filename, mode="wb"))
+
+    @staticmethod
+    def _validate_zip_file_name(filename):
+        if "." in filename:
+            filename_and_ext = filename.split(".")
+            if len(filename_and_ext) != 2:
+                raise ValueError("Invalid filename: " + filename)
+            filename = filename_and_ext[0]
+            suffix = "." + filename_and_ext[1]
+        else:
+            filename = filename
+            suffix = ".zip"
+        return filename, suffix
+
+    @staticmethod
+    def _create_zip_file(src_files, file):
+        zip_file = zipfile.ZipFile(file, "w")
+        LOG.info(f"Creating zip file. Target file: {zip_file.filename}, Input files: {src_files}")
+        for src_file in src_files:
+            if FileUtils.is_dir(src_file):
+                FileUtils2._add_dir_to_zip(src_file, zip_file)
+            else:
+                LOG.debug(f"Adding file '{src_file}' to zip file '${zip_file.filename}'")
+                zip_file.write(src_file, FileUtils.basename(src_file))
+        zip_file.close()
+        file.seek(0)
+        return file
+
+    @staticmethod
+    def _add_dir_to_zip(src_dir, zip_file):
+        # Iterate over all the files in directory
+        LOG.debug(f"Adding directory '{src_dir}' to zip file '${zip_file.filename}'")
+        for folderName, subfolders, filenames in os.walk(src_dir):
+            for filename in filenames:
+                # create complete filepath of file in directory
+                file_path = os.path.join(folderName, filename)
+                # Add file to zip
+                zip_file.write(file_path, FileUtils.basename(file_path))
 
 
 class StringUtils2:

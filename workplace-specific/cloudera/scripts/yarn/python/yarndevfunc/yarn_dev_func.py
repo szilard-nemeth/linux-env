@@ -13,8 +13,9 @@ from pythoncommons.date_utils import DateUtils
 from pythoncommons.file_utils import FileUtils
 
 from commands.branch_comparator import BranchComparator
+from commands.zip_latest_command_data import ZipLatestCommandData
 from utils import FileUtils2
-from yarndevfunc.argparser import ArgParser
+from yarndevfunc.argparser import ArgParser, CommandType
 from yarndevfunc.commands.backporter import Backporter
 from yarndevfunc.commands.format_patch_saver import FormatPatchSaver
 from yarndevfunc.commands.patch_saver import PatchSaver
@@ -32,6 +33,8 @@ from yarndevfunc.constants import (
     ORIGIN_TRUNK,
     GERRIT_REVIEWER_LIST,
     HADOOP_REPO_TEMPLATE,
+    LATEST_LOG,
+    LATEST_SESSION,
 )
 from yarndevfunc.git_wrapper import GitWrapper
 
@@ -39,6 +42,8 @@ DEFAULT_BASE_BRANCH = TRUNK
 
 LOG = logging.getLogger(__name__)
 __author__ = "Szilard Nemeth"
+
+IGNORE_LATEST_SYMLINK_COMMANDS = {CommandType.ZIP_LATEST_COMMAND_DATA}
 
 
 class Setup:
@@ -197,8 +202,12 @@ class YarnDevFunc:
 
     def compare_branches(self, args):
         branch_comparator = BranchComparator(args, self.downstream_repo, self.branch_comparator_output_dir)
-        FileUtils2.create_symlink("latest-session", branch_comparator.config.output_dir, self.project_out_root)
+        FileUtils2.create_symlink(LATEST_SESSION, branch_comparator.config.output_dir, self.project_out_root)
         branch_comparator.run()
+
+    def zip_latest_command_results(self, args):
+        zip_latest_cmd_data = ZipLatestCommandData(args, yarn_functions.project_out_root)
+        zip_latest_cmd_data.run()
 
 
 if __name__ == "__main__":
@@ -218,7 +227,11 @@ if __name__ == "__main__":
         verbose=args.verbose,
     )
 
-    FileUtils2.create_symlink("latest-log", log_file, yarn_functions.project_out_root)
+    if CommandType.from_str(args.command) not in IGNORE_LATEST_SYMLINK_COMMANDS:
+        FileUtils2.create_symlink(LATEST_LOG, log_file, yarn_functions.project_out_root)
+    else:
+        LOG.info(f"Skipping to re-create symlink as command is: {args.command}")
+
     # Call the handler function
     args.func(args)
 

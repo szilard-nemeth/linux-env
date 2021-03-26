@@ -1,7 +1,7 @@
 import logging
 import sys
 from enum import Enum
-from yarndevfunc.constants import TRUNK
+from yarndevfunc.constants import TRUNK, DEFAULT_COMMAND_DATA_FILE_NAME
 
 LOG = logging.getLogger(__name__)
 
@@ -22,6 +22,15 @@ class CommandType(Enum):
     DIFF_PATCHES_OF_JIRA = "diff_patches_of_jira"
     FETCH_JIRA_UMBRELLA_DATA = "fetch_jira_umbrella_data"
     COMPARE_BRANCHES = "compare_branches"
+    ZIP_LATEST_COMMAND_DATA = "zip_latest_command_data"
+
+    @staticmethod
+    def from_str(val):
+        val_to_enum = {ct.value: ct for ct in CommandType}
+        if val in val_to_enum:
+            return val_to_enum[val]
+        else:
+            raise NotImplementedError
 
 
 class ArgParser:
@@ -48,6 +57,7 @@ class ArgParser:
         ArgParser.diff_patches_of_jira(subparsers, yarn_functions)
         ArgParser.add_fetch_jira_umbrella_data(subparsers, yarn_functions)
         ArgParser.add_compare_branches(subparsers, yarn_functions)
+        ArgParser.add_zip_latest_command_data(subparsers, yarn_functions)
 
         # Normal arguments
         parser.add_argument(
@@ -181,3 +191,15 @@ class ArgParser:
             help="Console mode: Instead of writing output files, print everything to the console",
         )
         parser.set_defaults(func=yarn_functions.compare_branches)
+
+    @staticmethod
+    def add_zip_latest_command_data(subparsers, yarn_functions):
+        parser = subparsers.add_parser(
+            CommandType.ZIP_LATEST_COMMAND_DATA.value,
+            help="Zip latest command data." "Example: --dest_dir /tmp",
+        )
+        parser.add_argument("--dest_dir", required=False, type=str, help="Directory to create the zip file into")
+        parser.add_argument(
+            "--dest_filename", required=False, type=str, default=DEFAULT_COMMAND_DATA_FILE_NAME, help="Zip filename"
+        )
+        parser.set_defaults(func=yarn_functions.zip_latest_command_results)

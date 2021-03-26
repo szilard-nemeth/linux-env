@@ -13,6 +13,11 @@ ENV_HADOOP_DEV_DIR = "HADOOP_DEV_DIR"
 YARN_JIRA_ID_PATTERN = re.compile(r"(YARN-\d+)")
 ANY_JIRA_ID_PATTERN = re.compile(r"([A-Z]+-\d+)")
 
+# Symlink names
+LATEST_LOG = "latest-log"
+LATEST_SESSION = "latest-session"
+DEFAULT_COMMAND_DATA_FILE_NAME = "command_data.zip"
+
 # Do not leak bad ENV variable namings into the python code
 LOADED_ENV_UPSTREAM_DIR = "upstream-hadoop-dir"
 LOADED_ENV_DOWNSTREAM_DIR = "downstream-hadoop-dir"
