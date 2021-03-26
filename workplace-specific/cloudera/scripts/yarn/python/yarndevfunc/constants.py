@@ -16,6 +16,7 @@ ANY_JIRA_ID_PATTERN = re.compile(r"([A-Z]+-\d+)")
 # Symlink names
 LATEST_LOG = "latest-log"
 LATEST_SESSION = "latest-session"
+LATEST_DATA_ZIP = "latest-command-data-zip"
 DEFAULT_COMMAND_DATA_FILE_NAME = "command_data.zip"
 
 # Do not leak bad ENV variable namings into the python code

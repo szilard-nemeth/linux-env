@@ -1,24 +1,25 @@
 import logging
 from typing import List
 from pythoncommons.file_utils import FileUtils
-from constants import LATEST_SESSION, LATEST_LOG
+from constants import LATEST_SESSION, LATEST_LOG, LATEST_DATA_ZIP
 from utils import FileUtils2
 
 LOG = logging.getLogger(__name__)
 
 
 class Config:
-    def __init__(self, args, input_files: List[str]):
+    def __init__(self, args, input_files: List[str], project_basedir):
         self.input_files = input_files
         self.output_dir = args.dest_dir if "dest_dir" in args else None
         self.dest_filename = args.dest_filename
+        self.project_out_root = project_basedir
 
 
 class ZipLatestCommandData:
     def __init__(self, args, project_basedir: str):
         self.zip_these_files = [LATEST_LOG, LATEST_SESSION]
         self.input_files = self._validate(self.zip_these_files, project_basedir)
-        self.config = Config(args, self.input_files)
+        self.config = Config(args, self.input_files, project_basedir)
 
     def _validate(self, input_files: List[str], project_basedir: str):
         return self._check_input_files(input_files, project_basedir)
@@ -39,7 +40,7 @@ class ZipLatestCommandData:
 
     def run(self):
         LOG.info(
-            "Starting Zip latest command data... \n "
+            "Starting zipping latest command data... \n "
             f"PLEASE NOTE THAT ACTUAL OUTPUT DIR AND DESTINATION FILES CAN CHANGE, IF NOT SPECIFIED\n"
             f"Output dir: {self.config.output_dir}\n"
             f"Input files: {self.config.input_files}\n "
@@ -51,3 +52,4 @@ class ZipLatestCommandData:
         else:
             zip_file = FileUtils2.create_zip_as_tmp_file(self.config.input_files, self.config.dest_filename)
         LOG.info(f"Finished writing command data to zip file: {zip_file.name}")
+        FileUtils2.create_symlink(LATEST_DATA_ZIP, zip_file.name, self.config.project_out_root)
