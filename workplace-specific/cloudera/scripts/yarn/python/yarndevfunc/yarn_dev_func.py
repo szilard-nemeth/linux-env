@@ -12,10 +12,10 @@ from logging.handlers import TimedRotatingFileHandler
 from pythoncommons.date_utils import DateUtils
 from pythoncommons.file_utils import FileUtils
 
-from commands.branch_comparator import BranchComparator
-from commands.send_latest_command_data_in_mail import SendLatestCommandDataInEmail
-from commands.zip_latest_command_data import ZipLatestCommandData
-from utils import FileUtils2
+from yarndevfunc.commands.branch_comparator import BranchComparator
+from yarndevfunc.commands.send_latest_command_data_in_mail import SendLatestCommandDataInEmail
+from yarndevfunc.commands.zip_latest_command_data import ZipLatestCommandData
+from yarndevfunc.utils import FileUtils2
 from yarndevfunc.argparser import ArgParser, CommandType
 from yarndevfunc.commands.backporter import Backporter
 from yarndevfunc.commands.format_patch_saver import FormatPatchSaver
