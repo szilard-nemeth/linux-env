@@ -19,8 +19,8 @@ function sync-linux-env-repo() {
     #git filter-branch --subdirectory-filter ${dir_to_include} -- --all
     #echo "Finished filtering project, included dir: $dir_to_include"
     
-    echo "Found commits: "
-    git lg
+    #echo "Found commits: "
+    #git lg
     
     #Setup committer info
 #    git config user.name "Szilard Nemeth"
