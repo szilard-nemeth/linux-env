@@ -2,16 +2,14 @@ import logging
 import os
 from enum import Enum
 from typing import Dict, List, Tuple, Set
-from colr import color
 from git import Commit
 from pythoncommons.date_utils import DateUtils
 from pythoncommons.file_utils import FileUtils
 from pythoncommons.string_utils import StringUtils
-
-from command_runner import CommandRunner
-from commands.upstream_jira_umbrella_fetcher import CommitData
-from constants import ANY_JIRA_ID_PATTERN
-from git_wrapper import GitWrapper
+from yarndevfunc.command_runner import CommandRunner
+from yarndevfunc.commands.upstream_jira_umbrella_fetcher import CommitData
+from yarndevfunc.constants import ANY_JIRA_ID_PATTERN
+from yarndevfunc.git_wrapper import GitWrapper
 from yarndevfunc.utils import (
     ResultPrinter,
     BoolConversionConfig,

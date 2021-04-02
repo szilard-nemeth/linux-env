@@ -1,8 +1,8 @@
 import logging
 from typing import List
 from pythoncommons.file_utils import FileUtils
-from constants import LATEST_SESSION, LATEST_LOG, LATEST_DATA_ZIP
-from utils import FileUtils2
+from yarndevfunc.constants import LATEST_SESSION, LATEST_LOG, LATEST_DATA_ZIP
+from yarndevfunc.utils import FileUtils2
 
 LOG = logging.getLogger(__name__)
 
