@@ -381,8 +381,32 @@ function copy_files_from_linuxenv_repo_to_home() {
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/python
 }
 
+function setup-pythonpath() {
+  echo "Setting up Python and PYTHONPATH"
+  #Setup Python from venv
+  LINUXENV_VENV="$LINUX_ENV_REPO/venv/"
+  if [[ -d ${LINUXENV_VENV} ]]; then
+          VENV_PYTHON="$LINUXENV_VENV/bin/python"
+          export VENV_PYTHON
+  else
+      echo "Tried to setup python from venv but directory does not exist: $LINUXENV_VENV"
+  fi
+
+  YARN_DEV_TOOLS_MODULE="$LINUXENV_VENV/lib/python3.8/site-packages/yarndevtools/"
+  YARN_DEV_TOOLS_PY="$YARN_DEV_TOOLS_MODULE/yarn_dev_tools.py"
+  export YARN_DEV_TOOLS_PY
+  if [[ ! -f $YARN_DEV_TOOLS_PY ]]; then
+      echo "File not found: $YARN_DEV_TOOLS_PY. Make sure to install Python dependencies with pip install!"
+  fi
+
+  #Setup PYTHONPATH
+  #TODO make these independent from Python version
+  export PYTHONPATH="/usr/local/lib/python3.8/site-packages:$YARN_DEV_TOOLS_MODULE../:${HOME_LINUXENV_DIR}/scripts/python/:$HOME/Library/Python/3.8/lib/python/site-packages/:$HOME/Library/Python/3.8/bin:$PYTHONPATH"
+}
+
 
 #####################################
 initial_setup
+setup-pythonpath
 copy_files_from_linuxenv_repo_to_home
 set +x
