@@ -6,7 +6,7 @@
 
 # My Linux / Mac environment
 
-## Install
+## Installation
 
 Configure precommit as described in this blogpost: https://ljvmiranda921.github.io/notebook/2018/06/21/precommits-using-black-and-flake8/
 Commands:

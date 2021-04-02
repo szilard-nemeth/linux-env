@@ -1,8 +1,0 @@
-gitpython
-humanize
-tabulate~=0.8.9
-git+https://github.com/szilard-nemeth/python-commons.git
-requests
-bs4
-colr
-setuptools~=54.1.2
