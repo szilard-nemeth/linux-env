@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import logging
 import os
 from typing import Dict, Tuple, List
@@ -29,7 +31,10 @@ def sync():
     if not my_repos_dir:
         raise ValueError(f"My repositories dir (env var: {ENV_MY_REPOS_DIR}) is not set!")
 
-    lines = FileUtils.read_file(REPO_LIST_FILE)
+    script_dir = FileUtils.get_parent_dir_name(__file__)
+    repo_list_abs_path = FileUtils.join_path(script_dir, REPO_LIST_FILE)
+    LOG.info(f"Reading repo list from file: {repo_list_abs_path}")
+    lines = FileUtils.read_file(repo_list_abs_path)
     lines = lines.splitlines()
 
     repo_dict = create_repo_dict_from_file(lines)
