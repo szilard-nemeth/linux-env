@@ -1,1 +1,3 @@
 git+https://github.com/szilard-nemeth/yarn-dev-tools.git
+gitpython
+git+https://github.com/szilard-nemeth/python-commons.git

@@ -24,5 +24,6 @@ unset MANPATH # delete if you already modified MANPATH elsewhere in your config
 export MANPATH="$NPM_PACKAGES/share/man:$(manpath)"
 #End of npm config
 
+export MY_REPOS_DIR="$HOME/development/my-repos/"
 export KB_REPO="$HOME/development/my-repos/knowledge-base/"
 export KB_PRIVATE_REPO="$HOME/development/my-repos/knowledge-base-private/"
