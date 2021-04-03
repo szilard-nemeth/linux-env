@@ -40,3 +40,11 @@ function myrepos-reset-pythoncommons() {
   echo "Listing installed python-commons:"
   myrepos-list-pythoncommons
 }
+
+function myrepos-grep() {
+  myrepos_filtered_find.py --extension "*.py" --exclude "site-packages" ".git" "pyspark" "Chromagnon" "fork" "dist_test" "samples-books-school-experiments" | xargs grep $1
+}
+
+function myrepos-grep-C5() {
+  myrepos_filtered_find.py --extension "*.py" --exclude "site-packages" ".git" "pyspark" "Chromagnon" "fork" | xargs grep -C5 $1
+}
