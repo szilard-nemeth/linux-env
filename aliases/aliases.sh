@@ -63,7 +63,8 @@ BIN_PYTHON="$GCHROME_TOOLKIT_VENV/bin/python"
 local SETUP_PYENV="PYTHONPATH=$GCHROME_TOOLKIT_ROOT:$PYTHONPATH"
 alias save-tabs-android="$SETUP_PYENV $BIN_PYTHON $GCHROME_TOOLKIT_MODULE_ROOT/save_open_tabs_android.py"
 alias save-chrome-history-all="$SETUP_PYENV $BIN_PYTHON $GCHROME_TOOLKIT_MODULE_ROOT/main.py --search-db-files --export-mode all"
-alias sync-my-repos="repo_syncer.py"
+alias myrepos-sync="myrepos_syncer.py"
+alias myrepos-grep-todos="myrepos_filtered_find.py --extension \"*.py\" --exclude \"site-packages\" \".git\" \"pyspark\" \"Chromagnon\" | xargs grep -C5 TODO"
 
 
 ## OTHER ALIASES
