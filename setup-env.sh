@@ -335,6 +335,25 @@ function determine_platform() {
     echo ${platform}
 }
 
+function remove-stale-scripts() {
+  local scripts_rm_dir="$HOME_LINUXENV_DIR/scripts/"
+  local scripts_backup_dir="$HOME/_stale_linuxenv_scripts/"
+  mkdir -p $scripts_backup_dir
+
+  #Remove leading spaces with awk: https://unix.stackexchange.com/a/205854/189441
+  # This did not work for subdirectories of scripts_rm_dir
+  #local scripts_to_rm=($(diff -qr "$scripts_rm_dir" "$DIR/scripts/" | grep "^Only in $scripts_rm_dir" | cut -d: -f2- | awk '{$1=$1;print}' | while read line; do echo "$scripts_rm_dir/$line"; done))
+  local scripts_to_rm=($(diff -qr "$scripts_rm_dir" "$DIR/scripts/" | grep "^Only in $scripts_rm_dir" | sed 's/Only in //g' | sed 's/: /\//g'))
+
+  if [ ${#scripts_to_rm[@]} -ne 0 ]; then
+      echo "Recognized scripts that are only present in $HOME_LINUXENV_DIR. Going to move them to $scripts_backup_dir"
+      for script in $scripts_to_rm;
+      do
+        mv $script $scripts_backup_dir/
+      done
+  fi
+}
+
 function copy_files_from_linuxenv_repo_to_home() {
     declare -a COPY_LIST=()
     
@@ -408,5 +427,6 @@ function setup-pythonpath() {
 #####################################
 initial_setup
 setup-pythonpath
+remove-stale-scripts
 copy_files_from_linuxenv_repo_to_home
 set +x
