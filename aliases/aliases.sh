@@ -56,7 +56,6 @@ alias lc='colorls -lA --sd'
 
 ##Aliases for my DEV projects
 #Assuming venv is in googlechrometoolkit repo's root
-PYTHON_COMMONS_ROOT="$HOME/development/my-repos/python-commons/"
 GCHROME_TOOLKIT_ROOT="$HOME/development/my-repos/google-chrome-toolkit/"
 GCHROME_TOOLKIT_MODULE_ROOT="$GCHROME_TOOLKIT_ROOT/googlechrometoolkit/"
 GCHROME_TOOLKIT_VENV="$GCHROME_TOOLKIT_ROOT/venv/"

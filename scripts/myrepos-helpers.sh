@@ -1,3 +1,5 @@
+PYTHON_COMMONS_ROOT="$HOME/development/my-repos/python-commons/"
+
 function myrepos-rm-pythoncommons() {
   # Remove python-commons from all locations
   # Note: This intends to remove python-commons from default location
