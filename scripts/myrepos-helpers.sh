@@ -37,8 +37,6 @@ function myrepos-rm-pythoncommons() {
 	done
 }
 
-
-#TODO Move all pythoncommons aliases to myrepos-alias-extensions.sh
 alias myrepos-list-pythoncommons="find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -I % find % -type d \\( -iname \"pythoncommons\" -o -iname \"python_commons*\" \\) | sort"
 
 #Make sure to unset PYTHONPATH: python-commons won't be installed in virtualenv when it is found *ANYWHERE* on PYTHONPATH
