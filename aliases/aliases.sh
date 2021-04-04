@@ -66,8 +66,6 @@ alias save-tabs-android="$SETUP_PYENV $BIN_PYTHON $GCHROME_TOOLKIT_MODULE_ROOT/s
 alias save-chrome-history-all="$SETUP_PYENV $BIN_PYTHON $GCHROME_TOOLKIT_MODULE_ROOT/main.py --search-db-files --export-mode all"
 alias myrepos-sync="myrepos_syncer.py"
 alias myrepos-grep-todos="myrepos_filtered_find.py --extension \"*.py\" --exclude \"site-packages\" \".git\" \"pyspark\" \"Chromagnon\" | xargs grep -C5 TODO"
-alias myrepos-list-pythoncommons="find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -I % find % -type d \\( -iname \"pythoncommons\" -o -iname \"python_commons*\" \\)"
-alias myrepos-installpythoncommons="find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;pip3 install git+https://github.com/szilard-nemeth/python-commons.git;deactivate'"
 
 
 ## OTHER ALIASES
