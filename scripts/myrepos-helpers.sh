@@ -1,5 +1,26 @@
 PYTHON_COMMONS_ROOT="$HOME/development/my-repos/python-commons/"
 
+function myrepos-list-pythoncommons {
+  #Could be an alias but would not work from another script that sources this
+  #Example error message:
+  # /Users/snemeth/.linuxenv/scripts/myrepos-helpers.sh: line 18: myrepos-list-pythoncommons: command not found
+  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -I % find % -type d \( -iname "pythoncommons" -o -iname "python_commons*" \) | sort
+}
+
+function myrepos-install-pythoncommons {
+  #Make sure to unset PYTHONPATH: python-commons won't be installed in virtualenv when it is found *ANYWHERE* on PYTHONPATH
+  #Example output:
+  #➜ pip3 show python-commons
+  #Name: python-commons
+  #Version: 0.1.0
+  #Author: Szilard Nemeth
+  #Author-email: szilard.nemeth88@gmail.com
+  #License: Copyright (c) 2020, Szilard Nemeth
+  #Location: /Users/snemeth/development/my-repos/linux-env/venv/lib/python3.8/site-packages
+  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install git+https://github.com/szilard-nemeth/python-commons.git;deactivate'
+}
+
+
 function myrepos-rm-pythoncommons() {
   # Remove python-commons from all locations
   # Note: This intends to remove python-commons from default location
@@ -39,20 +60,6 @@ function myrepos-rm-pythoncommons() {
 	done
 }
 
-alias myrepos-list-pythoncommons="find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -I % find % -type d \\( -iname \"pythoncommons\" -o -iname \"python_commons*\" \\) | sort"
-
-#Make sure to unset PYTHONPATH: python-commons won't be installed in virtualenv when it is found *ANYWHERE* on PYTHONPATH
-#Example output:
-#➜ pip3 show python-commons
-#Name: python-commons
-#Version: 0.1.0
-#Author: Szilard Nemeth
-#Author-email: szilard.nemeth88@gmail.com
-#License: Copyright (c) 2020, Szilard Nemeth
-#Location: /Users/snemeth/development/my-repos/linux-env/venv/lib/python3.8/site-packages
-alias myrepos-installpythoncommons="find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install git+https://github.com/szilard-nemeth/python-commons.git;deactivate'"
-
-
 function myrepos-reset-pythoncommons() {
   echo "Pushing python-commons"
   cd $PYTHON_COMMONS_ROOT; git push
@@ -64,7 +71,7 @@ function myrepos-reset-pythoncommons() {
   myrepos-list-pythoncommons
 
   echo "Reinstalling python-commons in each project"
-  myrepos-installpythoncommons
+  myrepos-install-pythoncommons
 
   echo "Listing installed python-commons:"
   myrepos-list-pythoncommons

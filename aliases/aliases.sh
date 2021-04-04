@@ -19,6 +19,7 @@ alias knowledgebase-private-edit="subl ~/development/my-repos/knowledge-base-pri
 alias goto-linuxenv-repo="cd $LINUX_ENV_REPO"
 alias goto-kb-repo="cd $KB_REPO"
 alias goto-kb-private-repo="cd $KB_PRIVATE_REPO"
+alias goto-pythoncommons="cd $PYTHON_COMMONS_REPO"
 
 
 ## GIT ALIASES
@@ -65,7 +66,7 @@ alias save-tabs-android="$SETUP_PYENV $BIN_PYTHON $GCHROME_TOOLKIT_MODULE_ROOT/s
 alias save-chrome-history-all="$SETUP_PYENV $BIN_PYTHON $GCHROME_TOOLKIT_MODULE_ROOT/main.py --search-db-files --export-mode all"
 alias myrepos-sync="myrepos_syncer.py"
 alias myrepos-grep-todos="myrepos_filtered_find.py --extension \"*.py\" --exclude \"site-packages\" \".git\" \"pyspark\" \"Chromagnon\" | xargs grep -C5 TODO"
-
+alias gpwh="git-push-with-hooks.sh"
 
 ## OTHER ALIASES
 # Add an "alert" alias for long running commands.  Use like so:

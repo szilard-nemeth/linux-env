@@ -148,7 +148,7 @@ function source_files() {
 
 function add_to_path() {
     marker_file_name=$1
-    from_dir="$WORKPLACE_SPECIFIC_DIR"
+    from_dir="$2"
 
     echo "Searching for $marker_file_name files and adding them to PATH..."
     set_matched_dirs ${from_dir} ${marker_file_name}
@@ -396,8 +396,9 @@ function copy_files_from_linuxenv_repo_to_home() {
     source_scripts ${HOME_LINUXENV_DIR}/aliases
     source_scripts ${HOME_LINUXENV_DIR}/scripts
     source_files ".source-this"
-    add_to_path ".add-to-path"
+    add_to_path ".add-to-path" "$WORKPLACE_SPECIFIC_DIR"
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/python
+    add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/git
 }
 
 function setup-pythonpath() {
