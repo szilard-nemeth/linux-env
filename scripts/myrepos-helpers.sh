@@ -20,6 +20,10 @@ function myrepos-install-pythoncommons {
   find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install git+https://github.com/szilard-nemeth/python-commons.git;deactivate'
 }
 
+function myrepos-install-pythoncommons-dev {
+  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/python-commons;deactivate'
+}
+
 
 function myrepos-rm-pythoncommons() {
   # Remove python-commons from all locations
