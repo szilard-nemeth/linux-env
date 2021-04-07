@@ -13,7 +13,12 @@ def parse_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-ext", "--extensions", type=str, dest="name", help="Include only the matching files for name", required=True
+        "-ext",
+        "--extension",
+        type=str,
+        dest="extension",
+        help="Include only the matching files for name",
+        required=False,
     )
     parser.add_argument(
         "-e",
@@ -40,8 +45,9 @@ def filtered_find(args):
     if not my_repos_dir:
         raise ValueError(f"My repositories dir (env var: {ENV_MY_REPOS_DIR}) is not set!")
 
+    ext = args.extension if "extension" in args else None
     found_files = FileUtils.find_files(
-        my_repos_dir, full_path_result=True, extension="*.py", debug=True, exclude_dirs=args.excludes
+        my_repos_dir, full_path_result=True, extension=ext, debug=True, exclude_dirs=args.excludes
     )
     print("\n".join(found_files))
 

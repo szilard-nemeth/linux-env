@@ -81,9 +81,16 @@ function myrepos-reset-pythoncommons() {
   myrepos-list-pythoncommons
 }
 
-function myrepos-grep() {
+function myrepos-grep-python() {
   myrepos_filtered_find.py --extension "*.py" --exclude "site-packages" ".git" "pyspark" "Chromagnon" "fork" "dist_test" "samples-books-school-experiments" | xargs grep $1
 }
+
+# TODO this does not work --> Make extension optional
+function myrepos-grep-all() {
+  myrepos_filtered_find.py --exclude "site-packages" ".git" "pyspark" "Chromagnon" "fork" "dist_test" "samples-books-school-experiments" | xargs grep $1
+}
+
+# TODO add function that greps for python + shell scripts --> myrepos_filtered_find should accept multiple extensions
 
 function myrepos-grep-C5() {
   myrepos_filtered_find.py --extension "*.py" --exclude "site-packages" ".git" "pyspark" "Chromagnon" "fork" | xargs grep -C5 $1
