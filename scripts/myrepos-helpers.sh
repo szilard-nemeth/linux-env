@@ -91,7 +91,7 @@ function myrepos-grep-all() {
 }
 
 function myrepos-grep-C5-python-todos {
- myrepos_filtered_find.py --extension "*.py" --exclude "site-packages" ".git" "pyspark" "Chromagnon" | xargs grep -C5 TODO"
+ myrepos_filtered_find.py --extension "*.py" --exclude "site-packages" ".git" "pyspark" "Chromagnon" | xargs grep -C5 TODO
 }
 
 # TODO add function that greps for python + shell scripts --> myrepos_filtered_find should accept multiple extensions
