@@ -66,8 +66,14 @@ alias cm-build-libs="cd ./libs && ../tools/cmf-mvn $CM_SKIPTESTS $CM_NOBUILD_FRO
 alias cm-build-web-notestbuild="cd ./web && ../tools/cmf-mvn $CM_SKIPTESTS $CM_NOBUILD_FRONTEND $CM_NO_BUILD_TEST install; cd -"
 alias cm-build-libs-notestbuild="cd ./libs && ../tools/cmf-mvn $CM_SKIPTESTS $CM_NOBUILD_FRONTEND $CM_NO_BUILD_TEST install; cd -"
 
-alias backup-devdir="tar czf /tmp/devbackup-$(date +%Y%m%d_%H%M%S).gz $HOME/development/"
-alias backup-home="tar czf /tmp/homedir-backup-$(date +%Y%m%d_%H%M%S).gz $HOME | tee /tmp/homedir-backup-$(date +%Y%m%d_%H%M%S).log"
-alias backup-currdir="tar czf ~/googledrive/backup/codebackup/$(basename $(pwd))-$(date +%Y%m%d_%H%M%S).gz  ./;echo 'Backup results: ';ll -t ~/googledrive/backup/codebackup/ | grep gz | head -n1"
+alias backup-devdir="tmpdate=tar czf /tmp/devbackup-$(eval date-formatted).gz $HOME/development/"
+alias backup-home="tar czf /tmp/homedir-backup-$(eval date-formatted).gz $HOME | tee /tmp/homedir-backup-$(date +%Y%m%d_%H%M%S).log"
+
+function backup-currdir() {
+  local backup_path="$HOME/googledrive/backup/codebackup/"
+  tar czf "$backup_path/$(basename $(pwd))-$(eval date-formatted).gz" ./
+  echo "Backup results in dir: $backup_path"
+  ll -t $backup_path | grep gz | head -n1
+}
 
 alias python-precommit-all="pre-commit run --all-files"
