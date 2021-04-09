@@ -42,3 +42,7 @@ function docker-operation-except() {
     echo "$CONTAINERS_TO_REMOVE";
     docker ps --format '{{.Names}}' | grep ${GREP_CRITERIA} | xargs docker ${DOCKER_COMMAND}
 }
+
+function docker-rm-all-for-img {
+  docker ps -a | awk '{ print $1,$2 }' | grep $1 | awk '{print $1 }' | xargs -I {} docker rm {}
+}
