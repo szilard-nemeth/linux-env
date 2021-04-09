@@ -37,7 +37,7 @@ alias git-save-all-commits="rm /tmp/patches/*; git format-patch 4b825dc642cb6eb9
 alias rm='safe-rm'
 alias currentweek="date +%V"
 alias vpn-szyszy="sudo openvpn --client --config ~/openvpn-szyszy/client.ovpn --ca ~/openvpn-szyszy/ca.crt"
-alias date-formatted="date +%Y%m%d_%H_%M_%S"
+alias date-formatted="date +%Y%m%d_%H%M%S"
 alias sl="sl --help" # steam-locomotive: https://www.cyberciti.biz/tips/displays-animations-when-accidentally-you-type-sl-instead-of-ls.html
 alias grep='grep --color=auto'
 alias dfh='df -h'
