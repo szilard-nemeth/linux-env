@@ -1,11 +1,14 @@
 PYTHON_COMMONS_ROOT="$HOME/development/my-repos/python-commons/"
 COMMON_EXCLUDES=("site-packages" ".git" "pyspark" "Chromagnon" "fork" "dist_test" "samples-books-school-experiments" "superscraper-libs")
 
+#Problem: $CLOUDERA_DEV_ROOT is not yet defined atm
+YARN_CDSW_DIR="$HOME/development/cloudera/my-repos/yarn-cdsw"
+
 function myrepos-list-pythoncommons {
   #Could be an alias but would not work from another script that sources this
   #Example error message:
   # /Users/snemeth/.linuxenv/scripts/myrepos-helpers.sh: line 18: myrepos-list-pythoncommons: command not found
-  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -I % find % -type d \( -iname "pythoncommons" -o -iname "python_commons*" \) | sort
+  find $MY_REPOS_DIR $YARN_CDSW_DIR -type d -name venv -print0 | xargs -0 -I % find % -type d \( -iname "pythoncommons" -o -iname "python_commons*" \) | sort
 }
 
 function myrepos-install-pythoncommons {
@@ -18,11 +21,11 @@ function myrepos-install-pythoncommons {
   #Author-email: szilard.nemeth88@gmail.com
   #License: Copyright (c) 2020, Szilard Nemeth
   #Location: /Users/snemeth/development/my-repos/linux-env/venv/lib/python3.8/site-packages
-  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install git+https://github.com/szilard-nemeth/python-commons.git;deactivate'
+  find $MY_REPOS_DIR $YARN_CDSW_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install git+https://github.com/szilard-nemeth/python-commons.git;deactivate'
 }
 
 function myrepos-install-pythoncommons-dev {
-  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/python-commons;deactivate'
+  find $MY_REPOS_DIR $YARN_CDSW_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/python-commons;deactivate'
 }
 
 
