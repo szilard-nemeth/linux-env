@@ -46,3 +46,7 @@ function docker-operation-except() {
 function docker-rm-all-for-img {
   docker ps -a | awk '{ print $1,$2 }' | grep $1 | awk '{print $1 }' | xargs -I {} docker rm {}
 }
+
+function docker-listmounts() {
+  docker inspect -f '{{ .Mounts }}' $1
+}
