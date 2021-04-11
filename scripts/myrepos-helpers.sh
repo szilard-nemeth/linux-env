@@ -1,5 +1,5 @@
 PYTHON_COMMONS_ROOT="$HOME/development/my-repos/python-commons/"
-COMMON_EXCLUDES=("site-packages" ".git" "pyspark" "Chromagnon" "fork" "dist_test" "samples-books-school-experiments" "superscraper-libs")
+COMMON_EXCLUDES=("site-packages" ".git" ".idea" "pyspark" "Chromagnon" "fork" "dist_test" "samples-books-school-experiments" "superscraper-libs", "the-coding-train-challenges", "coding-practice")
 
 #Problem: $CLOUDERA_DEV_ROOT is not yet defined atm
 YARN_CDSW_DIR="$HOME/development/cloudera/my-repos/yarn-cdsw"
@@ -89,9 +89,13 @@ function myrepos-grep-python() {
   myrepos_filtered_find.py --extension "*.py" --exclude $COMMON_EXCLUDES | xargs grep $1
 }
 
-# TODO this does not work --> Make extension optional
 function myrepos-grep-all() {
-  myrepos_filtered_find.py --exclude $COMMON_EXCLUDES | xargs grep $1
+  # This did not work with files containing spaces:
+  #https://serverfault.com/questions/268368/how-can-i-handle-spaces-in-file-names-when-using-xargs-on-find-results
+
+  #TODO Binary file /Users/snemeth/development/my-repos/resume/fonts/FontAwesome.ttf matches
+  # TODO Add option to filter only test files with myrepos_filtered_find.py: https://stackoverflow.com/questions/898669/how-can-i-detect-if-a-file-is-binary-non-text-in-python // https://unix.stackexchange.com/questions/46276/finding-all-non-binary-files
+  myrepos_filtered_find.py --exclude $COMMON_EXCLUDES | tr '\n' '\0' | xargs -0 grep $1
 }
 
 function myrepos-grep-C5-python-todos {
