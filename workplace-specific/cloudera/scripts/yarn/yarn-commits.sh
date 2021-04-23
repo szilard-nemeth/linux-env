@@ -33,11 +33,13 @@ function hadoop-upstream-stats-all() {
     echo "Grand total: $total"
 }
 
+# TODO this does not work anymore :(
 function hadoop-upstream-stats-count-by-person() {
     NAME_VARIATIONS="$1"
     get-hadoop-upstream-stats "$GIT_LOG_PY_SCRIPT --grep $NAME_VARIATIONS --oneline --count"
 }
 
+# TODO this does not work anymore :(
 function hadoop-upstream-stats-by-person() {
     NAME_VARIATIONS="$1"
     get-hadoop-upstream-stats "$GIT_LOG_PY_SCRIPT --grep $NAME_VARIATIONS --oneline"
