@@ -23,6 +23,7 @@
     bdone = "!f() { git checkout ${1-master} && git up && git bclean ${1-master}; }; f"
     reset-soft = "reset --soft HEAD^"
     remove-commit = "reset --hard HEAD~1"
+    cpx = cherry-pick -x
 
 [credential]
     helper = cache --timeout=43200

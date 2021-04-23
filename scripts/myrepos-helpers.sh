@@ -25,7 +25,7 @@ function myrepos-install-pythoncommons {
 }
 
 function myrepos-install-pythoncommons-dev {
-  find $MY_REPOS_DIR $YARN_CDSW_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/python-commons;deactivate'
+  find $MY_REPOS_DIR $YARN_CDSW_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/python-commons;deactivate' && say "pythoncommons completed"
 }
 
 
