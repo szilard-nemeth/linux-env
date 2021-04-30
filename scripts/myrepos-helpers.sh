@@ -28,6 +28,10 @@ function myrepos-install-pythoncommons-dev {
   find $MY_REPOS_DIR $YARN_CDSW_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/python-commons;deactivate' && say "pythoncommons completed"
 }
 
+function myrepos-install-googleapiwrapper-dev {
+  grep --include=requirements.txt -rw $MY_REPOS_DIR -e "google-api-wrapper.git" | cut -d':' -f1 | sed 's/requirements.txt/venv/g' | tr '\n' '\0' | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/google-api-wrapper;deactivate' && say "google API wrapper completed"
+}
+
 
 function myrepos-rm-pythoncommons() {
   # Remove python-commons from all locations
