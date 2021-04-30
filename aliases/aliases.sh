@@ -28,6 +28,7 @@ alias git-commits-above-master="git log --oneline HEAD ^master | wc -l"
 alias git-mybranches="git branch | grep 'own-'"
 alias git-commit-msg="git log -n 1 --pretty=format:%s"
 alias git-remove-trailing-ws="git diff-tree --no-commit-id --name-only -r HEAD | xargs sed -i 's/[[:space:]]*$//'"
+alias git-fix-author-info="git config user.email 'szilard.nemeth88@gmail.com' && git config user.name 'Szilard Nemeth' && git commit --amend --reset-author"
 #alias git-save-all-commits="git format-patch $(git rev-list --max-parents=0 HEAD)..HEAD -o /tmp/patches"
 
 #https://stackoverflow.com/a/40884093/1106893 --> 4b825dc642cb6eb9a060e54bf8d69288fbee4904 is the id of the "empty tree"
