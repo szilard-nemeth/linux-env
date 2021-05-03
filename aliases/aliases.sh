@@ -12,8 +12,8 @@ alias linuxenv-edit="subl ~/development/my-repos/linux-env/"
 alias edit-branchcomparator-latest="subl ~/snemeth-dev-projects/yarn_dev_tools/latest-session-branchcomparator/"
 
 ## KNOWLEDGE BASE
-alias knowledgebase-edit="subl ~/development/my-repos/knowledge-base"
-alias knowledgebase-private-edit="subl ~/development/my-repos/knowledge-base-private"
+alias edit-knowledgebase="subl ~/development/my-repos/knowledge-base"
+alias edit-knowledgebase-private="subl ~/development/my-repos/knowledge-base-private"
 
 
 ## GOTO ALIASES
