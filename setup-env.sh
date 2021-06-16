@@ -399,6 +399,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     add_to_path ".add-to-path" "$WORKPLACE_SPECIFIC_DIR"
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/python
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/git
+    add_to_path_directly $HOME/jetbrains-scripts/
 }
 
 function setup-pythonpath() {
