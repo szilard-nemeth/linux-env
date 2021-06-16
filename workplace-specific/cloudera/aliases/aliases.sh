@@ -54,7 +54,8 @@ alias run-findbugs="mvn clean install -DskipTests && mvn findbugs:findbugs && mv
 
 alias mvn-hadoop-patch="mvn -Ptest-patch clean site site:stage"
 alias mvn-hadoop-cdpd="mvn clean package -s ~/.m2/settings-cdpd.xml -Pdist -DskipTests -Dmaven.javadoc.skip=true"
-alias mvn-hadoop-upstream-build="mvn clean install -Pdist -DskipTests  -Dmaven.javadoc.skip=true"
+alias mvn-hadoop-upstream-build="mvn clean install -Pdist -DskipTests -Dmaven.javadoc.skip=true -DskipShade"
+alias mvn-hadoop-upstream-native=build="mvn clean install -Pdist -Pnative -DskipTests -Dmaven.javadoc.skip=true -DskipShade"
 alias cluster-roulette="$HOME/Google\ Drive\ File\ Stream/My\ Drive/development/scripts/cluster-roulette.sh"
 
 #CM specific commands

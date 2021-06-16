@@ -91,3 +91,5 @@ alias list-aliases-functions="print -rl -- ${(k)aliases} ${(k)functions} ${(k)pa
 # CR  '\r' 0x0D = § U+00A7 Section Sign (⏎ U+23CE also works fine)
 # LF  '\n' 0x0A = ¶ U+00B6 Pilcrow Sign (was "Paragraph Sign")
 alias whitespace="sed 's/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'"
+
+alias copy-trello-checklist-script="cat ~/development/my-repos/knowledge-base/codesnippets/js-html-css/copy-trello-checklist-smartlinks.js | pbcopy"
