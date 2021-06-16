@@ -16,7 +16,7 @@ function sync-yarn-dev-tools-repo() {
     #Push to cloudera repo (mirror)
     git remote add mirror https://github.infra.cloudera.com/snemeth/yarn-dev-tools-mirror.git
     git push -f mirror master --tags
-    git push mirror 'refs/remotes/origin/*:refs/heads/*'
+    #git push mirror 'refs/remotes/origin/*:refs/heads/*'
     
     #Cleanup
     read -p "OK to remove directory: $tmp_dir ?" -n 1 -r
