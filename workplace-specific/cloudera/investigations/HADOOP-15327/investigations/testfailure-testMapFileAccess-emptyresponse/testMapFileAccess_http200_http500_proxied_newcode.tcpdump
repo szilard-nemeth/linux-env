@@ -1,0 +1,72 @@
+00:02:23.156257 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 64, bad cksum 0 (->3cb6)!)
+    localhost.61125 > localhost.radan-http: Flags [S], cksum 0xfe34 (incorrect -> 0xd3d6), seq 3143781909, win 65535, options [mss 16344,nop,wscale 6,nop,nop,TS val 1049089185 ecr 0,sackOK,eol], length 0
+E..@..@.@................bN..........4....?........
+>...........
+00:02:23.156360 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 64, bad cksum 0 (->3cb6)!)
+    localhost.radan-http > localhost.61125: Flags [S.], cksum 0xfe34 (incorrect -> 0x766b), seq 3190131723, ack 3143781910, win 65535, options [mss 16344,nop,wscale 6,nop,nop,TS val 1049089185 ecr 1049089185,sackOK,eol], length 0
+E..@..@.@................%...bN......4....?........
+>...>.......
+00:02:23.156371 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.61125 > localhost.radan-http: Flags [.], cksum 0xfe28 (incorrect -> 0xd774), ack 1, win 6379, options [nop,nop,TS val 1049089185 ecr 1049089185], length 0
+E..4..@.@................bN..%.......(.....
+>...>...
+00:02:23.156379 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.radan-http > localhost.61125: Flags [.], cksum 0xfe28 (incorrect -> 0xd774), ack 1, win 6379, options [nop,nop,TS val 1049089185 ecr 1049089185], length 0
+E..4..@.@................%...bN......(.....
+>...>...
+00:02:23.160222 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 305, bad cksum 0 (->3bc5)!)
+    localhost.61125 > localhost.radan-http: Flags [P.], cksum 0xff25 (incorrect -> 0x3532), seq 1:254, ack 1, win 6379, options [nop,nop,TS val 1049089188 ecr 1049089185], length 253
+E..1..@.@................bN..%.......%.....
+>...>...GET /mapOutput?job=job_12345_0001&reduce=0&map=attempt_12345_1_m_1_0 HTTP/1.1
+name: mapreduce
+version: 1.0.0
+User-Agent: Java/1.8.0_232b09
+Host: 127.0.0.1:8088
+Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+Connection: keep-alive
+
+
+00:02:23.160252 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.radan-http > localhost.61125: Flags [.], cksum 0xfe28 (incorrect -> 0xd675), ack 254, win 6375, options [nop,nop,TS val 1049089188 ecr 1049089188], length 0
+E..4..@.@................%...bO......(.....
+>...>...
+00:02:23.363860 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 71, bad cksum 0 (->3caf)!)
+    localhost.radan-http > localhost.61125: Flags [P.], cksum 0xfe3b (incorrect -> 0x0bbf), seq 1:20, ack 254, win 6375, options [nop,nop,TS val 1049089389 ecr 1049089188], length 19
+E..G..@.@................%...bO......;.....
+>..m>...HTTP/1.1 200 OK
+
+
+00:02:23.363885 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.61125 > localhost.radan-http: Flags [.], cksum 0xfe28 (incorrect -> 0xd4cc), ack 20, win 6379, options [nop,nop,TS val 1049089389 ecr 1049089389], length 0
+E..4..@.@................bO..%.......(.....
+>..m>..m
+00:02:23.376395 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 248, bad cksum 0 (->3bfe)!)
+    localhost.radan-http > localhost.61125: Flags [P.], cksum 0xfeec (incorrect -> 0x04a8), seq 20:216, ack 254, win 6375, options [nop,nop,TS val 1049089401 ecr 1049089389], length 196
+E.....@.@................%...bO............
+>..y>..mHTTP/1.1 500 Internal Server Error
+content-type: text/plain; charset=UTF-8
+name: mapreduce
+version: 1.0.0
+
+Error Reading IndexFilenullSecure IO is not possible without native code extensions.
+00:02:23.376428 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.61125 > localhost.radan-http: Flags [.], cksum 0xfe28 (incorrect -> 0xd3f3), ack 216, win 6376, options [nop,nop,TS val 1049089401 ecr 1049089401], length 0
+E..4..@.@................bO..%.......(.....
+>..y>..y
+00:02:23.378413 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.radan-http > localhost.61125: Flags [F.], cksum 0xfe28 (incorrect -> 0xd3f2), seq 216, ack 254, win 6375, options [nop,nop,TS val 1049089402 ecr 1049089401], length 0
+E..4..@.@................%...bO......(.....
+>..z>..y
+00:02:23.378488 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.61125 > localhost.radan-http: Flags [.], cksum 0xfe28 (incorrect -> 0xd3f0), ack 217, win 6376, options [nop,nop,TS val 1049089402 ecr 1049089402], length 0
+E..4..@.@................bO..%.......(.....
+>..z>..z
+00:02:23.804309 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.61125 > localhost.radan-http: Flags [F.], cksum 0xfe28 (incorrect -> 0xd249), seq 254, ack 217, win 6376, options [nop,nop,TS val 1049089824 ecr 1049089402], length 0
+E..4..@.@................bO..%.......(.....
+>.. >..z
+00:02:23.804351 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.radan-http > localhost.61125: Flags [.], cksum 0xfe28 (incorrect -> 0xd0a4), ack 255, win 6375, options [nop,nop,TS val 1049089824 ecr 1049089824], length 0
+E..4..@.@................%...bO......(.....
+>.. >.. 
+

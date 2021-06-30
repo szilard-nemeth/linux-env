@@ -1,0 +1,64 @@
+1,3c1,3
+< commit 2d647cebfc85f5bf30e2eca129f9a44695b6ac24
+< Author: Wei-Chiu Chuang <weichiu@cloudera.com>
+< Date:   Wed Mar 31 12:14:35 2021 +0800
+---
+> commit 765ba31d595d7232629a35ff2472b08e3d95e599
+> Author: Szilard Nemeth <szilard.nemeth88@gmail.com>
+> Date:   Sat Jun 5 00:24:10 2021 +0200
+7c7,8
+<     Change-Id: Ie12b476b6c1f0bc6e688158fdddf3496eb6562ad
+---
+>     Based on: https://github.com/jojochuang/hadoop/commit/2d647cebfc85f5bf30e2eca129f9a44695b6ac24
+>     Added some modifications
+10c11
+< index b9f7772725a..0c097f9995a 100644
+---
+> index 086aa6b4e13..638061bda9a 100644
+13,16c14,17
+< @@ -563,7 +563,7 @@ protected void serviceStart() throws Exception {
+<      bootstrap.option(ChannelOption.SO_BACKLOG,
+<          conf.getInt(SHUFFLE_LISTEN_QUEUE_SIZE,
+<              DEFAULT_SHUFFLE_LISTEN_QUEUE_SIZE))
+---
+> @@ -557,7 +557,7 @@ protected void serviceStart() throws Exception {
+>          .option(ChannelOption.SO_BACKLOG,
+>              conf.getInt(SHUFFLE_LISTEN_QUEUE_SIZE,
+>                  DEFAULT_SHUFFLE_LISTEN_QUEUE_SIZE))
+22c23,24
+< @@ -921,6 +921,8 @@ public void channelActive(ChannelHandlerContext ctx)
+---
+> @@ -909,6 +909,7 @@ public void setPort(int port) {
+>      public void channelActive(ChannelHandlerContext ctx)
+25d26
+<  
+27c28
+< +
+---
+>  
+30,31c31
+<              "greater than or equal to the max allowed shuffle connections (%d)", 
+< @@ -936,6 +938,7 @@ public void channelActive(ChannelHandlerContext ctx)
+---
+> @@ -925,6 +926,8 @@ public void channelActive(ChannelHandlerContext ctx)
+35c35,36
+< +      LOG.debug("added channel {}. accepted size {}", ctx.channel(), accepted.size());
+---
+> +      LOG.debug("added channel: {}. accepted size: {}",
+> +          ctx.channel(), accepted.size());
+39,40c40,41
+< @@ -1339,7 +1342,7 @@ protected void sendError(ChannelHandlerContext ctx, String msg,
+<        //    Unpooled.copiedBuffer(msg, CharsetUtil.UTF_8));
+---
+> @@ -1327,7 +1330,7 @@ protected void sendError(ChannelHandlerContext ctx, String msg,
+>        }
+49c50
+< index 9a5e6485a93..9654605bfaf 100644
+---
+> index f463c9b29c0..8bfad381d3d 100644
+56,57c57,58
+< +    // FIXME: connections are accepted in parallel; it's not sequential.
+< +    // FIXME: rewrite this test.
+---
+> +    // FIXME snemeth: connections are accepted in parallel; it's not sequential.
+> +    // FIXME snemeth: rewrite this test.

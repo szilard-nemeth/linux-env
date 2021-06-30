@@ -1,0 +1,59 @@
+14:01:13.391485 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 64, bad cksum 0 (->3cb6)!)
+    localhost.50188 > localhost.radan-http: Flags [S], cksum 0xfe34 (incorrect -> 0x6e2c), seq 40890142, win 65535, options [mss 16344,nop,wscale 6,nop,nop,TS val 928416800 ecr 0,sackOK,eol], length 0
+E..@..@.@................o...........4....?........
+7V. ........
+14:01:13.391593 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 64, bad cksum 0 (->3cb6)!)
+    localhost.radan-http > localhost.50188: Flags [S.], cksum 0xfe34 (incorrect -> 0x0c9b), seq 2136024760, ack 40890143, win 65535, options [mss 16344,nop,wscale 6,nop,nop,TS val 928416800 ecr 928416800,sackOK,eol], length 0
+E..@..@.@................Q&..o.......4....?........
+7V. 7V. ....
+14:01:13.391607 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.50188 > localhost.radan-http: Flags [.], cksum 0xfe28 (incorrect -> 0x6da4), ack 1, win 6379, options [nop,nop,TS val 928416800 ecr 928416800], length 0
+E..4..@.@................o...Q&......(.....
+7V. 7V. 
+14:01:13.391619 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.radan-http > localhost.50188: Flags [.], cksum 0xfe28 (incorrect -> 0x6da4), ack 1, win 6379, options [nop,nop,TS val 928416800 ecr 928416800], length 0
+E..4..@.@................Q&..o.......(.....
+7V. 7V. 
+14:01:13.397163 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 302, bad cksum 0 (->3bc8)!)
+    localhost.50188 > localhost.radan-http: Flags [P.], cksum 0xff22 (incorrect -> 0x7c41), seq 1:251, ack 1, win 6379, options [nop,nop,TS val 928416805 ecr 928416800], length 250
+E.....@.@................o...Q&......".....
+7V.%7V. GET /mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_1_0 HTTP/1.1
+name: mapreduce
+version: 1.0.0
+User-Agent: Java/1.8.0_232b09
+Host: 127.0.0.1:8088
+Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+Connection: keep-alive
+
+
+14:01:13.397193 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.radan-http > localhost.50188: Flags [.], cksum 0xfe28 (incorrect -> 0x6ca4), ack 251, win 6375, options [nop,nop,TS val 928416805 ecr 928416805], length 0
+E..4..@.@................Q&..o.......(.....
+7V.%7V.%
+14:01:13.510092 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 71, bad cksum 0 (->3caf)!)
+    localhost.radan-http > localhost.50188: Flags [P.], cksum 0xfe3b (incorrect -> 0xa247), seq 1:20, ack 251, win 6375, options [nop,nop,TS val 928416916 ecr 928416805], length 19
+E..G..@.@................Q&..o.......;.....
+7V..7V.%HTTP/1.1 200 OK
+
+
+14:01:13.510121 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.50188 > localhost.radan-http: Flags [.], cksum 0xfe28 (incorrect -> 0x6baf), ack 20, win 6379, options [nop,nop,TS val 928416916 ecr 928416916], length 0
+E..4..@.@................o...Q&......(.....
+7V..7V..
+14:01:13.511965 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.50188 > localhost.radan-http: Flags [F.], cksum 0xfe28 (incorrect -> 0x6bad), seq 251, ack 20, win 6379, options [nop,nop,TS val 928416917 ecr 928416916], length 0
+E..4..@.@................o...Q&......(.....
+7V..7V..
+14:01:13.511993 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.radan-http > localhost.50188: Flags [.], cksum 0xfe28 (incorrect -> 0x6bb0), ack 252, win 6375, options [nop,nop,TS val 928416917 ecr 928416917], length 0
+E..4..@.@................Q&..o.......(.....
+7V..7V..
+14:01:13.513346 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.radan-http > localhost.50188: Flags [F.], cksum 0xfe28 (incorrect -> 0x6bae), seq 20, ack 252, win 6375, options [nop,nop,TS val 928416918 ecr 928416917], length 0
+E..4..@.@................Q&..o.......(.....
+7V..7V..
+14:01:13.513385 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 52, bad cksum 0 (->3cc2)!)
+    localhost.50188 > localhost.radan-http: Flags [.], cksum 0xfe28 (incorrect -> 0x6ba9), ack 21, win 6379, options [nop,nop,TS val 928416918 ecr 928416918], length 0
+E..4..@.@................o...Q&......(.....
+7V..7V..
+

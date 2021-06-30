@@ -1,0 +1,393 @@
+Index: hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient/src/test/java/org/apache/hadoop/mapred/TestReduceFetchFromPartialMem.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient/src/test/java/org/apache/hadoop/mapred/TestReduceFetchFromPartialMem.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient/src/test/java/org/apache/hadoop/mapred/TestReduceFetchFromPartialMem.java
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient/src/test/java/org/apache/hadoop/mapred/TestReduceFetchFromPartialMem.java	(revision 756a46c5ba22524a64bdd09a4adf6a6065c5d8c5)
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient/src/test/java/org/apache/hadoop/mapred/TestReduceFetchFromPartialMem.java	(date 1624365946263)
+@@ -26,6 +26,7 @@
+ import org.apache.hadoop.io.Text;
+ import org.apache.hadoop.io.WritableComparator;
+ import org.apache.hadoop.mapreduce.TaskCounter;
++import org.apache.hadoop.mapreduce.task.reduce.Fetcher;
+ import org.junit.After;
+ import org.junit.Before;
+ import org.junit.Test;
+@@ -37,6 +38,7 @@
+ import java.util.Formatter;
+ import java.util.Iterator;
+ 
++import static org.apache.hadoop.mapreduce.task.reduce.Fetcher.SHUFFLE_ERR_GRP_NAME;
+ import static org.junit.Assert.assertEquals;
+ import static org.junit.Assert.assertTrue;
+ import static org.junit.Assert.fail;
+@@ -87,6 +89,9 @@
+     final long spill = c.findCounter(TaskCounter.SPILLED_RECORDS).getCounter();
+     assertTrue("Expected some records not spilled during reduce" + spill + ")",
+         spill < 2 * out); // spilled map records, some records at the reduce
++    long shuffleIoErrors =
++        c.getGroup(SHUFFLE_ERR_GRP_NAME).getCounter(Fetcher.ShuffleErrors.IO_ERROR.toString());
++    assertEquals(0, shuffleIoErrors);
+   }
+ 
+   /**
+Index: hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/task/reduce/Fetcher.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/task/reduce/Fetcher.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/task/reduce/Fetcher.java
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/task/reduce/Fetcher.java	(revision 756a46c5ba22524a64bdd09a4adf6a6065c5d8c5)
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/task/reduce/Fetcher.java	(date 1624379573075)
+@@ -53,7 +53,8 @@
+ 
+ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+ 
+-class Fetcher<K,V> extends Thread {
++@VisibleForTesting
++public class Fetcher<K,V> extends Thread {
+   
+   private static final Logger LOG = LoggerFactory.getLogger(Fetcher.class);
+   
+@@ -72,10 +73,12 @@
+   private static final String FETCH_RETRY_AFTER_HEADER = "Retry-After";
+ 
+   protected final Reporter reporter;
+-  private enum ShuffleErrors{IO_ERROR, WRONG_LENGTH, BAD_ID, WRONG_MAP,
++  @VisibleForTesting
++  public enum ShuffleErrors{IO_ERROR, WRONG_LENGTH, BAD_ID, WRONG_MAP,
+                                     CONNECTION, WRONG_REDUCE}
+-  
+-  private final static String SHUFFLE_ERR_GRP_NAME = "Shuffle Errors";
++
++  @VisibleForTesting
++  public final static String SHUFFLE_ERR_GRP_NAME = "Shuffle Errors";
+   private final JobConf jobConf;
+   private final Counters.Counter connectionErrs;
+   private final Counters.Counter ioErrs;
+Index: hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/test/java/org/apache/hadoop/mapred/TestShuffleHandler.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/test/java/org/apache/hadoop/mapred/TestShuffleHandler.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/test/java/org/apache/hadoop/mapred/TestShuffleHandler.java
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/test/java/org/apache/hadoop/mapred/TestShuffleHandler.java	(revision 756a46c5ba22524a64bdd09a4adf6a6065c5d8c5)
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/test/java/org/apache/hadoop/mapred/TestShuffleHandler.java	(date 1624367426917)
+@@ -18,15 +18,12 @@
+ package org.apache.hadoop.mapred;
+ 
+ import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+-import io.netty.buffer.ByteBuf;
+ import io.netty.channel.AbstractChannel;
+ import io.netty.channel.Channel;
+ import io.netty.channel.ChannelFuture;
+ import io.netty.channel.ChannelHandlerContext;
+ import io.netty.channel.ChannelPipeline;
+-import io.netty.channel.ChannelPromise;
+ import io.netty.channel.socket.SocketChannel;
+-import io.netty.handler.codec.http.HttpHeaders;
+ import io.netty.handler.codec.http.HttpMethod;
+ import io.netty.handler.codec.http.HttpRequest;
+ import io.netty.handler.codec.http.HttpResponse;
+@@ -321,76 +318,6 @@
+     }
+   }
+ 
+-  static class LoggingHttpResponseEncoder extends HttpResponseEncoder {
+-    private final boolean logStacktraceOfEncodingMethods;
+-
+-    public LoggingHttpResponseEncoder(boolean logStacktraceOfEncodingMethods) {
+-      this.logStacktraceOfEncodingMethods = logStacktraceOfEncodingMethods;
+-    }
+-
+-    @Override
+-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+-      printExecutingMethod();
+-      return super.acceptOutboundMessage(msg);
+-    }
+-
+-    @Override
+-    protected void encodeInitialLine(ByteBuf buf, HttpResponse response) throws Exception {
+-      LOG.debug("Executing method: {}, response: {}",
+-          getExecutingMethodName(), response);
+-      logStacktraceIfRequired();
+-      super.encodeInitialLine(buf, response);
+-    }
+-
+-    @Override
+-    protected void encode(ChannelHandlerContext ctx, Object msg,
+-        List<Object> out) throws Exception {
+-      printExecutingMethod();
+-      logStacktraceIfRequired();
+-      super.encode(ctx, msg, out);
+-    }
+-
+-    @Override
+-    protected void encodeHeaders(HttpHeaders headers, ByteBuf buf) {
+-      printExecutingMethod();
+-      super.encodeHeaders(headers, buf);
+-    }
+-
+-    @Override
+-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise
+-        promise) throws Exception {
+-      printExecutingMethod();
+-      super.write(ctx, msg, promise);
+-    }
+-
+-    private void logStacktraceIfRequired() {
+-      if (logStacktraceOfEncodingMethods) {
+-        LOG.debug("Stacktrace: ", new Throwable());
+-      }
+-    }
+-
+-    private void printExecutingMethod() {
+-      String methodName = getExecutingMethodName();
+-      LOG.debug("Executing method: {}", methodName);
+-    }
+-
+-    private String getExecutingMethodName() {
+-      StackTraceElement[] stackTrace = Thread.currentThread()
+-          .getStackTrace();
+-      // Array items (indices):
+-      // 0: java.lang.Thread.getStackTrace(...)
+-      // 1: TestShuffleHandler$LoggingHttpResponseEncoder.getExecutingMethodName(...)
+-      String methodName = stackTrace[2].getMethodName();
+-      //If this method was called from printExecutingMethod, 
+-      // we have yet another stack frame
+-      if (methodName.endsWith("printExecutingMethod")) {
+-        methodName = stackTrace[3].getMethodName();
+-      }
+-      String className = this.getClass().getSimpleName();
+-      return className + "#" + methodName;
+-    }
+-  }
+-
+   private static class MapOutputSender {
+     private final ShuffleHandler shuffleHandler;
+     private int headerWriteCount;
+Index: hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java	(revision 756a46c5ba22524a64bdd09a4adf6a6065c5d8c5)
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java	(date 1624378617836)
+@@ -201,6 +201,7 @@
+ 
+   //TODO snemeth add a config option for this later, this is temporarily disabled for now.
+   private boolean useOutboundExceptionHandler = false;
++  private boolean useOutboundLogger = false;
+   
+   /**
+    * Should the shuffle use posix_fadvise calls to manage the OS cache during
+@@ -334,6 +335,7 @@
+           future.channel().close();
+         }
+       } else {
++        LOG.info("***OPERATION COMPLETE");
+         pipelineFact.getSHUFFLE().sendMap(reduceContext);
+       }
+     }
+@@ -867,7 +869,14 @@
+       pipeline.addLast("encoder", new HttpResponseEncoder());
+       pipeline.addLast("chunking", new ChunkedWriteHandler());
+       pipeline.addLast("shuffle", SHUFFLE);
+-      
++      pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler(connectionKeepAliveTimeOut));
++      addOutboundHandlersIfRequired(pipeline);
++      // TODO factor security manager into pipeline
++      // TODO factor out encode/decode to permit binary shuffle
++      // TODO factor out decode of index to permit alt. models
++    }
++
++    private void addOutboundHandlersIfRequired(ChannelPipeline pipeline) {
+       if (useOutboundExceptionHandler) {
+         //https://stackoverflow.com/questions/50612403/catch-all-exception-handling-for-outbound-channelhandler
+         pipeline.addLast("outboundExcHandler", new ChannelOutboundHandlerAdapter() {
+@@ -878,10 +887,9 @@
+           }
+         });
+       }
+-      pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler(connectionKeepAliveTimeOut));
+-      // TODO factor security manager into pipeline
+-      // TODO factor out encode/decode to permit binary shuffle
+-      // TODO factor out decode of index to permit alt. models
++      if (useOutboundLogger) {
++        pipeline.addLast("loggingResponseEncoder", new LoggingHttpResponseEncoder(false));
++      }
+     }
+   }
+ 
+@@ -977,8 +985,9 @@
+     @Override
+     public void channelRead(ChannelHandlerContext ctx, Object msg)
+         throws Exception {
+-      LOG.debug("channelRead");
++      LOG.info("***channelRead");
+       HttpRequest request = (HttpRequest) msg;
++      LOG.info("***REQUEST: " + request);
+       if (request.method() != GET) {
+           sendError(ctx, METHOD_NOT_ALLOWED);
+           return;
+@@ -1078,6 +1087,7 @@
+         // but we need to keep backward compatibility.
+         // See more details in jira.
+         ch.writeAndFlush(response);
++        LOG.info("***Writing LastHttpContent, channel: {}", ch.id());
+         ch.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+         LOG.error("Shuffle error in populating headers :", e);
+         String errorMessage = getErrorMessage(e);
+@@ -1101,13 +1111,16 @@
+           user, mapOutputInfoMap, jobId, keepAlive);
+       LOG.debug("After response");
+       for (int i = 0; i < Math.min(maxSessionOpenFiles, mapIds.size()); i++) {
++        LOG.info("***LOOP" + (i + 1));
+         ChannelFuture nextMap = sendMap(reduceContext);
+         if(nextMap == null) {
+           return;
+         }
+       }
++      LOG.info("***LOOP ENDED");
+       //HADOOP-15327: Need to send an instance of LastHttpContent to define HTTP
+       //message boundaries. See details in jira.
++      LOG.info("***Writing LastHttpContent, channel: {}", ch.id());
+       ch.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+     }
+ 
+@@ -1336,6 +1349,7 @@
+         new ShuffleHeader(mapId, info.partLength, info.rawLength, reduce);
+       final DataOutputBuffer dob = new DataOutputBuffer();
+       header.write(dob);
++      LOG.info("***Writing response buffer: {}, channel: {}", dob.getLength(), ch.id());
+       ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+       final File spillfile =
+           new File(mapOutputInfo.mapOutputFileName.toString());
+@@ -1352,6 +1366,7 @@
+             info.startOffset, info.partLength, manageOsCache, readaheadLength,
+             readaheadPool, spillfile.getAbsolutePath(), 
+             shuffleBufferSize, shuffleTransferToAllowed);
++        LOG.info("***Writing response partition: {}, channel: {}", partition, ch.id());
+         writeFuture = ch.writeAndFlush(partition);
+         writeFuture.addListener(new ChannelFutureListener() {
+             // TODO error handling; distinguish IO/connection failures,
+@@ -1401,6 +1416,7 @@
+         response.headers().set(header.getKey(), header.getValue());
+       }
+ 
++      LOG.info("***Writing response and closing channel: {}", ch.id());
+       // Close the connection as soon as the error message is sent.
+       ctx.channel().writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+     }
+Index: hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/LoggingHttpResponseEncoder.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/LoggingHttpResponseEncoder.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/LoggingHttpResponseEncoder.java
+new file mode 100644
+--- /dev/null	(date 1624367426923)
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/LoggingHttpResponseEncoder.java	(date 1624367426923)
+@@ -0,0 +1,100 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package org.apache.hadoop.mapred;
++
++import io.netty.buffer.ByteBuf;
++import io.netty.channel.ChannelHandlerContext;
++import io.netty.channel.ChannelPromise;
++import io.netty.handler.codec.http.HttpHeaders;
++import io.netty.handler.codec.http.HttpResponse;
++import io.netty.handler.codec.http.HttpResponseEncoder;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++
++import java.util.List;
++
++class LoggingHttpResponseEncoder extends HttpResponseEncoder {
++  private static final Logger LOG = LoggerFactory.getLogger(LoggingHttpResponseEncoder.class);
++  private final boolean logStacktraceOfEncodingMethods;
++
++  public LoggingHttpResponseEncoder(boolean logStacktraceOfEncodingMethods) {
++    this.logStacktraceOfEncodingMethods = logStacktraceOfEncodingMethods;
++  }
++
++  @Override
++  public boolean acceptOutboundMessage(Object msg) throws Exception {
++    printExecutingMethod();
++    return super.acceptOutboundMessage(msg);
++  }
++
++  @Override
++  protected void encodeInitialLine(ByteBuf buf, HttpResponse response) throws Exception {
++    LOG.debug("Executing method: {}, response: {}",
++        getExecutingMethodName(), response);
++    logStacktraceIfRequired();
++    super.encodeInitialLine(buf, response);
++  }
++
++  @Override
++  protected void encode(ChannelHandlerContext ctx, Object msg,
++      List<Object> out) throws Exception {
++    printExecutingMethod();
++    logStacktraceIfRequired();
++    super.encode(ctx, msg, out);
++  }
++
++  @Override
++  protected void encodeHeaders(HttpHeaders headers, ByteBuf buf) {
++    printExecutingMethod();
++    super.encodeHeaders(headers, buf);
++  }
++
++  @Override
++  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise
++      promise) throws Exception {
++    printExecutingMethod();
++    super.write(ctx, msg, promise);
++  }
++
++  private void logStacktraceIfRequired() {
++    if (logStacktraceOfEncodingMethods) {
++      LOG.debug("Stacktrace: ", new Throwable());
++    }
++  }
++
++  private void printExecutingMethod() {
++    String methodName = getExecutingMethodName();
++    LOG.debug("Executing method: {}", methodName);
++  }
++
++  private String getExecutingMethodName() {
++    StackTraceElement[] stackTrace = Thread.currentThread()
++        .getStackTrace();
++    // Array items (indices):
++    // 0: java.lang.Thread.getStackTrace(...)
++    // 1: TestShuffleHandler$LoggingHttpResponseEncoder
++    // .getExecutingMethodName(...)
++    String methodName = stackTrace[2].getMethodName();
++    //If this method was called from printExecutingMethod, 
++    // we have yet another stack frame
++    if (methodName.endsWith("printExecutingMethod")) {
++      methodName = stackTrace[3].getMethodName();
++    }
++    String className = this.getClass().getSimpleName();
++    return className + "#" + methodName;
++  }
++}

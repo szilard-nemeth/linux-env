@@ -1,0 +1,232 @@
+1,3c1,3
+< commit 14761633c95a38291e825169f3b9ed6459586f7f
+< Author: Wei-Chiu Chuang <weichiu@cloudera.com>
+< Date:   Tue Mar 30 12:31:40 2021 +0800
+---
+> commit 6147c89fb3d1bdb6690fcffff5cffd7ff6e67c3e
+> Author: Szilard Nemeth <szilard.nemeth88@gmail.com>
+> Date:   Sat Jun 5 00:14:07 2021 +0200
+7c7,8
+<     Change-Id: I733ec6fba0729c7279b1356ba7f8b46bed4eda22
+---
+>     Based on: https://github.com/jojochuang/hadoop/commit/14761633c95a38291e825169f3b9ed6459586f7f
+>     Added some enhancements
+128c129
+< index 1d5b475ea7a..b9f7772725a 100644
+---
+> index 1d5b475ea7a..086aa6b4e13 100644
+162,170c163
+< @@ -39,6 +39,7 @@
+<  import java.net.InetSocketAddress;
+<  import java.net.URL;
+<  import java.nio.ByteBuffer;
+< +import java.nio.channels.Channels;
+<  import java.nio.channels.ClosedChannelException;
+<  import java.util.ArrayList;
+<  import java.util.Collections;
+< @@ -54,6 +55,43 @@
+---
+> @@ -54,6 +54,41 @@
+174d166
+< +import com.sun.jdi.event.ExceptionEvent;
+178d169
+< +import io.netty.channel.ChannelFactory;
+214c205,213
+< @@ -94,42 +132,6 @@
+---
+> @@ -79,7 +114,6 @@
+>  import org.apache.hadoop.security.token.Token;
+>  import org.apache.hadoop.util.DiskChecker;
+>  import org.apache.hadoop.util.Shell;
+> -import org.apache.hadoop.util.concurrent.HadoopExecutors;
+>  import org.apache.hadoop.yarn.api.records.ApplicationId;
+>  import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
+>  import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
+> @@ -94,42 +128,6 @@
+257c256
+< @@ -187,8 +189,14 @@
+---
+> @@ -187,8 +185,13 @@
+263d261
+< +  //private ChannelFactory selector;
+268c266
+< +  // FIXME: need thread safety.
+---
+> +  // FIXME: snemeth: need thread safety. - https://stackoverflow.com/questions/17836976/netty-4-0-instanciate-defaultchannelgroup
+274c272
+< @@ -267,7 +275,6 @@
+---
+> @@ -267,7 +270,6 @@
+282c280
+< @@ -305,7 +312,7 @@ public ReduceMapFileCount(ReduceContext rc) {
+---
+> @@ -305,7 +307,7 @@ public ReduceMapFileCount(ReduceContext rc) {
+291c289
+< @@ -313,12 +320,12 @@ public void operationComplete(ChannelFuture future) throws Exception {
+---
+> @@ -313,12 +315,12 @@ public void operationComplete(ChannelFuture future) throws Exception {
+306c304,316
+< @@ -526,10 +533,13 @@ protected void serviceInit(Configuration conf) throws Exception {
+---
+> @@ -505,6 +507,11 @@ protected void serviceInit(Configuration conf) throws Exception {
+>                                          DEFAULT_MAX_SHUFFLE_CONNECTIONS);
+>      int maxShuffleThreads = conf.getInt(MAX_SHUFFLE_THREADS,
+>                                          DEFAULT_MAX_SHUFFLE_THREADS);
+> +    // Since Netty 4.x, the value of 0 threads would default to: 
+> +    // io.netty.channel.MultithreadEventLoopGroup.DEFAULT_EVENT_LOOP_THREADS
+> +    // by simply passing 0 value to NioEventLoopGroup constructor below.
+> +    // However, this logic to determinte thread count
+> +    // was in place so we can keep it for now.
+>      if (maxShuffleThreads == 0) {
+>        maxShuffleThreads = 2 * Runtime.getRuntime().availableProcessors();
+>      }
+> @@ -526,10 +533,8 @@ protected void serviceInit(Configuration conf) throws Exception {
+311,313c321,322
+< +    /*selector = new NioServerSocketChannelFactory(
+<          HadoopExecutors.newCachedThreadPool(bossFactory),
+<          HadoopExecutors.newCachedThreadPool(workerFactory),
+---
+> -        HadoopExecutors.newCachedThreadPool(bossFactory),
+> -        HadoopExecutors.newCachedThreadPool(workerFactory),
+315,318c324,325
+< +        maxShuffleThreads);*/
+< +
+< +    bossGroup = new NioEventLoopGroup(0, bossFactory);
+< +    workerGroup = new NioEventLoopGroup(0, workerFactory);
+---
+> +    bossGroup = new NioEventLoopGroup(maxShuffleThreads, bossFactory);
+> +    workerGroup = new NioEventLoopGroup(maxShuffleThreads, workerFactory);
+322c329
+< @@ -540,22 +550,25 @@ protected void serviceStart() throws Exception {
+---
+> @@ -540,22 +545,24 @@ protected void serviceStart() throws Exception {
+327,331c334
+< +    bootstrap = new ServerBootstrap();
+< +    bootstrap.group(bossGroup, workerGroup)
+< +        .channel(NioServerSocketChannel.class);
+< +
+<      // Timer is shared across entire factory and must be released separately
+---
+> -    // Timer is shared across entire factory and must be released separately
+343,345c346,352
+< +    bootstrap.option(ChannelOption.SO_BACKLOG,
+< +        conf.getInt(SHUFFLE_LISTEN_QUEUE_SIZE,
+< +            DEFAULT_SHUFFLE_LISTEN_QUEUE_SIZE))
+---
+> +
+> +    bootstrap = new ServerBootstrap();
+> +    bootstrap.group(bossGroup, workerGroup)
+> +        .channel(NioServerSocketChannel.class)
+> +        .option(ChannelOption.SO_BACKLOG,
+> +            conf.getInt(SHUFFLE_LISTEN_QUEUE_SIZE,
+> +                DEFAULT_SHUFFLE_LISTEN_QUEUE_SIZE))
+357c364
+< @@ -577,17 +590,11 @@ protected void serviceStart() throws Exception {
+---
+> @@ -577,17 +584,11 @@ protected void serviceStart() throws Exception {
+377c384
+< @@ -785,29 +792,33 @@ private void removeJobShuffleInfo(JobID jobId) throws IOException {
+---
+> @@ -785,29 +786,31 @@ private void removeJobShuffleInfo(JobID jobId) throws IOException {
+381a389
+> -
+383d390
+<  
+410d416
+< +    //private final ChannelHandler idleStateHandler;
+417c423
+< @@ -815,7 +826,7 @@ public HttpPipelineFactory(Configuration conf, Timer timer) throws Exception {
+---
+> @@ -815,7 +818,6 @@ public HttpPipelineFactory(Configuration conf, Timer timer) throws Exception {
+422d427
+< +      //this.idleStateHandler = new IdleStateHandler(0, connectionKeepAliveTimeOut, 0);
+426c431
+< @@ -828,27 +839,29 @@ public void destroy() {
+---
+> @@ -828,27 +830,27 @@ public void destroy() {
+445d449
+< +      //pipeline.addLast("idle", idleStateHandler);
+450d453
+< +      //return pipeline;
+463c466
+< @@ -904,9 +917,9 @@ public void setPort(int port) {
+---
+> @@ -904,9 +906,9 @@ public void setPort(int port) {
+475c478
+< @@ -922,13 +935,13 @@ public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent evt)
+---
+> @@ -922,13 +924,13 @@ public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent evt)
+492c495
+< @@ -944,7 +957,7 @@ public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt)
+---
+> @@ -944,7 +946,7 @@ public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt)
+497c500
+< +        new QueryStringDecoder(request.getUri()).parameters();
+---
+> +        new QueryStringDecoder(request.uri()).parameters();
+501c504
+< @@ -1004,8 +1017,8 @@ public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt)
+---
+> @@ -1004,8 +1006,8 @@ public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt)
+512c515
+< @@ -1015,13 +1028,13 @@ public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt)
+---
+> @@ -1015,13 +1017,13 @@ public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt)
+528c531
+< @@ -1061,7 +1074,7 @@ public ChannelFuture sendMap(ReduceContext reduceContext)
+---
+> @@ -1061,7 +1063,7 @@ public ChannelFuture sendMap(ReduceContext reduceContext)
+537c540
+< @@ -1259,7 +1272,7 @@ protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx, Channel ch,
+---
+> @@ -1259,7 +1261,7 @@ protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx, Channel ch,
+546c549
+< @@ -1270,12 +1283,12 @@ protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx, Channel ch,
+---
+> @@ -1270,12 +1272,12 @@ protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx, Channel ch,
+561c564
+< @@ -1284,7 +1297,7 @@ public void operationComplete(ChannelFuture future) {
+---
+> @@ -1284,7 +1286,7 @@ public void operationComplete(ChannelFuture future) {
+570c573
+< @@ -1293,7 +1306,7 @@ public void operationComplete(ChannelFuture future) {
+---
+> @@ -1293,7 +1295,7 @@ public void operationComplete(ChannelFuture future) {
+579c582
+< @@ -1312,7 +1325,7 @@ protected void sendError(ChannelHandlerContext ctx, String message,
+---
+> @@ -1312,7 +1314,8 @@ protected void sendError(ChannelHandlerContext ctx, String message,
+584c587,588
+< +      FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status, Unpooled.copiedBuffer(msg, CharsetUtil.UTF_8));
+---
+> +      FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status,
+> +              Unpooled.copiedBuffer(msg, CharsetUtil.UTF_8));
+588c592
+< @@ -1322,18 +1335,17 @@ protected void sendError(ChannelHandlerContext ctx, String msg,
+---
+> @@ -1322,18 +1325,15 @@ protected void sendError(ChannelHandlerContext ctx, String msg,
+594,595d597
+< +      //response.setContent(
+< +      //    Unpooled.copiedBuffer(msg, CharsetUtil.UTF_8));
+612c614
+< @@ -1350,8 +1362,7 @@ public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+---
+> @@ -1350,8 +1350,7 @@ public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+636c638
+< index af3cb87760c..9a5e6485a93 100644
+---
+> index af3cb87760c..f463c9b29c0 100644
+771c773
+< @@ -1149,18 +1149,18 @@ public void testSendMapCount() throws Exception {
+---
+> @@ -1149,18 +1149,19 @@ public void testSendMapCount() throws Exception {
+789a792
+> +    //TODO snemeth Why is this commented out?
+796c799
+< @@ -1168,7 +1168,7 @@ public void testSendMapCount() throws Exception {
+---
+> @@ -1168,7 +1169,7 @@ public void testSendMapCount() throws Exception {
+805c808
+< @@ -1184,7 +1184,7 @@ public void testSendMapCount() throws Exception {
+---
+> @@ -1184,7 +1185,7 @@ public void testSendMapCount() throws Exception {

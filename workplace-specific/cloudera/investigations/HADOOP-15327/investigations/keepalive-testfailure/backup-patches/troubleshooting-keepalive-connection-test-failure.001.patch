@@ -1,0 +1,733 @@
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/task/reduce/ShuffleHeader.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/task/reduce/ShuffleHeader.java
+index b42c018427d..4536079b035 100644
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/task/reduce/ShuffleHeader.java
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/task/reduce/ShuffleHeader.java
+@@ -40,7 +40,7 @@
+   public static final String HTTP_HEADER_NAME = "name";
+   public static final String DEFAULT_HTTP_HEADER_NAME = "mapreduce";
+   public static final String HTTP_HEADER_VERSION = "version";
+-  public static final String DEFAULT_HTTP_HEADER_VERSION = "1.0.0";
++  public static final String DEFAULT_HTTP_HEADER_VERSION = "1.1";
+ 
+   /**
+    * The longest possible length of task attempt id that we will accept.
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java
+index 8b164ca11ad..7e7588f9253 100644
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java
+@@ -28,6 +28,7 @@
+ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
+ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
++import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
+ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+ import static org.fusesource.leveldbjni.JniDBFactory.asString;
+ import static org.fusesource.leveldbjni.JniDBFactory.bytes;
+@@ -55,6 +56,7 @@
+ import javax.crypto.SecretKey;
+ 
+ import io.netty.bootstrap.ServerBootstrap;
++import io.netty.buffer.ByteBuf;
+ import io.netty.buffer.Unpooled;
+ import io.netty.channel.Channel;
+ import io.netty.channel.ChannelFuture;
+@@ -64,7 +66,9 @@
+ import io.netty.channel.ChannelInboundHandlerAdapter;
+ import io.netty.channel.ChannelInitializer;
+ import io.netty.channel.ChannelOption;
++import io.netty.channel.ChannelOutboundHandlerAdapter;
+ import io.netty.channel.ChannelPipeline;
++import io.netty.channel.ChannelPromise;
+ import io.netty.channel.EventLoopGroup;
+ import io.netty.channel.group.ChannelGroup;
+ import io.netty.channel.group.DefaultChannelGroup;
+@@ -75,6 +79,7 @@
+ import io.netty.handler.codec.http.DefaultFullHttpResponse;
+ import io.netty.handler.codec.http.DefaultHttpResponse;
+ import io.netty.handler.codec.http.FullHttpResponse;
++import io.netty.handler.codec.http.HttpHeaders;
+ import io.netty.handler.codec.http.HttpObjectAggregator;
+ import io.netty.handler.codec.http.HttpRequest;
+ import io.netty.handler.codec.http.HttpRequestDecoder;
+@@ -307,7 +312,10 @@ public ReduceMapFileCount(ReduceContext rc) {
+ 
+     @Override
+     public void operationComplete(ChannelFuture future) throws Exception {
++      LOG.info("***Operationcomplete");
+       if (!future.isSuccess()) {
++        LOG.error("Future is unsuccessful. Cause: ", future.cause());
++        LOG.error("***Closing channel");
+         future.channel().closeFuture().awaitUninterruptibly();
+         return;
+       }
+@@ -317,10 +325,11 @@ public void operationComplete(ChannelFuture future) throws Exception {
+         // Let the idle timer handler close keep-alive connections
+         if (reduceContext.getKeepAlive()) {
+           ChannelPipeline pipeline = future.channel().pipeline();
+-          TimeoutHandler timeoutHandler =
+-              (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
+-          timeoutHandler.setEnabledTimeout(true);
++//          TimeoutHandler timeoutHandler =
++//              (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
++//          timeoutHandler.setEnabledTimeout(true);
+         } else {
++          LOG.error("***Closing channel");
+           future.channel().closeFuture().awaitUninterruptibly();
+         }
+       } else {
+@@ -801,7 +810,9 @@ void setEnabledTimeout(boolean enabledTimeout) {
+     @Override
+     public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
+       if (e.state() == IdleState.WRITER_IDLE && enabledTimeout) {
+-        ctx.channel().close();
++        LOG.debug("***Closing channel as writer was idle");
++        //TODO
++        //ctx.channel().close();
+       }
+     }
+   }
+@@ -838,12 +849,68 @@ public void destroy() {
+       }
+       pipeline.addLast("decoder", new HttpRequestDecoder());
+       pipeline.addLast("aggregator", new HttpObjectAggregator(1 << 16));
+-      pipeline.addLast("encoder", new HttpResponseEncoder());
++      pipeline.addLast("encoder", new HttpResponseEncoder() {
++        @Override
++        public boolean acceptOutboundMessage(Object msg) throws Exception {
++          LOG.debug("***HttpResponseEncoder#acceptOutboundMessage");
++          return super.acceptOutboundMessage(msg);
++        }
++
++        @Override
++        protected void encodeInitialLine(ByteBuf buf, HttpResponse response) throws Exception {
++//          LOG.debug("***HttpResponseEncoder#encodeInitialLine: " + response, new Throwable());
++          LOG.debug("***HttpResponseEncoder#encodeInitialLine: " + response);
++          LOG.debug("***superclass, encodeInitialLine: " + getClass().getSuperclass());
++          super.encodeInitialLine(buf, response);
++        }
++
++        @Override
++        protected void sanitizeHeadersBeforeEncode(HttpResponse msg,
++            boolean isAlwaysEmpty) {
++          LOG.debug("***HttpResponseEncoder#sanitizeHeadersBeforeEncode");
++          super.sanitizeHeadersBeforeEncode(msg, isAlwaysEmpty);
++        }
++
++        @Override
++        protected boolean isContentAlwaysEmpty(HttpResponse msg) {
++          LOG.debug("***HttpResponseEncoder#isContentAlwaysEmpty");
++          return super.isContentAlwaysEmpty(msg);
++        }
++
++        @Override
++        protected void encode(ChannelHandlerContext ctx, Object msg,
++            List<Object> out) throws Exception {
++//          LOG.debug("***HttpResponseEncoder#encode", new Throwable());
++          LOG.debug("***HttpResponseEncoder#encode");
++          LOG.debug("***superclass, encode: " + getClass().getSuperclass());
++          super.encode(ctx, msg, out);
++        }
++
++        @Override
++        protected void encodeHeaders(HttpHeaders headers, ByteBuf buf) {
++          LOG.debug("***HttpResponseEncoder#encodeHeaders");
++          super.encodeHeaders(headers, buf);
++        }
++
++        @Override
++        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
++          LOG.debug("***HttpResponseEncoder#write");
++          super.write(ctx, msg, promise);
++        }
++      });
+       pipeline.addLast("chunking", new ChunkedWriteHandler());
+       pipeline.addLast("shuffle", SHUFFLE);
+-      pipeline.addLast("idle", new IdleStateHandler(
+-          0, connectionKeepAliveTimeOut, 0));
+-      pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler());
++      //https://stackoverflow.com/questions/50612403/catch-all-exception-handling-for-outbound-channelhandler
++      pipeline.addLast("exc", new ChannelOutboundHandlerAdapter() {
++        @Override
++        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
++          promise.addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
++          super.write(ctx, msg, promise);
++        }
++      });
++//      pipeline.addLast("idle", new IdleStateHandler(
++//          0, connectionKeepAliveTimeOut, 0));
++//      pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler());
+       // TODO factor security manager into pipeline
+       // TODO factor out encode/decode to permit binary shuffle
+       // TODO factor out decode of index to permit alt. models
+@@ -909,6 +976,7 @@ public void setPort(int port) {
+     @Override
+     public void channelActive(ChannelHandlerContext ctx)
+         throws Exception {
++      LOG.debug("***channelActive");
+       int numConnections = acceptedConnections.incrementAndGet();
+       if ((maxShuffleConnections > 0) && (numConnections >= maxShuffleConnections)) {
+         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
+@@ -941,19 +1009,25 @@ public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+     @Override
+     public void channelRead(ChannelHandlerContext ctx, Object msg)
+         throws Exception {
++      LOG.debug("***channelRead");
+       HttpRequest request = (HttpRequest) msg;
+-      if (request.getMethod() != GET) {
++      if (request.method() != GET) {
+           sendError(ctx, METHOD_NOT_ALLOWED);
+           return;
+       }
+       // Check whether the shuffle version is compatible
++      String headerVersion = "unknown";
++      if (request.headers() != null) {
++        headerVersion = request.headers()
++            .get(ShuffleHeader.HTTP_HEADER_VERSION);
++      }
++      LOG.debug("HTTP header version: {}", headerVersion);
+       if (!ShuffleHeader.DEFAULT_HTTP_HEADER_NAME.equals(
+           request.headers() != null ?
+               request.headers().get(ShuffleHeader.HTTP_HEADER_NAME) : null)
+           || !ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION.equals(
+               request.headers() != null ?
+-                  request.headers()
+-                      .get(ShuffleHeader.HTTP_HEADER_VERSION) : null)) {
++                  headerVersion : null)) {
+         sendError(ctx, "Incompatible shuffle request version", BAD_REQUEST);
+       }
+       final Map<String,List<String>> q =
+@@ -1019,9 +1093,9 @@ public void channelRead(ChannelHandlerContext ctx, Object msg)
+           new HashMap<String, MapOutputInfo>();
+       Channel ch = ctx.channel();
+       ChannelPipeline pipeline = ch.pipeline();
+-      TimeoutHandler timeoutHandler =
+-          (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
+-      timeoutHandler.setEnabledTimeout(false);
++//      TimeoutHandler timeoutHandler =
++//          (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
++//      timeoutHandler.setEnabledTimeout(false);
+       String user = userRsrc.get(jobId);
+ 
+       try {
+@@ -1034,11 +1108,23 @@ public void channelRead(ChannelHandlerContext ctx, Object msg)
+         sendError(ctx,errorMessage , INTERNAL_SERVER_ERROR);
+         return;
+       }
+-      ch.writeAndFlush(response);
+-      //Initialize one ReduceContext object per messageReceived call
++      LOG.debug("***written response: " + response);
++      ch.writeAndFlush(response).addListener(new ChannelFutureListener() {
++        @Override
++        public void operationComplete(ChannelFuture future) throws Exception {
++          if (future.isSuccess()) {
++            LOG.debug("***written response successfully");
++          } else {
++            LOG.error("***Problem writing response");
++          }
++          
++        }
++      });
++      //Initialize one ReduceContext object per channelRead call
+       boolean keepAlive = keepAliveParam || connectionKeepAliveEnabled;
+       ReduceContext reduceContext = new ReduceContext(mapIds, reduceId, ctx,
+           user, mapOutputInfoMap, jobId, keepAlive);
++      LOG.debug("***After response");
+       for (int i = 0; i < Math.min(maxSessionOpenFiles, mapIds.size()); i++) {
+         ChannelFuture nextMap = sendMap(reduceContext);
+         if(nextMap == null) {
+@@ -1072,6 +1158,7 @@ public ChannelFuture sendMap(ReduceContext reduceContext)
+             info = getMapOutputInfo(mapId, reduceContext.getReduceId(),
+                 reduceContext.getJobId(), reduceContext.getUser());
+           }
++          LOG.debug("***before sendMapOutput");
+           nextMap = sendMapOutput(
+               reduceContext.getCtx(),
+               reduceContext.getCtx().channel(),
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/test/java/org/apache/hadoop/mapred/TestShuffleHandler.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/test/java/org/apache/hadoop/mapred/TestShuffleHandler.java
+index 1851f67093e..16753e030b1 100644
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/test/java/org/apache/hadoop/mapred/TestShuffleHandler.java
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/test/java/org/apache/hadoop/mapred/TestShuffleHandler.java
+@@ -24,7 +24,6 @@
+ import io.netty.channel.ChannelHandlerContext;
+ import io.netty.channel.ChannelPipeline;
+ import io.netty.channel.socket.SocketChannel;
+-import io.netty.handler.codec.http.DefaultHttpResponse;
+ import io.netty.handler.codec.http.HttpMethod;
+ import io.netty.handler.codec.http.HttpRequest;
+ import io.netty.handler.codec.http.HttpResponse;
+@@ -32,8 +31,6 @@
+ import org.apache.hadoop.test.GenericTestUtils;
+ 
+ import static io.netty.buffer.Unpooled.wrappedBuffer;
+-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+ import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+ import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+@@ -58,6 +55,7 @@
+ import java.util.Arrays;
+ import java.util.List;
+ import java.util.Map;
++import java.util.concurrent.atomic.AtomicInteger;
+ import java.util.zip.CheckedOutputStream;
+ import java.util.zip.Checksum;
+ 
+@@ -101,6 +99,7 @@
+ import org.eclipse.jetty.http.HttpHeader;
+ import org.slf4j.Logger;
+ import org.slf4j.LoggerFactory;
++import sun.util.logging.PlatformLogger;
+ 
+ public class TestShuffleHandler {
+   static final long MiB = 1024 * 1024; 
+@@ -142,7 +141,7 @@ protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
+               new ShuffleHeader("attempt_12345_1_m_1_0", 5678, 5678, 1);
+           DataOutputBuffer dob = new DataOutputBuffer();
+           header.write(dob);
+-          ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
++          ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+           dob = new DataOutputBuffer();
+           for (int i = 0; i < 100; ++i) {
+             header.write(dob);
+@@ -302,7 +301,7 @@ protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
+                 new ShuffleHeader("attempt_12345_1_m_1_0", 5678, 5678, 1);
+             DataOutputBuffer dob = new DataOutputBuffer();
+             header.write(dob);
+-            ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
++            ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+             dob = new DataOutputBuffer();
+             for (int i = 0; i < 100000; ++i) {
+               header.write(dob);
+@@ -364,17 +363,20 @@ SocketAddress getSocketAddres() {
+     }
+   }
+ 
+-  @Test(timeout = 10000)
++  @Test(timeout = 150000)
+   public void testKeepAlive() throws Exception {
+     final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
+     Configuration conf = new Configuration();
+-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+-    conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
++    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 8088);
++    conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, false);
+     // try setting to -ve keep alive timeout.
+-    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, -100);
++    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, 1000);
+     final LastSocketAddress lastSocketAddress = new LastSocketAddress();
+-
++    
++    final int headerWriteCount = 100000;
+     ShuffleHandler shuffleHandler = new ShuffleHandler() {
++      AtomicInteger counter = new AtomicInteger();
++      HeaderPopulator headerPopulator = new HeaderPopulator(this, headerWriteCount, counter, true);
+       @Override
+       protected Shuffle getShuffle(final Configuration conf) {
+         // replace the shuffle handler with one stubbed for testing
+@@ -395,23 +397,9 @@ protected void populateHeaders(List<String> mapIds, String jobId,
+               String user, int reduce, HttpRequest request,
+               HttpResponse response, boolean keepAliveParam,
+               Map<String, MapOutputInfo> infoMap) throws IOException {
+-            // Send some dummy data (populate content length details)
+-            ShuffleHeader header =
+-                new ShuffleHeader("attempt_12345_1_m_1_0", 5678, 5678, 1);
+-            DataOutputBuffer dob = new DataOutputBuffer();
+-            header.write(dob);
+-            dob = new DataOutputBuffer();
+-            for (int i = 0; i < 100000; ++i) {
+-              header.write(dob);
+-            }
+-
+-            long contentLength = dob.getLength();
+-            // for testing purpose;
+-            // disable connectinKeepAliveEnabled if keepAliveParam is available
+-            if (keepAliveParam) {
+-              connectionKeepAliveEnabled = false;
+-            }
+-
++            long contentLength = headerPopulator.populateHeaders(
++                mapIds, jobId, user, reduce,
++                request, response, keepAliveParam, infoMap);
+             super.setResponseHeaders(response, keepAliveParam, contentLength);
+           }
+ 
+@@ -419,21 +407,27 @@ protected void populateHeaders(List<String> mapIds, String jobId,
+           protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
+               Channel ch, String user, String mapId, int reduce,
+               MapOutputInfo info) throws IOException {
++            counter.incrementAndGet();
++            LOG.debug("***in sendMapOutput");
+             lastSocketAddress.setAddress(ch.remoteAddress());
+-            HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
+-
+             // send a shuffle header and a lot of data down the channel
+             // to trigger a broken pipe
+             ShuffleHeader header =
+-                new ShuffleHeader("attempt_12345_1_m_1_0", 5678, 5678, 1);
++                new ShuffleHeader("attempt_12345_1_m_1_0" + counter.get(), 5678, 5678, 1);
+             DataOutputBuffer dob = new DataOutputBuffer();
+             header.write(dob);
+-            ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
++            LOG.debug("***sendMapOutput before WriteAndFlush #1");
++            ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
++            LOG.debug("***sendMapOutput after WriteAndFlush #1. dob: " + dob.size());
+             dob = new DataOutputBuffer();
+-            for (int i = 0; i < 100000; ++i) {
++            LOG.debug("***created new DOB");
++            for (int i = 0; i < headerWriteCount; ++i) {
+               header.write(dob);
+             }
+-            return ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
++            LOG.debug("***sendMapOutput after WriteAndFlush #2. dob: " + dob.size());
++            LOG.debug("***sendMapOutput WriteAndFlush big chunk of data");
++            return ch.writeAndFlush(wrappedBuffer(dob.getData(), 0,
++                dob.getLength()));
+           }
+ 
+           @Override
+@@ -441,6 +435,7 @@ protected void sendError(ChannelHandlerContext ctx,
+               HttpResponseStatus status) {
+             if (failures.size() == 0) {
+               failures.add(new Error());
++              LOG.error("***sendError Closing channel");
+               ctx.channel().close();
+             }
+           }
+@@ -450,67 +445,231 @@ protected void sendError(ChannelHandlerContext ctx, String message,
+               HttpResponseStatus status) {
+             if (failures.size() == 0) {
+               failures.add(new Error());
++              LOG.error("***sendError2 Closing channel");
+               ctx.channel().close();
+             }
+           }
+         };
+       }
+     };
++    sun.util.logging.PlatformLogger
++        .getLogger("sun.net.www.protocol.http.HttpURLConnection")
++        .setLevel(PlatformLogger.Level.ALL);
++//    System.setProperty("javax.net.debug", "all");
+     shuffleHandler.init(conf);
+     shuffleHandler.start();
+ 
+     String shuffleBaseURL = "http://127.0.0.1:"
+             + shuffleHandler.getConfig().get(
+               ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
+-    URL url =
+-        new URL(shuffleBaseURL + "/mapOutput?job=job_12345_1&reduce=1&"
+-            + "map=attempt_12345_1_m_1_0");
+-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+-    conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
+-        ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+-    conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
+-        ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+-    conn.connect();
+-    DataInputStream input = new DataInputStream(conn.getInputStream());
+-    Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
+-        conn.getHeaderField(HttpHeader.CONNECTION.asString()));
+-    Assert.assertEquals("timeout=1",
+-        conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
+-    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+-    ShuffleHeader header = new ShuffleHeader();
+-    header.readFields(input);
+-    byte[] buffer = new byte[1024];
+-    while (input.read(buffer) != -1) {}
+-    SocketAddress firstAddress = lastSocketAddress.getSocketAddres();
+-    input.close();
++    URL url;
++    HttpURLConnection conn;
++    DataInputStream input;
++    ShuffleHeader header;
++//    URL url =
++//        new URL(shuffleBaseURL + "/mapOutput?job=job_12345_1&reduce=1&"
++//            + "map=attempt_12345_1_m_1_0");
++//    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
++//    conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
++//        ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
++//    conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
++//        ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
++//    conn.connect();
++//    DataInputStream input = new DataInputStream(conn.getInputStream());
++//    LOG.debug("***Received DataInputStream #1");
++//    Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
++//        conn.getHeaderField(HttpHeader.CONNECTION.asString()));
++//    Assert.assertEquals("timeout=1000",
++//        conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
++//    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
++//    ShuffleHeader header = new ShuffleHeader();
++////    header.readFields(input);
++//    byte[] buffer = new byte[1024];
++//    int sumReadBytes = 0;
++//    int read = 0;
++//    while ((read = input.read(buffer)) != -1) {
++//      sumReadBytes += read;
++//    }
++//    LOG.debug("***Read bytes: " + sumReadBytes);
++//    SocketAddress firstAddress = lastSocketAddress.getSocketAddres();
++//    input.close();
+ 
+     // For keepAlive via URL
+-    url =
+-        new URL(shuffleBaseURL + "/mapOutput?job=job_12345_1&reduce=1&"
+-            + "map=attempt_12345_1_m_1_0&keepAlive=true");
+-    conn = (HttpURLConnection) url.openConnection();
+-    conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
+-        ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+-    conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
+-        ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+-    conn.connect();
+-    input = new DataInputStream(conn.getInputStream());
+-    Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
+-        conn.getHeaderField(HttpHeader.CONNECTION.asString()));
+-    Assert.assertEquals("timeout=1",
+-        conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
+-    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+-    header = new ShuffleHeader();
+-    header.readFields(input);
++//    shuffleHandler.connectionKeepAliveEnabled = false;
++//    url =
++//        new URL(shuffleBaseURL + "/mapOutput?job=job_12345_1&reduce=1&"
++//            + "map=attempt_12345_1_m_1_0&keepAlive=true");
++//    conn = (HttpURLConnection) url.openConnection();
++//    conn.setConnectTimeout(10000);
++//    conn.setReadTimeout(10000);
++//    conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
++//        ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
++//    conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
++//        ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
++//    conn.connect();
++//    input = new DataInputStream(conn.getInputStream());
++//    LOG.debug("***Received DataInputStream #2");
++//    Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
++//        conn.getHeaderField(HttpHeader.CONNECTION.asString()));
++//    Assert.assertEquals("timeout=1000",
++//        conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
++//    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
++//    header = new ShuffleHeader();
++//    header.readFields(input);
++//    input.close();
++//    SocketAddress secondAddress = lastSocketAddress.getSocketAddres();
++//    Assert.assertNotNull("Initial shuffle address should not be null",
++//        firstAddress);
++//    Assert.assertNotNull("Keep-Alive shuffle address should not be null",
++//        secondAddress);
++//    Assert.assertEquals("Initial shuffle address and keep-alive shuffle "
++//        + "address should be the same", firstAddress, secondAddress);
++    
++    
++    //==============================================
++    shuffleHandler.connectionKeepAliveEnabled = false;
++    SocketAddress firstAddress = null;
++    SocketAddress secondAddress = null;
++    for (int i = 0; i < 2; i++) {
++      String keepaliveurl = "/mapOutput?job=job_12345_1&reduce=1&"
++          + "map=attempt_12345_1_m_1_0&keepAlive=true";
++      String simpleeurl = "/mapOutput?job=job_12345_1&reduce=1&"
++          + "map=attempt_12345_1_m_1_0";
++      url =
++          new URL(shuffleBaseURL + keepaliveurl);
++      conn = (HttpURLConnection) url.openConnection();
++      conn.setConnectTimeout(1000000);
++      conn.setReadTimeout(1000000);
++      conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
++          ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
++      conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
++          ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
++      conn.connect();
++      input = new DataInputStream(conn.getInputStream());
++      LOG.debug("***Received DataInputStream #" + i);
++//      Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
++//          conn.getHeaderField(HttpHeader.CONNECTION.asString()));
++//      Assert.assertEquals("timeout=1000",
++//          conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
++//      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
++      header = new ShuffleHeader();
++      header.readFields(input);
++      int sumReadBytes = readDataFromInputStream(input);
++      if (i == 0) {
++        firstAddress = lastSocketAddress.getSocketAddres();
++      } else if (i == 1){
++        secondAddress = lastSocketAddress.getSocketAddres();
++      }
+     input.close();
+-    SocketAddress secondAddress = lastSocketAddress.getSocketAddres();
++      Assert.assertEquals(33966, sumReadBytes);
++    }
++
++        Assert.assertNotNull("Initial shuffle address should not be null",
++        firstAddress);
++    Assert.assertNotNull("Keep-Alive shuffle address should not be null",
++        secondAddress);
++    Assert.assertEquals("Initial shuffle address and keep-alive shuffle "
++        + "address should be the same", firstAddress, secondAddress);
++  }
++
++  @Test(timeout = 150000)
++  public void testKeepAlive2() throws Exception {
++    final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
++    Configuration conf = new Configuration();
++    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 8088);
++    conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, false);
++    // try setting to -ve keep alive timeout.
++    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, 1000);
++    final LastSocketAddress lastSocketAddress = new LastSocketAddress();
++
++    final int headerWriteCount = 100000;
++    ShuffleHandler shuffleHandler = new ShuffleHandler() {
++      AtomicInteger counter = new AtomicInteger();
++      HeaderPopulator headerPopulator = new HeaderPopulator(this, headerWriteCount, counter, true);
++      @Override
++      protected Shuffle getShuffle(final Configuration conf) {
++        // replace the shuffle handler with one stubbed for testing
++        return new Shuffle(conf) {
++          @Override
++          protected void verifyRequest(String appid, ChannelHandlerContext ctx,
++              HttpRequest request, HttpResponse response, URL requestUri)
++              throws IOException {
++          }
++
++          @Override
++          protected void populateHeaders(List<String> mapIds, String jobId,
++              String user, int reduce, HttpRequest request,
++              HttpResponse response, boolean keepAliveParam,
++              Map<String, MapOutputInfo> infoMap) throws IOException {
++            long contentLength = headerPopulator.populateHeaders(
++                mapIds, jobId, user, reduce,
++                request, response, keepAliveParam, infoMap);
++            super.setResponseHeaders(response, keepAliveParam, contentLength);
++          }
++        };
++      }
++    };
++    shuffleHandler.init(conf);
++    shuffleHandler.start();
++
++    String shuffleBaseURL = "http://127.0.0.1:"
++        + shuffleHandler.getConfig().get(
++        ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
++    URL url;
++    HttpURLConnection conn;
++    DataInputStream input;
++    ShuffleHeader header;
++    shuffleHandler.connectionKeepAliveEnabled = false;
++    SocketAddress[] sockets = new SocketAddress[2];
++    String attemptId = "12345";
++    String simpleUrl = "/mapOutput?job=job_12345_1&reduce=1&"
++        + "map=attempt_" + attemptId + "_1_m_1_0";
++    String keepAliveUrl = simpleUrl + "&keepAlive=true";
++    String[] urls = new String[] { simpleUrl, keepAliveUrl };
++    for (int i = 0; i < 2; i++) {
++      String urlString = urls[i];
++      LOG.debug("Current URL: " + urlString);
++      url =
++          new URL(shuffleBaseURL + keepAliveUrl);
++      conn = (HttpURLConnection) url.openConnection();
++      conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
++          ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
++      conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
++          ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
++      conn.connect();
++      input = new DataInputStream(conn.getInputStream());
++      LOG.debug("***Received DataInputStream #" + (i + 1));
++      Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
++          conn.getHeaderField(HttpHeader.CONNECTION.asString()));
++      Assert.assertEquals("timeout=1000",
++          conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
++      Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
++      header = new ShuffleHeader();
++      header.readFields(input);
++      int sumReadBytes = readDataFromInputStream(input);
++      Assert.assertEquals(33966, sumReadBytes);
++      sockets[i] = lastSocketAddress.getSocketAddres();
++      input.close();
++    }
++    SocketAddress firstAddress = sockets[0];
++    SocketAddress secondAddress = sockets[1];
+     Assert.assertNotNull("Initial shuffle address should not be null",
+         firstAddress);
+     Assert.assertNotNull("Keep-Alive shuffle address should not be null",
+         secondAddress);
+     Assert.assertEquals("Initial shuffle address and keep-alive shuffle "
+         + "address should be the same", firstAddress, secondAddress);
++  }
+ 
++  private int readDataFromInputStream(DataInputStream input) throws IOException {
++    byte[] buffer = new byte[1024];
++    int sumReadBytes = 0;
++    int read = 0;
++    while ((read = input.read(buffer)) != -1) {
++      sumReadBytes += read;
++    }
++    LOG.debug("***Read bytes: " + sumReadBytes);
++    return sumReadBytes;
+   }
+ 
+   @Test(timeout = 10000)
+@@ -635,7 +794,7 @@ protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
+                 new ShuffleHeader("dummy_header", 5678, 5678, 1);
+             DataOutputBuffer dob = new DataOutputBuffer();
+             header.write(dob);
+-            ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
++            ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+             dob = new DataOutputBuffer();
+             for (int i=0; i<100000; ++i) {
+               header.write(dob);
+@@ -1228,4 +1387,44 @@ public Object answer(InvocationOnMock invocation) throws Throwable {
+     }).when(mockHttpRequest).uri();
+     return mockHttpRequest;
+   }
++
++  private class HeaderPopulator {
++    private ShuffleHandler shuffleHandler;
++    private final int headerWriteCount;
++    private final AtomicInteger counter;
++    private boolean disableKeepAliveConfig;
++
++    public HeaderPopulator(ShuffleHandler shuffleHandler, 
++        int headerWriteCount, AtomicInteger counter, 
++        boolean disableKeepAliveConfig) {
++      this.shuffleHandler = shuffleHandler;
++      this.headerWriteCount = headerWriteCount;
++      this.counter = counter;
++      this.disableKeepAliveConfig = disableKeepAliveConfig;
++    }
++
++    public long populateHeaders(List<String> mapIds, String jobId,
++        String user, int reduce, HttpRequest request,
++        HttpResponse response, boolean keepAliveParam,
++        Map<String, ShuffleHandler.Shuffle.MapOutputInfo> infoMap) throws IOException {
++      // Send some dummy data (populate content length details)
++      ShuffleHeader header =
++          new ShuffleHeader("attempt_12345_1_m_1_0" + counter.get(), 5678, 5678, 1);
++      DataOutputBuffer dob = new DataOutputBuffer();
++      header.write(dob);
++      dob = new DataOutputBuffer();
++      for (int i = 0; i < headerWriteCount; ++i) {
++        header.write(dob);
++      }
++
++      long contentLength = dob.getLength();
++      LOG.debug("HTTP response content length: {}", contentLength);
++      // for testing purpose;
++      // disable connectionKeepAliveEnabled if keepAliveParam is available
++      if (keepAliveParam && disableKeepAliveConfig) {
++        shuffleHandler.connectionKeepAliveEnabled = false;
++      }
++      return contentLength;
++    }
++  }
+ }
+diff --git a/hadoop-project/pom.xml b/hadoop-project/pom.xml
+index 2ac75705cd7..ef9b47bc51e 100644
+--- a/hadoop-project/pom.xml
++++ b/hadoop-project/pom.xml
+@@ -138,7 +138,7 @@
+     <gson.version>2.2.4</gson.version>
+     <metrics.version>3.2.4</metrics.version>
+     <netty3.version>3.10.6.Final</netty3.version>
+-    <netty4.version>4.1.61.Final</netty4.version>
++    <netty4.version>4.1.65.Final</netty4.version>
+     <snappy-java.version>1.1.8.2</snappy-java.version>
+     <lz4-java.version>1.7.1</lz4-java.version>
+ 
