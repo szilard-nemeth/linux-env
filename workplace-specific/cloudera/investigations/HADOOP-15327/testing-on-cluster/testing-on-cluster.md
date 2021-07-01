@@ -52,8 +52,14 @@ ssh systest@ccycloud-3.snemeth-netty2.root.hwx.site "sudo yum -y install rsync"
 cd ~/development/cloudera/YARN-tools/YARN-Cluster-Setup
 
 #WITH BUILD
-./bootstrap-cluster.sh ccycloud-1.snemeth-netty2.root.hwx.site --dist-type=upstream --patch-file=~/googledrive/development_drive/_upstream/HADOOP-15327/patches/official-patches/HADOOP-15327.005.patch --cluster-setup-branch=HADOOP-15327
+./bootstrap-cluster.sh ccycloud-1.snemeth-netty2.root.hwx.site --dist-type=upstream --patch-file=~/development/my-repos/linux-env/workplace-specific/cloudera/investigations/HADOOP-15327/patches/official-patches/HADOOP-15327.005.patch --cluster-setup-branch=HADOOP-15327
 
 
 #NO BUILD
-./bootstrap-cluster.sh ccycloud-1.snemeth-netty2.root.hwx.site --dist-type=upstream --patch-file=~/googledrive/development_drive/_upstream/HADOOP-15327/patches/official-patches/HADOOP-15327.005.patch --cluster-setup-branch=HADOOP-15327 --no-build --no-update-hadoop
+./bootstrap-cluster.sh ccycloud-1.snemeth-netty2.root.hwx.site --dist-type=upstream --patch-file=~/development/my-repos/linux-env/workplace-specific/cloudera/investigations/HADOOP-15327/patches/official-patches/HADOOP-15327.005.patch --cluster-setup-branch=HADOOP-15327 --no-build --no-update-hadoop
+
+
+#Restart RM / NMs
+ssh systest@ccycloud-1.snemeth-netty2.root.hwx.site '/opt/hadoop/bin/yarn --daemon stop resourcemanager;/opt/hadoop/bin/yarn resourcemanager'
+ssh systest@ccycloud-2.snemeth-netty2.root.hwx.site '/opt/hadoop/bin/yarn --daemon stop nodemanager;/opt/hadoop/bin/yarn nodemanager'
+ssh systest@ccycloud-3.snemeth-netty2.root.hwx.site '/opt/hadoop/bin/yarn --daemon stop nodemanager;/opt/hadoop/bin/yarn nodemanager'
