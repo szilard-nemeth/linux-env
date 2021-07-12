@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -v
 set -x
+df -h
+free
+export GIT_TRACE_PACKET=1;export GIT_TRACE=1;export GIT_CURL_VERBOSE=1
 
 YETUSDIR=${WORKSPACE}/yetus
 ARTIFACTS=${WORKSPACE}/out
@@ -8,6 +11,14 @@ BASEDIR=${WORKSPACE}/sourcedir
 TOOLS=${WORKSPACE}/tools
 rm -rf "${ARTIFACTS}" "${YETUSDIR}"
 mkdir -p "${ARTIFACTS}" "${YETUSDIR}" "${TOOLS}"
+
+
+ls -la $BASEDIR
+cp -R $BASEDIR/target ~/target
+rm -rf $BASEDIR
+mkdir -p $BASEDIR
+YETUS_SHELL_SCRIPT_DEBUG="true"
+export YETUS_SHELL_SCRIPT_DEBUG="true"
 
 if [[ -d /sys/fs/cgroup/pids/user.slice ]]; then
   pids=$(cat /sys/fs/cgroup/pids/user.slice/user-910.slice/pids.max)
