@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-set -v
-set -x
-df -h
-free
-export GIT_TRACE_PACKET=1;export GIT_TRACE=1;export GIT_CURL_VERBOSE=1
+
+set -xv
 
 YETUSDIR=${WORKSPACE}/yetus
 ARTIFACTS=${WORKSPACE}/out
@@ -11,18 +8,8 @@ BASEDIR=${WORKSPACE}/sourcedir
 TOOLS=${WORKSPACE}/tools
 rm -rf "${ARTIFACTS}" "${YETUSDIR}"
 mkdir -p "${ARTIFACTS}" "${YETUSDIR}" "${TOOLS}"
-
-
-ls -la $BASEDIR
-cp -R $BASEDIR/target ~/target
-rm -rf $BASEDIR
-mkdir -p $BASEDIR
-YETUS_SHELL_SCRIPT_DEBUG="true"
-export YETUS_SHELL_SCRIPT_DEBUG="true"
-
 if [[ -d /sys/fs/cgroup/pids/user.slice ]]; then
   pids=$(cat /sys/fs/cgroup/pids/user.slice/user-910.slice/pids.max)
-  
   if [[ ${pids} -gt 13000 ]]; then
     echo "passed: ${pids}"
     PIDMAX=10000
@@ -35,18 +22,14 @@ else
   echo "passed? no limit on trusty?"
   PIDMAX=10000
 fi
-
-mv $YETUSDIR /tmp/yetus_backup
-mkdir -p $YETUSDIR
-
 echo "Downloading Yetus 0.13.0-SNAPSHOT"
 curl -L https://api.github.com/repos/apache/yetus/tarball/6ab19e71eaf3234863424c6f684b34c1d3dcc0ce -o yetus.tar.gz
 gunzip -c yetus.tar.gz | tar xpf - -C "${YETUSDIR}" --strip-components 1
 
-#YFILE="$YETUSDIR/yetus/precommit/src/main/shell/test-patch.sh"
-#cp $YFILE /tmp/test-patch.sh
-#var="set -v"
-#sed -i "2s/.*/$var/" $YFILE
+patchfile=$YETUSDIR/precommit/src/main/shell/core.d/patchfiles.sh
+sed '129s/.*/set -xv/' $patchfile > tmp.1
+sed '167s/.*/set +xv/' tmp.1 > tmp.2
+mv tmp.2 $patchfile
 
 YETUS_ARGS+=("--archive-list=checkstyle-errors.xml,spotbugsXml.xml")
 YETUS_ARGS+=("--basedir=${BASEDIR}")
@@ -76,11 +59,7 @@ YETUS_ARGS+=("--sentinel")
 YETUS_ARGS+=("--shelldocs=${BASEDIR}/dev-support/bin/shelldocs")
 YETUS_ARGS+=("--tests-filter=checkstyle,pylint,shelldocs")
 YETUS_ARGS+=("--mvn-javadoc-goals=process-sources,javadoc:javadoc-no-fork")
-
 YETUS_ARGS+=("YARN-${ISSUE_NUM}")
-
 export MAVEN_OPTS="-Xms256m -Xmx1536m -Dhttps.protocols=TLSv1.2 -Dhttps.cipherSuites=TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
-
 TESTPATCHBIN=${YETUSDIR}/precommit/src/main/shell/test-patch.sh
-
 /bin/bash ${TESTPATCHBIN} "${YETUS_ARGS[@]}"
