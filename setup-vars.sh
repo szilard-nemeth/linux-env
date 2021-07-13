@@ -25,6 +25,8 @@ export MANPATH="$NPM_PACKAGES/share/man:$(manpath)"
 #End of npm config
 
 export MY_REPOS_DIR="$HOME/development/my-repos/"
+export OTHER_REPOS_DIR="$HOME/development/other-repos/"
+export LINUXENV_DIR="$HOME/development/my-repos/linux-env/"
 export KB_REPO="$HOME/development/my-repos/knowledge-base/"
 export KB_PRIVATE_REPO="$HOME/development/my-repos/knowledge-base-private/"
 export PYTHON_COMMONS_REPO="$HOME/development/my-repos/python-commons/"
