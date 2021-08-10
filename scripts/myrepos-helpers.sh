@@ -106,7 +106,9 @@ function myrepos-grep-all() {
   #https://serverfault.com/questions/268368/how-can-i-handle-spaces-in-file-names-when-using-xargs-on-find-results
 
   #TODO Binary file /Users/snemeth/development/my-repos/resume/fonts/FontAwesome.ttf matches
-  # TODO Add option to filter only test files with myrepos_filtered_find.py: https://stackoverflow.com/questions/898669/how-can-i-detect-if-a-file-is-binary-non-text-in-python // https://unix.stackexchange.com/questions/46276/finding-all-non-binary-files
+  # TODO Add option to filter only test files with myrepos_filtered_find.py:
+  #  https://stackoverflow.com/questions/898669/how-can-i-detect-if-a-file-is-binary-non-text-in-python
+  #  https://unix.stackexchange.com/questions/46276/finding-all-non-binary-files
   myrepos_filtered_find.py --exclude $COMMON_EXCLUDES | tr '\n' '\0' | xargs -0 grep $1
 }
 
