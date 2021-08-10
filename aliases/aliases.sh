@@ -97,3 +97,4 @@ alias list-aliases-functions="print -rl -- ${(k)aliases} ${(k)functions} ${(k)pa
 alias whitespace="sed 's/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'"
 
 alias copy-trello-checklist-script="cat ~/development/my-repos/knowledge-base/codesnippets/js-html-css/copy-trello-checklist-smartlinks.js | pbcopy"
+alias copy-pushbullet-linksaver-script="cat ~/development/my-repos/knowledge-base/codesnippets/js-html-css/pushbullet-save-links.js | pbcopy"

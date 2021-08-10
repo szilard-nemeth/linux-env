@@ -20,8 +20,8 @@ alias git-rebase-trunk="git co trunk && echo 'Pulling origin/trunk...' && git pu
 alias j7='export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home'
 alias j8='export JAVA_HOME=/Library/Java//JavaVirtualMachines/jdk1.8.0_151.jdk/Contents/Home'
 
-alias git-push-to-cdpdmaster="git push cauldron HEAD:refs/for/cdpd-master%r=shuzirra,r=pbacsko,r=gandras,r=bteke"
-alias git-push-to-cdh71maint="git push cauldron HEAD:refs/for/CDH-7.1-maint%r=shuzirra,r=pbacsko,r=gandras,r=bteke"
+alias git-push-to-cdpdmaster="git push cauldron HEAD:refs/for/cdpd-master%r=shuzirra,r=pbacsko,r=gandras,r=bteke,r=tdomok"
+alias git-push-to-cdh71maint="git push cauldron HEAD:refs/for/CDH-7.1-maint%r=shuzirra,r=pbacsko,r=gandras,r=bteke,r=tdomok"
 
 #==============================================
 #YARN-related commands
