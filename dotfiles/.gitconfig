@@ -24,6 +24,7 @@
     reset-soft = "reset --soft HEAD^"
     remove-commit = "reset --hard HEAD~1"
     cpx = cherry-pick -x
+    rbc = rebase --continue
 
 [credential]
     helper = cache --timeout=43200
