@@ -30,7 +30,7 @@ alias git-commit-msg="git log -n 1 --pretty=format:%s"
 alias git-remove-trailing-ws="git diff-tree --no-commit-id --name-only -r HEAD | xargs sed -i 's/[[:space:]]*$//'"
 alias git-fix-author-info="git config user.email 'szilard.nemeth88@gmail.com' && git config user.name 'Szilard Nemeth' && git commit --amend --reset-author"
 #alias git-save-all-commits="git format-patch $(git rev-list --max-parents=0 HEAD)..HEAD -o /tmp/patches"
-alias git-add-all-tracked="git status -s | grep -v "??" | cut -c 4- | xargs git add"
+alias git-add-all-tracked="git status -s | grep -v \"??\" | cut -c 4- | xargs git add"
 
 ## REVIEW ALIASES
 #Example usage: backport-diff-generator 137729/1
