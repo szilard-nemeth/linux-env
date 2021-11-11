@@ -35,3 +35,5 @@ set listchars=tab:>\ ,trail:.,nbsp:.
 
 " Always assume Unix-style line endings
 set fileformats=unix
+
+map s :2,$s/^pick/squash/<CR>
