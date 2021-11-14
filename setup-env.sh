@@ -270,6 +270,12 @@ function initial_setup_macos() {
         brew install wget
     fi
 
+    echo "Checking whether thefuck is installed..."
+    if ! hash fuck 2>/dev/null; then
+        echo "Installing thefuck"
+        brew install thefuck
+    fi
+
     echo "Checking available shells..."
     cat /etc/shells | grep zsh
     if [[ "$?" -ne 0 ]]; then
