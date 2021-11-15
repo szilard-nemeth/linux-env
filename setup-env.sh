@@ -77,16 +77,23 @@ function copy_files() {
         fi
 
         if [[ "$from" == *. ]]; then
+          from_stripped=$(echo ${from} | sed 's/.$//')
+          echo "$from_stripped $to" >> ${ENV_FILE_MAPPINGS}
+          if diff "$from" "$to" 2>&1 > /dev/null ; then
+            echo "No changes in files. SRC DIR: $from, DEST DIR: $to"
+          else
             echo "Copying files from $from to $to (recursive)"
             yes | cp -aR ${from} ${to}
-            from_stripped=$(echo ${from} | sed 's/.$//')
-            echo "$from_stripped $to" >> ${ENV_FILE_MAPPINGS}
+          fi
         else
+          echo "$from $to" >> ${ENV_FILE_MAPPINGS}
+          if cmp -s "$from" "$to" ; then
+            echo "No changes in file. SRC: $from, DEST: $to"
+          else
             echo "Copying file from $from to $to"
             cp ${from} ${to}
-            echo "$from $to" >> ${ENV_FILE_MAPPINGS}
+          fi
         fi
-
         i=$[$i+2]
     done
 }
@@ -135,7 +142,7 @@ function source_files() {
             . "$setup_sh"
         fi
     done
-    
+
     for d in ${matched_dirs}; do
         printf "\tSourcing files from $d\n"
         for f in $(find ${d} -maxdepth 1 -iname  "*.sh" -not -iname "setup.sh"); do
@@ -373,6 +380,8 @@ function copy_files_from_linuxenv_repo_to_home() {
     
     #Common
     COPY_LIST+=("$DIR/setup-vars.sh $HOME_LINUXENV_DIR/setup-vars.sh")
+    COPY_LIST+=("$DIR/setup-env.sh $HOME_LINUXENV_DIR/setup-env.sh")
+    COPY_LIST+=("$DIR/reset-env.sh $HOME_LINUXENV_DIR/reset-env.sh")
     COPY_LIST+=("$DIR/dotfiles/. $HOME/")
     COPY_LIST+=("$DIR/aliases/. $HOME_LINUXENV_DIR/aliases/")
     COPY_LIST+=("$DIR/scripts/. $HOME_LINUXENV_DIR/scripts")
