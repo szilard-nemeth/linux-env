@@ -77,3 +77,14 @@ function diff_files_in_dirs() {
   done
 #  set +x
 }
+
+function zip-directory() {
+    #EXAMPLE CALL:
+    #zip-directory <dir> <path-to-tar>
+    if [ $# -ne 2 ]; then
+       echo "Usage: $0 [dir1] [path-to-tar]"
+        echo "Example: $0 <some-directory> <path-to-tar-archive-with-name>"
+        return 1
+    fi
+    tar -czvf $2.tar.gz -C $1 .
+}
