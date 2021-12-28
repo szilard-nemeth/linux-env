@@ -61,7 +61,7 @@ function diff_files_in_dirs() {
   #EXAMPLE CALL:
   #diff_files_in_dirs ~/development/my-repos/python/yarn-dev-func ~/development/my-repos/linux-env/workplace-specific/cloudera/scripts/yarn/python "*.py"
   if [ $# -ne 3 ]; then
-    echo "Usage: $0 [dir1] [dir2] [filaname-pattern]"
+    echo "Usage: $0 [dir1] [dir2] [filename-pattern]"
     echo "Example: $0 $(pwd)/ ~/somedir/ '*.py'"
     return 1
   fi
