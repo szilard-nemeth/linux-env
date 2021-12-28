@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # TODO Now we have 3 copies of the same script --> MIGRATE TO PYTHON
 function sync-yarn-dev-tools-repo() {
-    local tmp_dir=$(mktemp -d -t kb-private-XXXXXX)
+    local tmp_dir=$(mktemp -d -t yarn-dev-tools-XXXXXX)
     local repo_name="yarn-dev-tools"
     local original_dir=$(pwd)
     
