@@ -48,8 +48,13 @@ function myrepos-install-linuxenv-dependencies-dev {
 }
 
 function myrepos-install-googleapiwrapper-dev {
-  grep --include=requirements.txt -rw $MY_REPOS_DIR -e "google-api-wrapper.git" | cut -d':' -f1 | sed 's/requirements.txt/venv/g' | tr '\n' '\0' | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/google-api-wrapper;deactivate';say "google API wrapper completed"
+  grep --include=requirements.txt -rw $MY_REPOS_DIR -e "google-api-wrapper.git" | cut -d':' -f1 | sed 's/requirements.txt/venv/g' | tr '\n' '\0' | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/google-api-wrapper;deactivate';say "Google API wrapper completed"
 }
+
+function myrepos-install-googleapiwrapper-dev-just-yarndevtools {
+  sh -c 'cd $MY_REPOS_DIR/yarn-dev-tools/venv; source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/google-api-wrapper;deactivate' && say "Google API wrapper completed"
+}
+
 
 
 function myrepos-rm-pythoncommons() {
