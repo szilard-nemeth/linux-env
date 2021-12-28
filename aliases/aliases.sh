@@ -21,6 +21,7 @@ alias goto-linuxenv-repo="cd $LINUX_ENV_REPO"
 alias goto-kb-repo="cd $KB_REPO"
 alias goto-kb-private-repo="cd $KB_PRIVATE_REPO"
 alias goto-pythoncommons="cd $PYTHON_COMMONS_REPO"
+alias goto-yarndevtools="cd $YARNDEVTOOLS_REPO"
 
 
 ## GIT ALIASES
@@ -103,3 +104,4 @@ alias whitespace="sed 's/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'"
 
 alias copy-trello-checklist-script="cat ~/development/my-repos/knowledge-base/codesnippets/js-html-css/copy-trello-checklist-smartlinks.js | pbcopy"
 alias copy-pushbullet-linksaver-script="cat ~/development/my-repos/knowledge-base/codesnippets/js-html-css/pushbullet-save-links.js | pbcopy"
+alias svim='vim -u ~/.SpaceVim/vimrc'
