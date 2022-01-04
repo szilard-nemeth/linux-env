@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # TODO Now we have 3 copies of the same script --> MIGRATE TO PYTHON
-function sync-yarn-dev-tools-repo() {
+function sync-yarn-dev-tools-repo-internal() {
+    BRANCH="$1"
     local tmp_dir=$(mktemp -d -t yarn-dev-tools-XXXXXX)
     local repo_name="yarn-dev-tools"
     local original_dir=$(pwd)
@@ -14,10 +15,13 @@ function sync-yarn-dev-tools-repo() {
     #git remote rm origin
     
     #Push to cloudera repo (mirror)
+    git checkout $BRANCH
     git remote add mirror https://github.infra.cloudera.com/snemeth/yarn-dev-tools-mirror.git
-    git push -f mirror master --tags
+    set -x
+    git push -f mirror $BRANCH:master --tags
     #git push mirror 'refs/remotes/origin/*:refs/heads/*'
     
+    set +x
     #Cleanup
     read -p "OK to remove directory: $tmp_dir ?" -n 1 -r
     echo    # (optional) move to a new line
@@ -28,4 +32,12 @@ function sync-yarn-dev-tools-repo() {
     fi
     
     cd ${original_dir}
+}
+
+function sync-yarn-dev-tools-repo() {
+    sync-yarn-dev-tools-repo-internal master
+}
+
+function sync-yarn-dev-tools-repo-branch() {
+    sync-yarn-dev-tools-repo-internal $1
 }
