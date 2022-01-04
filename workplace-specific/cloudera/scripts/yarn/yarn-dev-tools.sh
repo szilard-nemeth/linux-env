@@ -22,6 +22,7 @@ function timezones() {
     echo -n "Time in Bangalore: " && TZ="UTC-5" date
 }
 
+# TODO outdated path, should use YARN dev tools
 function reviewsync() {
     python $HOME/development/my-repos/hadoop-reviewsync/reviewsync/reviewsync.py \
     --gsheet \
@@ -71,30 +72,30 @@ function yarn-listupstreamversions() {
 
 #####ALIASES
 
+PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=sys_path
+YARN_DEV_TOOLS_ENV="export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY;export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT"
 
-YARN_DEV_TOOLS_EXPORTS="export HADOOP_DEV_DIR; export CLOUDERA_HADOOP_ROOT"
-
-alias yarn-save-patch="$YARN_DEV_TOOLS_EXPORTS; $BIN_PYTHON $YARN_DEV_TOOLS_PY save_patch"
+alias yarn-save-patch="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY SAVE_PATCH"
 
 #Example call: yarn-create-review-branch /Users/snemeth/yarn-tasks/YARN-10277-test2/YARN-10277-test2.010.patch
-alias yarn-create-review-branch="$YARN_DEV_TOOLS_EXPORTS; $BIN_PYTHON $YARN_DEV_TOOLS_PY create_review_branch"
+alias yarn-create-review-branch="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY CREATE_REVIEW_BRANCH"
 
 #Generic call: yarn-backport-c6 [Upstream commit hash or commit message fragment] [CDH-jira-number] [CDH-branch]
 #Example call: yarn-backport-c6 YARN-7948 CDH-64201 CDH-64201-cdh6x
-alias yarn-backport-c6="$YARN_DEV_TOOLS_EXPORTS; $BIN_PYTHON $YARN_DEV_TOOLS_PY backport_c6"
+alias yarn-backport-c6="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY BACKPORT_C6"
 
 #Generic call: yarn-upstream-commit-pr [github-username] [remote-branch]
 #Example call: yarn-upstream-commit-pr szilard-nemeth YARN-9999
-alias yarn-upstream-commit-pr="$YARN_DEV_TOOLS_EXPORTS; $BIN_PYTHON $YARN_DEV_TOOLS_PY upstream_pr_fetch"
+alias yarn-upstream-commit-pr="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY UPSTREAM_PR_FETCH"
 
 #Generic call: yarn-diff-patches [JIRA_ID] [branches]
 #Example call: yarn-diff-patches YARN-7913 trunk branch-3.2 branch-3.1
-alias yarn-diff-patches="$YARN_DEV_TOOLS_EXPORTS; $BIN_PYTHON $YARN_DEV_TOOLS_PY diff_patches_of_jira"
+alias yarn-diff-patches="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY DIFF_PATCHES_OF_JIRA"
 
 #Generic call: save-diff-as-patches [refspec-to-diff-head-with] [destination-directory-prefix]"
 #Example call: save-diff-as-patches master gpu
 #Example call: save-diff-as-patches master WIP-migrate-yarn-scripts-to-python ~/yarn-tasks/saved_patches prefix1
-alias save-diff-as-patches="$YARN_DEV_TOOLS_EXPORTS; $BIN_PYTHON $YARN_DEV_TOOLS_PY save_diff_as_patches"
+alias save-diff-as-patches="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY SAVE_DIFF_AS_PATCHES"
 
 #Example call: yarn-get-umbrella-data YARN-5734
-alias yarn-get-umbrella-data="$YARN_DEV_TOOLS_EXPORTS; $BIN_PYTHON $YARN_DEV_TOOLS_PY fetch_jira_umbrella_data"
+alias yarn-get-umbrella-data="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY FETCH_JIRA_UMBRELLA_DATA"

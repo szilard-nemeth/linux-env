@@ -69,13 +69,20 @@ alias lc='colorls -lA --sd'
 
 ##Aliases for my DEV projects
 #Assuming venv is in googlechrometoolkit repo's root
+
+# Linux-env Python venv setup - Also used by yarn-* aliases
+LINUXENV_VENV="$LINUX_ENV_REPO/venv"
+LINUXENV_BIN_PYTHON="$LINUXENV_VENV/bin/python3"
+
+# Google chrome toolkit aliases + Python setup
 GCHROME_TOOLKIT_ROOT="$HOME/development/my-repos/google-chrome-toolkit/"
 GCHROME_TOOLKIT_MODULE_ROOT="$GCHROME_TOOLKIT_ROOT/googlechrometoolkit/"
 GCHROME_TOOLKIT_VENV="$GCHROME_TOOLKIT_ROOT/venv/"
-BIN_PYTHON="$GCHROME_TOOLKIT_VENV/bin/python"
+BIN_PYTHON_GCHROME="$GCHROME_TOOLKIT_VENV/bin/python3"
 local SETUP_PYENV="PYTHONPATH=$GCHROME_TOOLKIT_ROOT:$PYTHONPATH"
-alias save-tabs-android="$SETUP_PYENV $BIN_PYTHON $GCHROME_TOOLKIT_MODULE_ROOT/save_open_tabs_android.py"
-alias save-chrome-history-all="$SETUP_PYENV $BIN_PYTHON $GCHROME_TOOLKIT_MODULE_ROOT/main.py --search-db-files --export-mode all"
+alias save-tabs-android="$SETUP_PYENV $BIN_PYTHON_GCHROME $GCHROME_TOOLKIT_MODULE_ROOT/save_open_tabs_android.py"
+alias save-chrome-history-all="$SETUP_PYENV $BIN_PYTHON_GCHROME $GCHROME_TOOLKIT_MODULE_ROOT/main.py --search-db-files --export-mode all"
+
 alias myrepos-sync="myrepos_syncer.py"
 alias gpwh="git-push-with-hooks.sh"
 
