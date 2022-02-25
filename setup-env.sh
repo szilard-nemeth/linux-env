@@ -79,7 +79,7 @@ function copy_files() {
         if [[ "$from" == *. ]]; then
           from_stripped=$(echo ${from} | sed 's/.$//')
           echo "$from_stripped $to" >> ${ENV_FILE_MAPPINGS}
-          if diff "$from" "$to" 2>&1 > /dev/null ; then
+          if diff -r "$from" "$to" 2>&1 > /dev/null ; then
             echo "No changes in files. SRC DIR: $from, DEST DIR: $to"
           else
             echo "Copying files from $from to $to (recursive)"
