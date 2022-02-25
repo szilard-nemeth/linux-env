@@ -36,8 +36,8 @@ alias git-add-all-tracked="git status -s | grep -v \"??\" | cut -c 4- | xargs gi
 ## REVIEW ALIASES
 #Example usage: backport-diff-generator 137729/1
 # REPO: https://github.com/9uapaw/hadoop-scripts
-alias backport-diff-generator-gerrit="python3 $OTHER_REPOS_DIR/gandras/hadoop-scripts/backport_diff_generator.py" 
-alias backport-diff-generator-upstream="python3 $OTHER_REPOS_DIR/gandras/hadoop-scripts/github_us_backport_diff_generator.py"
+alias yarn-backport-diff-generator-gerrit="python3 $OTHER_REPOS_DIR/gandras/hadoop-scripts/backport_diff_generator.py" 
+alias yarn-backport-diff-generator-upstream="python3 $OTHER_REPOS_DIR/gandras/hadoop-scripts/github_us_backport_diff_generator.py"
 
 
 
@@ -112,3 +112,4 @@ alias whitespace="sed 's/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'"
 alias copy-trello-checklist-script="cat ~/development/my-repos/knowledge-base/codesnippets/js-html-css/copy-trello-checklist-smartlinks.js | pbcopy"
 alias copy-pushbullet-linksaver-script="cat ~/development/my-repos/knowledge-base/codesnippets/js-html-css/pushbullet-save-links.js | pbcopy"
 alias svim='vim -u ~/.SpaceVim/vimrc'
+alias link-to-project-run-configurations="ln -s ~/development/my-repos/project-run-configurations/pycharm/$PROJECT_TO_LINK/.run ./.run"

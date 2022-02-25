@@ -29,6 +29,11 @@ function myrepos-install-pythoncommons-dev-just-yarndevtools {
   sh -c 'cd $MY_REPOS_DIR/yarn-dev-tools/venv; source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/python-commons;deactivate' && say "pythoncommons completed"
 }
 
+function myrepos-install-pythoncommons-dev-just-expense-summarizer {
+  sh -c 'cd $MY_REPOS_DIR/monthly-expense-summarizer/venv; source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/python-commons;deactivate' && say "pythoncommons completed"
+}
+
+
 function myrepos-install-yarndevtools-dev {
   find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/yarn-dev-tools;deactivate' && say "yarndevtools completed"
 }
