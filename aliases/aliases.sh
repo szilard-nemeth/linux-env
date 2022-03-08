@@ -43,7 +43,10 @@ alias yarn-backport-diff-generator-upstream="python3 $OTHER_REPOS_DIR/gandras/ha
 
 #https://stackoverflow.com/a/40884093/1106893 --> 4b825dc642cb6eb9a060e54bf8d69288fbee4904 is the id of the "empty tree"
 alias git-save-all-commits="rm /tmp/patches/*; git format-patch 4b825dc642cb6eb9a060e54bf8d69288fbee4904..HEAD -o /tmp/patches"
-
+alias git-add-mod="git ls-files --modified | xargs git add"
+alias gs="git status"
+alias gc="git commit"
+alias ga="git add"
 
 ## OTHER ALIASES
 alias rm='safe-rm'
