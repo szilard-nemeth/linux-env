@@ -48,6 +48,9 @@ alias eyarn-deploy="cd $EYARN_DIR; make helm/install ns=$K8S_NAMESPACE; cd -"
 alias eyarn-redeploy="cd $EYARN_DIR; make helm/delete ns=$K8S_NAMESPACE && make helm/install ns=$K8S_NAMESPACE; cd -"
 alias start-minikube="minikube start --cpus=4"
 
+# Other YARN aliases
+alias yarn-fixbuild-zk-intellij="git apply $HOME/googledrive//development_drive/downstream-hadoop-build-issues-patches/fix-zk-intellij.patch"
+alias yarn-fixbuild-avro="git apply $HOME/googledrive//development_drive/downstream-hadoop-build-issues-patches/hadoop-build-avro-change2.patch"
 
 #==============================================
 alias run-findbugs="mvn clean install -DskipTests && mvn findbugs:findbugs && mvn findbugs:gui"
