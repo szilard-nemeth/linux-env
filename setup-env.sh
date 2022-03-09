@@ -145,7 +145,7 @@ function source_files() {
 
     for d in ${matched_dirs}; do
         printf "\tSourcing files from $d\n"
-        for f in $(find ${d} -maxdepth 1 -iname  "*.sh" -not -iname "setup.sh"); do
+        for f in $(find ${d} -maxdepth 1 -iname  "*.sh" -not -iname "setup.sh" | xargs grep -L "##SKIPSOURCING##"); do
             printf "\tSourcing file $f\n"
             . "$f"
         done

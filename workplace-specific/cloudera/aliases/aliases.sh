@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#goto aliases
+#GOTO aliases
 alias goto-cldr="cd $CLOUDERA_DEV_ROOT"
 alias goto-cldr-hadoop="cd $CLOUDERA_HADOOP_ROOT"
 alias goto-tasks="cd $HOME/Google Drive File Stream/My Drive/development/tasks/"
@@ -12,13 +12,17 @@ alias goto-cmf="cd $CLOUDERA_DEV_ROOT/cmf"
 alias goto-yarn-tasks="cd $HOME/yarn-tasks"
 alias goto-eyarn="cd $EYARN_DIR"
 alias goto-bundlelogprocessor="cd $CLOUDERA_DEV_ROOT/YARN-tools/bundle-log-processor"
+alias goto-dex="cd $CLOUDERA_DEV_ROOT/cde/dex"
 
 #git / gerrit commands
 alias gerrit-branches5="git br -r | grep gerrit | grep -e '5.1\d.*' | cut -d_ -f 2-3 | sort -u | grep -v patch"
 alias git-rebase-trunk="git co trunk && echo 'Pulling origin/trunk...' && git pull && git co - && git rebase trunk"
 
-alias j7='export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home'
-alias j8='export JAVA_HOME=/Library/Java//JavaVirtualMachines/jdk1.8.0_151.jdk/Contents/Home'
+# Java convenience aliases
+#alias j7='export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home'
+#alias j8='export JAVA_HOME=/Library/Java//JavaVirtualMachines/jdk1.8.0_151.jdk/Contents/Home'
+alias java8="sdk use java 8.0.232-trava"
+alias java11="sdk use java 11.0.2-open"
 
 alias git-push-to-cdpdmaster="git push cauldron HEAD:refs/for/cdpd-master%r=shuzirra,r=pbacsko,r=gandras,r=bteke,r=tdomok"
 alias git-push-to-cdh71maint="git push cauldron HEAD:refs/for/CDH-7.1-maint%r=shuzirra,r=pbacsko,r=gandras,r=bteke,r=tdomok"
