@@ -56,6 +56,10 @@ alias start-minikube="minikube start --cpus=4"
 alias yarn-fixbuild-zk-intellij="git apply $HOME/googledrive//development_drive/downstream-hadoop-build-issues-patches/fix-zk-intellij.patch"
 alias yarn-fixbuild-avro="git apply $HOME/googledrive//development_drive/downstream-hadoop-build-issues-patches/hadoop-build-avro-change2.patch"
 
+# Hadock / Hades aliases
+alias hadock-stop="docker-compose -f ~/.hadock/docker-compose.yml down"
+alias hadock-start="docker-compose -f ~/.hadock/docker-compose.yml up"
+
 #==============================================
 alias run-findbugs="mvn clean install -DskipTests && mvn findbugs:findbugs && mvn findbugs:gui"
 
