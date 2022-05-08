@@ -9,6 +9,7 @@ alias linuxenv-todos="grep '#TODO' -r $LINUX_ENV_REPO"
 alias linuxenv-debug-on="echo \"enabled\" > ${ENV_DEBUG_SETUP_FILE}"
 alias linuxenv-debug-off="echo \"disabled\" > ${ENV_DEBUG_SETUP_FILE}"
 alias edit-linuxenv="subl ~/development/my-repos/linux-env/"
+alias edit-run-configs="subl ~/development/my-repos/project-run-configurations/"
 alias edit-branchcomparator-latest="subl ~/snemeth-dev-projects/yarn_dev_tools/latest-session-branchcomparator/"
 
 ## KNOWLEDGE BASE
