@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="8.29">
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/BasicSessionCredential.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSPosixBucketUtils.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSLoginHelper.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSFsDFSListing.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSBlockOutputStream.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSObjectBucketUtils.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/RenameFailedException.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSFileSystem.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSIOException.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSDataBlocks.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/SseWrapper.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/package-info.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSInputStream.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/FileConflictException.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBS.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/DefaultOBSClientFactory.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSFileStatus.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSConstants.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSClientFactory.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSCommonUtils.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSListing.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/main/java/org/apache/hadoop/fs/obs/OBSWriteOperationHelper.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSContractRename.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSContractAppend.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSFSMainOperations.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSFileContextMainOperations.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/OBSTestUtils.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSContractSeek.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSContractCreate.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSContractMkdir.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/OBSContract.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSContractOpen.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSFileContextURI.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSContractGetFileStatus.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSContractRootDir.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSFileContextUtil.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSContractDelete.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSFileContextCreateMkdir.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/TestOBSFileSystemContract.java">
+</file>
+<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-cloud-storage-project/hadoop-huaweicloud/src/test/java/org/apache/hadoop/fs/obs/OBSTestConstants.java">
+</file>
+</checkstyle>

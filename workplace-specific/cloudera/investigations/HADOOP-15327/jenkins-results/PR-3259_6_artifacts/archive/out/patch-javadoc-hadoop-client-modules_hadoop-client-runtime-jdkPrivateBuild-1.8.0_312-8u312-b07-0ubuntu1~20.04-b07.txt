@@ -1,0 +1,53 @@
+Mon 11 Apr 2022 01:58:57 PM UTC
+cd /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-client-modules/hadoop-client-runtime
+/usr/bin/mvn --batch-mode -Dmaven.repo.local=/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/yetus-m2/hadoop-trunk-patch-0 -Ptest-patch -Pdocs -DskipTests clean process-sources javadoc:javadoc-no-fork -DskipTests=true
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Detecting the operating system and CPU architecture
+[INFO] ------------------------------------------------------------------------
+[INFO] os.detected.name: linux
+[INFO] os.detected.arch: x86_64
+[INFO] os.detected.version: 4.15
+[INFO] os.detected.version.major: 4
+[INFO] os.detected.version.minor: 15
+[INFO] os.detected.release: ubuntu
+[INFO] os.detected.release.version: 20.04
+[INFO] os.detected.release.like.ubuntu: true
+[INFO] os.detected.release.like.debian: true
+[INFO] os.detected.classifier: linux-x86_64
+[INFO] 
+[INFO] --------------< org.apache.hadoop:hadoop-client-runtime >---------------
+[INFO] Building Apache Hadoop Client Runtime 3.4.0-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- maven-clean-plugin:3.1.0:clean (default-clean) @ hadoop-client-runtime ---
+[INFO] Deleting /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-client-modules/hadoop-client-runtime/target
+[INFO] Deleting /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-client-modules/hadoop-client-runtime (includes = [dependency-reduced-pom.xml], excludes = [])
+[INFO] 
+[INFO] --- maven-antrun-plugin:1.7:run (create-testdirs) @ hadoop-client-runtime ---
+[INFO] Executing tasks
+
+main:
+    [mkdir] Created dir: /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-client-modules/hadoop-client-runtime/target/test-dir
+[INFO] Executed tasks
+[INFO] 
+[INFO] --- maven-enforcer-plugin:3.0.0:enforce (banned-illegal-imports) @ hadoop-client-runtime ---
+[INFO] 
+[INFO] --- replacer:1.5.3:replace (replace-generated-sources) @ hadoop-client-runtime ---
+[INFO] Skipping
+[INFO] 
+[INFO] --- replacer:1.5.3:replace (replace-sources) @ hadoop-client-runtime ---
+[INFO] Skipping
+[INFO] 
+[INFO] --- replacer:1.5.3:replace (replace-guava) @ hadoop-client-runtime ---
+[INFO] Replacement run on 0 file.
+[INFO] 
+[INFO] --- maven-javadoc-plugin:3.0.1:javadoc-no-fork (default-cli) @ hadoop-client-runtime ---
+[INFO] Skipping javadoc generation
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  3.378 s
+[INFO] Finished at: 2022-04-11T13:59:02Z
+[INFO] ------------------------------------------------------------------------
+[WARNING] The requested profile "docs" could not be activated because it does not exist.

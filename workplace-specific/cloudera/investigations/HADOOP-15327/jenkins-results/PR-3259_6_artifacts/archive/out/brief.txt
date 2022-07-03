@@ -1,0 +1,52 @@
+
+
+-1 overall
+
+
+The following subsystems voted -1:
+    blanks javac shadedclient spotbugs
+
+
+The following subsystems voted -1 but
+were configured to be filtered/ignored:
+    checkstyle
+
+
+The following subsystems are considered long running:
+(runtime bigger than 1h  0m  0s)
+    unit
+
+
+Specific tests:
+
+    SpotBugs :
+
+       module:hadoop-mapreduce-project/hadoop-mapreduce-client 
+       Write to static field org.apache.hadoop.mapreduce.task.reduce.Fetcher.nextId from instance method new org.apache.hadoop.mapreduce.task.reduce.Fetcher(JobConf, TaskAttemptID, ShuffleSchedulerImpl, MergeManager, Reporter, ShuffleClientMetrics, ExceptionReporter, SecretKey) At Fetcher.java:from instance method new org.apache.hadoop.mapreduce.task.reduce.Fetcher(JobConf, TaskAttemptID, ShuffleSchedulerImpl, MergeManager, Reporter, ShuffleClientMetrics, ExceptionReporter, SecretKey) At Fetcher.java:[line 120] 
+
+    SpotBugs :
+
+       module:hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core 
+       Write to static field org.apache.hadoop.mapreduce.task.reduce.Fetcher.nextId from instance method new org.apache.hadoop.mapreduce.task.reduce.Fetcher(JobConf, TaskAttemptID, ShuffleSchedulerImpl, MergeManager, Reporter, ShuffleClientMetrics, ExceptionReporter, SecretKey) At Fetcher.java:from instance method new org.apache.hadoop.mapreduce.task.reduce.Fetcher(JobConf, TaskAttemptID, ShuffleSchedulerImpl, MergeManager, Reporter, ShuffleClientMetrics, ExceptionReporter, SecretKey) At Fetcher.java:[line 120] 
+      
+
+   javac:
+
+      https://ci-hadoop.apache.org/job/hadoop-multibranch/job/PR-3259/6/artifact/out/results-compile-javac-root-jdkUbuntu-11.0.14.1+1-Ubuntu-0ubuntu1.20.04.txt [4.0K]
+      https://ci-hadoop.apache.org/job/hadoop-multibranch/job/PR-3259/6/artifact/out/results-compile-javac-root-jdkPrivateBuild-1.8.0_312-8u312-b07-0ubuntu1~20.04-b07.txt [4.0K]
+
+   blanks:
+
+      https://ci-hadoop.apache.org/job/hadoop-multibranch/job/PR-3259/6/artifact/out/blanks-eol.txt [8.0K]
+
+   checkstyle:
+
+      https://ci-hadoop.apache.org/job/hadoop-multibranch/job/PR-3259/6/artifact/out/results-checkstyle-root.txt [28K]
+
+   spotbugs:
+
+      https://ci-hadoop.apache.org/job/hadoop-multibranch/job/PR-3259/6/artifact/out/new-spotbugs-hadoop-mapreduce-project_hadoop-mapreduce-client.html [8.0K]
+      https://ci-hadoop.apache.org/job/hadoop-multibranch/job/PR-3259/6/artifact/out/new-spotbugs-hadoop-mapreduce-project_hadoop-mapreduce-client_hadoop-mapreduce-client-core.html [8.0K]
+
+Powered by Apache Yetus 0.14.0-SNAPSHOT   https://yetus.apache.org
+

@@ -1,0 +1,101 @@
+Mon 11 Apr 2022 12:14:30 PM UTC
+cd /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle
+/usr/bin/mvn --batch-mode -Dmaven.repo.local=/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/yetus-m2/hadoop-trunk-patch-0 -Ptest-patch -Pdocs -DskipTests clean process-sources javadoc:javadoc-no-fork -DskipTests=true
+WARNING: An illegal reflective access operation has occurred
+WARNING: Illegal reflective access by com.google.inject.internal.cglib.core.$ReflectUtils$1 (file:/usr/share/maven/lib/guice.jar) to method java.lang.ClassLoader.defineClass(java.lang.String,byte[],int,int,java.security.ProtectionDomain)
+WARNING: Please consider reporting this to the maintainers of com.google.inject.internal.cglib.core.$ReflectUtils$1
+WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+WARNING: All illegal access operations will be denied in a future release
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Detecting the operating system and CPU architecture
+[INFO] ------------------------------------------------------------------------
+[INFO] os.detected.name: linux
+[INFO] os.detected.arch: x86_64
+[INFO] os.detected.version: 4.15
+[INFO] os.detected.version.major: 4
+[INFO] os.detected.version.minor: 15
+[INFO] os.detected.release: ubuntu
+[INFO] os.detected.release.version: 20.04
+[INFO] os.detected.release.like.ubuntu: true
+[INFO] os.detected.release.like.debian: true
+[INFO] os.detected.classifier: linux-x86_64
+[INFO] 
+[INFO] ---------< org.apache.hadoop:hadoop-mapreduce-client-shuffle >----------
+[INFO] Building Apache Hadoop MapReduce Shuffle 3.4.0-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- maven-clean-plugin:3.1.0:clean (default-clean) @ hadoop-mapreduce-client-shuffle ---
+[INFO] Deleting /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target
+[INFO] Deleting /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle (includes = [dependency-reduced-pom.xml], excludes = [])
+[INFO] 
+[INFO] --- maven-antrun-plugin:1.7:run (create-testdirs) @ hadoop-mapreduce-client-shuffle ---
+[INFO] Executing tasks
+
+main:
+    [mkdir] Created dir: /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/test-dir
+[INFO] Executed tasks
+[INFO] 
+[INFO] --- protobuf-maven-plugin:0.5.1:compile (src-compile-protoc) @ hadoop-mapreduce-client-shuffle ---
+[INFO] Compiling 1 proto file(s) to /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/generated-sources/java
+[INFO] 
+[INFO] --- maven-enforcer-plugin:3.0.0:enforce (banned-illegal-imports) @ hadoop-mapreduce-client-shuffle ---
+[INFO] 
+[INFO] --- replacer:1.5.3:replace (replace-generated-sources) @ hadoop-mapreduce-client-shuffle ---
+[INFO] Replacement run on 1 file.
+[INFO] 
+[INFO] --- replacer:1.5.3:replace (replace-sources) @ hadoop-mapreduce-client-shuffle ---
+[INFO] Replacement run on 3 files.
+[INFO] 
+[INFO] --- replacer:1.5.3:replace (replace-guava) @ hadoop-mapreduce-client-shuffle ---
+[INFO] Replacement run on 6 files.
+[INFO] 
+[INFO] --- maven-javadoc-plugin:3.0.1:javadoc-no-fork (default-cli) @ hadoop-mapreduce-client-shuffle ---
+[INFO] 
+Loading source files for package org.apache.hadoop.mapred...
+Constructing Javadoc information...
+Standard Doclet version 11.0.14.1
+Building tree for all the packages and classes...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/org/apache/hadoop/mapred/FadvisedChunkedFile.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/org/apache/hadoop/mapred/FadvisedFileRegion.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/org/apache/hadoop/mapred/ShuffleHandler.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/org/apache/hadoop/mapred/package-summary.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/org/apache/hadoop/mapred/package-tree.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/constant-values.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/org/apache/hadoop/mapred/class-use/ShuffleHandler.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/org/apache/hadoop/mapred/class-use/FadvisedChunkedFile.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/org/apache/hadoop/mapred/class-use/FadvisedFileRegion.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/org/apache/hadoop/mapred/package-use.html...
+Building index for all the packages and classes...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/overview-tree.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/index-all.html...
+Building index for all classes...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/allclasses-index.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/allpackages-index.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/deprecated-list.html...
+Building index for all classes...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/allclasses.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/allclasses.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/index.html...
+Generating /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/target/site/apidocs/help-doc.html...
+4 warnings
+[WARNING] Javadoc Warnings
+[WARNING] javadoc: warning - You have specified the HTML version as HTML 4.01 by using the -html4 option.
+[WARNING] The default is currently HTML5 and the support for HTML 4.01 will be removed
+[WARNING] in a future release. To suppress this warning, please ensure that any HTML constructs
+[WARNING] in your comments are valid in HTML5, and remove the -html4 option.
+[WARNING] /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java:424: warning: no @throws for java.io.IOException
+[WARNING] public static ByteBuffer serializeMetaData(int port) throws IOException {
+[WARNING] ^
+[WARNING] /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java:436: warning: no @throws for java.io.IOException
+[WARNING] public static int deserializeMetaData(ByteBuffer meta) throws IOException {
+[WARNING] ^
+[WARNING] /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java:451: warning: no @throws for java.io.IOException
+[WARNING] public static ByteBuffer serializeServiceData(Token<JobTokenIdentifier> jobToken) throws IOException {
+[WARNING] ^
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  7.175 s
+[INFO] Finished at: 2022-04-11T12:14:39Z
+[INFO] ------------------------------------------------------------------------

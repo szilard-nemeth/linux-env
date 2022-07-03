@@ -1,0 +1,59 @@
+Mon 11 Apr 2022 12:17:48 PM UTC
+cd /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core
+/usr/bin/mvn --batch-mode -Dmaven.repo.local=/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/yetus-m2/hadoop-trunk-patch-0 -Ptest-patch -Pdocs -DskipTests clean process-sources javadoc:javadoc-no-fork -DskipTests=true
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Detecting the operating system and CPU architecture
+[INFO] ------------------------------------------------------------------------
+[INFO] os.detected.name: linux
+[INFO] os.detected.arch: x86_64
+[INFO] os.detected.version: 4.15
+[INFO] os.detected.version.major: 4
+[INFO] os.detected.version.minor: 15
+[INFO] os.detected.release: ubuntu
+[INFO] os.detected.release.version: 20.04
+[INFO] os.detected.release.like.ubuntu: true
+[INFO] os.detected.release.like.debian: true
+[INFO] os.detected.classifier: linux-x86_64
+[INFO] 
+[INFO] -----------< org.apache.hadoop:hadoop-mapreduce-client-core >-----------
+[INFO] Building Apache Hadoop MapReduce Core 3.4.0-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- maven-clean-plugin:3.1.0:clean (default-clean) @ hadoop-mapreduce-client-core ---
+[INFO] Deleting /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/target
+[INFO] Deleting /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/site/resources (includes = [configuration.xsl, mapred-default.xml], excludes = [])
+[INFO] 
+[INFO] --- maven-antrun-plugin:1.7:run (create-testdirs) @ hadoop-mapreduce-client-core ---
+[INFO] Executing tasks
+
+main:
+    [mkdir] Created dir: /home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/target/test-dir
+[INFO] Executed tasks
+[INFO] 
+[INFO] --- avro-maven-plugin:1.9.2:protocol (default) @ hadoop-mapreduce-client-core ---
+[WARNING] configuration key 'resource.loader' has been deprecated in favor of 'resource.loaders'
+[WARNING] configuration key 'class.resource.loader.class' has been deprecated in favor of 'resource.loader.class.class'
+[WARNING] configuration key 'file.resource.loader.class' has been deprecated in favor of 'resource.loader.file.class'
+[WARNING] configuration key 'file.resource.loader.path' has been deprecated in favor of 'resource.loader.file.path'
+[WARNING] configuration key 'runtime.references.strict' has been deprecated in favor of 'runtime.strict_mode.enable'
+[WARNING] configuration key 'space.gobbling' has been deprecated in favor of 'parser.space_gobbling'
+[INFO] 
+[INFO] --- maven-enforcer-plugin:3.0.0:enforce (banned-illegal-imports) @ hadoop-mapreduce-client-core ---
+[INFO] 
+[INFO] --- replacer:1.5.3:replace (replace-generated-sources) @ hadoop-mapreduce-client-core ---
+[INFO] Skipping
+[INFO] 
+[INFO] --- replacer:1.5.3:replace (replace-sources) @ hadoop-mapreduce-client-core ---
+[INFO] Skipping
+[INFO] 
+[INFO] --- replacer:1.5.3:replace (replace-guava) @ hadoop-mapreduce-client-core ---
+[INFO] Replacement run on 618 files.
+[INFO] 
+[INFO] --- maven-javadoc-plugin:3.0.1:javadoc-no-fork (default-cli) @ hadoop-mapreduce-client-core ---
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  8.415 s
+[INFO] Finished at: 2022-04-11T12:17:58Z
+[INFO] ------------------------------------------------------------------------

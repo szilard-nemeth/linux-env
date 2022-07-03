@@ -1,0 +1,4 @@
+{"state": "error", 
+"target_url": "https://ci-hadoop.apache.org/job/hadoop-multibranch/job/PR-3259/6/artifact/out/new-spotbugs-hadoop-mapreduce-project_hadoop-mapreduce-client_hadoop-mapreduce-client-core.html",
+"description": " hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core generated 1 new + 0 unchanged - 0 fixed = 1 total (was 0) ",
+"context":"Apache Yetus(jenkins) error:  spotbugs "}

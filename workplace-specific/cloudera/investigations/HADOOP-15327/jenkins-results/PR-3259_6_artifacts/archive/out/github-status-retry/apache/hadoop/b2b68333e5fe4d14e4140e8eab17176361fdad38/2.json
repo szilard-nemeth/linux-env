@@ -1,0 +1,4 @@
+{"state": "error", 
+"target_url": "https://ci-hadoop.apache.org/job/hadoop-multibranch/job/PR-3259/6/artifact/out/results-compile-javac-root-jdkPrivateBuild-1.8.0_312-8u312-b07-0ubuntu1~20.04-b07.txt",
+"description": " root-jdkPrivateBuild-1.8.0_312-8u312-b07-0ubuntu1~20.04-b07 with JDK Private Build-1.8.0_312-8u312-b07-0ubuntu1~20.04-b07 generated 1 new + 1686 unchanged - 0 fixed = 1687 total (was 1686) ",
+"context":"Apache Yetus(jenkins) error:  javac "}

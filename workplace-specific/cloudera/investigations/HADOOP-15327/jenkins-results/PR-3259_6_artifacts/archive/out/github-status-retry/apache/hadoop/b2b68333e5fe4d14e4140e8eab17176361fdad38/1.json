@@ -1,0 +1,4 @@
+{"state": "error", 
+"target_url": "https://ci-hadoop.apache.org/job/hadoop-multibranch/job/PR-3259/6/artifact/out/results-compile-javac-root-jdkUbuntu-11.0.14.1+1-Ubuntu-0ubuntu1.20.04.txt",
+"description": " root-jdkUbuntu-11.0.14.1+1-Ubuntu-0ubuntu1.20.04 with JDK Ubuntu-11.0.14.1+1-Ubuntu-0ubuntu1.20.04 generated 1 new + 1814 unchanged - 0 fixed = 1815 total (was 1814) ",
+"context":"Apache Yetus(jenkins) error:  javac "}

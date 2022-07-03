@@ -1,0 +1,4 @@
+{"state": "error", 
+"target_url": "https://ci-hadoop.apache.org/job/hadoop-multibranch/job/PR-3259/6/artifact/out/blanks-eol.txt",
+"description": " The patch has 25 line(s) that end in blanks. Use git apply --whitespace=fix <<patch_file>>. Refer https://git-scm.com/docs/git-apply ",
+"context":"Apache Yetus(jenkins) error:  blanks "}
