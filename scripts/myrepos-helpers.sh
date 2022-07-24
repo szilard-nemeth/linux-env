@@ -60,6 +60,13 @@ function myrepos-install-googleapiwrapper-dev-just-yarndevtools {
   sh -c 'cd $MY_REPOS_DIR/yarn-dev-tools/venv; source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/google-api-wrapper;deactivate' && say "Google API wrapper completed"
 }
 
+function myrepos-install-pythoncommons-current-venv {
+  myrepos-install-pythoncommons-dev-just-yarndevtools && cp -R ~/development/my-repos/yarn-dev-tools/venv/lib/python3.9/site-packages/pythoncommons/ ./venv/lib/python3.8/site-packages/pythoncommons
+}
+
+function myrepos-install-googleapiwrapper-current-venv {
+  myrepos-install-googleapiwrapper-dev-just-yarndevtools && cp -R ~/development/my-repos/yarn-dev-tools/venv/lib/python3.9/site-packages/googleapiwrapper ./venv/lib/python3.8/site-packages/
+}
 
 
 function myrepos-rm-pythoncommons() {
