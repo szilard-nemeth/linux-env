@@ -1,14 +1,37 @@
 PYTHON_COMMONS_ROOT="$HOME/development/my-repos/python-commons/"
 COMMON_EXCLUDES=("site-packages" ".git" ".idea" "pyspark" "Chromagnon" "fork" "dist_test" "samples-books-school-experiments" "superscraper-libs", "the-coding-train-challenges", "coding-practice")
 
-function myrepos-list-pythoncommons {
-  #Could be an alias but would not work from another script that sources this
-  #Example error message:
-  # /Users/snemeth/.linuxenv/scripts/myrepos-helpers.sh: line 18: myrepos-list-pythoncommons: command not found
-  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -I % find % -type d \( -iname "pythoncommons" -o -iname "python_commons*" \) | sort
+function find-poetry-projects {
+#  set -x
+  POETRY_ROOT=$HOME/Library/Caches/pypoetry/virtualenvs/
+  for proj in $(gfind $MY_REPOS_DIR -name 'pyproject.toml' -printf "%h\n"); do
+    # echo "cding to $proj"
+    cd $proj
+    p_env=$(poetry env list)
+
+    if [[ "$?" -ne 0 ]]; then
+      # echo "Poetry setup not defined for $proj, skipping..."
+      echo -n '' # placeholder
+    else
+       p_env=$(echo $p_env | cut -d' ' -f1)
+       final_p_env="$POETRY_ROOT/$p_env"
+       echo $final_p_env
+    fi
+    popd 1>/dev/null
+#    set +x
+  done
 }
 
-function myrepos-install-pythoncommons {
+function pip-install-to-env {
+  set -x
+  env_path=$1
+  package=$2
+  #echo -n $env_path $package | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install %;deactivate'
+  echo "$env_path\n$package" | xargs -n 2 sh -c 'cd $1;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $2;deactivate' argv0
+  set +x
+}
+
+function myrepos-install {
   #Make sure to unset PYTHONPATH: python-commons won't be installed in virtualenv when it is found *ANYWHERE* on PYTHONPATH
   #Example output:
   #➜ pip3 show python-commons
@@ -18,54 +41,89 @@ function myrepos-install-pythoncommons {
   #Author-email: szilard.nemeth88@gmail.com
   #License: Copyright (c) 2020, Szilard Nemeth
   #Location: /Users/snemeth/development/my-repos/linux-env/venv/lib/python3.8/site-packages
-  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install git+https://github.com/szilard-nemeth/python-commons.git;deactivate'
+
+  package_to_install="$1"
+  say="$2"
+
+  # 1. This is for legacy (non-poetry based) projects
+  for env_path in $(find $MY_REPOS_DIR -type d -name venv); do
+    echo "Current virtualenv: $env_path"
+    pip-install-to-env $env_path $package_to_install
+  done
+
+  # 2. Poetry projects
+  poetry_envs=($(find-poetry-projects))
+  echo "Discovered Poetry envs: $poetry_envs"
+  IFS=$'\n'
+  for env_path in $poetry_envs; do
+    echo "Current Poetry env: $env_path"
+    pip-install-to-env $env_path $package_to_install
+  done
 }
 
-function myrepos-install-pythoncommons-dev {
-  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/python-commons;deactivate' && say "pythoncommons completed"
+# TODO migrate
+function myrepos-list-pythoncommons {
+  #Could be an alias but would not work from another script that sources this
+  #Example error message:
+  # /Users/snemeth/.linuxenv/scripts/myrepos-helpers.sh: line 18: myrepos-list-pythoncommons: command not found
+  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -I % find % -type d \( -iname "pythoncommons" -o -iname "python_commons*" \) | sort
+}
+
+
+function myrepos-install-pythoncommons-git-all {
+  myrepos-install "git+https://github.com/szilard-nemeth/python-commons.git" "pythoncommons completed"
+}
+
+function myrepos-install-pythoncommons-dev-all {
+  myrepos-install "$MY_REPOS_DIR/python-commons" "pythoncommons completed"
+}
+
+function myrepos-install-pythoncommons {
+  myrepos-install-pythoncommons-dev-all
 }
 
 function myrepos-install-pythoncommons-dev-just-yarndevtools {
-  sh -c 'cd $MY_REPOS_DIR/yarn-dev-tools/venv; source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/python-commons;deactivate' && say "pythoncommons completed"
+  sh -c 'cd $MY_REPOS_DIR/yarn-dev-tools/;poetry update python-common-lib' && say "pythoncommons completed"
 }
 
 function myrepos-install-pythoncommons-dev-just-expense-summarizer {
-  sh -c 'cd $MY_REPOS_DIR/monthly-expense-summarizer/venv; source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/python-commons;deactivate' && say "pythoncommons completed"
+  echo "!! NOT WORKING, MIGRATE TO POETRY !!"
+  sh -c 'cd $MY_REPOS_DIR/monthly-expense-summarizer/;poetry update python-common-lib' && say "pythoncommons completed"
 }
 
 
-function myrepos-install-yarndevtools-dev {
-  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/yarn-dev-tools;deactivate' && say "yarndevtools completed"
+function myrepos-install-yarndevtools-dev-all {
+  myrepos-install "$MY_REPOS_DIR/yarn-dev-tools" "yarndevtools completed"
 }
 
 
-function myrepos-install-pytest-to-all-venvs {
-  find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install pytest;deactivate' && say "Installation of pytest to all venvs completed"
+function myrepos-install-pytest-all {
+  myrepos-install "pytest" "Installation of pytest to all venvs completed"
 }
 
-
-function myrepos-install-linuxenv-dependencies {
-  cd $LINUXENV_DIR/venv;source ./bin/activate;pip3 uninstall -y python-commons yarn-dev-tools;./bin/pip3 install -r $LINUXENV_DIR/requirements.txt && deactivate && say "Installation completed"
-}
-
-function myrepos-install-linuxenv-dependencies-dev {
-  cd $LINUXENV_DIR/venv;source ./bin/activate;pip3 uninstall -y python-commons yarn-dev-tools;./bin/pip3 install $MY_REPOS_DIR/python-commons $MY_REPOS_DIR/yarn-dev-tools && deactivate && say "Installation completed"
-}
-
-function myrepos-install-googleapiwrapper-dev {
-  grep --include=requirements.txt -rw $MY_REPOS_DIR -e "google-api-wrapper.git" | cut -d':' -f1 | sed 's/requirements.txt/venv/g' | tr '\n' '\0' | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/google-api-wrapper;deactivate';say "Google API wrapper completed"
+function myrepos-install-linuxenv-deps {
+  cd $LINUXENV_DIR;poetry install && say "Installation completed"
 }
 
 function myrepos-install-googleapiwrapper-dev-just-yarndevtools {
-  sh -c 'cd $MY_REPOS_DIR/yarn-dev-tools/venv; source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $MY_REPOS_DIR/google-api-wrapper;deactivate' && say "Google API wrapper completed"
+  sh -c 'cd $MY_REPOS_DIR/yarn-dev-tools/;poetry update google-api-wrapper2' && say "Google API wrapper completed"
 }
 
-function myrepos-install-pythoncommons-current-venv {
-  myrepos-install-pythoncommons-dev-just-yarndevtools && cp -R ~/development/my-repos/yarn-dev-tools/venv/lib/python3.9/site-packages/pythoncommons/ ./venv/lib/python3.8/site-packages/pythoncommons
-}
+function myrepos-install-googleapiwrapper-dev {
+  # Legacy projects
+  for env_path in $(grep --include=requirements.txt -rw $MY_REPOS_DIR -e "google-api-wrapper.git" | cut -d':' -f1 | sed 's/requirements.txt/venv/g'); do
+    echo "Current virtualenv: $env_path"
+    pip-install-to-env $env_path "$MY_REPOS_DIR/google-api-wrapper"
+  done
 
-function myrepos-install-googleapiwrapper-current-venv {
-  myrepos-install-googleapiwrapper-dev-just-yarndevtools && cp -R ~/development/my-repos/yarn-dev-tools/venv/lib/python3.9/site-packages/googleapiwrapper ./venv/lib/python3.8/site-packages/
+  # 2. Poetry projects
+  poetry_envs=($(find-poetry-projects))
+  echo "Discovered Poetry envs: $poetry_envs"
+  IFS=$'\n'
+  for env_path in $poetry_envs; do
+    echo "Current Poetry env: $env_path"
+    sh -c 'cd $env_path/;poetry update google-api-wrapper2' && say "Google API wrapper completed"
+  done
 }
 
 
@@ -131,11 +189,11 @@ function myrepos-grep-python() {
 
 function myrepos-grep-all() {
   # This did not work with files containing spaces:
-  #https://serverfault.com/questions/268368/how-can-i-handle-spaces-in-file-names-when-using-xargs-on-find-results
+  #https://serverfault.com/questions/268368/how-can-proj-handle-spaces-in-file-names-when-using-xargs-on-find-results
 
   #TODO Binary file /Users/snemeth/development/my-repos/resume/fonts/FontAwesome.ttf matches
   # TODO Add option to filter only test files with myrepos_filtered_find.py:
-  #  https://stackoverflow.com/questions/898669/how-can-i-detect-if-a-file-is-binary-non-text-in-python
+  #  https://stackoverflow.com/questions/898669/how-can-proj-detect-if-a-file-is-binary-non-text-in-python
   #  https://unix.stackexchange.com/questions/46276/finding-all-non-binary-files
   myrepos_filtered_find.py --exclude $COMMON_EXCLUDES | tr '\n' '\0' | xargs -0 grep $1
 }
