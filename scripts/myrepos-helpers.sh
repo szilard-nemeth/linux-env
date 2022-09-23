@@ -26,7 +26,6 @@ function pip-install-to-env {
   set -x
   env_path=$1
   package=$2
-  #echo -n $env_path $package | xargs -0 -t -I % sh -c 'cd %;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install %;deactivate'
   echo "$env_path\n$package" | xargs -n 2 sh -c 'cd $1;source ./bin/activate;unset PYTHONPATH;./bin/pip3 install $2;deactivate' argv0
   set +x
 }

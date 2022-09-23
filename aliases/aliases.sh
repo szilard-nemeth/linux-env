@@ -75,10 +75,6 @@ alias lc='colorls -lA --sd'
 ##Aliases for my DEV projects
 #Assuming venv is in googlechrometoolkit repo's root
 
-# Linux-env Python venv setup - Also used by yarn-* aliases
-LINUXENV_VENV="$LINUX_ENV_REPO/venv"
-LINUXENV_BIN_PYTHON="$LINUXENV_VENV/bin/python3"
-
 # Google chrome toolkit aliases + Python setup
 GCHROME_TOOLKIT_ROOT="$HOME/development/my-repos/google-chrome-toolkit/"
 GCHROME_TOOLKIT_MODULE_ROOT="$GCHROME_TOOLKIT_ROOT/googlechrometoolkit/"
