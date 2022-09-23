@@ -14,3 +14,40 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.poetry]
+name = "linux-env"
+version = "0.0.1"
+description = ""
+authors = ["Szilard Nemeth <szilard.nemeth88@gmail.com>"]
+readme = "README.md"
+homepage = "https://github.com/szilard-nemeth/linux-env"
+repository = "https://github.com/szilard-nemeth/linux-env"
+packages = [{include = "scripts/python"}]
+include = [
+"LICENSE"
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+python-common-lib = "1.0.2"
+google-api-wrapper2 = "1.0.2"
+yarn-dev-tools = "1.1.1"
+
+
+[tool.poetry.group.dev.dependencies]
+flake8 = "*"
+pytest = "*"
+pytest-cov = "*"
+pre-commit = "*"
+black = "*"
+autopep8 = "*"
+
+[tool.poetry.group.localdev.dependencies]
+python-common-lib = { path = "../python-commons/", develop = false }
+google-api-wrapper2 = { path = "../google-api-wrapper", develop = false }
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
