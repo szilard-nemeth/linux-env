@@ -11,6 +11,7 @@ export CLOUDERA_DIR
 #===============================================
 
 #export PATH="/usr/local/opt/protobuf@2.5/bin:$PATH"
+export PATH="/Users/snemeth/.local/bin:$PATH"
 
 #CM build specific settings
 export MAVEN_OPTS='-Xmx5000m'
