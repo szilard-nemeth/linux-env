@@ -69,33 +69,3 @@ function yarn-listupstreamversions() {
         printf "\n"
     done
 }
-
-# TODO poetry move these to yarn-dev-tools repo and source it from there
-# TODO poetry Move example calls from bash comments to yarndevtools itself
-#Example call: yarn-create-review-branch /Users/snemeth/yarn-tasks/YARN-10277-test2/YARN-10277-test2.010.patch
-
-#Generic call: yarn-backport-c6 [Upstream commit hash or commit message fragment] [CDH-jira-number] [CDH-branch]
-#Example call: yarn-backport-c6 YARN-7948 CDH-64201 CDH-64201-cdh6x
-
-#Generic call: yarn-upstream-commit-pr [github-username] [remote-branch]
-#Example call: yarn-upstream-commit-pr szilard-nemeth YARN-9999
-
-#Generic call: yarn-diff-patches [JIRA_ID] [branches]
-#Example call: yarn-diff-patches YARN-7913 trunk branch-3.2 branch-3.1
-
-#Generic call: save-diff-as-patches [refspec-to-diff-head-with] [destination-directory-prefix]"
-#Example call: save-diff-as-patches master gpu
-#Example call: save-diff-as-patches master WIP-migrate-yarn-scripts-to-python ~/yarn-tasks/saved_patches prefix1
-
-#Example call: yarn-get-umbrella-data YARN-5734
-###################################ALIASES###################################
-
-YARN_DEV_TOOLS_DIR="$HOME/development/my-repos/yarn-dev-tools"
-YARN_DEV_TOOLS_ENV="export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT"
-alias yarn-backport-c6="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools BACKPORT_C6; popd"
-alias yarn-save-patch="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools SAVE_PATCH; popd"
-alias yarn-create-review-branch="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools CREATE_REVIEW_BRANCH; popd"
-alias yarn-upstream-commit-pr="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools UPSTREAM_PR_FETCH; popd"
-alias yarn-diff-patches="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools DIFF_PATCHES_OF_JIRA; popd"
-alias save-diff-as-patches="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools SAVE_DIFF_AS_PATCHES; popd"
-alias yarn-get-umbrella-data="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools FETCH_JIRA_UMBRELLA_DATA; popd"
