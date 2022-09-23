@@ -4,6 +4,11 @@ function setup() {
     export UPSTREAM_HADOOP_DIR=${HADOOP_DEV_DIR}
     export DOWNSTREAM_HADOOP_DIR=${CLOUDERA_HADOOP_ROOT}
     export TASKS_DIR="$HOME/yarn-tasks/"
+
+    # Setup for aliases
+    YARN_DEV_TOOLS_DIR="$HOME/development/my-repos/yarn-dev-tools"
+    PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=sys_path
+    YARN_DEV_TOOLS_ENV="export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY;export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT"
 }
 
 #####LESS COMPLEX SCRIPTS CAN STAY HERE, AS IT'S NOT WORTH IT TO MIGRATE THESE SMALL SCRIPTS TO PYTHON
@@ -70,32 +75,30 @@ function yarn-listupstreamversions() {
     done
 }
 
-#####ALIASES
-
-PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=sys_path
-YARN_DEV_TOOLS_ENV="export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY;export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT"
-
-alias yarn-save-patch="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY SAVE_PATCH"
-
+# TODO poetry move these to yarn-dev-tools repo and source it from there
+# TODO poetry Move example calls from bash comments to yarndevtools itself
 #Example call: yarn-create-review-branch /Users/snemeth/yarn-tasks/YARN-10277-test2/YARN-10277-test2.010.patch
-alias yarn-create-review-branch="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY CREATE_REVIEW_BRANCH"
 
 #Generic call: yarn-backport-c6 [Upstream commit hash or commit message fragment] [CDH-jira-number] [CDH-branch]
 #Example call: yarn-backport-c6 YARN-7948 CDH-64201 CDH-64201-cdh6x
-alias yarn-backport-c6="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY BACKPORT_C6"
 
 #Generic call: yarn-upstream-commit-pr [github-username] [remote-branch]
 #Example call: yarn-upstream-commit-pr szilard-nemeth YARN-9999
-alias yarn-upstream-commit-pr="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY UPSTREAM_PR_FETCH"
 
 #Generic call: yarn-diff-patches [JIRA_ID] [branches]
 #Example call: yarn-diff-patches YARN-7913 trunk branch-3.2 branch-3.1
-alias yarn-diff-patches="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY DIFF_PATCHES_OF_JIRA"
 
 #Generic call: save-diff-as-patches [refspec-to-diff-head-with] [destination-directory-prefix]"
 #Example call: save-diff-as-patches master gpu
 #Example call: save-diff-as-patches master WIP-migrate-yarn-scripts-to-python ~/yarn-tasks/saved_patches prefix1
-alias save-diff-as-patches="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY SAVE_DIFF_AS_PATCHES"
 
 #Example call: yarn-get-umbrella-data YARN-5734
-alias yarn-get-umbrella-data="$YARN_DEV_TOOLS_ENV; $LINUXENV_BIN_PYTHON $YARN_DEV_TOOLS_PY FETCH_JIRA_UMBRELLA_DATA"
+###################################ALIASES###################################
+
+alias yarn-backport-c6="$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools BACKPORT_C6"
+alias yarn-save-patch="$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools SAVE_PATCH"
+alias yarn-create-review-branch="$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools CREATE_REVIEW_BRANCH"
+alias yarn-upstream-commit-pr="$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools UPSTREAM_PR_FETCH"
+alias yarn-diff-patches="$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools DIFF_PATCHES_OF_JIRA"
+alias save-diff-as-patches="$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools SAVE_DIFF_AS_PATCHES"
+alias yarn-get-umbrella-data="$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools FETCH_JIRA_UMBRELLA_DATA"
