@@ -65,6 +65,8 @@ alias run-findbugs="mvn clean install -DskipTests && mvn findbugs:findbugs && mv
 
 alias mvn-hadoop-patch="mvn -Ptest-patch clean site site:stage"
 alias mvn-hadoop-cdpd="asdf uninstall protoc && asdf uninstall maven && cp /usr/local/bin/protoc_old /usr/local/bin/protoc && mvn clean package -s $CLOUDERA_HADOOP_ROOT/cloudera/settings.xml -Pdist -DskipTests -Dmaven.javadoc.skip=true -DskipShade"
+alias mvn-hadoop-cdpd-2="asdf uninstall protoc && asdf uninstall maven && cp /usr/local/bin/protoc_old /usr/local/bin/protoc && mvn clean package -s ~/.m2/settings-cdpd.xml -Pdist -DskipTests -Dmaven.javadoc.skip=true -DskipShade"
+
 alias mvn-hadoop-upstream-build="asdf plugin-remove yarn;mvn clean install -Pdist -DskipTests -Dmaven.javadoc.skip=true -DskipShade"
 alias mvn-hadoop-upstream-native=build="mvn clean install -Pdist -Pnative -DskipTests -Dmaven.javadoc.skip=true -DskipShade"
 alias mvn-generate-proto="mvn generate-sources"
