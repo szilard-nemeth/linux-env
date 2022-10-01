@@ -95,3 +95,7 @@ function backup-currdir() {
 }
 
 alias python-precommit-all="pre-commit run --all-files"
+
+### DEX
+alias dex-saml2aws="saml2aws exec --exec-profile cu_dex_dev -- bash"
+alias dex-runtime-k9s="dexw -e dev -cid cluster-sn6sdnlq --auth cst -v -- k9s"
