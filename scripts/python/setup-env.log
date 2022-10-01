@@ -1,0 +1,866 @@
+Cannot set JAVA_HOME as JDK was not found!
+Setting up prompt...
+Setting up kitty...
+Setting up sdkman...
+Running setup-env.sh...
++/Users/snemeth/development/my-repos/linux-env//setup-env.sh:430> initial_setup
++initial_setup:1> test -n 5.8.1
++initial_setup:2> PROFILE_SHELL=zsh
++initial_setup:15> [[ zsh == zsh ]]
++initial_setup:16> DIR=/Users/snemeth/development/my-repos/linux-env/
++initial_setup:22> HOME_ENV=/Users/snemeth/.env/
++initial_setup:23> ENV_SETUP_STATUS=/Users/snemeth/.env//.initial-setup-status
++initial_setup:25> HOME_LINUXENV_DIR=/Users/snemeth/.linuxenv/
++initial_setup:26> WORKPLACE_SPECIFIC_DIR=/Users/snemeth/.linuxenv//workplace-specific/
++initial_setup:27> INFO_PREFIX='--->'
++initial_setup:30> platform=+initial_setup:30> determine_platform
++determine_platform:1> platform=unknown
++determine_platform:2> unamestr=+determine_platform:2> uname
++determine_platform:2> unamestr=Darwin
++determine_platform:3> [[ Darwin == Linux ]]
++determine_platform:5> [[ Darwin == FreeBSD ]]
++determine_platform:7> [[ Darwin == Darwin ]]
++determine_platform:8> platform=macOS
++determine_platform:10> echo macOS
++initial_setup:30> platform=macOS
++initial_setup:31> echo 'Platform is: macOS'
+Platform is: macOS
++initial_setup:34> [[ macOS == macOS ]]
++initial_setup:34> grep '--color=auto' '--exclude-dir=.bzr' '--exclude-dir=CVS' '--exclude-dir=.git' '--exclude-dir=.hg' '--exclude-dir=.svn' '--exclude-dir=.idea' '--exclude-dir=.tox' -q complete /Users/snemeth/.env//.initial-setup-status
++/Users/snemeth/development/my-repos/linux-env//setup-env.sh:431> setup-pythonpath
++setup-pythonpath:1> echo 'Setting up PYTHONPATH'
+Setting up PYTHONPATH
++setup-pythonpath:2> ASDF_PYTHON_LIBS=+setup-pythonpath:2> asdf where python
++setup-pythonpath:2> ASDF_PYTHON_LIBS=/Users/snemeth/.asdf/installs/python/3.8.12/lib/python3.8/site-packages
++setup-pythonpath:3> STANDARD_PYTHON_LIBS=/Users/snemeth/Library/Python/3.8/lib/python/site-packages/
++setup-pythonpath:4> export PYTHONPATH=/Users/snemeth/Library/Python/3.8/lib/python/site-packages/:/Users/snemeth/.asdf/installs/python/3.8.12/lib/python3.8/site-packages:/Users/snemeth/.linuxenv//scripts/python/:
++/Users/snemeth/development/my-repos/linux-env//setup-env.sh:432> remove-stale-scripts
++remove-stale-scripts:1> local scripts_rm_dir=/Users/snemeth/.linuxenv//scripts/
++remove-stale-scripts:2> local scripts_backup_dir=/Users/snemeth/_stale_linuxenv_scripts/
++remove-stale-scripts:3> mkdir -p /Users/snemeth/_stale_linuxenv_scripts/
++remove-stale-scripts:8> diff -qr /Users/snemeth/.linuxenv//scripts/ /Users/snemeth/development/my-repos/linux-env//scripts/
++remove-stale-scripts:8> grep '--color=auto' '--exclude-dir=.bzr' '--exclude-dir=CVS' '--exclude-dir=.git' '--exclude-dir=.hg' '--exclude-dir=.svn' '--exclude-dir=.idea' '--exclude-dir=.tox' '^Only in /Users/snemeth/.linuxenv//scripts/'
++remove-stale-scripts:8> sed 's/Only in //g'
++remove-stale-scripts:8> sed 's/: /\//g'
++remove-stale-scripts:8> local scripts_to_rm=( )
++remove-stale-scripts:10> [ 0 -ne 0 ']'
++/Users/snemeth/development/my-repos/linux-env//setup-env.sh:433> copy_files_from_linuxenv_repo_to_home
++copy_files_from_linuxenv_repo_to_home:1> declare -a COPY_LIST=( )
++copy_files_from_linuxenv_repo_to_home:4> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//.bashrc /Users/snemeth/.bashrc' )
++copy_files_from_linuxenv_repo_to_home:5> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//.bash_profile /Users/snemeth/.bash_profile' )
++copy_files_from_linuxenv_repo_to_home:8> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//.zshrc /Users/snemeth/.zshrc' )
++copy_files_from_linuxenv_repo_to_home:9> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//.zprofile /Users/snemeth/.zprofile' )
++copy_files_from_linuxenv_repo_to_home:12> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//setup-vars.sh /Users/snemeth/.linuxenv//setup-vars.sh' )
++copy_files_from_linuxenv_repo_to_home:13> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//setup-env.sh /Users/snemeth/.linuxenv//setup-env.sh' )
++copy_files_from_linuxenv_repo_to_home:14> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//reset-env.sh /Users/snemeth/.linuxenv//reset-env.sh' )
++copy_files_from_linuxenv_repo_to_home:15> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//dotfiles/. /Users/snemeth/' )
++copy_files_from_linuxenv_repo_to_home:16> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//aliases/. /Users/snemeth/.linuxenv//aliases/' )
++copy_files_from_linuxenv_repo_to_home:17> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//scripts/. /Users/snemeth/.linuxenv//scripts' )
++copy_files_from_linuxenv_repo_to_home:18> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//scripts/python/. /Users/snemeth/.linuxenv//scripts/python' )
++copy_files_from_linuxenv_repo_to_home:19> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//workplace-specific/. /Users/snemeth/.linuxenv//workplace-specific/' )
++copy_files_from_linuxenv_repo_to_home:20> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//.npmrc /Users/snemeth/.npmrc' )
++copy_files_from_linuxenv_repo_to_home:23> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//config/kitty.conf /Users/snemeth/.config/kitty/kitty.conf' )
++copy_files_from_linuxenv_repo_to_home:24> COPY_LIST+=( '/Users/snemeth/development/my-repos/linux-env//config/theme.conf /Users/snemeth/.config/kitty/theme.conf' )
++copy_files_from_linuxenv_repo_to_home:27> [[ ! macOS == macOS ]]
++copy_files_from_linuxenv_repo_to_home:30> echo '---> Skip copying i3 files as platform is macOS'
+---> Skip copying i3 files as platform is macOS
++copy_files_from_linuxenv_repo_to_home:33> set -e
++copy_files_from_linuxenv_repo_to_home:34> copy_files '/Users/snemeth/development/my-repos/linux-env//.bashrc /Users/snemeth/.bashrc' '/Users/snemeth/development/my-repos/linux-env//.bash_profile /Users/snemeth/.bash_profile' '/Users/snemeth/development/my-repos/linux-env//.zshrc /Users/snemeth/.zshrc' '/Users/snemeth/development/my-repos/linux-env//.zprofile /Users/snemeth/.zprofile' '/Users/snemeth/development/my-repos/linux-env//setup-vars.sh /Users/snemeth/.linuxenv//setup-vars.sh' '/Users/snemeth/development/my-repos/linux-env//setup-env.sh /Users/snemeth/.linuxenv//setup-env.sh' '/Users/snemeth/development/my-repos/linux-env//reset-env.sh /Users/snemeth/.linuxenv//reset-env.sh' '/Users/snemeth/development/my-repos/linux-env//dotfiles/. /Users/snemeth/' '/Users/snemeth/development/my-repos/linux-env//aliases/. /Users/snemeth/.linuxenv//aliases/' '/Users/snemeth/development/my-repos/linux-env//scripts/. /Users/snemeth/.linuxenv//scripts' '/Users/snemeth/development/my-repos/linux-env//scripts/python/. /Users/snemeth/.linuxenv//scripts/python' '/Users/snemeth/development/my-repos/linux-env//workplace-specific/. /Users/snemeth/.linuxenv//workplace-specific/' '/Users/snemeth/development/my-repos/linux-env//.npmrc /Users/snemeth/.npmrc' '/Users/snemeth/development/my-repos/linux-env//config/kitty.conf /Users/snemeth/.config/kitty/kitty.conf' '/Users/snemeth/development/my-repos/linux-env//config/theme.conf /Users/snemeth/.config/kitty/theme.conf'
++copy_files:4> mkdir -p /Users/snemeth/.env
++copy_files:5> ENV_FILE_MAPPINGS=/Users/snemeth/.env//.file-mappings
++copy_files:6> rm /Users/snemeth/.env//.file-mappings
++copy_files:7> touch /Users/snemeth/.env//.file-mappings
++copy_files:10> [[ zsh == zsh ]]
++copy_files:11> IFS=' ' +copy_files:11> read -rA copy_list
++copy_files:13> i=1
++copy_files:18> unset IFS
++copy_files:20> [ 0 -ne 0 ']'
++copy_files:25> [ 1 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//.bashrc
++copy_files:27> to=/Users/snemeth/.bashrc
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//.bashrc ]]
++copy_files:31> [[ -f /Users/snemeth/development/my-repos/linux-env//.bashrc ]]
++copy_files:32> dirname /Users/snemeth/.bashrc
++copy_files:32> mkdir -p /Users/snemeth
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//.bashrc == *. ]]
++copy_files:45> echo '/Users/snemeth/development/my-repos/linux-env//.bashrc /Users/snemeth/.bashrc'
++copy_files:46> cmp -s /Users/snemeth/development/my-repos/linux-env//.bashrc /Users/snemeth/.bashrc
++copy_files:47> echo 'No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//.bashrc, DEST: /Users/snemeth/.bashrc'
+No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//.bashrc, DEST: /Users/snemeth/.bashrc
++copy_files:53> i=3
++copy_files:25> [ 3 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//.bash_profile
++copy_files:27> to=/Users/snemeth/.bash_profile
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//.bash_profile ]]
++copy_files:31> [[ -f /Users/snemeth/development/my-repos/linux-env//.bash_profile ]]
++copy_files:32> dirname /Users/snemeth/.bash_profile
++copy_files:32> mkdir -p /Users/snemeth
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//.bash_profile == *. ]]
++copy_files:45> echo '/Users/snemeth/development/my-repos/linux-env//.bash_profile /Users/snemeth/.bash_profile'
++copy_files:46> cmp -s /Users/snemeth/development/my-repos/linux-env//.bash_profile /Users/snemeth/.bash_profile
++copy_files:47> echo 'No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//.bash_profile, DEST: /Users/snemeth/.bash_profile'
+No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//.bash_profile, DEST: /Users/snemeth/.bash_profile
++copy_files:53> i=5
++copy_files:25> [ 5 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//.zshrc
++copy_files:27> to=/Users/snemeth/.zshrc
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//.zshrc ]]
++copy_files:31> [[ -f /Users/snemeth/development/my-repos/linux-env//.zshrc ]]
++copy_files:32> dirname /Users/snemeth/.zshrc
++copy_files:32> mkdir -p /Users/snemeth
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//.zshrc == *. ]]
++copy_files:45> echo '/Users/snemeth/development/my-repos/linux-env//.zshrc /Users/snemeth/.zshrc'
++copy_files:46> cmp -s /Users/snemeth/development/my-repos/linux-env//.zshrc /Users/snemeth/.zshrc
++copy_files:47> echo 'No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//.zshrc, DEST: /Users/snemeth/.zshrc'
+No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//.zshrc, DEST: /Users/snemeth/.zshrc
++copy_files:53> i=7
++copy_files:25> [ 7 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//.zprofile
++copy_files:27> to=/Users/snemeth/.zprofile
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//.zprofile ]]
++copy_files:31> [[ -f /Users/snemeth/development/my-repos/linux-env//.zprofile ]]
++copy_files:32> dirname /Users/snemeth/.zprofile
++copy_files:32> mkdir -p /Users/snemeth
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//.zprofile == *. ]]
++copy_files:45> echo '/Users/snemeth/development/my-repos/linux-env//.zprofile /Users/snemeth/.zprofile'
++copy_files:46> cmp -s /Users/snemeth/development/my-repos/linux-env//.zprofile /Users/snemeth/.zprofile
++copy_files:47> echo 'No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//.zprofile, DEST: /Users/snemeth/.zprofile'
+No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//.zprofile, DEST: /Users/snemeth/.zprofile
++copy_files:53> i=9
++copy_files:25> [ 9 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//setup-vars.sh
++copy_files:27> to=/Users/snemeth/.linuxenv//setup-vars.sh
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//setup-vars.sh ]]
++copy_files:31> [[ -f /Users/snemeth/development/my-repos/linux-env//setup-vars.sh ]]
++copy_files:32> dirname /Users/snemeth/.linuxenv//setup-vars.sh
++copy_files:32> mkdir -p /Users/snemeth/.linuxenv
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//setup-vars.sh == *. ]]
++copy_files:45> echo '/Users/snemeth/development/my-repos/linux-env//setup-vars.sh /Users/snemeth/.linuxenv//setup-vars.sh'
++copy_files:46> cmp -s /Users/snemeth/development/my-repos/linux-env//setup-vars.sh /Users/snemeth/.linuxenv//setup-vars.sh
++copy_files:49> echo 'Copying file from /Users/snemeth/development/my-repos/linux-env//setup-vars.sh to /Users/snemeth/.linuxenv//setup-vars.sh'
+Copying file from /Users/snemeth/development/my-repos/linux-env//setup-vars.sh to /Users/snemeth/.linuxenv//setup-vars.sh
++copy_files:50> cp /Users/snemeth/development/my-repos/linux-env//setup-vars.sh /Users/snemeth/.linuxenv//setup-vars.sh
++copy_files:53> i=11
++copy_files:25> [ 11 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//setup-env.sh
++copy_files:27> to=/Users/snemeth/.linuxenv//setup-env.sh
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//setup-env.sh ]]
++copy_files:31> [[ -f /Users/snemeth/development/my-repos/linux-env//setup-env.sh ]]
++copy_files:32> dirname /Users/snemeth/.linuxenv//setup-env.sh
++copy_files:32> mkdir -p /Users/snemeth/.linuxenv
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//setup-env.sh == *. ]]
++copy_files:45> echo '/Users/snemeth/development/my-repos/linux-env//setup-env.sh /Users/snemeth/.linuxenv//setup-env.sh'
++copy_files:46> cmp -s /Users/snemeth/development/my-repos/linux-env//setup-env.sh /Users/snemeth/.linuxenv//setup-env.sh
++copy_files:49> echo 'Copying file from /Users/snemeth/development/my-repos/linux-env//setup-env.sh to /Users/snemeth/.linuxenv//setup-env.sh'
+Copying file from /Users/snemeth/development/my-repos/linux-env//setup-env.sh to /Users/snemeth/.linuxenv//setup-env.sh
++copy_files:50> cp /Users/snemeth/development/my-repos/linux-env//setup-env.sh /Users/snemeth/.linuxenv//setup-env.sh
++copy_files:53> i=13
++copy_files:25> [ 13 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//reset-env.sh
++copy_files:27> to=/Users/snemeth/.linuxenv//reset-env.sh
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//reset-env.sh ]]
++copy_files:31> [[ -f /Users/snemeth/development/my-repos/linux-env//reset-env.sh ]]
++copy_files:32> dirname /Users/snemeth/.linuxenv//reset-env.sh
++copy_files:32> mkdir -p /Users/snemeth/.linuxenv
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//reset-env.sh == *. ]]
++copy_files:45> echo '/Users/snemeth/development/my-repos/linux-env//reset-env.sh /Users/snemeth/.linuxenv//reset-env.sh'
++copy_files:46> cmp -s /Users/snemeth/development/my-repos/linux-env//reset-env.sh /Users/snemeth/.linuxenv//reset-env.sh
++copy_files:47> echo 'No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//reset-env.sh, DEST: /Users/snemeth/.linuxenv//reset-env.sh'
+No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//reset-env.sh, DEST: /Users/snemeth/.linuxenv//reset-env.sh
++copy_files:53> i=15
++copy_files:25> [ 15 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//dotfiles/.
++copy_files:27> to=/Users/snemeth/
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//dotfiles/. ]]
++copy_files:30> mkdir -p /Users/snemeth/
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//dotfiles/. == *. ]]
++copy_files:36> from_stripped=+copy_files:36> echo /Users/snemeth/development/my-repos/linux-env//dotfiles/.
++copy_files:36> from_stripped=+copy_files:36> sed 's/.$//'
++copy_files:36> from_stripped=/Users/snemeth/development/my-repos/linux-env//dotfiles/
++copy_files:37> echo '/Users/snemeth/development/my-repos/linux-env//dotfiles/ /Users/snemeth/'
++copy_files:38> diff -r /Users/snemeth/development/my-repos/linux-env//dotfiles/. /Users/snemeth/
++copy_files:41> echo 'Copying files from /Users/snemeth/development/my-repos/linux-env//dotfiles/. to /Users/snemeth/ (recursive)'
+Copying files from /Users/snemeth/development/my-repos/linux-env//dotfiles/. to /Users/snemeth/ (recursive)
++copy_files:42> yes
++copy_files:42> cp -aR /Users/snemeth/development/my-repos/linux-env//dotfiles/. /Users/snemeth/
++copy_files:53> i=17
++copy_files:25> [ 17 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//aliases/.
++copy_files:27> to=/Users/snemeth/.linuxenv//aliases/
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//aliases/. ]]
++copy_files:30> mkdir -p /Users/snemeth/.linuxenv//aliases/
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//aliases/. == *. ]]
++copy_files:36> from_stripped=+copy_files:36> echo /Users/snemeth/development/my-repos/linux-env//aliases/.
++copy_files:36> from_stripped=+copy_files:36> sed 's/.$//'
++copy_files:36> from_stripped=/Users/snemeth/development/my-repos/linux-env//aliases/
++copy_files:37> echo '/Users/snemeth/development/my-repos/linux-env//aliases/ /Users/snemeth/.linuxenv//aliases/'
++copy_files:38> diff -r /Users/snemeth/development/my-repos/linux-env//aliases/. /Users/snemeth/.linuxenv//aliases/
++copy_files:39> echo 'No changes in files. SRC DIR: /Users/snemeth/development/my-repos/linux-env//aliases/., DEST DIR: /Users/snemeth/.linuxenv//aliases/'
+No changes in files. SRC DIR: /Users/snemeth/development/my-repos/linux-env//aliases/., DEST DIR: /Users/snemeth/.linuxenv//aliases/
++copy_files:53> i=19
++copy_files:25> [ 19 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//scripts/.
++copy_files:27> to=/Users/snemeth/.linuxenv//scripts
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//scripts/. ]]
++copy_files:30> mkdir -p /Users/snemeth/.linuxenv//scripts
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//scripts/. == *. ]]
++copy_files:36> from_stripped=+copy_files:36> echo /Users/snemeth/development/my-repos/linux-env//scripts/.
++copy_files:36> from_stripped=+copy_files:36> sed 's/.$//'
++copy_files:36> from_stripped=/Users/snemeth/development/my-repos/linux-env//scripts/
++copy_files:37> echo '/Users/snemeth/development/my-repos/linux-env//scripts/ /Users/snemeth/.linuxenv//scripts'
++copy_files:38> diff -r /Users/snemeth/development/my-repos/linux-env//scripts/. /Users/snemeth/.linuxenv//scripts
++copy_files:41> echo 'Copying files from /Users/snemeth/development/my-repos/linux-env//scripts/. to /Users/snemeth/.linuxenv//scripts (recursive)'
+Copying files from /Users/snemeth/development/my-repos/linux-env//scripts/. to /Users/snemeth/.linuxenv//scripts (recursive)
++copy_files:42> yes
++copy_files:42> cp -aR /Users/snemeth/development/my-repos/linux-env//scripts/. /Users/snemeth/.linuxenv//scripts
++copy_files:53> i=21
++copy_files:25> [ 21 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//scripts/python/.
++copy_files:27> to=/Users/snemeth/.linuxenv//scripts/python
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//scripts/python/. ]]
++copy_files:30> mkdir -p /Users/snemeth/.linuxenv//scripts/python
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//scripts/python/. == *. ]]
++copy_files:36> from_stripped=+copy_files:36> echo /Users/snemeth/development/my-repos/linux-env//scripts/python/.
++copy_files:36> from_stripped=+copy_files:36> sed 's/.$//'
++copy_files:36> from_stripped=/Users/snemeth/development/my-repos/linux-env//scripts/python/
++copy_files:37> echo '/Users/snemeth/development/my-repos/linux-env//scripts/python/ /Users/snemeth/.linuxenv//scripts/python'
++copy_files:38> diff -r /Users/snemeth/development/my-repos/linux-env//scripts/python/. /Users/snemeth/.linuxenv//scripts/python
++copy_files:39> echo 'No changes in files. SRC DIR: /Users/snemeth/development/my-repos/linux-env//scripts/python/., DEST DIR: /Users/snemeth/.linuxenv//scripts/python'
+No changes in files. SRC DIR: /Users/snemeth/development/my-repos/linux-env//scripts/python/., DEST DIR: /Users/snemeth/.linuxenv//scripts/python
++copy_files:53> i=23
++copy_files:25> [ 23 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//workplace-specific/.
++copy_files:27> to=/Users/snemeth/.linuxenv//workplace-specific/
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//workplace-specific/. ]]
++copy_files:30> mkdir -p /Users/snemeth/.linuxenv//workplace-specific/
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//workplace-specific/. == *. ]]
++copy_files:36> from_stripped=+copy_files:36> echo /Users/snemeth/development/my-repos/linux-env//workplace-specific/.
++copy_files:36> from_stripped=+copy_files:36> sed 's/.$//'
++copy_files:36> from_stripped=/Users/snemeth/development/my-repos/linux-env//workplace-specific/
++copy_files:37> echo '/Users/snemeth/development/my-repos/linux-env//workplace-specific/ /Users/snemeth/.linuxenv//workplace-specific/'
++copy_files:38> diff -r /Users/snemeth/development/my-repos/linux-env//workplace-specific/. /Users/snemeth/.linuxenv//workplace-specific/
++copy_files:41> echo 'Copying files from /Users/snemeth/development/my-repos/linux-env//workplace-specific/. to /Users/snemeth/.linuxenv//workplace-specific/ (recursive)'
+Copying files from /Users/snemeth/development/my-repos/linux-env//workplace-specific/. to /Users/snemeth/.linuxenv//workplace-specific/ (recursive)
++copy_files:42> yes
++copy_files:42> cp -aR /Users/snemeth/development/my-repos/linux-env//workplace-specific/. /Users/snemeth/.linuxenv//workplace-specific/
+cp: /Users/snemeth/.linuxenv//workplace-specific/./cloudera/investigations/HADOOP-15327/nodemanager-config-alpha-20220830/cm-auto-host_keystore.jks: Permission denied
+cp: /Users/snemeth/.linuxenv//workplace-specific/./cloudera/investigations/HADOOP-15327/nodemanager-config-alpha-20220830/cm-auto-host_key.pem: Permission denied
+cp: /Users/snemeth/.linuxenv//workplace-specific/./cloudera/investigations/HADOOP-15327/nodemanager-config-alpha-20220830/cm-auto-global_cacerts.pem: Permission denied
+cp: /Users/snemeth/.linuxenv//workplace-specific/./cloudera/investigations/HADOOP-15327/nodemanager-config-alpha-20220830/cm-auto-global_truststore.jks: Permission denied
+cp: /Users/snemeth/.linuxenv//workplace-specific/./cloudera/investigations/HADOOP-15327/nodemanager-config-alpha-20220830/cm-auto-host_cert_chain.pem: Permission denied
+cp: /Users/snemeth/.linuxenv//workplace-specific/./cloudera/investigations/HADOOP-15327/nodemanager-config-alpha-20220830/container-executor.cfg: Permission denied
+cp: /Users/snemeth/.linuxenv//workplace-specific/./cloudera/investigations/HADOOP-15327/nodemanager-config-alpha-20220830/cm-auto-in_cluster_ca_cert.pem: Permission denied
+cp: /Users/snemeth/.linuxenv//workplace-specific/./cloudera/investigations/HADOOP-15327/nodemanager-config-alpha-20220830/cm-auto-in_cluster_truststore.jks: Permission denied
+cp: /Users/snemeth/.linuxenv//workplace-specific/./cloudera/investigations/HADOOP-15327/nodemanager-config-alpha-20220830/cm-auto-host_key.pw: Permission denied
+cp: cannot overwrite directory /Users/snemeth/.linuxenv//workplace-specific/./cloudera/investigations/HADOOP-15327/testing-on-cluster/testcase_results/latest with non-directory /Users/snemeth/development/my-repos/linux-env//workplace-specific/./cloudera/investigations/HADOOP-15327/testing-on-cluster/testcase_results/latest
++copy_files:53> i=25
++copy_files:25> [ 25 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//.npmrc
++copy_files:27> to=/Users/snemeth/.npmrc
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//.npmrc ]]
++copy_files:31> [[ -f /Users/snemeth/development/my-repos/linux-env//.npmrc ]]
++copy_files:32> dirname /Users/snemeth/.npmrc
++copy_files:32> mkdir -p /Users/snemeth
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//.npmrc == *. ]]
++copy_files:45> echo '/Users/snemeth/development/my-repos/linux-env//.npmrc /Users/snemeth/.npmrc'
++copy_files:46> cmp -s /Users/snemeth/development/my-repos/linux-env//.npmrc /Users/snemeth/.npmrc
++copy_files:47> echo 'No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//.npmrc, DEST: /Users/snemeth/.npmrc'
+No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//.npmrc, DEST: /Users/snemeth/.npmrc
++copy_files:53> i=27
++copy_files:25> [ 27 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//config/kitty.conf
++copy_files:27> to=/Users/snemeth/.config/kitty/kitty.conf
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//config/kitty.conf ]]
++copy_files:31> [[ -f /Users/snemeth/development/my-repos/linux-env//config/kitty.conf ]]
++copy_files:32> dirname /Users/snemeth/.config/kitty/kitty.conf
++copy_files:32> mkdir -p /Users/snemeth/.config/kitty
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//config/kitty.conf == *. ]]
++copy_files:45> echo '/Users/snemeth/development/my-repos/linux-env//config/kitty.conf /Users/snemeth/.config/kitty/kitty.conf'
++copy_files:46> cmp -s /Users/snemeth/development/my-repos/linux-env//config/kitty.conf /Users/snemeth/.config/kitty/kitty.conf
++copy_files:47> echo 'No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//config/kitty.conf, DEST: /Users/snemeth/.config/kitty/kitty.conf'
+No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//config/kitty.conf, DEST: /Users/snemeth/.config/kitty/kitty.conf
++copy_files:53> i=29
++copy_files:25> [ 29 -lt 30 ']'
++copy_files:26> from=/Users/snemeth/development/my-repos/linux-env//config/theme.conf
++copy_files:27> to=/Users/snemeth/.config/kitty/theme.conf
++copy_files:29> [[ -d /Users/snemeth/development/my-repos/linux-env//config/theme.conf ]]
++copy_files:31> [[ -f /Users/snemeth/development/my-repos/linux-env//config/theme.conf ]]
++copy_files:32> dirname /Users/snemeth/.config/kitty/theme.conf
++copy_files:32> mkdir -p /Users/snemeth/.config/kitty
++copy_files:35> [[ /Users/snemeth/development/my-repos/linux-env//config/theme.conf == *. ]]
++copy_files:45> echo '/Users/snemeth/development/my-repos/linux-env//config/theme.conf /Users/snemeth/.config/kitty/theme.conf'
++copy_files:46> cmp -s /Users/snemeth/development/my-repos/linux-env//config/theme.conf /Users/snemeth/.config/kitty/theme.conf
++copy_files:47> echo 'No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//config/theme.conf, DEST: /Users/snemeth/.config/kitty/theme.conf'
+No changes in file. SRC: /Users/snemeth/development/my-repos/linux-env//config/theme.conf, DEST: /Users/snemeth/.config/kitty/theme.conf
++copy_files:53> i=31
++copy_files:25> [ 31 -lt 30 ']'
++copy_files_from_linuxenv_repo_to_home:35> set +e
++copy_files_from_linuxenv_repo_to_home:39> source_single_file /Users/snemeth/.linuxenv//scripts/load-these-first.sh
++source_single_file:1> src_file=/Users/snemeth/.linuxenv//scripts/load-these-first.sh
++source_single_file:2> echo 'Sourcing file /Users/snemeth/.linuxenv//scripts/load-these-first.sh'
+Sourcing file /Users/snemeth/.linuxenv//scripts/load-these-first.sh
++source_single_file:3> . /Users/snemeth/.linuxenv//scripts/load-these-first.sh
++copy_files_from_linuxenv_repo_to_home:40> source_single_file /Users/snemeth/.linuxenv//setup-vars.sh
++source_single_file:1> src_file=/Users/snemeth/.linuxenv//setup-vars.sh
++source_single_file:2> echo 'Sourcing file /Users/snemeth/.linuxenv//setup-vars.sh'
+Sourcing file /Users/snemeth/.linuxenv//setup-vars.sh
++source_single_file:3> . /Users/snemeth/.linuxenv//setup-vars.sh
++/Users/snemeth/.linuxenv//setup-vars.sh:2> echo 'Loading setup-vars.sh...'
+Loading setup-vars.sh...
++/Users/snemeth/.linuxenv//setup-vars.sh:6> export NODE_PATH=/usr/local/lib/node_modules
++/Users/snemeth/.linuxenv//setup-vars.sh:7> NPM_PACKAGES=/Users/snemeth/.npm-packages
++/Users/snemeth/.linuxenv//setup-vars.sh:8> PATH=/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt
++/Users/snemeth/.linuxenv//setup-vars.sh:10> unset MANPATH
++/Users/snemeth/.linuxenv//setup-vars.sh:11> manpath
++/Users/snemeth/.linuxenv//setup-vars.sh:11> export MANPATH=/Users/snemeth/.npm-packages/share/man:/Users/snemeth/.sdkman/candidates/java/current/man:/usr/local/share/man:/usr/share/man:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/man:/Library/Apple/usr/share/man:/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/share/man:/Library/Developer/CommandLineTools/usr/share/man
++/Users/snemeth/.linuxenv//setup-vars.sh:16> PATH=/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt
++/Users/snemeth/.linuxenv//setup-vars.sh:17> PATH=+/Users/snemeth/.linuxenv//setup-vars.sh:17> gem environment gempath
++/Users/snemeth/.linuxenv//setup-vars.sh:17> PATH=+/Users/snemeth/.linuxenv//setup-vars.sh:17> tr '\n' :
++/Users/snemeth/.linuxenv//setup-vars.sh:17> PATH=+/Users/snemeth/.linuxenv//setup-vars.sh:17> tr : '\n'
+/Users/snemeth/.rbenv/shims/gem: line 21: /usr/local/Cellar/rbenv/1.1.2/libexec/rbenv: No such file or directory
++/Users/snemeth/.linuxenv//setup-vars.sh:17> PATH=+/Users/snemeth/.linuxenv//setup-vars.sh:17> find -type d -name bin
+find: illegal option -- t
+usage: find [-H | -L | -P] [-EXdsx] [-f path] path ... [expression]
+       find [-H | -L | -P] [-EXdsx] -f path [path ...] [expression]
++/Users/snemeth/.linuxenv//setup-vars.sh:17> PATH=:/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt
++/Users/snemeth/.linuxenv//setup-vars.sh:20> export MAVEN_OPTS='-Xmx1024m -XX:MaxPermSize=1024m'
++/Users/snemeth/.linuxenv//setup-vars.sh:21> export ANT_OPTS='-XX:PermSize=512m -XX:MaxPermSize=512m -Xmx1024m -Xms1024m'
++/Users/snemeth/.linuxenv//setup-vars.sh:22> export GIT_EDITOR=vim
++/Users/snemeth/.linuxenv//setup-vars.sh:23> export MY_REPOS_DIR=/Users/snemeth/development/my-repos/
++/Users/snemeth/.linuxenv//setup-vars.sh:24> export OTHER_REPOS_DIR=/Users/snemeth/development/other-repos/
++/Users/snemeth/.linuxenv//setup-vars.sh:25> export FORKED_REPOS_DIR=/Users/snemeth/development/my-repos/fork
++/Users/snemeth/.linuxenv//setup-vars.sh:26> export LINUXENV_DIR=/Users/snemeth/development/my-repos/linux-env/
++/Users/snemeth/.linuxenv//setup-vars.sh:27> export KB_REPO=/Users/snemeth/development/my-repos/knowledge-base/
++/Users/snemeth/.linuxenv//setup-vars.sh:28> export KB_PRIVATE_REPO=/Users/snemeth/development/my-repos/knowledge-base-private/
++/Users/snemeth/.linuxenv//setup-vars.sh:29> export PYTHON_COMMONS_REPO=/Users/snemeth/development/my-repos/python-commons/
++/Users/snemeth/.linuxenv//setup-vars.sh:30> export YARNDEVTOOLS_REPO=/Users/snemeth/development/my-repos/yarn-dev-tools/
++copy_files_from_linuxenv_repo_to_home:41> source_scripts /Users/snemeth/.linuxenv//aliases
++source_scripts:1> source_from=/Users/snemeth/.linuxenv//aliases
++source_scripts:2> src_first_orig=''
++source_scripts:3> src_first=/Users/snemeth/.linuxenv//aliases/
++source_scripts:5> [[ ! -z '' ]]
++source_scripts:10> echo Sourcing files from /Users/snemeth/.linuxenv//aliases
+Sourcing files from /Users/snemeth/.linuxenv//aliases
++source_scripts:11> f=/Users/snemeth/.linuxenv//aliases/aliases.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//aliases/ && /Users/snemeth/.linuxenv//aliases/aliases.sh = /Users/snemeth/.linuxenv//aliases/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//aliases/aliases.sh
+Sourcing file /Users/snemeth/.linuxenv//aliases/aliases.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//aliases/aliases.sh
++/Users/snemeth/.linuxenv//aliases/aliases.sh:3> DIR=+/Users/snemeth/.linuxenv//aliases/aliases.sh:3> dirname ''
++/Users/snemeth/.linuxenv//aliases/aliases.sh:3> DIR=+/Users/snemeth/.linuxenv//aliases/aliases.sh:3> cd .
++/Users/snemeth/.linuxenv//aliases/aliases.sh:3> pwd
++/Users/snemeth/.linuxenv//aliases/aliases.sh:3> DIR=/Users/snemeth
++/Users/snemeth/.linuxenv//aliases/aliases.sh:7> alias 'linuxenv-reload=/Users/snemeth/development/my-repos/linux-env//setup-env.sh'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:8> alias 'linuxenv-todos=grep '\''#TODO'\'' -r /Users/snemeth/development/my-repos/linux-env/'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:9> alias 'linuxenv-debug-on=echo "enabled" > /Users/snemeth/.env//.debug-setup'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:10> alias 'linuxenv-debug-off=echo "disabled" > /Users/snemeth/.env//.debug-setup'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:11> alias 'edit-linuxenv=subl ~/development/my-repos/linux-env/'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:12> alias 'edit-run-configs=subl ~/development/my-repos/project-run-configurations/'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:13> alias 'edit-branchcomparator-latest=subl ~/snemeth-dev-projects/yarn_dev_tools/latest-session-branchcomparator/'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:16> alias 'edit-knowledgebase=subl ~/development/my-repos/knowledge-base'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:17> alias 'edit-knowledgebase-private=subl ~/development/my-repos/knowledge-base-private'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:21> alias 'goto-linuxenv-repo=cd /Users/snemeth/development/my-repos/linux-env/'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:22> alias 'goto-kb-repo=cd /Users/snemeth/development/my-repos/knowledge-base/'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:23> alias 'goto-kb-private-repo=cd /Users/snemeth/development/my-repos/knowledge-base-private/'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:24> alias 'goto-pythoncommons=cd /Users/snemeth/development/my-repos/python-commons/'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:25> alias 'goto-yarndevtools=cd /Users/snemeth/development/my-repos/yarn-dev-tools/'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:29> alias 'git-commits-above-master=git log --oneline HEAD ^master | wc -l'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:30> alias 'git-mybranches=git branch | grep '\''own-'\'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:31> alias 'git-commit-msg=git log -n 1 --pretty=format:%s'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:32> alias 'git-remove-trailing-ws=git diff-tree --no-commit-id --name-only -r HEAD | xargs sed -i '\''s/[[:space:]]*$//'\'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:33> alias 'git-fix-author-info-private=git config user.email '\''szilard.nemeth88@gmail.com'\'' && git config user.name '\''Szilard Nemeth'\'' && git commit --amend --reset-author'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:34> alias 'git-fix-author-info-cloudera=git config user.email '\''snemeth@cloudera.com'\'' && git config user.name '\''Szilard Nemeth'\'' && git commit --amend --reset-author'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:36> alias 'git-add-all-tracked=git status -s | grep -v "??" | cut -c 4- | xargs git add'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:41> alias 'yarn-backport-diff-generator-gerrit=python3 /Users/snemeth/development/other-repos//gandras/hadoop-scripts/backport_diff_generator.py'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:42> alias 'yarn-backport-diff-generator-upstream=python3 /Users/snemeth/development/other-repos//gandras/hadoop-scripts/github_us_backport_diff_generator.py'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:47> alias 'git-save-all-commits=rm /tmp/patches/*; git format-patch 4b825dc642cb6eb9a060e54bf8d69288fbee4904..HEAD -o /tmp/patches'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:48> alias 'git-add-mod=git ls-files --modified | xargs git add'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:49> alias 'gs=git status'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:50> alias 'gc=git commit'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:51> alias 'ga=git add'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:54> alias 'rm=safe-rm'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:55> alias 'currentweek=date +%V'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:56> alias 'vpn-szyszy=sudo openvpn --client --config ~/openvpn-szyszy/client.ovpn --ca ~/openvpn-szyszy/ca.crt'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:57> alias 'date-formatted=date +%Y%m%d_%H%M%S'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:58> alias 'sl=sl --help'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:59> alias 'grep=grep --color=auto'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:60> alias 'dfh=df -h'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:61> alias 'bashrc=vim ~/.bashrc'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:62> alias 'logs=find /var/log -type f -exec file {} \; | grep '\''text'\'' | cut -d'\'' '\'' -f1 | sed -e'\''s/:$//g'\'' | grep -v '\''[0-9]$'\'' | xargs tail -f'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:63> alias '..=cd ..'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:64> alias '...=cd ../..'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:65> alias '....=cd ../../..'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:68> alias 'll=ls -alF'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:69> alias 'la=ls -A'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:70> alias 'l=ls -CF'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:73> alias 'lc=colorls -lA --sd'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:79> GCHROME_TOOLKIT_ROOT=/Users/snemeth/development/my-repos/google-chrome-toolkit/
++/Users/snemeth/.linuxenv//aliases/aliases.sh:80> GCHROME_TOOLKIT_MODULE_ROOT=/Users/snemeth/development/my-repos/google-chrome-toolkit//googlechrometoolkit/
++/Users/snemeth/.linuxenv//aliases/aliases.sh:81> GCHROME_TOOLKIT_VENV=/Users/snemeth/development/my-repos/google-chrome-toolkit//venv/
++/Users/snemeth/.linuxenv//aliases/aliases.sh:82> BIN_PYTHON_GCHROME=/Users/snemeth/development/my-repos/google-chrome-toolkit//venv//bin/python3
++/Users/snemeth/.linuxenv//aliases/aliases.sh:83> local SETUP_PYENV='PYTHONPATH=/Users/snemeth/development/my-repos/google-chrome-toolkit/:/Users/snemeth/Library/Python/3.8/lib/python/site-packages/:/Users/snemeth/.asdf/installs/python/3.8.12/lib/python3.8/site-packages:/Users/snemeth/.linuxenv//scripts/python/:'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:84> alias 'save-tabs-android=PYTHONPATH=/Users/snemeth/development/my-repos/google-chrome-toolkit/:/Users/snemeth/Library/Python/3.8/lib/python/site-packages/:/Users/snemeth/.asdf/installs/python/3.8.12/lib/python3.8/site-packages:/Users/snemeth/.linuxenv//scripts/python/: /Users/snemeth/development/my-repos/google-chrome-toolkit//venv//bin/python3 /Users/snemeth/development/my-repos/google-chrome-toolkit//googlechrometoolkit//save_open_tabs_android.py'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:85> alias 'save-chrome-history-all=PYTHONPATH=/Users/snemeth/development/my-repos/google-chrome-toolkit/:/Users/snemeth/Library/Python/3.8/lib/python/site-packages/:/Users/snemeth/.asdf/installs/python/3.8.12/lib/python3.8/site-packages:/Users/snemeth/.linuxenv//scripts/python/: /Users/snemeth/development/my-repos/google-chrome-toolkit//venv//bin/python3 /Users/snemeth/development/my-repos/google-chrome-toolkit//googlechrometoolkit//main.py --search-db-files --export-mode all'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:87> alias 'myrepos-sync=myrepos_syncer.py'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:88> alias 'gpwh=git-push-with-hooks.sh'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:93> alias 'alert=notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:94> thefuck --alias
++/Users/snemeth/.linuxenv//aliases/aliases.sh:94> eval fuck '()' '{' 'TF_PYTHONIOENCODING=$PYTHONIOENCODING;' export 'TF_SHELL=zsh;' export 'TF_ALIAS=fuck;' 'TF_SHELL_ALIASES=$(alias);' export 'TF_SHELL_ALIASES;' 'TF_HISTORY="$(fc' -ln '-10)";' export 'TF_HISTORY;' export 'PYTHONIOENCODING=utf-8;' 'TF_CMD=$(' thefuck THEFUCK_ARGUMENT_PLACEHOLDER '$@' ')' '&&' eval '$TF_CMD;' unset 'TF_HISTORY;' export 'PYTHONIOENCODING=$TF_PYTHONIOENCODING;' test -n '"$TF_CMD"' '&&' print -s '$TF_CMD' '}'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:95> alias 'mc=LANG=en_EN.UTF-8 mc'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:99> alias 'zip-files=sudo find / -iname *1564501696813_0001_01_000001* -print0 | sudo tar -czvf backup-1564501696813_0001-20190730.tar.gz --null -T -'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:102> alias 'zsh-printcolors=for code in {000..255}; do print -P -- :' '%F{}Color%f; done'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:103> alias 'list-aliases-functions=print -rl -- history glgga gcsm edit-run-configs gbsb mc groh md gupv gupav gbsg git-commit-msg gds gbsr currentweek git-save-all-commits gignored gdt gbss goto-yarndevtools date-formatted gdw save-tabs-android git-add-all-tracked gpd gsps gpf - gpf! glola 1 2 edit-branchcomparator-latest 3 4 5 6 7 8 pip 9 gpu gpv gcans! grep lsa glols bashrc grev gca! git-fix-author-info-cloudera gfa linuxenv-todos goto-pythoncommons gfg yarn-backport-diff-generator-upstream gpristine .. gfo _ gmom glod g glog gra grb l edit-knowledgebase glol gga grh grset grm linuxenv-debug-on gwip grrm gclean grs grt gru ggpush grv dfh gcn! ... gamscp gsb linuxenv-reload gsd gsh gsi ghh gcam git-fix-author-info-private grhh gsr gss gst gsu gsta grss gpsup grst zsh-printcolors gsw gstc gstd zip-files alert myrepos-sync glods gstl git-remove-trailing-ws gstp gsts gstu rd gtl gstall ga .... gb gc gd git-mybranches gf gts gg rm git-svn-dcommit-push gdca gstaa gtv gk gl gm fgrep edit-knowledgebase-private ggsup gama gp gamc gr gs run-help yarn-backport-diff-generator-gerrit glgg gdct gdcw goto-kb-repo glgm gams glgp gup vpn-szyszy grup sl goto-linuxenv-repo gbnm git-add-mod gunwip gignore git-commits-above-master ggpur gke gloga gbda gswc gmtvim ggpull gcpa gcpc goto-kb-private-repo logs gwch gaa glg gc! gbD glo glp gam gmum gap gapa gcan! gpoat gau gav gcount gma glum gpwh grmc gba grba gapt gbd grbc which-command grbd grbi gbl grbm gmt grbo gbr grmv gbs grbs save-chrome-history-all egrep gca edit-linuxenv gcb la gunignore gcd lc gcf gcmsg afind linuxenv-debug-off gcl gcm ll gco gcp gupa gcs ls _x_colormapid _git_log_prettily _arg_compile _fuse_values _omz::pr::clean _xset __sdk_default _exec _vmctl _gnu_generic _zsh_highlight_preexec_hook _enscript _getclip _ispell _omz_diag_dump_os_specific_version _fetch _find_net_interfaces __sdkman_determine_candidate_bin_dir _zsh_highlight_load_highlighters _darcs _next_tags _xv _bzr _quilt _xz _history_modifiers spectrum_bls _ionice _piuparts _zsh_highlight_main__precmd_hook _espeak spaceship_elm _nkf _svn-buildpackage __sdkman_export_candidate_home _zsh_highlight_main__is_global_alias _zsh_highlight_cursor_moved __sdkman_load_env _dpatch-edit-patch _dtruss _yp _file_flags _toilet git_commits_ahead _omz::changelog _psutils spaceship::exists _zsh_highlight_main__resolve_alias _compadd initial_setup _generic _main_complete _webbrowser __sdk_home git_prompt_status git_commits_behind _moosic omz_urldecode _bittorrent _correct_word _dmesg _feh _slabtop _dchroot-dsa _calendar _lz4 _command _netstat compinit d _ldconfig _pax _zsh_highlight _x_font _subversion _ccal _parameters _menu _printenv omz_urlencode _zsh_highlight_highlighter_brackets_predicate _omz_diag_dump_echo_file_w_header _mplayer _complete_help_generic _kdeconnect _lldb _pbm _groups setup-prompt _cygcheck _describe clipcopy brew_cask_install _deb_packages _read_comp _split _otool _zsh_highlight_main_highlighter_highlight_backtick _cygpath _vim-addons _dirs _redirect _combination _wait _omz_diag_dump_check_core_commands spaceship::displaytime __sdkman_echo_paged _read compdef _dsh _acroread _apachectl __sdkman_link_candidate_version _print _zsh_highlight_main_highlighter_highlight_list _add-zle-hook-widget add-zle-hook-widget _look __sdk_config _trap _less spaceship_docker _x_title _zsh_highlight_highlighter_main_paint _omz::plugin _pdf _fw_update ggfl _arping _find compdump _x_locale _fink spaceship::section _zsh_highlight_add_highlight _cpio _npm __sdkman_secure_curl_with_timeouts _list_files _cssh _arch_archives _x_cursor _file_systems _options_set _zsh_highlight_main_highlighter__try_expand_parameter spaceship_hg_branch _graphicsmagick _newsgroups _omz::theme::use _bash _wiggle _ethtool _autocd __sdkman_echo_debug __sdkman_checksum_zip _yafc _fortune _caffeinate _chattr _timeout omz_history _mere _rlogin _setsid setup-pythonpath env_default _xterm _dict_words _user_math_func _pkg_instance _printers __sdk_uninstall _ltrace _directories _wpa_cli _zsh_highlight_main_highlighter_highlight_dollar_quote _chown _pkgtool _parameter _x_selection_timeout _dvi _object_classes _guilt _socket _asciinema _directory_stack _cmdstring _ps1234 _cal _cygstart _xpdf __sdkman_echo_yellow _scselect _dpkg_source _watch _update-rc.d _cat chruby_prompt_info _csup _smit _brace_parameter _remote_files _path_files _ldap _touch _axi-cache _pkg-config compaudit _lynx _perl_modules _diff3 _xfig _tree _history _gqview _postgresql source_scripts _sysstat __sdkman_build_version_csv hg_prompt_info _comp_locale _ant source_files spaceship_git brew_install _condition _php _hwinfo _fs_usage _gnupod _users_on _mysqldiff _bpf_filters _zsh_highlight_highlighter_line_predicate current_branch _wajig _vared spaceship_xcode _zfs_dataset _visudo _uscan _xft_fonts _xdvi _vars down-line-or-beginning-search _toolchain-source _localedef __sdkman_determine_current_version bashcompinit _zed __sdkman_normalise _dpkg _fmt _pip _chkconfig _x_display _fetchmail _ssh spaceship_jobs spaceship_kubectl_version _dkms _lscfg _brew _extensions spaceship_pyenv _shred _bsd_disks _valgrind _java_class _cdr _entr _kld _nbsd_architectures _pspdf _apm _zsh_highlight_highlighter_regexp_paint _smartmontools git_current_user_name _apt _killall spaceship::deprecated _user_admin spaceship_vi_mode_enable _terminals _zsh_highlight__zle-line-pre-redraw _zsh_highlight_apply_zle_highlight _zfs _omz::help _scutil git_current_branch _vpnc _mkdir _mosh _zparseopts _pfexec _selinux_types spaceship_docker_context _basename _loadkeys _man _ngrep _acpi __sdkman_check_version_present _inetadm _logical_volumes __sdkman_set_candidate_home _svcs_fmri _options _zcalc _dumper _myrepos _readelf _gsettings _selinux_users _date_formats _debsign _tcpdump _date _other_accounts setup-key-bindings _arp take _antiword _stgit _urpmi _tput _omz::theme::list _mencal _dates _sqlite setup-kitty _asciidoctor _disable _x_color _osascript _qemu _stat _rmdir _lighttpd _patchutils __sdkman_install_local_version _rar _systat _transmission _pkgadd spaceship_kubectl_context ___sdkman_check_version_cache _zip _mkshortcut _zsh-mime-handler add_to_path _xt_session_id _finger _umountable _zsh_highlight_main_highlighter_highlight_double_quote _mkfifo _dpkg-cross _kvno spaceship_user _sysctl spaceship_ruby _dladm _x_modifier _scons _urxvt _run-help _match _wipefs _x_window spaceship_time git_prompt_info _cvsup spaceship_terraform prompt_spaceship_setup _ecasound _perl __sdkman_install_candidate_version _ulimit _zsh_highlight_highlighter_regexp_predicate zsh-pip-cache-packages _lsattr _baudrates _pick_variant azhw:zle-isearch-update _beep _deb_files _xclip azhw:zle-keymap-select _fsh _fuser _history_complete_word _mysql_utils _first _rcs __sdkman_display_offline_warning _zsh_highlight_main_calculate_fallback _pon _uml __sdkman_secure_curl_download _zcat __sdkman_determine_upgradable_version _tload spaceship_exit_code _augeas _curl _rcctl _texinfo _kfmclient _zsh_highlight_bind_widgets __sdkman_cleanup_folder svn_prompt_info _zle __sdk_use _vserver _math_params spaceship_line_sep _mdutil _bsdinstall _source _xxd _complete_tag _ffmpeg _shuf _beadm _xautolock _nice _xt_arguments determine_platform zle-line-init _awk _luarocks _bindkey __sdkman_echo_confirm is-platform-linux _kill __sdkman_env_restore_default_version setup-history _volume_groups _mac_applications _cplay _have_glob_qual git_repo_name ___sdkman_check_candidates_cache _postscript _zmv _paste spaceship_dir _alsa-utils _zsh_highlight_main__is_redirection _tcptraceroute _base64 _urls _zsh_highlight_brackets_match compinstall _be_name _getent __sdk_upgrade _fuse_arguments _dpkg-repack _normal _time_zone _all_labels _getfacl copy_files_from_linuxenv_repo_to_home _floppy _coreadm _networksetup _tracepath _cmp _deb_architectures _jail _yast _dcop _zargs _lsusb _regex_words _zypper _dhcpinfo _cdbs-edit-patch _monotone _tilde __sdk_broadcast _guard __sdkman_download _ipsec _knock _install _omz::plugin::info _functions _cache_invalid _dput _zsh_highlight_main_highlighter_highlight_arithmetic _gprof _complete_debug _update-alternatives _rubber _ipset parse_git_dirty _arch_namespace spaceship_package _omz::pr __sdkman_update_broadcast _limits __sdkman_complete_command _call_program _files _vorbis _SUSEconfig _mknod _pkgin _gzip _code _expand_word virtualenv_prompt_info setup-sdkman spaceship_host _debfoster _next_label _free _zsh_highlight_highlighter_brackets_paint _debdiff __sdkman_echo_cyan _doas _sys_calls git_prompt_short_sha _mdls _chrt _jails _vcsh spaceship_julia __sdkman_check_candidate_present git_main_branch _echotc _sequence _complete _options_unset _qtplay _echoti _mondo nvm_prompt_info _iconv _gnome-gv rvm_prompt_info title _zsh_highlight_main_highlighter_highlight_path_separators _a2utils __sdkman_matches_candidate_format omz_termsupport_precmd _chsh _zsh_highlight_highlighter_cursor_predicate _set_command _ipadm _who _tmux _rsync spaceship_rprompt _iwconfig _topgit _equal _debuild _completers _zfs_keysource_props _pydoc _links _python azhw:zle-line-finish _hash spaceship_node edit-command-line _openstack _object_files _omz::log _user_at_host _regex_arguments _zsh_highlight_highlighter_pattern_paint _cabal _geany _zsh _omz_diag_dump_one_big_text _a2ps _w3m _zsh_highlight_highlighter_root_paint _zsh_highlight__zle-line-finish _ranlib _retrieve_cache _plutil _python_modules _zsh_highlight_highlighter_line_paint zsh-pip-clear-cache _trash _x_geometry run-setup-scripts uninstall_oh_my_zsh _zstyle _xmlsoft _bogofilter _grep _zdump _pids _debchange _getopt _kitty __sdkman_complete_candidate_version _file_modes _nothing _tac _md5sum _oldlist _absolute_command_paths _zsh_highlight_regexp_highlighter_loop _path_commands _subscript _lslv __sdk_flush _zcompile _zftp _twidge _my_accounts _tar _canonical_paths _mixerctl _dconf _zsh_highlight_pattern_highlighter_loop _dcut _correct colors _hdiutil _bash_complete _savecore _evince _mpc _ptree gdv _fbsd_device_types check_version __sdkman_path_contains fuck _xwit spaceship_exec_time_preexec_hook omz_diagnostic_dump _globflags _process_names _zpool _groff _script spaceship_golang _defaults _ports __sdkman_echo _obsd_architectures _svcs _omz::pr::test _external_pwds _btrfs _gstat _antigen _bzip2 __sdk_env _domains _zeal _cut ensure-command-available _stow _ztodo _global _lsof _sublimetext _pscp __sdkman_create_env_file omz _deb_codenames _list spaceship::is_hg _netcat _mail spaceship::defined _sort zsh-pip-clean-packages _avahi _clay _picocom _madison _telnet _cvs _rpm _values _head ggf _brctl ggl _portlint _baz _tee _svcadm spaceship_char ggp _xcode-select __sdk_update _zsocket ggu _lspv _dupload remove-stale-scripts _mii-tool ruby_prompt_info _locale _tex _setup _zsh_highlight_main__stack_pop _zsh_highlight_main_add_region_highlight _zsh_highlight_highlighter_cursor_paint spectrum_ls _arrays _dtrace _etags __sdkman_echo_red _diffstat _nautilus azhw:zle-line-init _zpty _init_d _xscreensaver _apt-show-versions _gnutls _make _x_resource grename _pkgrm __sdk_current _gphoto2 _message spaceship_git_status _antigen_compinit _strings spaceship_kubectl _approximate _members _zfs_pool _comm initial_setup_macos _x_arguments _swift _strftime _findmnt _pidof _mtr _netscape _at spaceship_vi_mode_disable __sdk_install upgrade_oh_my_zsh infer_platform _xloadimage bracketed-paste-magic _selinux_contexts _pack __sdkman_set_availability _most_recent_file _perl_basepods _zsh_highlight_buffer_modified _tcpsys _zsh_highlight_main_highlighter_check_path antigen _rdesktop spaceship_rust _abcde __sdkman_env_each_candidate setup _zcalc_line __sdkman_setup_env __sdkman_cleanup_broadcast _xmms2 _yodl _dlocate _mtools _java __sdk_offline _zsh_highlight_main_highlighter_highlight_single_quote spaceship_vi_mode _tardy tf_prompt_info _cd _tar_archive _env _jls _whois _readlink _omz::update _gcc _zsh_highlight_highlighter_main_predicate _jexec _objdump source_single_file _cp _stty _devtodo _drill _cu _pdftk _texi _totd _eog _grep-excuses _nslookup _unison _truss _call_function _ttyctl _tig spaceship_php _dd _df _tin spaceship::compose_prompt __sdk_selfupdate _svcprop _gdb git_prompt_long_sha _fbsd_architectures __sdkman_determine_broadcast_id _du _ghostscript _attr start-app-silently pyenv_prompt_info _iftop _jobs_builtin __git_prompt_git _enable _ed _pine _ping __sdkman_list_versions _xmlstarlet _patch _wget _gem _lsvg _joe _growisofs spaceship_exec_vcs_info_precmd_hook _networkmanager _fc _jot copy_files _zones _uptime _last _ldd _spamassassin _omz _renice _widgets detect-clipboard _x_keysym url-quote-magic _vmstat _tla alias_value _xournal _surfraw _x_visual _selinux_roles _shasum _open _nedit _flac _go _zsh_highlight_main_highlighter_highlight_argument _tidy _dir_list _bison _gv _debcheckout _cksum _schedtool setup-antigen try_alias_value _unhash getent _in_vared _mergechanges _chcon _cdcd _column git_prompt_behind _wanna-build _zlogin azhw:zle-isearch-exit __sdkman_prepend_candidate_to_path _xmodmap _pkg5 _locate _lsblk _dynamic_directory_name _zmodload _bind_addresses ggpnp spaceship_gcloud _slrn _alternative _configure _debbugs_bugnumber spaceship_conda _email_addresses _fold _module _tiff __sdkman_echo_green __sdkman_update_broadcast_and_service_availability _elfdump _id _pbcopy _okular spaceship_hg _dpkg-buildpackage _users _x_borderwidth _portsnap git_prompt_ahead _signify _ip __sdk_list _asdf _todo.sh _zsh_highlight_main__is_runnable _fstat _prompt _twisted _services _samba _git _cdrecord _alias _globquals _math _unace _compress _nmap spaceship_swift _mktemp _suffix_alias_files _sep_parts _top _lha add_to_path_directly _builtin _chflags _jq _bibtex _expand _cryptsetup _tpb _sshfs _zsh_highlight_highlighter_pattern_predicate _ignored _omz::plugin::list _retrieve_mac_apps rbenv_prompt_info _flowadm _irssi _net_interfaces _auto-apt _sockstat _zsh_highlight_highlighter_root_predicate _jobs _dak _apt-file _cygrunsrv _deborphan _django _ttys _jobs_bg _sub_commands spaceship_exec_time_precmd_hook _cscope _sqsh _invoke-rc.d _strace _mailboxes _osc _rrdtool _zsh_highlight_main_highlighter_expand_path __sdkman_clear_env _chmod _mkzsh _typeset _pkginfo _flex _reprepro _zsh_highlight_main__type spaceship_hg_status _runit set_debug _numfmt _mozilla _kpartx _ln _fakeroot _lp _mime_types _all_matches _ls sdk spaceship_haskell _lzop _elinks __sdkman_display_proxy_warning add-zsh-hook spaceship_aws _postfix zle-line-finish _dispatch _file_descriptors _opkg _portmaster spaceship_exec_time spaceship_ps2 _mh _arguments _e2label _svccfg _lsdev _pgrep _limit _mt _setfacl _sbuild _mv zsh_stats _dict _diff_options _xargs _default clippaste _x_utils _swaks _expand_alias _sc_usage _prefix _qiv _pipenv _dchroot _globqual_delims _pandoc _w _bsd_pkg _nl _nm handle_completion_insecurities _portaudit __sdkman_determine_version _ansible _unexpand _composer _crontab _cdrdao _hosts _od _zattr _wakeup_capable_devices __sdkman_validate_zip _jobs_fg _module_math_func _value _setopt _zsh_highlight_main_highlighter_check_assign _aptitude _tty _aliases _ruby _rake _rclone _bpython __sdkman_is_blank_line _genisoimage _vim git_current_user_email _losetup _softwareupdate spaceship_dotnet _pmap _which git_remote_status _showmount spaceship::is_git _pbuilder _fusermount _diff _dns_types _gpasswd _gpg _schroot _getmail _ps _pv _sched _xauth _emulate _setxkbmap _imagemagick vi_mode_prompt_info _mount _cowsay __sdkman_secure_curl _swanctl _mac_files_for_application _uniq _compdef _screen default _prove _say _dbus _tags _join git_prompt_remote _iconvconfig _perforce __sdkman_auto_update _initctl _seafile _yum _ri _omz::theme _rm _store_cache _complete_help spaceship_prompt _locales _tilde_files is-at-least _ifconfig __sdkman_list_candidates _physical_volumes _bts _mutt work_in_progress is-platform-macos _snoop _gradle _route open_command _matlab gdnolock _correct_filename set_matched_dirs _dig _whereis _zsh_highlight_main_add_many_region_highlights _pfctl __sdkman_offline_list _sh _user_expand spaceship::union _bug _dmidecode _scl _sisu _fmadm _ss _getconf _lein _su _sw_vers _add-zsh-hook _tail compgen spaceship_ember _dhclient _module-assistant _chroot _gcore _procstat spaceship_git_branch _mdfind _watch-snoop _units _uname _ld_debug _zsh_highlight__is_function_p _cygserver _sudo _acpitool _htop _prstat _sdk _pump _mdadm _nginx _assign _tr _vnc _tune2fs _system_profiler _git-buildpackage _xrandr _strip _aap _requested _iostat _multi_parts zsh-pip-test-clean-packages _cpupower omz_termsupport_preexec complete _figlet _sed _description _precommand _stdbuf __sdk_help _seq up-line-or-beginning-search _bash_completions _set _service _modutils _delimiters _x_name spaceship_battery _shutdown _dos2unix _mupdf _host _ctags_tags _rebootin _nvram __sdk_version _dumpadm _apt-move __sdkman_echo_no_colour _zsh_highlight_call_widget _sccs _zsh_highlight__function_is_autoload_stub_p _ack _bsdconfig _signals _powerd _sysrc _cmdambivalent _omz::confirm vcs_info _wc _analyseplugin _libvirt _global_tags jenv_prompt_info _putclip _pwgen _lua _wanted _adb _perldoc _freebsd-update spaceship_elixir azhw:zle-history-line-set _zoneadm _zsh_highlight__function_callable_p _lintian _command_names __sdkman_add_to_path _x_extension print-welcome-screen _iptables _dnf _make-kpkg _readshortcut azhw:zle-line-pre-redraw bzr_prompt_info _hexdump _ncftp __sdkman_is_symlink _ssh_hosts spaceship_venv _hostname _qdbus SPACESHIP_VENV_GENERIC_NAMES SPACESHIP_EMBER_SUFFIX KB_PRIVATE_REPO SPACESHIP_JOBS_AMOUNT_PREFIX SPACESHIP_NODE_SUFFIX src_first_orig RANDOM SDKMAN_DIR USERNAME SPACESHIP_DOCKER_COLOR SPACESHIP_GIT_STATUS_BEHIND SPACESHIP_KUBECONTEXT_COLOR ZSH_THEME_GIT_PROMPT_CLEAN STANDARD_PYTHON_LIBS SPACESHIP_EXEC_TIME_ELAPSED SPACESHIP_RUST_COLOR SPACESHIP_DOCKER_CONTEXT_PREFIX sdkman_curl_retry_max_time LOGNAME COMMAND_MODE SPACESHIP_KUBECONTEXT_COLOR_GROUPS SPACESHIP_GOLANG_SYMBOL SPACESHIP_VI_MODE_INSERT SPACESHIP_VI_MODE_PREFIX SPACESHIP_EMBER_COLOR SPACESHIP_ELIXIR_PREFIX ! KB_REPO # NULLCMD SPACESHIP_DOCKER_PREFIX SPACESHIP_PHP_PREFIX SPACESHIP_XCODE_SHOW_LOCAL $ SPACESHIP_GIT_BRANCH_SHOW watch COLORTERM sdkman_debug_mode sdkman_insecure_ssl * config READNULLCMD HISTFILESIZE - SPACESHIP_EMBER_PREFIX 0 dis_aliases _patcomps TIMEFMT SPACESHIP_NODE_PREFIX terminfo dis_reswords SPACESHIP_GIT_STATUS_ADDED fg_bold bg_bold ? PWD @ SPACESHIP_PACKAGE_SYMBOL SPACESHIP_GCLOUD_SHOW COPY_LIST SPACESHIP_VENV_SYMBOL GID ANTIGEN_CHECK_FILES SPACESHIP_PROMPT_SUFFIXES_SHOW SPACESHIP_PROMPT_PREFIXES_SHOW MY_REPOS_DIR sdkman_auto_answer SPACESHIP_TERRAFORM_SHOW saliases sdkman_rosetta2_compatible SPACESHIP_JOBS_SUFFIX LINUXENV_DIR SPACESHIP_GCLOUD_COLOR SPACESHIP_GIT_STATUS_DIVERGED SPACESHIP_PYENV_SUFFIX SPACESHIP_CONDA_VERBOSE SPACESHIP_HASKELL_COLOR ENV_SETUP_STATUS LINUX_ENV_REPO SPACESHIP_RUBY_SHOW ZSH_HIGHLIGHT_VERSION LINENO SDKMAN_CANDIDATES_API _ SPACESHIP_GIT_SUFFIX d SPACESHIP_SWIFT_SYMBOL SPACESHIP_HOST_SUFFIX f SPACESHIP_HASKELL_SHOW nameddirs i SPACESHIP_BATTERY_SYMBOL_CHARGING SPACESHIP_JULIA_COLOR SPACESHIP_ELIXIR_DEFAULT_VERSION ZSH_VERSION _comp_dumpfile darwin TTY SPACESHIP_USER_SHOW SPACESHIP_RUST_VERBOSE_VERSION SPACESHIP_EMBER_SHOW SDKMAN_CANDIDATES_DIR SPACESHIP_JOBS_PREFIX ZSH_PATCHLEVEL HISTFILE ZSH_HIGHLIGHT_PATTERNS PPID dis_builtins SPACESHIP_PYENV_PREFIX LISTMAX src_file SPACESHIP_XCODE_SYMBOL path module_path ZSH_THEME_RVM_PROMPT_OPTIONS WORDCHARS SPACESHIP_EXIT_CODE_SUFFIX SPACESHIP_RUBY_COLOR SPACESHIP_JULIA_SYMBOL ARGC SPACESHIP_GIT_SHOW SPACESHIP_GIT_PREFIX solaris SPACESHIP_KUBECTL_VERSION_SUFFIX ZSH_HIGHLIGHT_HIGHLIGHTERS SPACESHIP_SWIFT_SHOW_LOCAL SPACESHIP_GIT_STATUS_SHOW SPACESHIP_KUBECTL_VERSION_COLOR PYTHON_COMMONS_REPO SPACESHIP_HOST_PREFIX SPACESHIP_AWS_COLOR galiases SPACESHIP_XCODE_SHOW_GLOBAL mailpath SCREEN_NO SPACESHIP_PACKAGE_COLOR SPACESHIP_CHAR_SYMBOL SPACESHIP_KUBECTL_COLOR SPACESHIP_HG_SYMBOL SPACESHIP_TERRAFORM_SUFFIX SPACESHIP_ELM_SUFFIX SPACESHIP_PROMPT_ADD_NEWLINE KITTY_WINDOW_ID parameters SPACESHIP_HG_STATUS_ADDED _ANTIGEN_BUNDLE_RECORD SPACESHIP_BATTERY_SYMBOL_DISCHARGING SPACESHIP_KUBECTL_SYMBOL MAVEN_OPTS ASDF_PYTHON_LIBS SPACESHIP_EXIT_CODE_PREFIX ENABLE_DEBUG compprefuncs TRY_BLOCK_ERROR SPACESHIP_TIME_SUFFIX SPACESHIP_USER_SUFFIX SPACESHIP_KUBECTL_VERSION_PREFIX SPACESHIP_DIR_COLOR TRY_BLOCK_INTERRUPT functrace SPACESHIP_KUBECONTEXT_SUFFIX ZSH_EVAL_CONTEXT ZSH_THEME_TERM_TITLE_IDLE bash_shell SPACESHIP_TERRAFORM_PREFIX SPACESHIP_ELM_PREFIX SPACESHIP_PHP_SHOW SPACESHIP_DOCKER_VERBOSE SPACESHIP_SWIFT_SHOW_GLOBAL options SPACESHIP_ELIXIR_SYMBOL OPTARG ZSH_SUBSHELL SPACESHIP_DOCKER_SYMBOL SPACESHIP_PHP_SYMBOL UID FUNCNEST SPACESHIP_GIT_STATUS_SUFFIX platform reswords fg_no_bold _compautos fignore SPACESHIP_HG_SHOW SPACESHIP_EMBER_SYMBOL WATCH usergroups SPACESHIP_TIME_COLOR SPACESHIP_ELM_SHOW SPACESHIP_HOST_SHOW SPACESHIP_DIR_SUFFIX SPACESHIP_CONDA_SUFFIX sdkman_curl_max_time FIGNORE SPACESHIP_NODE_SYMBOL color SPACESHIP_TIME_PREFIX SPACESHIP_USER_PREFIX SDKMAN_CANDIDATES_CACHE ENV_FILE_MAPPINGS SPACESHIP_GIT_STATUS_UNTRACKED aliases YARNDEVTOOLS_REPO XPC_FLAGS PROFILE_SHELL SPACESHIP_KUBECONTEXT_PREFIX userdirs TTYIDLE CPUTYPE SPACESHIP_PROMPT_SEPARATE_LINE SPACESHIP_GCLOUD_SUFFIX GIT_EDITOR TMPPREFIX SPACESHIP_XCODE_COLOR _comp_assocs ANTIGEN_RSRC SPACESHIP_TERRAFORM_COLOR SPACESHIP_GIT_STATUS_PREFIX psvar termcap SPACESHIP_AWS_SUFFIX SDKMAN_VERSION TMPDIR SPACESHIP_RUST_SUFFIX SPACESHIP_GIT_BRANCH_COLOR ANT_OPTS JAVA_HOME HISTSIZE bold_color SPACESHIP_DIR_PREFIX OTHER_REPOS_DIR SPACESHIP_CONDA_PREFIX SPACESHIP_BATTERY_SHOW TERMINFO _comps _lastcomp ZSH_HIGHLIGHT_STYLES SPACESHIP_JOBS_AMOUNT_THRESHOLD SPACESHIP_GIT_STATUS_COLOR preexec_functions SDKMAN_KERNEL ZSH_HIGHLIGHT_REVISION zsh_highlight__pat_static_bug SPACESHIP_HOST_COLOR_SSH COLUMNS builtins ZSH_THEME_GIT_PROMPT_DIRTY SPACESHIP_GCLOUD_PREFIX SPACESHIP_NODE_DEFAULT_VERSION SPACESHIP_DIR_LOCK_SYMBOL SPACESHIP_DOTNET_SUFFIX ANTIGEN_CACHE BIN_PYTHON_GCHROME sdkman_auto_complete SPACESHIP_JOBS_SYMBOL HOME_LINUXENV_DIR EGID SPACESHIP_PYENV_SYMBOL SPACESHIP_DIR_TRUNC_PREFIX _services SPACESHIP_HASKELL_SUFFIX NPM_PACKAGES SPACESHIP_KUBECTL_SHOW _comp_setup SPACESHIP_AWS_PREFIX SPACESHIP_GIT_STATUS_STASHED SPACESHIP_RUST_PREFIX _zsh_highlight_main__command_type_cache ZSH_THEME_TERM_TAB_TITLE_IDLE to SPACESHIP_GIT_SYMBOL bg SPACESHIP_DIR_TRUNC ZSH_HIGHLIGHT_REGEXP SPACESHIP_RPROMPT_ORDER zsh_shell LOGCHECK SHELL dis_patchars _comp_options GCHROME_TOOLKIT_MODULE_ROOT ENV_DEBUG_SETUP_FILE SPACESHIP_DOCKER_CONTEXT_SHOW XPC_SERVICE_NAME zle_bracketed_paste jobdirs SPACESHIP_HG_STATUS_SUFFIX OPTIND SPACESHIP_ELIXIR_SHOW reset_color SPACESHIP_DOTNET_PREFIX SPACESHIP_HASKELL_PREFIX SPACESHIP_VI_MODE_SHOW SPACESHIP_GOLANG_SHOW SPACESHIP_GIT_BRANCH_SUFFIX SPACESHIP_EXIT_CODE_SYMBOL sdkman_checksum_enable PROMPT2 FORKED_REPOS_DIR SPACESHIP_RUBY_SUFFIX PROMPT3 SPACESHIP_AWS_SHOW PROMPT4 VENDOR SPACESHIP_TIME_SHOW SPACESHIP_TIME_12HR modules SPACESHIP_PYENV_COLOR KEYBOARD_HACK zsh_eval_context from SPACESHIP_CONDA_SHOW SPACESHIP_HG_STATUS_PREFIX _postpatcomps MAILPATH SPACESHIP_GIT_STATUS_DELETED SDKMAN_CANDIDATES bg_no_bold SPACESHIP_HG_BRANCH_COLOR SPACESHIP_HG_STATUS_UNTRACKED SPACESHIP_KUBECTL_VERSION_SHOW comppostfuncs SPACESHIP_BATTERY_SUFFIX SPACESHIP_TERRAFORM_SYMBOL SPACESHIP_ELM_SYMBOL ZSH_THEME_GIT_PROMPT_SUFFIX source_from SPACESHIP_DIR_LOCK_COLOR SPACESHIP_EXIT_CODE_COLOR HOME key src_first fpath widgets SPACESHIP_HG_STATUS_COLOR SPACESHIP_RUST_SHOW SPACESHIP_GIT_BRANCH_PREFIX SPACESHIP_NODE_COLOR INFO_PREFIX SETUP_ENV_SCRIPT SPACESHIP_GIT_STATUS_UNMERGED SPACESHIP_RUBY_PREFIX SPACESHIP_GIT_STATUS_AHEAD sdkman_beta_channel SPACESHIP_PROMPT_FIRST_PREFIX_SHOW NEWLINE SPACESHIP_GOLANG_SUFFIX SPACESHIP_VENV_COLOR SPACESHIP_VI_MODE_COLOR KEYTIMEOUT GCHROME_TOOLKIT_VENV cygwin SHLVL functions SPACESHIP_DIR_TRUNC_REPO prompt_opts MACHTYPE argv SPACESHIP_PROMPT_ORDER commands SPACESHIP_BATTERY_PREFIX ZSH_THEME_GIT_PROMPT_PREFIX SPACESHIP_GOLANG_COLOR SPACESHIP_EXEC_TIME_SUFFIX SPACESHIP_EXEC_TIME_COLOR dis_functions RPS1 BG SETUP_PYENV langinfo DIR funcfiletrace SPACESHIP_ROOT HOME_ENV SPACESHIP_NODE_SHOW history SPACESHIP_TIME_FORMAT PSVAR SPACESHIP_USER_COLOR EUID SPACESHIP_PACKAGE_SUFFIX SPACESHIP_CONDA_SYMBOL fg SPACESHIP_VENV_SUFFIX SPACESHIP_GOLANG_PREFIX CDPATH cdpath NODE_PATH SECONDS __CF_USER_TEXT_ENCODING SPACESHIP_HG_BRANCH_SHOW ZSH_HIGHLIGHT_DIRS_BLACKLIST SPACESHIP_EXEC_TIME_SHOW SPACESHIP_VENV_SHOW keymaps sdkman_colour_enable LINES SPACESHIP_HG_BRANCH_SUFFIX PATH SPACESHIP_PROMPT_DEFAULT_SUFFIX sdkman_curl_connect_timeout SPACESHIP_CHAR_COLOR_SECONDARY spaceship_prompt_opened manpath SPACESHIP_GCLOUD_SYMBOL SPACESHIP_HG_STATUD_MODIFIED GCHROME_TOOLKIT_ROOT SDKMAN_PLATFORM sdkman_auto_selfupdate SPACESHIP_EXEC_TIME_PREFIX MANPATH copy_list ZSH_ARGZERO SPACESHIP_AWS_SYMBOL ZSH_PIP_CACHE_FILE SPACESHIP_SWIFT_SUFFIX HISTCMD SPACESHIP_HG_STATUS_MODIFIED SPACESHIP_RUST_SYMBOL patchars SPACESHIP_ELIXIR_COLOR WORKPLACE_SPECIFIC_DIR precmd_functions sdkman_curl_retry SPACESHIP_PACKAGE_PREFIX signals dirstack section SPACESHIP_VENV_PREFIX __CFBundleIdentifier funcsourcetrace zsh_scheduled_events SPACESHIP_CONDA_COLOR SPACESHIP_DOTNET_COLOR SPACESHIP_DOCKER_SHOW WATCHFMT sdkman_curl_continue SPACESHIP_HOST_SHOW_FULL OSTYPE SPACESHIP_HG_BRANCH_PREFIX sdkman_auto_env SPACESHIP_XCODE_SUFFIX SPACESHIP_PROMPT_DEFAULT_PREFIX dis_saliases SPACESHIP_PYENV_SHOW VIRTUAL_ENV_DISABLE_PROMPT PS1 histchars PS2 ZSH_NAME SPACESHIP_DOTNET_SYMBOL PS3 PS4 SPACESHIP_HG_STATUS_DELETED SPACESHIP_JULIA_SUFFIX SPACESHIP_CHAR_COLOR_FAILURE SSH_AUTH_SOCK SPACESHIP_KUBECONTEXT_NAMESPACE_SHOW SPACESHIP_HASKELL_SYMBOL SPACESHIP_DIR_SHOW SPACESHIP_CHAR_COLOR_SUCCESS TERM SPACESHIP_SWIFT_PREFIX funcstack freebsd SPACESHIP_HOST_COLOR status ZSH_THEME_RUBY_PROMPT_SUFFIX SPACESHIP_GIT_STATUS_MODIFIED SPACESHIP_CHAR_SUFFIX SPACESHIP_GIT_STATUS_RENAMED MODULE_PATH SPACESHIP_HG_SUFFIX sdkman_selfupdate_enable ZSH_PIP_INDEXES historywords OLDPWD PYTHONPATH SAVEHIST _ANTIGEN_CACHE_LOADED SPACESHIP_EXIT_CODE_SHOW SPACESHIP_ELM_COLOR USER ZSH_CACHE_DIR SPACESHIP_XCODE_PREFIX SPACESHIP_BATTERY_SYMBOL_FULL SPACESHIP_KUBECTL_SUFFIX HISTCHARS ZSH SPACESHIP_KUBECONTEXT_SHOW dis_functions_source _ANTIGEN_CACHE_VERSION SPACESHIP_CHAR_SYMBOL_SECONDARY SPACESHIP_CHAR_SYMBOL_ROOT SPACESHIP_PACKAGE_SHOW SPACESHIP_JULIA_PREFIX SPACESHIP_PHP_COLOR SPACESHIP_JOBS_COLOR PAGER SPACESHIP_JOBS_AMOUNT_SUFFIX FG LSCOLORS SPACESHIP_HG_STATUS_SHOW _ZCACHE_BUNDLE_SOURCE FPATH SDKMAN_CANDIDATES_CSV SPACESHIP_JOBS_SHOW LESS SPACESHIP_SWIFT_COLOR SPROMPT SPACESHIP_VI_MODE_NORMAL SPACESHIP_RUBY_SYMBOL ZSH_THEME_RUBY_PROMPT_PREFIX SPACESHIP_DOCKER_CONTEXT_SUFFIX functions_source SPACESHIP_VERSION SPACESHIP_CHAR_PREFIX FX jobtexts SPACESHIP_HG_PREFIX colour SPACESHIP_DOTNET_SHOW SPACESHIP_VI_MODE_SUFFIX pipestatus SPACESHIP_ELIXIR_SUFFIX dis_galiases prompt SPACESHIP_DOCKER_SUFFIX SPACESHIP_PHP_SUFFIX SPACESHIP_USER_COLOR_ROOT SPACESHIP_JULIA_SHOW MAILCHECK SPACESHIP_BATTERY_THRESHOLD PROMPT HOST jobstates WINDOWID from_stripped SPACESHIP_KUBECTL_PREFIX'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:111> alias 'whitespace=sed '\''s/ /·/g;s/\t/￫/g;s/\r/§/g;s/$/¶/g'\'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:113> alias 'copy-trello-checklist-script=cat ~/development/my-repos/knowledge-base/codesnippets/js-html-css/copy-trello-checklist-smartlinks.js | pbcopy'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:114> alias 'copy-pushbullet-linksaver-script=cat ~/development/my-repos/knowledge-base/codesnippets/js-html-css/pushbullet-save-links.js | pbcopy'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:115> alias 'svim=vim -u ~/.SpaceVim/vimrc'
++/Users/snemeth/.linuxenv//aliases/aliases.sh:116> alias 'link-to-project-run-configurations=ln -s ~/development/my-repos/project-run-configurations/pycharm//.run ./.run'
++source_scripts:11> f=/Users/snemeth/.linuxenv//aliases/docker.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//aliases/ && /Users/snemeth/.linuxenv//aliases/docker.sh = /Users/snemeth/.linuxenv//aliases/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//aliases/docker.sh
+Sourcing file /Users/snemeth/.linuxenv//aliases/docker.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//aliases/docker.sh
++/Users/snemeth/.linuxenv//aliases/docker.sh:3> ensure-command-available docker
++ensure-command-available:1> cmd=docker
++ensure-command-available:2> command -v docker
++ensure-command-available:4> [[ 0 -ne 0 ]]
++/Users/snemeth/.linuxenv//aliases/docker.sh:8> docker network ls
++/Users/snemeth/.linuxenv//aliases/docker.sh:8> awk '/ / { print $1 }'
++/Users/snemeth/.linuxenv//aliases/docker.sh:8> alias $'docker-rm-net=docker network rm NETWORK\n03f9a3556ea3\n8092be4ff0ee\nd410d48063e5\n42d0d36bc7e2'
++/Users/snemeth/.linuxenv//aliases/docker.sh:9> alias 'docker-rmfv-all=docker-operation-except /Users/snemeth/.docker-op-exceptions rm -fv'
++/Users/snemeth/.linuxenv//aliases/docker.sh:10> alias 'docker-rmf-all=docker-operation-except /Users/snemeth/.docker-op-exceptions rm -f'
++/Users/snemeth/.linuxenv//aliases/docker.sh:11> alias 'docker-stop-all=docker-operation-except /Users/snemeth/.docker-op-exceptions stop'
++/Users/snemeth/.linuxenv//aliases/docker.sh:12> alias 'docker-rmfv-all=docker rm -fv $(docker ps -q)'
++/Users/snemeth/.linuxenv//aliases/docker.sh:13> alias 'docker-rmf-dangling=docker images -f "dangling=true" -q | xargs docker rmi -f'
++/Users/snemeth/.linuxenv//aliases/docker.sh:14> alias 'docker-list-dangling=docker images -f "dangling=true" -q'
++source_scripts:11> f=/Users/snemeth/.linuxenv//aliases/i3.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//aliases/ && /Users/snemeth/.linuxenv//aliases/i3.sh = /Users/snemeth/.linuxenv//aliases/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//aliases/i3.sh
+Sourcing file /Users/snemeth/.linuxenv//aliases/i3.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//aliases/i3.sh
++/Users/snemeth/.linuxenv//aliases/i3.sh:3> is-platform-macos
++is-platform-macos:1> [[ macOS == macOS ]]
++is-platform-macos:2> return 0
++/Users/snemeth/.linuxenv//aliases/i3.sh:5> echo '---> i3 aliases won'\''t be used as platform is macOS!'
+---> i3 aliases won't be used as platform is macOS!
++/Users/snemeth/.linuxenv//aliases/i3.sh:6> return 1
++source_scripts:11> f=/Users/snemeth/.linuxenv//aliases/macos-specific-aliases.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//aliases/ && /Users/snemeth/.linuxenv//aliases/macos-specific-aliases.sh = /Users/snemeth/.linuxenv//aliases/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//aliases/macos-specific-aliases.sh
+Sourcing file /Users/snemeth/.linuxenv//aliases/macos-specific-aliases.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//aliases/macos-specific-aliases.sh
++/Users/snemeth/.linuxenv//aliases/macos-specific-aliases.sh:3> is-platform-macos
++is-platform-macos:1> [[ macOS == macOS ]]
++is-platform-macos:2> return 0
++/Users/snemeth/.linuxenv//aliases/macos-specific-aliases.sh:10> alias 'get-cores=sysctl hw.physicalcpu hw.logicalcpu'
++source_scripts:11> f=/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//aliases/ && /Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh = /Users/snemeth/.linuxenv//aliases/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh
+Sourcing file /Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:3> is-platform-linux
++is-platform-linux:1> [[ macOS == linux ]]
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:9> alias 'intellij-keyboard-fix=ibus-daemon -rd'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:10> alias 'suspend=sudo pm-suspend'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:11> alias 'restart-network=sudo service network-manager restart'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:12> alias 'konsoleb=konsole --background-mode&'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:13> alias 'calc=gcalctool -s'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:14> alias 'gedit=vim'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:18> alias 'install=sudo apt-get install'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:19> alias 'uninstall=sudo apt-get remove'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:20> alias 'reinstall=sudo apt-get --reinstall install'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:21> alias 'remove=sudo apt-get remove'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:22> alias 'purge=sudo apt-get remove --purge'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:23> alias 'update=sudo apt-get update'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:24> alias 'upgrade=sudo apt-get upgrade'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:25> alias 'clean=sudo apt-get autoclean && sudo apt-get autoremove'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:26> alias 'search=apt-cache search'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:27> alias 'show=apt-cache show'
++/Users/snemeth/.linuxenv//aliases/ubuntu-specific.sh:28> alias 'sources=(sudo vim /etc/apt/sources.list)'
++source_scripts:19> echo Done sourcing files from /Users/snemeth/.linuxenv//aliases
+Done sourcing files from /Users/snemeth/.linuxenv//aliases
++copy_files_from_linuxenv_repo_to_home:42> source_scripts /Users/snemeth/.linuxenv//scripts
++source_scripts:1> source_from=/Users/snemeth/.linuxenv//scripts
++source_scripts:2> src_first_orig=''
++source_scripts:3> src_first=/Users/snemeth/.linuxenv//scripts/
++source_scripts:5> [[ ! -z '' ]]
++source_scripts:10> echo Sourcing files from /Users/snemeth/.linuxenv//scripts
+Sourcing files from /Users/snemeth/.linuxenv//scripts
++source_scripts:11> f=/Users/snemeth/.linuxenv//scripts/docker.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//scripts/ && /Users/snemeth/.linuxenv//scripts/docker.sh = /Users/snemeth/.linuxenv//scripts/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//scripts/docker.sh
+Sourcing file /Users/snemeth/.linuxenv//scripts/docker.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//scripts/docker.sh
++/Users/snemeth/.linuxenv//scripts/docker.sh:3> ensure-command-available docker
++ensure-command-available:1> cmd=docker
++ensure-command-available:2> command -v docker
++ensure-command-available:4> [[ 0 -ne 0 ]]
++source_scripts:11> f=/Users/snemeth/.linuxenv//scripts/filesystem.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//scripts/ && /Users/snemeth/.linuxenv//scripts/filesystem.sh = /Users/snemeth/.linuxenv//scripts/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//scripts/filesystem.sh
+Sourcing file /Users/snemeth/.linuxenv//scripts/filesystem.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//scripts/filesystem.sh
++source_scripts:11> f=/Users/snemeth/.linuxenv//scripts/generic.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//scripts/ && /Users/snemeth/.linuxenv//scripts/generic.sh = /Users/snemeth/.linuxenv//scripts/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//scripts/generic.sh
+Sourcing file /Users/snemeth/.linuxenv//scripts/generic.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//scripts/generic.sh
++source_scripts:11> f=/Users/snemeth/.linuxenv//scripts/git.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//scripts/ && /Users/snemeth/.linuxenv//scripts/git.sh = /Users/snemeth/.linuxenv//scripts/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//scripts/git.sh
+Sourcing file /Users/snemeth/.linuxenv//scripts/git.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//scripts/git.sh
++source_scripts:11> f=/Users/snemeth/.linuxenv//scripts/i3.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//scripts/ && /Users/snemeth/.linuxenv//scripts/i3.sh = /Users/snemeth/.linuxenv//scripts/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//scripts/i3.sh
+Sourcing file /Users/snemeth/.linuxenv//scripts/i3.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//scripts/i3.sh
++/Users/snemeth/.linuxenv//scripts/i3.sh:3> is-platform-macos
++is-platform-macos:1> [[ macOS == macOS ]]
++is-platform-macos:2> return 0
++/Users/snemeth/.linuxenv//scripts/i3.sh:5> echo '---> i3 functions won'\''t be used as platform is macOS!'
+---> i3 functions won't be used as platform is macOS!
++/Users/snemeth/.linuxenv//scripts/i3.sh:6> return 1
++source_scripts:11> f=/Users/snemeth/.linuxenv//scripts/load-these-first.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//scripts/ && /Users/snemeth/.linuxenv//scripts/load-these-first.sh = /Users/snemeth/.linuxenv//scripts/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//scripts/load-these-first.sh
+Sourcing file /Users/snemeth/.linuxenv//scripts/load-these-first.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//scripts/load-these-first.sh
++source_scripts:11> f=/Users/snemeth/.linuxenv//scripts/mac-specific.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//scripts/ && /Users/snemeth/.linuxenv//scripts/mac-specific.sh = /Users/snemeth/.linuxenv//scripts/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//scripts/mac-specific.sh
+Sourcing file /Users/snemeth/.linuxenv//scripts/mac-specific.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//scripts/mac-specific.sh
++source_scripts:11> f=/Users/snemeth/.linuxenv//scripts/myrepos-helpers.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//scripts/ && /Users/snemeth/.linuxenv//scripts/myrepos-helpers.sh = /Users/snemeth/.linuxenv//scripts/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//scripts/myrepos-helpers.sh
+Sourcing file /Users/snemeth/.linuxenv//scripts/myrepos-helpers.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//scripts/myrepos-helpers.sh
++/Users/snemeth/.linuxenv//scripts/myrepos-helpers.sh:1> PYTHON_COMMONS_ROOT=/Users/snemeth/development/my-repos/python-commons/
++/Users/snemeth/.linuxenv//scripts/myrepos-helpers.sh:2> COMMON_EXCLUDES=( site-packages .git .idea pyspark Chromagnon fork dist_test samples-books-school-experiments superscraper-libs, the-coding-train-challenges, coding-practice )
++source_scripts:11> f=/Users/snemeth/.linuxenv//scripts/network.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//scripts/ && /Users/snemeth/.linuxenv//scripts/network.sh = /Users/snemeth/.linuxenv//scripts/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//scripts/network.sh
+Sourcing file /Users/snemeth/.linuxenv//scripts/network.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//scripts/network.sh
++source_scripts:11> f=/Users/snemeth/.linuxenv//scripts/process.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//scripts/ && /Users/snemeth/.linuxenv//scripts/process.sh = /Users/snemeth/.linuxenv//scripts/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//scripts/process.sh
+Sourcing file /Users/snemeth/.linuxenv//scripts/process.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//scripts/process.sh
++source_scripts:11> f=/Users/snemeth/.linuxenv//scripts/ubuntu-specific.sh
++source_scripts:12> [[ ! -z /Users/snemeth/.linuxenv//scripts/ && /Users/snemeth/.linuxenv//scripts/ubuntu-specific.sh = /Users/snemeth/.linuxenv//scripts/ ]]
++source_scripts:16> echo Sourcing file /Users/snemeth/.linuxenv//scripts/ubuntu-specific.sh
+Sourcing file /Users/snemeth/.linuxenv//scripts/ubuntu-specific.sh
++source_scripts:17> . /Users/snemeth/.linuxenv//scripts/ubuntu-specific.sh
++/Users/snemeth/.linuxenv//scripts/ubuntu-specific.sh:3> is-platform-linux
++is-platform-linux:1> [[ macOS == linux ]]
++source_scripts:19> echo Done sourcing files from /Users/snemeth/.linuxenv//scripts
+Done sourcing files from /Users/snemeth/.linuxenv//scripts
++copy_files_from_linuxenv_repo_to_home:43> source_files .source-this
++source_files:1> local marker_file_name=.source-this
++source_files:2> local from_dir=/Users/snemeth/.linuxenv//workplace-specific/
++source_files:4> echo 'Searching for .source-this files and sourcing them...'
+Searching for .source-this files and sourcing them...
++source_files:5> set_matched_dirs /Users/snemeth/.linuxenv//workplace-specific/ .source-this
++set_matched_dirs:1> local from_dir=/Users/snemeth/.linuxenv//workplace-specific/
++set_matched_dirs:2> local marker_file_name=.source-this
++set_matched_dirs:10> matched_dirs=+set_matched_dirs:10> find /Users/snemeth/.linuxenv//workplace-specific/ -name .source-this -print0
++set_matched_dirs:10> matched_dirs=+set_matched_dirs:10> xargs -0 -n1 dirname
++set_matched_dirs:10> matched_dirs=+set_matched_dirs:10> sort --unique
++set_matched_dirs:10> matched_dirs=( /Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn )
++source_files:9> d=/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases
++source_files:10> setup_sh=/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/setup.sh
++source_files:11> [[ -f /Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/setup.sh ]]
++source_files:9> d=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts
++source_files:10> setup_sh=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh
++source_files:11> [[ -f /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh ]]
++source_files:12> printf '\tSourcing setup file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh\n'
+	Sourcing setup file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh
++source_files:13> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:4> CLOUDERA_DEV_ROOT=/Users/snemeth/development/cloudera/
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:5> CLOUDERA_HADOOP_ROOT=/Users/snemeth/development/cloudera//hadoop/
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:6> HADOOP_MVN_DIR=/Users/snemeth/development/apache/hadoop-maven/
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:7> HADOOP_DEV_DIR=/Users/snemeth/development/apache/hadoop/
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:9> CLOUDERA_DIR=/Users/snemeth/.linuxenv//workplace-specific/cloudera/
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:10> export CLOUDERA_DIR
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:14> export PATH=/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:17> export MAVEN_OPTS=-Xmx5000m
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:18> export TARGETROOT=''
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:19> export MVN_NO_DOCKER=1
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:22> PATH=/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:23> PATH=/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:25> is-platform-macos
++is-platform-macos:1> [[ macOS == macOS ]]
++is-platform-macos:2> return 0
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:27> PATH=/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:28> PATH=/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:29> PATH=/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup.sh:32> PATH=/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin:/Users/snemeth/.cargo/bin
++source_files:9> d=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn
++source_files:10> setup_sh=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup.sh
++source_files:11> [[ -f /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup.sh ]]
++source_files:17> d=/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases
++source_files:18> printf '\tSourcing files from /Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases\n'
+	Sourcing files from /Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases
++source_files:19> find /Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases -maxdepth 1 -iname '*.sh' -not -iname setup.sh
++source_files:19> xargs grep -L '##SKIPSOURCING##'
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:4> alias 'goto-cldr=cd /Users/snemeth/development/cloudera/'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:5> alias 'goto-cldr-hadoop=cd /Users/snemeth/development/cloudera//hadoop/'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:6> alias 'goto-tasks=cd /Users/snemeth/Google Drive File Stream/My Drive/development/tasks/'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:7> alias 'goto-hadoop=cd /Users/snemeth/development/apache/hadoop/'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:8> alias 'goto-hadoop-mvn=cd /Users/snemeth/development/apache/hadoop-maven/'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:9> alias 'goto-hadoop-commit=cd /Users/snemeth/development/apache/hadoop-commit'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:10> alias 'goto-qecmf=cd /Users/snemeth/development/cloudera//qe-cmf/systest'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:11> alias 'goto-cmf=cd /Users/snemeth/development/cloudera//cmf'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:12> alias 'goto-yarn-tasks=cd /Users/snemeth/yarn-tasks'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:13> alias 'goto-eyarn=cd '
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:14> alias 'goto-bundlelogprocessor=cd /Users/snemeth/development/cloudera//YARN-tools/bundle-log-processor'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:15> alias 'goto-dex=cd /Users/snemeth/development/cloudera//cde/dex'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:18> alias 'gerrit-branches5=git br -r | grep gerrit | grep -e '\''5.1\d.*'\'' | cut -d_ -f 2-3 | sort -u | grep -v patch'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:19> alias 'git-rebase-trunk=git co trunk && echo '\''Pulling origin/trunk...'\'' && git pull && git co - && git rebase trunk'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:24> alias 'java8=sdk use java 8.0.232-trava'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:25> alias 'java11=sdk use java 11.0.2-open'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:27> alias 'git-push-to-cdpdmaster=git push cauldron HEAD:refs/for/cdpd-master%r=gandras,r=bteke,r=tdomok'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:28> alias 'git-push-to-cdh71maint=git push cauldron HEAD:refs/for/CDH-7.1-maint%r=gandras,r=bteke,r=tdomok'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:33> alias 'grind-yarn=export GRIND_MAVEN_FLAGS=-Dmaven-dependency-plugin.version=2.10 && rm -rf ~/development/cloudera/dist_test/env/.grind/cache/ && goto-hadoop-mvn && mvn clean install -DskipTests -Dmaven.javadoc.skip=true && cd hadoop-yarn-project && grind --verbose test --java-version 8'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:40> alias 'grind-yarn-exceptions=grind --verbose test --java-version 8  -e TestHBaseStorageFlowActivity  -e TestHBaseStorageFlowRun  -e TestHBaseStorageFlowRunCompaction  -e TestHBaseTimelineStorageApps  -e TestHBaseTimelineStorageDomain  -e TestHBaseTimelineStorageEntities  -e TestHBaseTimelineStorageSchema'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:51> alias 'eyarn-deploy=cd ; make helm/install ns=; cd -'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:52> alias 'eyarn-redeploy=cd ; make helm/delete ns= && make helm/install ns=; cd -'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:53> alias 'start-minikube=minikube start --cpus=4'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:56> alias 'yarn-fixbuild-zk-intellij=git apply /Users/snemeth/googledrive//development_drive/downstream-hadoop-build-issues-patches/fix-zk-intellij.patch'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:57> alias 'yarn-fixbuild-avro=git apply /Users/snemeth/googledrive//development_drive/downstream-hadoop-build-issues-patches/hadoop-build-avro-change2.patch'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:60> alias 'hadock-stop=docker-compose -f ~/.hadock/docker-compose.yml down'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:61> alias 'hadock-start=docker-compose -f ~/.hadock/docker-compose.yml up'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:64> alias 'run-findbugs=mvn clean install -DskipTests && mvn findbugs:findbugs && mvn findbugs:gui'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:66> alias 'mvn-hadoop-patch=mvn -Ptest-patch clean site site:stage'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:67> alias 'mvn-hadoop-cdpd=asdf uninstall protoc && asdf uninstall maven && cp /usr/local/bin/protoc_old /usr/local/bin/protoc && mvn clean package -s /Users/snemeth/development/cloudera//hadoop//cloudera/settings.xml -Pdist -DskipTests -Dmaven.javadoc.skip=true -DskipShade'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:68> alias 'mvn-hadoop-cdpd-2=asdf uninstall protoc && asdf uninstall maven && cp /usr/local/bin/protoc_old /usr/local/bin/protoc && mvn clean package -s ~/.m2/settings-cdpd.xml -Pdist -DskipTests -Dmaven.javadoc.skip=true -DskipShade'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:70> alias 'mvn-hadoop-upstream-build=asdf plugin-remove yarn;mvn clean install -Pdist -DskipTests -Dmaven.javadoc.skip=true -DskipShade'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:71> alias 'mvn-hadoop-upstream-native=build=mvn clean install -Pdist -Pnative -DskipTests -Dmaven.javadoc.skip=true -DskipShade'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:72> alias 'mvn-generate-proto=mvn generate-sources'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:73> alias 'cluster-roulette=/Users/snemeth/Google\ Drive\ File\ Stream/My\ Drive/development/scripts/cluster-roulette.sh'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:76> CM_SKIPTESTS=-DskipTests
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:77> CM_NOBUILD_DIST='-Dnot-dist-build=true'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:78> CM_NOBUILD_NAV='-Dnot-nav-build=true'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:79> CM_NOBUILD_FRONTEND='-DskipFrontend=true'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:80> CM_NO_BUILD_TEST='-Dmaven.test.skip=true'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:81> alias 'cm-build=make server'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:82> alias 'cm-build-web=cd ./web && ../tools/cmf-mvn -DskipTests -DskipFrontend=true install; cd -'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:83> alias 'cm-build-libs=cd ./libs && ../tools/cmf-mvn -DskipTests -DskipFrontend=true install; cd -'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:84> alias 'cm-build-web-notestbuild=cd ./web && ../tools/cmf-mvn -DskipTests -DskipFrontend=true -Dmaven.test.skip=true install; cd -'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:85> alias 'cm-build-libs-notestbuild=cd ./libs && ../tools/cmf-mvn -DskipTests -DskipFrontend=true -Dmaven.test.skip=true install; cd -'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:87> eval date-formatted
++(eval):1> date +%Y%m%d_%H%M%S
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:87> alias 'backup-devdir=tmpdate=tar czf /tmp/devbackup-20220925_174443.gz /Users/snemeth/development/'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:88> eval date-formatted
++(eval):1> date +%Y%m%d_%H%M%S
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:88> date +%Y%m%d_%H%M%S
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:88> alias 'backup-home=tar czf /tmp/homedir-backup-20220925_174444.gz /Users/snemeth | tee /tmp/homedir-backup-20220925_174444.log'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/aliases/aliases.sh:97> alias 'python-precommit-all=pre-commit run --all-files'
++source_files:17> d=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts
++source_files:18> printf '\tSourcing files from /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts\n'
+	Sourcing files from /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts
++source_files:19> find /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts -maxdepth 1 -iname '*.sh' -not -iname setup.sh
++source_files:19> xargs grep -L '##SKIPSOURCING##'
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-dex-env.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-dex-env.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-dex-env.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-dex-env.sh
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-dex-env.sh:3> echo 'Setting up DEX env...'
+Setting up DEX env...
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-dex-env.sh:5> . /usr/local/opt/asdf/libexec/asdf.sh
++/usr/local/opt/asdf/libexec/asdf.sh:5> _under=/usr/local/opt/asdf/libexec/asdf.sh
++/usr/local/opt/asdf/libexec/asdf.sh:6> [ -z '' ']'
++/usr/local/opt/asdf/libexec/asdf.sh:7> [ -n '' ']'
++/usr/local/opt/asdf/libexec/asdf.sh:9> [[ /usr/local/opt/asdf/libexec/asdf.sh == *.sh ]]
++/usr/local/opt/asdf/libexec/asdf.sh:10> current_script_path=/usr/local/opt/asdf/libexec/asdf.sh
++/usr/local/opt/asdf/libexec/asdf.sh:15> ASDF_DIR=+/usr/local/opt/asdf/libexec/asdf.sh:15> dirname /usr/local/opt/asdf/libexec/asdf.sh
++/usr/local/opt/asdf/libexec/asdf.sh:15> ASDF_DIR=/usr/local/opt/asdf/libexec
++/usr/local/opt/asdf/libexec/asdf.sh:17> export ASDF_DIR
++/usr/local/opt/asdf/libexec/asdf.sh:19> [ -d /usr/local/opt/asdf/libexec ']'
++/usr/local/opt/asdf/libexec/asdf.sh:25> ASDF_BIN=/usr/local/opt/asdf/libexec/bin
++/usr/local/opt/asdf/libexec/asdf.sh:26> ASDF_USER_SHIMS=/Users/snemeth/.asdf/shims
++/usr/local/opt/asdf/libexec/asdf.sh:27> [[ :/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin:/Users/snemeth/.cargo/bin: == *:/usr/local/opt/asdf/libexec/bin:* ]]
++/usr/local/opt/asdf/libexec/asdf.sh:28> [[ :/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin:/Users/snemeth/.cargo/bin: == *:/Users/snemeth/.asdf/shims:* ]]
++/usr/local/opt/asdf/libexec/asdf.sh:30> PATH=/usr/local/opt/asdf/libexec/bin:/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin:/Users/snemeth/.cargo/bin
++/usr/local/opt/asdf/libexec/asdf.sh:31> PATH=/Users/snemeth/.asdf/shims:/usr/local/opt/asdf/libexec/bin:/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin:/Users/snemeth/.cargo/bin
++/usr/local/opt/asdf/libexec/asdf.sh:35> . /usr/local/opt/asdf/libexec/lib/asdf.sh
++/usr/local/opt/asdf/libexec/asdf.sh:37> unset _under current_script_path ASDF_BIN ASDF_USER_SHIMS
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-dex-env.sh:8> go env GOPATH
+/Users/snemeth/.asdf/shims/go: line 3: /usr/local/Cellar/asdf/0.9.0/libexec/bin/asdf: No such file or directory
+/Users/snemeth/.asdf/shims/go: line 3: exec: /usr/local/Cellar/asdf/0.9.0/libexec/bin/asdf: cannot execute: No such file or directory
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-dex-env.sh:8> export GOPATH=''
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-dex-env.sh:9> export PATH=/Users/snemeth/.asdf/shims:/usr/local/opt/asdf/libexec/bin:/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin:/Users/snemeth/.cargo/bin:/bin
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-dex-env.sh:10> export GOOS=darwin
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-linux-env-repo.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-linux-env-repo.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-linux-env-repo.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-linux-env-repo.sh
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/upstream-filter-cdpd-master-differ.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/upstream-filter-cdpd-master-differ.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/upstream-filter-cdpd-master-differ.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/upstream-filter-cdpd-master-differ.sh
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-kb-private-repo.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-kb-private-repo.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-kb-private-repo.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-kb-private-repo.sh
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-yarn-dev-tools-repo.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-yarn-dev-tools-repo.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-yarn-dev-tools-repo.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/sync-yarn-dev-tools-repo.sh
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-qe.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-qe.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-qe.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/setup-qe.sh
++source_files:17> d=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn
++source_files:18> printf '\tSourcing files from /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn\n'
+	Sourcing files from /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn
++source_files:19> find /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn -maxdepth 1 -iname '*.sh' -not -iname setup.sh
++source_files:19> xargs grep -L '##SKIPSOURCING##'
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-jar-functions.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-jar-functions.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-jar-functions.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-jar-functions.sh
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-commits.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-commits.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-commits.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-commits.sh
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-commits.sh:3> GIT_LOG_PY_SCRIPT=git_log_cmd_generator.py
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-commits.sh:4> MY_NAME_VARIATIONS='snemeth Szilard '\''Szilard Nemeth'\'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-commits.sh:5> MY_APACHE_MAIL=\''snemeth@apache.org'\'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-commits.sh:6> MY_APACHE_USERNAME=snemeth
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-commits.sh:7> PROJECTS=\''YARN\|SUBMARINE\|HADOOP'\'
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-snippets.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-snippets.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-snippets.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-snippets.sh
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup-yarn-dev-tools-aliases.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup-yarn-dev-tools-aliases.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup-yarn-dev-tools-aliases.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup-yarn-dev-tools-aliases.sh
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup-yarn-dev-tools-aliases.sh:64> setup-vars
++setup-vars:2> export UPSTREAM_HADOOP_DIR=/Users/snemeth/development/apache/hadoop/
++setup-vars:3> export DOWNSTREAM_HADOOP_DIR=/Users/snemeth/development/cloudera//hadoop/
++setup-vars:6> export YARNDEVTOOLS_ROOT=/Users/snemeth/.yarndevtools
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup-yarn-dev-tools-aliases.sh:65> setup-aliases-yarndevtools-package
++setup-aliases-yarndevtools-package:1> YARN_DEV_TOOLS_ENV='export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT'
++setup-aliases-yarndevtools-package:3> alias 'yarn-backport-c6=export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools BACKPORT_C6; popd'
++setup-aliases-yarndevtools-package:4> alias 'yarn-save-patch=export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools SAVE_PATCH; popd'
++setup-aliases-yarndevtools-package:5> alias 'yarn-create-review-branch=export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools CREATE_REVIEW_BRANCH; popd'
++setup-aliases-yarndevtools-package:6> alias 'yarn-upstream-commit-pr=export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools UPSTREAM_PR_FETCH; popd'
++setup-aliases-yarndevtools-package:7> alias 'yarn-diff-patches=export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools DIFF_PATCHES_OF_JIRA; popd'
++setup-aliases-yarndevtools-package:8> alias 'yarn-save-diff-as-patches=export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools SAVE_DIFF_AS_PATCHES; popd'
++setup-aliases-yarndevtools-package:9> alias 'yarn-get-umbrella-data=export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools FETCH_JIRA_UMBRELLA_DATA; popd'
++setup-aliases-yarndevtools-package:10> print-yarn-dev-tools-aliases
++print-yarn-dev-tools-aliases:1> echo '============================================YARNDEVTOOLS SETUP============================================\n\n'
+============================================YARNDEVTOOLS SETUP============================================
+
+
++print-yarn-dev-tools-aliases:2> echo 'CLOUDERA_HADOOP_ROOT=/Users/snemeth/development/cloudera//hadoop/'
+CLOUDERA_HADOOP_ROOT=/Users/snemeth/development/cloudera//hadoop/
++print-yarn-dev-tools-aliases:3> echo 'HADOOP_DEV_DIR=/Users/snemeth/development/apache/hadoop/'
+HADOOP_DEV_DIR=/Users/snemeth/development/apache/hadoop/
++print-yarn-dev-tools-aliases:4> echo 'YARN_DEV_TOOLS_DIR='
+YARN_DEV_TOOLS_DIR=
++print-yarn-dev-tools-aliases:5> echo 'YARN_DEV_TOOLS_ENV=export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT'
+YARN_DEV_TOOLS_ENV=export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT
++print-yarn-dev-tools-aliases:6> echo 'Aliases: '
+Aliases:
++print-yarn-dev-tools-aliases:7> alias
++print-yarn-dev-tools-aliases:7> grep '--color=auto' -e '^yarn-.*='
+yarn-backport-c6='export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools BACKPORT_C6; popd'
+yarn-backport-diff-generator-gerrit='python3 /Users/snemeth/development/other-repos//gandras/hadoop-scripts/backport_diff_generator.py'
+yarn-backport-diff-generator-upstream='python3 /Users/snemeth/development/other-repos//gandras/hadoop-scripts/github_us_backport_diff_generator.py'
+yarn-create-review-branch='export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools CREATE_REVIEW_BRANCH; popd'
+yarn-diff-patches='export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools DIFF_PATCHES_OF_JIRA; popd'
+yarn-fixbuild-avro='git apply /Users/snemeth/googledrive//development_drive/downstream-hadoop-build-issues-patches/hadoop-build-avro-change2.patch'
+yarn-fixbuild-zk-intellij='git apply /Users/snemeth/googledrive//development_drive/downstream-hadoop-build-issues-patches/fix-zk-intellij.patch'
+yarn-get-umbrella-data='export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools FETCH_JIRA_UMBRELLA_DATA; popd'
+yarn-save-diff-as-patches='export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools SAVE_DIFF_AS_PATCHES; popd'
+yarn-save-patch='export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools SAVE_PATCH; popd'
+yarn-upstream-commit-pr='export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; yarndevtools UPSTREAM_PR_FETCH; popd'
++print-yarn-dev-tools-aliases:8> echo '\n'
+
+
++print-yarn-dev-tools-aliases:9> echo '============================================YARNDEVTOOLS SETUP============================================'
+============================================YARNDEVTOOLS SETUP============================================
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-testcomparison.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-testcomparison.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-testcomparison.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-testcomparison.sh
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh:93> YARN_DEV_TOOLS_DIR=/Users/snemeth/development/my-repos/yarn-dev-tools
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh:94> YARN_DEV_TOOLS_ENV='export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh:95> alias 'yarn-backport-c6=cd /Users/snemeth/development/my-repos/yarn-dev-tools;export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; poetry run exec-yarndevtools BACKPORT_C6; popd'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh:96> alias 'yarn-save-patch=cd /Users/snemeth/development/my-repos/yarn-dev-tools;export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; poetry run exec-yarndevtools SAVE_PATCH; popd'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh:97> alias 'yarn-create-review-branch=cd /Users/snemeth/development/my-repos/yarn-dev-tools;export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; poetry run exec-yarndevtools CREATE_REVIEW_BRANCH; popd'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh:98> alias 'yarn-upstream-commit-pr=cd /Users/snemeth/development/my-repos/yarn-dev-tools;export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; poetry run exec-yarndevtools UPSTREAM_PR_FETCH; popd'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh:99> alias 'yarn-diff-patches=cd /Users/snemeth/development/my-repos/yarn-dev-tools;export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; poetry run exec-yarndevtools DIFF_PATCHES_OF_JIRA; popd'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh:100> alias 'save-diff-as-patches=cd /Users/snemeth/development/my-repos/yarn-dev-tools;export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; poetry run exec-yarndevtools SAVE_DIFF_AS_PATCHES; popd'
++/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/yarn-dev-tools-legacy.sh:101> alias 'yarn-get-umbrella-data=cd /Users/snemeth/development/my-repos/yarn-dev-tools;export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT; poetry run exec-yarndevtools FETCH_JIRA_UMBRELLA_DATA; popd'
++source_files:19> f=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup-yarn-dev-tools.sh
++source_files:20> printf '\tSourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup-yarn-dev-tools.sh\n'
+	Sourcing file /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup-yarn-dev-tools.sh
++source_files:21> . /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/yarn/setup-yarn-dev-tools.sh
++source_files:24> echo 'Done sourcing .source-this files from /Users/snemeth/.linuxenv//workplace-specific/'
+Done sourcing .source-this files from /Users/snemeth/.linuxenv//workplace-specific/
++copy_files_from_linuxenv_repo_to_home:44> add_to_path .add-to-path /Users/snemeth/.linuxenv//workplace-specific/
++add_to_path:1> marker_file_name=.add-to-path
++add_to_path:2> from_dir=/Users/snemeth/.linuxenv//workplace-specific/
++add_to_path:4> echo 'Searching for .add-to-path files and adding them to PATH...'
+Searching for .add-to-path files and adding them to PATH...
++add_to_path:5> set_matched_dirs /Users/snemeth/.linuxenv//workplace-specific/ .add-to-path
++set_matched_dirs:1> local from_dir=/Users/snemeth/.linuxenv//workplace-specific/
++set_matched_dirs:2> local marker_file_name=.add-to-path
++set_matched_dirs:10> matched_dirs=+set_matched_dirs:10> find /Users/snemeth/.linuxenv//workplace-specific/ -name .add-to-path -print0
++set_matched_dirs:10> matched_dirs=+set_matched_dirs:10> xargs -0 -n1 dirname
++set_matched_dirs:10> matched_dirs=+set_matched_dirs:10> sort --unique
++set_matched_dirs:10> matched_dirs=( /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/cldr-clusters /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/start-yarn-on-cluster )
++add_to_path:6> d=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/cldr-clusters
++add_to_path:7> printf '\tAdding files from directory /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/cldr-clusters to PATH...\n'
+	Adding files from directory /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/cldr-clusters to PATH...
++add_to_path:8> PATH=/Users/snemeth/.asdf/shims:/usr/local/opt/asdf/libexec/bin:/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin:/Users/snemeth/.cargo/bin:/bin:/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/cldr-clusters
++add_to_path:6> d=/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/start-yarn-on-cluster
++add_to_path:7> printf '\tAdding files from directory /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/start-yarn-on-cluster to PATH...\n'
+	Adding files from directory /Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/start-yarn-on-cluster to PATH...
++add_to_path:8> PATH=/Users/snemeth/.asdf/shims:/usr/local/opt/asdf/libexec/bin:/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin:/Users/snemeth/.cargo/bin:/bin:/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/cldr-clusters:/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/start-yarn-on-cluster
++add_to_path:10> echo 'Done sourcing .add-to-path files from /Users/snemeth/.linuxenv//workplace-specific/'
+Done sourcing .add-to-path files from /Users/snemeth/.linuxenv//workplace-specific/
++copy_files_from_linuxenv_repo_to_home:45> add_to_path_directly /Users/snemeth/.linuxenv//scripts/python
++add_to_path_directly:1> dir=/Users/snemeth/.linuxenv//scripts/python
++add_to_path_directly:2> echo 'Adding directory: /Users/snemeth/.linuxenv//scripts/python to PATH'
+Adding directory: /Users/snemeth/.linuxenv//scripts/python to PATH
++add_to_path_directly:3> PATH=/Users/snemeth/.asdf/shims:/usr/local/opt/asdf/libexec/bin:/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin:/Users/snemeth/.cargo/bin:/bin:/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/cldr-clusters:/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/start-yarn-on-cluster:/Users/snemeth/.linuxenv//scripts/python
++copy_files_from_linuxenv_repo_to_home:46> add_to_path_directly /Users/snemeth/.linuxenv//scripts/git
++add_to_path_directly:1> dir=/Users/snemeth/.linuxenv//scripts/git
++add_to_path_directly:2> echo 'Adding directory: /Users/snemeth/.linuxenv//scripts/git to PATH'
+Adding directory: /Users/snemeth/.linuxenv//scripts/git to PATH
++add_to_path_directly:3> PATH=/Users/snemeth/.asdf/shims:/usr/local/opt/asdf/libexec/bin:/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin:/Users/snemeth/.cargo/bin:/bin:/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/cldr-clusters:/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/start-yarn-on-cluster:/Users/snemeth/.linuxenv//scripts/python:/Users/snemeth/.linuxenv//scripts/git
++copy_files_from_linuxenv_repo_to_home:47> add_to_path_directly /Users/snemeth/jetbrains-scripts/
++add_to_path_directly:1> dir=/Users/snemeth/jetbrains-scripts/
++add_to_path_directly:2> echo 'Adding directory: /Users/snemeth/jetbrains-scripts/ to PATH'
+Adding directory: /Users/snemeth/jetbrains-scripts/ to PATH
++add_to_path_directly:3> PATH=/Users/snemeth/.asdf/shims:/usr/local/opt/asdf/libexec/bin:/Users/snemeth/.local/bin::/Users/snemeth/.rbenv/shims:/Users/snemeth/.npm-packages/bin:/Users/snemeth/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/kitty.app/Contents/MacOS:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/lib:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/git:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/pip:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/lein:/Users/snemeth/.antigen/bundles/robbyrussell/oh-my-zsh/plugins/command-not-found:/Users/snemeth/.antigen/bundles/zsh-users/zsh-syntax-highlighting:/Users/snemeth/.antigen/bundles/denysdovhan/spaceship-prompt:/Users/snemeth/development/other-repos/util-scripts:/Users/snemeth/development/cloudera/dist_test/bin:/Users/snemeth/Library/Python/2.7/bin:/Users/snemeth/Library/Python/3.8/bin:/Applications/CMake.app/Contents/bin:/Users/snemeth/.cargo/bin:/bin:/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/cldr-clusters:/Users/snemeth/.linuxenv//workplace-specific//cloudera/scripts/start-yarn-on-cluster:/Users/snemeth/.linuxenv//scripts/python:/Users/snemeth/.linuxenv//scripts/git:/Users/snemeth/jetbrains-scripts/
++/Users/snemeth/development/my-repos/linux-env//setup-env.sh:434> set +x
+
+WELCOME
+   September 2022
+Su Mo Tu We Th Fr Sa
+             1  2  3
+ 4  5  6  7  8  9 10
+11 12 13 14 15 16 17
+18 19 20 21 22 23 24
+25 26 27 28 29 30
+
+Sysinfo: 17:44  up 35 days,  5:07, 1 user, load averages: 2.71 3.32 3.15
+
+
+snemeth@snemeth-MBP16 [17:44:45] ⇣76% --( ~ ) via ⬢ v18.2.0

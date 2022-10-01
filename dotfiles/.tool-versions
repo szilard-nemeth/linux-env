@@ -1,0 +1,25 @@
+awscli 2.2.39
+golang 1.18.3
+python 3.8.12
+make 4.3
+maven 3.8.2
+protoc 3.17.3
+yarn 1.22.11
+nodejs 16.13.0
+
+
+awscli 2.2.39
+#python 3.9.13 2.7.18
+
+# k8s
+k9s 0.26.0
+kubectl 1.22.1
+
+# cloud
+aws-iam-authenticator 0.5.7
+awscli 2.2.39
+saml2aws 2.33.0
+azure-cli 2.35.0
+
+jq 1.6
+pipenv 2022.9.8

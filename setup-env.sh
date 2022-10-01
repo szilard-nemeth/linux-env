@@ -261,6 +261,8 @@ function initial_setup_macos() {
     else
         echo "gettext is already installed"
     fi
+    #######################################################
+    # MIGRATED UNTIL THIS
 
     if ! hash tig 2>/dev/null; then
         echo "tig not found! Installing tig..."
@@ -426,6 +428,7 @@ function setup-pythonpath() {
 
 
 #####################################
+#set -x
 initial_setup
 setup-pythonpath
 remove-stale-scripts
