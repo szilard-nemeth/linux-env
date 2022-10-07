@@ -203,7 +203,12 @@ function run-setup-scripts() {
 }
 
 #################################################################################
+
+### Uncomment these to run setup scripts on every shell launch
 setup
 set_debug
 run-setup-scripts
+export SKIP_LINUXENV_COPY=1
+
+
 print-welcome-screen

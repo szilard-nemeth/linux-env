@@ -367,6 +367,21 @@ function remove-stale-scripts() {
   fi
 }
 
+function setup-vars-aliases {
+  # !!! THE ORDER OF THE FOLLOWING SOURCE COMMANDS ARE STRICT !!!
+    #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
+    source_single_file "${HOME_LINUXENV_DIR}/scripts/load-these-first.sh"
+    source_single_file "${HOME_LINUXENV_DIR}/setup-vars.sh"
+    source_scripts ${HOME_LINUXENV_DIR}/aliases
+    source_scripts ${HOME_LINUXENV_DIR}/scripts
+    source_files ".source-this"
+    add_to_path ".add-to-path" "$WORKPLACE_SPECIFIC_DIR"
+    add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/python
+    add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/git
+    add_to_path_directly $HOME/jetbrains-scripts/
+}
+
+
 function copy_files_from_linuxenv_repo_to_home() {
     declare -a COPY_LIST=()
     
@@ -403,18 +418,6 @@ function copy_files_from_linuxenv_repo_to_home() {
     set -e
     copy_files "${COPY_LIST[@]}"
     set +e
-    
-    # !!! THE ORDER OF THE FOLLOWING SOURCE COMMANDS ARE STRICT !!!
-    #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
-    source_single_file "${HOME_LINUXENV_DIR}/scripts/load-these-first.sh"
-    source_single_file "${HOME_LINUXENV_DIR}/setup-vars.sh"
-    source_scripts ${HOME_LINUXENV_DIR}/aliases
-    source_scripts ${HOME_LINUXENV_DIR}/scripts
-    source_files ".source-this"
-    add_to_path ".add-to-path" "$WORKPLACE_SPECIFIC_DIR"
-    add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/python
-    add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/git
-    add_to_path_directly $HOME/jetbrains-scripts/
 }
 
 function setup-pythonpath() {
@@ -429,5 +432,12 @@ function setup-pythonpath() {
 initial_setup
 setup-pythonpath
 remove-stale-scripts
-copy_files_from_linuxenv_repo_to_home
+
+if [[ $SKIP_LINUXENV_COPY == 0 ]]; then
+  copy_files_from_linuxenv_repo_to_home
+else
+  echo "NOTE: Skip copying files from linuxenv repo."
+fi
+
+setup-vars-aliases
 set +x
