@@ -214,3 +214,16 @@ function myrepos-grep-todos {
 function myrepos-grep-C5() {
   myrepos_filtered_find.py --extension "*.py" --exclude $COMMON_EXCLUDES | xargs grep -C5 $1
 }
+
+function yarndevtools-run-tests {
+  cd /Users/snemeth/development/my-repos/yarn-dev-tools/; \
+  MAIL_ACC_PASSWORD=fake MAIL_ACC_USER=jenkinstestreporter@gmail.com \
+  poetry run python -m pytest -k 'CdswConfigReaderTest' \
+  --html=report.html \
+  --self-contained-html --doctest-ignore-import-errors \
+  --doctest-modules \
+  --junitxml=junit/test-resultpy39.xml \
+  --cov=./ \
+  --cov-report=html
+  # MAIL_ACC_PASSWORD=fake MAIL_ACC_USER=jenkinstestreporter@gmail.com poetry run python -m pytest -k 'CdswConfigReaderTest' --html=report.html --self-contained-html --doctest-ignore-import-errors --doctest-modules --junitxml=junit/test-resultpy39.xml --cov=./ --cov-report=xml --cov-report=html
+}
