@@ -119,8 +119,8 @@ function dex-build-runtime {
     # Should call manually: dex-export-runtime-build-env
   	cd ~/development/cloudera/cde/dex/docker
     make dex-runtime-api-server
-    #docker tag docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION}-${JIRA_NUM}
-    docker tag docker-registry.infra.cloudera.com/cloudera/dex/dex-runtime-api-server:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION}-${JIRA_NUM}
+    docker tag docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION}-${JIRA_NUM}
+    # docker tag docker-registry.infra.cloudera.com/cloudera/dex/dex-runtime-api-server:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION}-${JIRA_NUM}
     docker push docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION}-${JIRA_NUM}
     cd -
 }
@@ -153,7 +153,7 @@ function dex-deploy-runtime {
 	  }' -s -b cdp-session-token=${CST} $dex_deploy_url | jq
 }
 
-function dex-k9s-namespace {
+function dex-namespace-k9s {
   if [[ $# -ne 1 ]]; then
     echo "Usage: dex-k9s-namespace [namespace]"
     return 1
@@ -167,7 +167,41 @@ function dex-k9s-namespace {
         return 1
   fi
 
-  dex-cst && ~/development/cloudera/cde/dex/dev-tools/dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev --auth cst k9s --namespace $DEX_NS
+  dex-cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev --auth cst k9s --namespace $DEX_NS
+}
+
+function dex-namespace-shell {
+  if [[ $# -ne 1 ]]; then
+    echo "Usage: dex-namespace-shell [namespace]"
+    return 1
+  fi
+
+  CLUSTER_ID="${CLUSTER_ID:-noclusterid}"
+  DEX_NS=$1
+
+  if [[ "$CLUSTER_ID" == 'noclusterid' ]]; then
+        echo "CLUSTER_ID should be set"
+        return 1
+  fi
+
+  dex-cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev --auth cst zsh
+}
+
+function dex-stern-dex-api {
+  if [[ $# -ne 1 ]]; then
+    echo "Usage: dex-stern-dex-api [namespace]"
+    return 1
+  fi
+
+  CLUSTER_ID="${CLUSTER_ID:-noclusterid}"
+  DEX_NS=$1
+
+  if [[ "$CLUSTER_ID" == 'noclusterid' ]]; then
+        echo "CLUSTER_ID should be set"
+        return 1
+  fi
+
+  dex-cst && dexw -a cst --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev stern -n $DEX_NS -l app.kubernetes.io/name=dex-app-api
 }
 
 ###################################################################### DEX RUNTIME ######################################################################
