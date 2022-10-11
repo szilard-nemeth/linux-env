@@ -96,6 +96,12 @@ function backup-currdir() {
 
 alias python-precommit-all="pre-commit run --all-files"
 
+#### DEX
+alias dex-sync-branch="git fetch origin && git checkout develop && git rebase origin/develop && git co - && git rebase develop && git --no-pager log -1 --oneline"
+alias dex-test-with-clean="goto-dex;make clean-mocks && make gen-mocks && make test"
+alias dex-test="goto-dex;make test"
+alias dex-update-dev-env="goto-dex;make update-dev-env"
+
 ### DEX, Beni
 alias dex-saml2aws="saml2aws exec --exec-profile cu_dex_dev -- bash"
 alias dex-runtime-k9s="dexw -e dev -cid cluster-sn6sdnlq --auth cst -v -- k9s"
