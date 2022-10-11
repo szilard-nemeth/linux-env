@@ -63,7 +63,7 @@ function copy_files() {
     
     if [ $((${#copy_list[@]} % 2)) -ne 0 ]; then
         echo "Illegal number of parameters, should be even!"
-        exit 1
+        return 1
     fi
 
     while [ ${i} -lt ${#copy_list[@]} ]; do
@@ -415,9 +415,9 @@ function copy_files_from_linuxenv_repo_to_home() {
         echo "$INFO_PREFIX Skip copying i3 files as platform is $platform"
     fi
     
-    set -e
+    #set -e
     copy_files "${COPY_LIST[@]}"
-    set +e
+    #set +e
 }
 
 function setup-pythonpath() {
