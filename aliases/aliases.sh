@@ -4,7 +4,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #cd $DIR
 
 ## LINUX-ENV ALIASES
-alias linuxenv-reload="cp ~/development/my-repos/linux-env/setup-env.sh ~/.linuxenv/setup-env.sh && cp ~/development/my-repos/linux-env/.zshrc ~/ && SKIP_LINUXENV_COPY=0 source ~/.linuxenv/setup-env.sh"
+alias linuxenv-reload="cp ~/development/my-repos/linux-env/setup-env.sh ~/.linuxenv/setup-env.sh && cp ~/development/my-repos/linux-env/.zshrc ~/ && LINUXENV_SKIP_COPY=0 LINUXENV_DEBUG=1 source ~/.linuxenv/setup-env.sh"
 alias linuxenv-todos="grep '#TODO' -r $LINUX_ENV_REPO"
 alias linuxenv-debug-on="echo \"enabled\" > ${ENV_DEBUG_SETUP_FILE}"
 alias linuxenv-debug-off="echo \"disabled\" > ${ENV_DEBUG_SETUP_FILE}"

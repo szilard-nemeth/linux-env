@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+function print_debug {
+  if [[ $LINUXENV_DEBUG == 1 ]]; then
+    echo $1
+  fi
+}
+
 #TODO Make setup colored: error messages with red, standard messages with white, etc.
 ###############################
 function initial_setup() {
@@ -80,17 +86,17 @@ function copy_files() {
           from_stripped=$(echo ${from} | sed 's/.$//')
           echo "$from_stripped $to" >> ${ENV_FILE_MAPPINGS}
           if diff -r "$from" "$to" 2>&1 > /dev/null ; then
-            echo "No changes in files. SRC DIR: $from, DEST DIR: $to"
+            print_debug "No changes in files. SRC DIR: $from, DEST DIR: $to"
           else
             echo "Copying files from $from to $to (recursive)"
             yes | cp -aR ${from} ${to}
           fi
         else
-          echo "$from $to" >> ${ENV_FILE_MAPPINGS}
+          print_debug "$from $to" >> ${ENV_FILE_MAPPINGS}
           if cmp -s "$from" "$to" ; then
-            echo "No changes in file. SRC: $from, DEST: $to"
+            print_debug "No changes in file. SRC: $from, DEST: $to"
           else
-            echo "Copying file from $from to $to"
+            print_debug "Copying file from $from to $to"
             cp ${from} ${to}
           fi
         fi
@@ -401,7 +407,14 @@ function copy_files_from_linuxenv_repo_to_home() {
     COPY_LIST+=("$DIR/aliases/. $HOME_LINUXENV_DIR/aliases/")
     COPY_LIST+=("$DIR/scripts/. $HOME_LINUXENV_DIR/scripts")
     COPY_LIST+=("$DIR/scripts/python/. $HOME_LINUXENV_DIR/scripts/python")
-    COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
+
+    # TODO Dummy + error-prone way of adding all dirs manually --> Instead, implement exceptions e.g. workplace-specific/cloudera/investigations should not be copied
+    # Old definition
+    # COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
+
+    COPY_LIST+=("$DIR/workplace-specific/cloudera/aliases/. $WORKPLACE_SPECIFIC_DIR/cloudera/aliases")
+    COPY_LIST+=("$DIR/workplace-specific/cloudera/config/. $WORKPLACE_SPECIFIC_DIR/cloudera/config")
+    COPY_LIST+=("$DIR/workplace-specific/cloudera/scripts/. $WORKPLACE_SPECIFIC_DIR/cloudera/scripts")
     COPY_LIST+=("$DIR/.npmrc $HOME/.npmrc")
     
     #Kitty conf + theme
@@ -416,6 +429,8 @@ function copy_files_from_linuxenv_repo_to_home() {
     fi
     
     #set -e
+    # echo "Copying files, copy list: ${COPY_LIST[@]}"
+    print_debug "Copying files, copy list:`printf '%s\n' "${COPY_LIST[@]}"`"
     copy_files "${COPY_LIST[@]}"
     #set +e
 }
@@ -433,7 +448,11 @@ initial_setup
 setup-pythonpath
 remove-stale-scripts
 
-if [[ $SKIP_LINUXENV_COPY == 0 ]]; then
+# Define LINUXENV_* vars
+LINUXENV_DEBUG="${LINUXENV_DEBUG:-0}"
+LINUXENV_SKIP_COPY="${LINUXENV_SKIP_COPY:-0}"
+
+if [[ $LINUXENV_SKIP_COPY == 0 ]]; then
   copy_files_from_linuxenv_repo_to_home
 else
   echo "NOTE: Skip copying files from linuxenv repo."
