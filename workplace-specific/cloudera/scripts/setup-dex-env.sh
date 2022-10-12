@@ -30,8 +30,12 @@ complete -C '/usr/local/bin/aws_completer' aws
 
 # DEX Variables, Add them to path
 export CSI_HOME="$HOME/development/cloudera/cde/cloud-services-infra/"
-export DEX_DEV_TOOLS="$HOME/development/cloudera/cde/dex/dev-tools"
+export DEX_DEV_TOOLS="$DEX_DEV_ROOT/dev-tools"
 export PATH=$PATH:$CSI_HOME/bin:$CSI_HOME/moonlander:$DEX_DEV_TOOLS
+
+
+# Moonlander / Private stacks: https://github.infra.cloudera.com/CDH/dex/wiki/Private-Stacks-Moonlander
+source $DEX_DEV_ROOT/lib/tools/dexk.sh
 
 
 #################################### DEX functions ####################################
@@ -45,13 +49,14 @@ function dex-export-protoc25 {
 #Go setup
 function dex-export-gopath {
 	export GOPATH=$(go env GOPATH)
+	export GOBIN=$GOPATH/bin
 	export PATH=$PATH:$GOPATH/bin
 	export GOOS=darwin
 }
 
 
 # https://github.infra.cloudera.com/CDH/dex-utils/tree/master/cdp-token-chrome
-function dex-cst () {
+function cst () {
   local CHROME_PROFILE="Default"
 	env=dev
 	if [[ $# > 0 ]]
@@ -117,7 +122,7 @@ function dex-build-runtime {
 
 
     # Should call manually: dex-export-runtime-build-env
-  	cd ~/development/cloudera/cde/dex/docker
+  	cd $DEX_DEV_ROOT/docker
     make dex-runtime-api-server
     docker tag docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION}-${JIRA_NUM}
     # docker tag docker-registry.infra.cloudera.com/cloudera/dex/dex-runtime-api-server:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION}-${JIRA_NUM}
@@ -125,13 +130,13 @@ function dex-build-runtime {
     cd -
 }
 
-function dex-deploy-runtime {
+function dex-deploy-runtime-dev-auto {
   # Setting the pull policy to always means you can push multiple iterations to the same docker tag when testing.
 
   dex_deploy_url="https://console.dps.mow-dev.cloudera.com/${INGRESS_PATH}/api/v1/cluster/${CLUSTER_ID}/instance"
   echo "Using DEX deploy URL: $dex_deploy_url"
 
-  dex-cst; curl -H 'Content-Type: application/json' -d '{
+  cst; curl -H 'Content-Type: application/json' -d '{
 	    "name": "'${INSTANCE_NAME}'",
 	    "description": "DESCRIPTION",
 	    "config": {
@@ -167,7 +172,7 @@ function dex-namespace-k9s {
         return 1
   fi
 
-  dex-cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev --auth cst k9s --namespace $DEX_NS
+  cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev --auth cst k9s --namespace $DEX_NS
 }
 
 function dex-namespace-shell {
@@ -184,7 +189,7 @@ function dex-namespace-shell {
         return 1
   fi
 
-  dex-cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev --auth cst zsh
+  cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev --auth cst zsh
 }
 
 function dex-stern-dex-api {
@@ -201,7 +206,66 @@ function dex-stern-dex-api {
         return 1
   fi
 
-  dex-cst && dexw -a cst --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev stern -n $DEX_NS -l app.kubernetes.io/name=dex-app-api
+  cst && dexw -a cst --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev stern -n $DEX_NS -l app.kubernetes.io/name=dex-app-api
+}
+
+function dex-open-private-stack-bteke {
+  CLUSTER_ID=$1
+    if [[ -z $CLUSTER_ID ]]; then
+        echo "Usage: dex-open-private-stack-bteke cluster-id" >&2
+        return 1
+    fi
+  dexw -cst $CST --cluster-id cluster-8gr6wwvt --mow-env priv --csi-workspace bteke k9s
+}
+
+
+function dex-create-service-in-stack {
+    dex-cst; curl -H 'Content-Type: application/json' -d '{
+      "name": "snemeth-cde-DEX7712",
+      "env": "dex-priv-default-aws-env-3",
+      "config": {
+          "properties": {
+              "loadbalancer.internal":"true",
+              "cde.version": "1.18.0"
+          },
+          "resources": {
+              "instance_type": "m5.2xlarge",
+              "min_instances": "0",
+              "max_instances": "10",
+              "initial_instances": "0",
+              "root_vol_size": "100"
+          }
+      }
+  }' -s -b cdp-session-token=${CST}  https://snemeth-console.cdp-priv.mow-dev.cloudera.com/dex/api/v1/cluster
+
+}
+
+function dex-create-private-stack {
+  echo "Moonlander / make"
+  cd $CSI_HOME/moonlander && make;
+
+
+  gimme-aws-creds
+  goto-dex
+  # 1. make protos api-docs gen-mocks
+
+  # 2. moonlander install
+  DATE_OF_START=`date +%F-%H%M%S`
+  logfilename="~/.dex/logs/dexprivatestack_$DATE_OF_START.log"
+  mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 | tee $logfilename
+
+  # 3. Create service with curl: https://github.infra.cloudera.com/CDH/dex/wiki/Upgrade-Testing
+  #### UNCOMMENT THIS TO CREATE SERVICE
+  # dex-create-service-in-stack
+}
+
+function dex-dexk() {
+    CLUSTER_ID=$1
+    if [[ -z $CLUSTER_ID ]]; then
+        echo "Usage: dex-dexk cluster-id" >&2
+        return 1
+    fi
+    cst && dexk --cluster-id $clusterId --cdp-token $CST --ingress dex --mow-env priv --workspace-name ${USER}
 }
 
 ###################################################################### DEX RUNTIME ######################################################################

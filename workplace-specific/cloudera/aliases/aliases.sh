@@ -12,7 +12,8 @@ alias goto-cmf="cd $CLOUDERA_DEV_ROOT/cmf"
 alias goto-yarn-tasks="cd $HOME/yarn-tasks"
 alias goto-eyarn="cd $EYARN_DIR"
 alias goto-bundlelogprocessor="cd $CLOUDERA_DEV_ROOT/YARN-tools/bundle-log-processor"
-alias goto-dex="cd $CLOUDERA_DEV_ROOT/cde/dex"
+alias goto-dex="cd $DEX_DEV_ROOT"
+alias goto-hades="cd $HOME/development/other-repos/gandras/hades/"
 
 #git / gerrit commands
 alias gerrit-branches5="git br -r | grep gerrit | grep -e '5.1\d.*' | cut -d_ -f 2-3 | sort -u | grep -v patch"
