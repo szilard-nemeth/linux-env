@@ -2,7 +2,7 @@
 
 if ! is-platform-linux
 then
-    echo "$INFO_PREFIX ubuntu-specific aliases won't be used as platform is $platform!"
+    print_debug "$INFO_PREFIX ubuntu-specific aliases won't be used as platform is $platform!"
     return 1
 fi
 

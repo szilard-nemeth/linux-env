@@ -11,3 +11,7 @@ function debug-command() {
     ${cmd} 2>&1; 
     set +x;
 }
+
+function show-funcdef {
+  declare -f $1
+}

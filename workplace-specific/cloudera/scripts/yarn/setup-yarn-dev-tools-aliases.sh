@@ -45,7 +45,10 @@ function setup-aliases-yarndevtools-source {
   alias yarn-diff-patches="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools DIFF_PATCHES_OF_JIRA; popd"
   alias yarn-save-diff-as-patches="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools SAVE_DIFF_AS_PATCHES; popd"
   alias yarn-get-umbrella-data="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools FETCH_JIRA_UMBRELLA_DATA; popd"
-  print-yarn-dev-tools-aliases
+
+  if [[ $LINUXENV_DEBUG_YARNDEVTOOLS == 1 ]]; then
+    print-yarn-dev-tools-aliases
+  fi
 }
 
 function setup-aliases-yarndevtools-package {
@@ -58,7 +61,10 @@ function setup-aliases-yarndevtools-package {
   alias yarn-diff-patches="$YARN_DEV_TOOLS_ENV; yarndevtools DIFF_PATCHES_OF_JIRA; popd"
   alias yarn-save-diff-as-patches="$YARN_DEV_TOOLS_ENV; yarndevtools SAVE_DIFF_AS_PATCHES; popd"
   alias yarn-get-umbrella-data="$YARN_DEV_TOOLS_ENV; yarndevtools FETCH_JIRA_UMBRELLA_DATA; popd"
-  print-yarn-dev-tools-aliases
+
+  if [[ $LINUXENV_DEBUG_YARNDEVTOOLS == 1 ]]; then
+    print-yarn-dev-tools-aliases
+  fi
 }
 
 setup-vars

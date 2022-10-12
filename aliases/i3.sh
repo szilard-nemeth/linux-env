@@ -2,7 +2,7 @@
 
 if is-platform-macos
 then
-    echo "$INFO_PREFIX i3 aliases won't be used as platform is $platform!"
+    print_debug "$INFO_PREFIX i3 aliases won't be used as platform is $platform!"
     return 1
 fi
 

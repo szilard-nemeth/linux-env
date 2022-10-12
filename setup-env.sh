@@ -6,6 +6,12 @@ function print_debug {
   fi
 }
 
+function printf_debug {
+  if [[ $LINUXENV_DEBUG == 1 ]]; then
+    printf $1
+  fi
+}
+
 #TODO Make setup colored: error messages with red, standard messages with white, etc.
 ###############################
 function initial_setup() {
@@ -88,7 +94,7 @@ function copy_files() {
           if diff -r "$from" "$to" 2>&1 > /dev/null ; then
             print_debug "No changes in files. SRC DIR: $from, DEST DIR: $to"
           else
-            echo "Copying files from $from to $to (recursive)"
+            printf_debug "Copying files from $from to $to (recursive)"
             yes | cp -aR ${from} ${to}
           fi
         else
@@ -110,25 +116,25 @@ function source_scripts() {
     src_first=${source_from}/${src_first_orig}
     
     if [[ ! -z ${src_first_orig}  ]]; then
-        echo "Sourcing files first: $src_first"
+        printf_debug "Sourcing files first: $src_first"
         . "$src_first"
     fi
     
-    echo Sourcing files from ${source_from};
+    printf_debug "Sourcing files from ${source_from}"
     for f in ${source_from}/*.sh; do
         if [[ ! -z ${src_first} &&  "$f" = "$src_first" ]]; then
-            echo "Skipping sourcing file again: $f"
+            printf_debug "Skipping sourcing file again: $f"
             continue
         fi
-        echo Sourcing file ${f}
+        printf_debug "Sourcing file ${f}"
         . "$f"
     done
-    echo Done sourcing files from ${source_from};
+    printf_debug "Done sourcing files from ${source_from}"
 }
 
 function source_single_file() {
     src_file=$1
-    echo "Sourcing file ${src_file}"
+    printf_debug "Sourcing file ${src_file}"
     . "$src_file"
 }
 
@@ -136,7 +142,7 @@ function source_files() {
     local marker_file_name=$1
     local from_dir="$WORKPLACE_SPECIFIC_DIR"
 
-    echo "Searching for $marker_file_name files and sourcing them..."
+    printf_debug "Searching for $marker_file_name files and sourcing them..."
     set_matched_dirs ${WORKPLACE_SPECIFIC_DIR} ${marker_file_name}
     
     #Source each *.sh file from matched dirs
@@ -144,37 +150,37 @@ function source_files() {
     for d in ${matched_dirs}; do
         setup_sh="$d/setup.sh"
         if [[ -f "$setup_sh" ]]; then
-            printf "\tSourcing setup file $setup_sh\n"
+            printf_debug "\tSourcing setup file $setup_sh\n"
             . "$setup_sh"
         fi
     done
 
     for d in ${matched_dirs}; do
-        printf "\tSourcing files from $d\n"
+        printf_debug "\tSourcing files from $d\n"
         for f in $(find ${d} -maxdepth 1 -iname  "*.sh" -not -iname "setup.sh" | xargs grep -L "##SKIPSOURCING##"); do
-            printf "\tSourcing file $f\n"
+            printf_debug "\tSourcing file $f\n"
             . "$f"
         done
     done
-    echo "Done sourcing $marker_file_name files from $from_dir"
+    printf_debug "Done sourcing $marker_file_name files from $from_dir"
 }
 
 function add_to_path() {
     marker_file_name=$1
     from_dir="$2"
 
-    echo "Searching for $marker_file_name files and adding them to PATH..."
+    printf_debug "Searching for $marker_file_name files and adding them to PATH..."
     set_matched_dirs ${from_dir} ${marker_file_name}
     for d in ${matched_dirs}; do
-        printf "\tAdding files from directory $d to PATH...\n"
+        printf_debug "\tAdding files from directory $d to PATH...\n"
         PATH=$PATH:${d}
     done
-    echo "Done sourcing $marker_file_name files from $from_dir"
+    printf_debug "Done sourcing $marker_file_name files from $from_dir"
 }
 
 function add_to_path_directly() {
     dir=$1
-    echo "Adding directory: $dir to PATH"
+    printf_debug "Adding directory: $dir to PATH"
     PATH=$PATH:${dir}
 }
 
@@ -425,11 +431,11 @@ function copy_files_from_linuxenv_repo_to_home() {
     if [[ ! ${platform} == 'macOS' ]]; then
         COPY_LIST+=("$DIR/dotfiles/i3/. $HOME/.i3/")
     else
-        echo "$INFO_PREFIX Skip copying i3 files as platform is $platform"
+        printf_debug "$INFO_PREFIX Skip copying i3 files as platform is $platform"
     fi
     
     #set -e
-    # echo "Copying files, copy list: ${COPY_LIST[@]}"
+    # printf_debug "Copying files, copy list: ${COPY_LIST[@]}"
     print_debug "Copying files, copy list:`printf '%s\n' "${COPY_LIST[@]}"`"
     copy_files "${COPY_LIST[@]}"
     #set +e
@@ -450,6 +456,7 @@ remove-stale-scripts
 
 # Define LINUXENV_* vars
 LINUXENV_DEBUG="${LINUXENV_DEBUG:-0}"
+export LINUXENV_DEBUG_YARNDEVTOOLS="${LINUXENV_DEBUG_YARNDEVTOOLS:-0}"
 LINUXENV_SKIP_COPY="${LINUXENV_SKIP_COPY:-0}"
 
 if [[ $LINUXENV_SKIP_COPY == 0 ]]; then
