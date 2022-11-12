@@ -33,3 +33,14 @@ function gitconfig-cloudera() {
     git config user.email snemeth@cloudera.com
     git config user.name "Szilard Nemeth"
 }
+
+function gh-apply-patch() {
+  if [ $# -ne 1 ]; then
+    echo "Usage: gh-apply-patch <pr_id>" 1>&2
+    return 1
+  fi
+
+  PR_ID=$1
+  gh pr diff $PR_ID --patch > /tmp/github-pr-$PR_ID.patch
+  git apply /tmp/github-pr-$PR_ID.patch
+}
