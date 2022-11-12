@@ -83,6 +83,7 @@ function increase-package-versions-in-yarndevtools() {
   sed -i '' -e "s/^google-api-wrapper2 = \"[0-9].*/google-api-wrapper2 = \"$new_googleaiwrapper_version\"/" pyproject.toml
   git --no-pager diff
   poetry version patch
+  poetry update
   commit-version-bump "increase version of packages: python-common-lib, google-api-wrapper2"
 
   echo "Publishing yarn-dev-tools..."
