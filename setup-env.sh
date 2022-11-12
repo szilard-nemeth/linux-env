@@ -8,7 +8,7 @@ function print_debug {
 
 function printf_debug {
   if [[ $LINUXENV_DEBUG == 1 ]]; then
-    printf $1
+    printf "$1\n"
   fi
 }
 
@@ -126,8 +126,12 @@ function source_scripts() {
             printf_debug "Skipping sourcing file again: $f"
             continue
         fi
-        printf_debug "Sourcing file ${f}"
-        . "$f"
+        if [[ $f == *"upgrade-pythoncommons.sh"* ]]; then
+          printf_debug "Skip sourcing file: $f"
+        else
+          printf_debug "Sourcing file ${f}"
+          . "$f"
+        fi
     done
     printf_debug "Done sourcing files from ${source_from}"
 }
@@ -156,9 +160,9 @@ function source_files() {
     done
 
     for d in ${matched_dirs}; do
-        printf_debug "\tSourcing files from $d\n"
+        printf_debug "\tSourcing files from $d"
         for f in $(find ${d} -maxdepth 1 -iname  "*.sh" -not -iname "setup.sh" | xargs grep -L "##SKIPSOURCING##"); do
-            printf_debug "\tSourcing file $f\n"
+            printf_debug "\tSourcing file $f"
             . "$f"
         done
     done
