@@ -3,10 +3,46 @@ YARN_DEV_TOOLS_DIR="$HOME/development/my-repos/yarn-dev-tools"
 PYTHON_COMMONS_DIR="$HOME/development/my-repos/python-commons"
 GOOGLE_API_WRAPPER_DIR="$HOME/development/my-repos/google-api-wrapper/"
 
+function check-git-changes() {
+  local repo_dir=$1
+  cd $repo_dir
+  current_br=$(git rev-parse --abbrev-ref HEAD)
+
+  if [[ "master" != "$current_br" ]]; then
+    echo "Current branch is not master in $(pwd)! Exiting..."
+    return 1
+  fi
+
+  if [[ ! -z $(git status -s) ]]; then
+    echo "There are changed files in $repo_dir. Please remove changes and re-run this script"
+    return 2
+  fi
+
+  if [[ ! -z $(git --no-pager log origin/master..HEAD) ]]; then
+    echo "There are unpushed commits in $repo_dir. Please push or remove these commits and re-run this script"
+    return 2
+  fi
+}
+
 function show-changes() {
-  echo "Changes in $PYTHON_COMMONS_DIR" && cd $PYTHON_COMMONS_DIR && git --no-pager log origin/master..HEAD/Users/snemeth/development/my-repos/yarn-dev-tools
-  echo "Changes in $GOOGLE_API_WRAPPER_DIR" && cd $GOOGLE_API_WRAPPER_DIR && git --no-pager log origin/master..HEAD
-  echo "Changes in $YARN_DEV_TOOLS_DIR" && cd $YARN_DEV_TOOLS_DIR && git --no-pager reset --hard origin/master
+  echo "Listing changes in $PYTHON_COMMONS_DIR ..." && cd $PYTHON_COMMONS_DIR && git --no-pager log origin/master..HEAD
+  echo "Listing changes in $GOOGLE_API_WRAPPER_DIR ..." && cd $GOOGLE_API_WRAPPER_DIR && git --no-pager log origin/master..HEAD
+  echo "Listing changes in $YARN_DEV_TOOLS_DIR ..." && cd $YARN_DEV_TOOLS_DIR && git --no-pager log origin/master..HEAD
+
+  check-git-changes $PYTHON_COMMONS_DIR
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
+
+  check-git-changes $GOOGLE_API_WRAPPER_DIR
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
+
+  check-git-changes $YARN_DEV_TOOLS_DIR
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
 }
 
 function reset() {
@@ -29,22 +65,8 @@ function commit-version-bump() {
   fi
 }
 
-function check-git-changes() {
-  current_br=$(git rev-parse --abbrev-ref HEAD)
-  if [[ "master" != "$current_br" ]]; then
-    echo "Current branch is not master in $(pwd)! Exiting..."
-    exit 1
-  fi
-
-  if [[ ! -z $(git status -s) ]]; then
-    echo "There are changed files in $PYTHON_COMMONS_DIR. Please remove changes and rerun this script!"
-    exit 2
-  fi
-}
-
 function bump-pythoncommons-version() {
   echo "Bumping version of: pythoncommons"
-  check-git-changes
 
   cd $PYTHON_COMMONS_DIR
   current_version=$(poetry version --short)
@@ -60,7 +82,6 @@ function bump-pythoncommons-version() {
 
 function bump-googleapiwrapper-version() {
   echo "Bumping version of: googleapiwrapper"
-  check-git-changes
 
   cd $GOOGLE_API_WRAPPER_DIR
   # NOTE: Apparently, the command below does not work, in contrary to the documentation:
@@ -74,6 +95,18 @@ function bump-googleapiwrapper-version() {
   echo "Publishing google-api-wrapper..."
   poetry build && poetry publish
   new_googleaiwrapper_version=$(poetry version --short)
+}
+
+function bump-yarndevtools-version() {
+  echo "Bumping version of: yarndevtools"
+
+  cd $YARN_DEV_TOOLS_DIR
+  poetry version patch
+  git --no-pager diff
+  commit-version-bump "bump version (patch)"
+
+  echo "Publishing yarndevtools..."
+  poetry build && poetry publish
 }
 
 function increase-package-versions-in-yarndevtools() {
@@ -97,4 +130,16 @@ function myrepos-upgrade-pythoncommons() {
   bump-pythoncommons-version
   bump-googleapiwrapper-version
   increase-package-versions-in-yarndevtools
+}
+
+
+function myrepos-upgrade-yarndevtools() {
+  GIT_PUSH=0
+  show-changes
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
+
+  reset
+  bump-yarndevtools-version
 }
