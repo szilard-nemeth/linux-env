@@ -38,7 +38,7 @@ function setup-aliases-yarndevtools-source {
   YARN_DEV_TOOLS_DIR="$HOME/development/my-repos/yarn-dev-tools"
   YARN_DEV_TOOLS_ENV="export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT"
 
-  alias yarn-backport="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools BACKPORT_C6; popd"
+  alias yarn-backport="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools BACKPORT; popd"
   alias yarn-save-patch="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools SAVE_PATCH; popd"
   alias yarn-create-review-branch="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools CREATE_REVIEW_BRANCH; popd"
   alias yarn-upstream-commit-pr="cd $YARN_DEV_TOOLS_DIR;$YARN_DEV_TOOLS_ENV; poetry run exec-yarndevtools UPSTREAM_PR_FETCH; popd"
@@ -54,7 +54,7 @@ function setup-aliases-yarndevtools-source {
 function setup-aliases-yarndevtools-package {
   YARN_DEV_TOOLS_ENV="export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT"
 
-  alias yarn-backport="$YARN_DEV_TOOLS_ENV; yarndevtools BACKPORT_C6; popd"
+  alias yarn-backport="$YARN_DEV_TOOLS_ENV; yarndevtools BACKPORT; popd"
   alias yarn-save-patch="$YARN_DEV_TOOLS_ENV; yarndevtools SAVE_PATCH; popd"
   alias yarn-create-review-branch="$YARN_DEV_TOOLS_ENV; yarndevtools CREATE_REVIEW_BRANCH; popd"
   alias yarn-upstream-commit-pr="$YARN_DEV_TOOLS_ENV; yarndevtools UPSTREAM_PR_FETCH; popd"

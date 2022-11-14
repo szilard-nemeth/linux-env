@@ -127,7 +127,7 @@ function source_scripts() {
             continue
         fi
         # Uncomment this if file exclude is required
-#        if [[ $f == *"upgrade-pythoncommons.sh"* ]]; then
+#        if [[ $f == *"upgrade-python-packages.sh"* ]]; then
 #          printf_debug "Skip sourcing file: $f"
 #        else
 #          printf_debug "Sourcing file ${f}"
