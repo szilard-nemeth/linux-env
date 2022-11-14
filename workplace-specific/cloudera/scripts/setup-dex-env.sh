@@ -112,22 +112,97 @@ function dex-export-runtime-build-env() {
 }
 
 
-function dex-build-runtime {
-		if [ -z ${REGISTRY_NAMESPACE+x} ]; then 
+function _dex-build {
+  if [ $# -ne 1 ]; then
+    echo "Usage: _dex-build <service>" 1>&2
+    exit 1
+  fi
+  service_to_build="$1"
+
+  if [ -z ${REGISTRY_NAMESPACE+x} ]; then
 			echo "REGISTRY_NAMESPACE is not set. Call 'dex-export-runtime-build-env' first";
 			return
-		else 
-			echo "REGISTRY_NAMESPACE set to '$REGISTRY_NAMESPACE'"; 
+		else
+			echo "REGISTRY_NAMESPACE set to '$REGISTRY_NAMESPACE'";
 		fi
 
 
     # Should call manually: dex-export-runtime-build-env
   	cd $DEX_DEV_ROOT/docker
-    make dex-runtime-api-server
-    docker tag docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION}-${JIRA_NUM}
-    # docker tag docker-registry.infra.cloudera.com/cloudera/dex/dex-runtime-api-server:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION}-${JIRA_NUM}
-    docker push docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/dex-runtime-api-server:${VERSION}-${JIRA_NUM}
+    make $service_to_build
+
+    echo "Listing images..."
+    docker images | grep $service_to_build | grep $VERSION
+    docker tag docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:${VERSION}-${JIRA_NUM}
+    # docker tag docker-registry.infra.cloudera.com/cloudera/dex/$service_to_build:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:${VERSION}-${JIRA_NUM}
+    docker push docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:${VERSION}-${JIRA_NUM}
     cd -
+}
+
+function _dex-increase-docker-tag-counter {
+  if [ $# -ne 1 ]; then
+    echo "Usage: _dex-increase-docker-tag-counter <service>" 1>&2
+    exit 1
+  fi
+  service_to_build="$1"
+
+  if [[ -z $VERSION ]]; then
+    echo "VERSION must be set"
+    return 1
+  fi
+
+  if [[ -z $REGISTRY_NAMESPACE ]]; then
+    echo "REGISTRY_NAMESPACE must be set"
+    return 1
+  fi
+
+
+  if [[ -z $JIRA_NUM ]]; then
+    echo "JIRA_NUM must be set"
+    return 1
+  fi
+
+  #docker-registry.infra.cloudera.com/snemeth/dex-runtime-api-server 1.18.0-dev-DEX-7712 06bb27949544 2 hours ago 646MB
+  arr=($(docker images | grep $service_to_build | grep $JIRA_NUM-iteration- | grep $VERSION-$JIRA_NUM | tail -n 1 | tr -s ' '))
+
+  if [[ ${#arr[@]} == 0 ]];then
+    echo "Counter not found for Docker image '${arr[1]}'"
+    counter=0
+  else
+    unset counter
+    d_tag=${arr[2]}
+    [[ $d_tag =~ '^[0-9A-Za-z_\.\-]+-iteration-([0-9]+)$' ]] && counter=$match[1]
+
+    if [[ -z $counter ]]; then
+      echo "Counter not found for Docker image '${arr[1]}'"
+      counter=0
+    fi
+  fi
+
+  echo "Current tag counter for Docker image '${arr[1]}': $counter"
+  let "counter++"
+  echo "Increased tag counter for Docker image '${arr[1]}': $counter"
+
+  new_tag="${VERSION}-${JIRA_NUM}-iteration-$counter"
+
+  docker tag docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:$new_tag
+  docker push docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:$new_tag
+
+  # TODO Filter images with docker images itself - https://stackoverflow.com/questions/24659300/how-to-use-docker-images-filter
+  docker images | grep docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:$new_tag
+
+  echo "Use this image to replace service:"
+  echo "docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:$new_tag"
+}
+
+function dex-build-runtime {
+  _dex-build "dex-runtime-api-server"
+  _dex-increase-docker-tag-counter "dex-runtime-api-server"
+}
+
+function dex-build-cp {
+  _dex-build "dex-cp"
+  _dex-increase-docker-tag-counter "dex-cp"
 }
 
 function dex-deploy-runtime-dev-auto {
@@ -258,6 +333,105 @@ function dex-create-private-stack {
   #### UNCOMMENT THIS TO CREATE SERVICE
   # dex-create-service-in-stack
 }
+
+function dex-private-stack-replace-dexcp {
+  #- k9s -n snemeth-dex
+  #- kubectl -n snemeth-dex describe deployment snemeth-dex-dex-cp | grep -i image
+  #- kubectl -n snemeth-dex set image deployment/snemeth-dex-dex-cp dex-cp=docker-registry.infra.cloudera.com/snemeth/dex-cp:1.18.0-dev-DEX-7712-iteration-4
+  if [[ -z $DEX_MOONLANDER_CP_IMAGE_TAG ]]; then
+    echo "DEX_MOONLANDER_CP_IMAGE_TAG must be set"
+    return 1
+  fi
+
+  # TODO Get latest iteration image tag
+  # DEX_MOONLANDER_CP_IMAGE_TAG=1.18.0-dev-DEX-7712-iteration-4
+  echo "DEX_MOONLANDER_CP_IMAGE_TAG=$DEX_MOONLANDER_CP_IMAGE_TAG"
+
+  cst;
+  goto-dex
+  #export SKIP_BUILD=true
+  #export DEX_IMAGE_TAG=$DEX_MOONLANDER_CP_IMAGE_TAG
+  mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --skip-build --version $DEX_MOONLANDER_CP_IMAGE_TAG
+}
+
+function dex-private-stack-replace-runtime {
+  if [[ -z $CLUSTER_ID ]]; then
+        echo "CLUSTER_ID is not defined"
+        return 1
+  fi
+
+  NEW_IMAGE_TAG="$1"
+
+  # TODO Determine latest image for runtime (iteration-*)
+  if [[ -z $NEW_IMAGE_TAG ]]; then
+        echo "Usage: dex-private-stack-replace-runtime <new image tag>"
+        return 1
+  fi
+
+  cst
+
+  if [[ -z $DEX_APP_NS ]]; then
+    # Get and store dex-app's Namespace from Private stack
+	  DEX_APP_NS=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n dex get namespaces | grep "dex-app-" | awk '{print $1}' 2>/dev/null | tail -n 1)
+	  export DEX_APP_NS
+	  echo "Queried namespace of dex-app: $DEX_APP_NS"
+	else
+	  echo "Found cached namespace of dex-app: $DEX_APP_NS"
+	fi
+
+  if [[ -z $DEX_APP_DEPL ]]; then
+    # Get dex-app-api deployment from dex-app namespace
+    DEX_APP_DEPL=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get deployments  | grep "dex-app.*-api" | awk '{print $1}' 2>/dev/null | tail -n 1)
+    export DEX_APP_DEPL
+    echo "Queried deployment of dex-app-api: $DEX_APP_DEPL"
+  else
+      echo "Found cached deployment of dex-app: $DEX_APP_DEPL"
+  fi
+
+	# Uncomment to describe deployment
+	# dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS describe deployment $DEX_APP_DEPL
+
+  echo "Listing original image of dex-app-api (runtime): "
+	dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS describe deployment $DEX_APP_DEPL | grep -i image
+
+  dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS set image deployment/$DEX_APP_DEPL dex-app-api=docker-registry.infra.cloudera.com/snemeth/dex-runtime-api-server:$NEW_IMAGE_TAG
+
+  echo "Listing modified image of dex-app-api (runtime): "
+	dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS describe deployment $DEX_APP_DEPL | grep -i image
+
+	dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods
+}
+
+function dex-private-stack-get-logs-follow {
+  DEX_API_POD=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods | grep -o -e "dex-app-.*-api-\S*")
+  echo "API pod: $DEX_API_POD"
+  dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD
+}
+
+function dex-private-stack-get-logs-followgrep {
+  local grepfor="$1"
+  DEX_API_POD=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods | grep -o -e "dex-app-.*-api-\S*")
+  echo "API pod: $DEX_API_POD"
+  dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD | grep $grepfor
+}
+
+function dex-launch-jobs {
+  # Jira with commands: https://jira.cloudera.com/browse/DEX-7217
+  goto-dex
+
+  # UNCOMMENT THIS TO CREATE SLEEPER RESOURCE
+  # build/cde resource create --name sleeper
+  # build/cde resource upload --name sleeper --local-path sleep.py
+
+  JOB_LIMIT=10
+
+  # Create jobs
+  for ((i=0;i<$JOB_LIMIT;i++)); do yes yes | build/cde job create --name sleep_py_$i --type spark --application-file sleep.py --mount-1-resource sleeper; done
+
+  # Run jobs
+  for ((i=0;i<$JOB_LIMIT;i++)); do yes yes | build/cde --auth-pass-file  ~/.cdp/workload_pass  job run --name sleep_py_$i; done
+}
+
 
 function dex-dexk() {
     CLUSTER_ID=$1
