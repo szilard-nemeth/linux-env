@@ -6,6 +6,26 @@ PROJ_NAME_YARN_DEV_TOOLS="yarndevtools"
 PROJ_NAME_PYTHON_COMMONS="pythoncommons"
 PROJ_NAME_GOOGLE_API_WRAPPER="googleapiwrapper"
 
+function remove-links-with-target() {
+  local lnk_target_to_remove_1="$1"
+  local lnk_target_to_remove_2="$2"
+
+  cd $YARN_DEV_TOOLS_DIR
+  find . -type l |
+  while IFS= read -r lnkname;
+  do
+    lnk_target=$(readlink "$lnkname")
+    if [[ "$lnk_target" =~ "^$lnk_target_to_remove_1$" || "$lnk_target" =~ "^$lnk_target_to_remove_2$" ]]; then
+      echo "Removing link: $lnkname -> $lnk_target"
+      rm -- "$lnkname"
+    fi
+  done
+}
+
+function cleanup-yarndevtools-links() {
+  remove-links-with-target "/tmp/.*" "/home/cdsw/snemeth-dev-projects.*"
+}
+
 function get-project-dir() {
   local project="$1"
 
@@ -89,6 +109,9 @@ function poetry-build-and-publish() {
 }
 
 function commit-version-bump() {
+  # TODO Add git tag to commit
+  # TODO Add new version number to commit message
+
   commit_msg="$1"
   echo "Committing version bump..."
   git commit -am "\"$commit_msg\""
@@ -178,6 +201,7 @@ function update-package-versions-in-yarndevtools() {
 
 function myrepos-upgrade-pythoncommons() {
   GIT_PUSH=1
+  cleanup-yarndevtools-links
   show-changes
 
   reset # TODO Make this depend on flag like 'GIT_PUSH'
@@ -201,6 +225,7 @@ function myrepos-upgrade-pythoncommons() {
 
 function myrepos-upgrade-yarndevtools() {
   GIT_PUSH=0
+  cleanup-yarndevtools-links
   show-changes
   if [[ "$?" -ne 0 ]]; then
     return 1
