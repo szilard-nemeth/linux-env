@@ -1,0 +1,2 @@
+Certificate attributes: https://docs.oracle.com/cd/E24191_01/common/tutorials/authz_cert_attributes.html
+Keytool manual: https://docs.oracle.com/javase/8/docs/technotes/tools/unix/keytool.html#keytool_option_genkeypair
