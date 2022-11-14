@@ -56,6 +56,19 @@ function reset() {
   git reset --hard origin/master
 }
 
+function poetry-build-and-publish() {
+  local project="$1"
+  echo "Publishing $project..."
+  poetry build && poetry publish
+  ret=$?
+
+  if [[ "$ret" -ne 0 ]]; then
+    echo "Failed to build / publish $project. Skipping commit"
+    # TODO should do git repo reset here (for specific project)
+    return 1
+  fi
+}
+
 function commit-version-bump() {
   commit_msg="$1"
   echo "Committing version bump..."
@@ -65,18 +78,44 @@ function commit-version-bump() {
   fi
 }
 
-function bump-pythoncommons-version() {
-  echo "Bumping version of: pythoncommons"
+function bump-project-version() {
+  local project="$1"
+  echo "Bumping version of: $project"
 
-  cd $PYTHON_COMMONS_DIR
+  project_dir=""
+  if [[ ${project} == 'pythoncommons' ]]; then
+    project_dir="$PYTHON_COMMONS_DIR"
+  elif [[ ${project} == 'yarndevtools' ]]; then
+    project_dir="$YARN_DEV_TOOLS_DIR"
+  elif [[ ${project} == 'googleapiwrapper' ]]; then
+    project_dir="$GOOGLE_API_WRAPPER_DIR"
+  else
+    echo "Unknown project: $project"
+    return 1
+  fi
+
+  cd $project_dir
+
   current_version=$(poetry version --short)
-  echo "Current version of python-commons is: $current_version"
+  echo "Current version of $project is: $current_version"
 
   poetry version patch
-  commit-version-bump "bump version (patch)"
+  git --no-pager diff
+  poetry-build-and-publish $project
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  else
+    commit-version-bump "bump version (patch)"
+  fi
+}
 
-  echo "Publishing pythoncommons..."
-  poetry build && poetry publish
+function bump-pythoncommons-version() {
+  bump-project-version "pythoncommons"
+  if [[ "$?" -ne 0 ]]; then
+    echo "Failed to bump version of pythoncommons"
+    return 1
+  fi
+
   new_pythoncommons_version=$(poetry version --short)
 }
 
@@ -88,36 +127,36 @@ function bump-googleapiwrapper-version() {
   # poetry add python-common-lib==$new_pythoncommons_version
   # Use sed to upgrade the package's version
   sed -i '' -e "s/^python-common-lib = \"[0-9].*/python-common-lib = \"$new_pythoncommons_version\"/" pyproject.toml
-  git --no-pager diff
-  poetry version patch
-  commit-version-bump "bump version (patch)"
 
-  echo "Publishing google-api-wrapper..."
-  poetry build && poetry publish
+  bump-project-version "googleapiwrapper"
+  if [[ "$?" -ne 0 ]]; then
+    echo "Failed to bump version of googleapiwrapper"
+    return 1
+  fi
+
   new_googleaiwrapper_version=$(poetry version --short)
 }
 
 function bump-yarndevtools-version() {
-  echo "Bumping version of: yarndevtools"
+  bump-project-version "yarndevtools"
+  if [[ "$?" -ne 0 ]]; then
+    echo "Failed to bump version of yarndevtools"
+    return 1
+  fi
 
-  cd $YARN_DEV_TOOLS_DIR
-  poetry version patch
-  git --no-pager diff
-  commit-version-bump "bump version (patch)"
-
-  echo "Publishing yarndevtools..."
-  poetry build && poetry publish
+  new_yarndevtools_version=$(poetry version --short)
 }
 
-function increase-package-versions-in-yarndevtools() {
+function update-package-versions-in-yarndevtools() {
   echo "yarndevtools: Increasing package versions for: googleapiwrapper, pythoncommons"
   cd $YARN_DEV_TOOLS_DIR
   sed -i '' -e "s/^python-common-lib = \"[0-9].*/python-common-lib = \"$new_pythoncommons_version\"/" pyproject.toml
   sed -i '' -e "s/^google-api-wrapper2 = \"[0-9].*/google-api-wrapper2 = \"$new_googleaiwrapper_version\"/" pyproject.toml
   git --no-pager diff
+  # TODO Check if two lines modified or user should manually confirm if git diff looks okay
   poetry version patch
   poetry update
-  commit-version-bump "increase version of packages: python-common-lib, google-api-wrapper2"
+  commit-version-bump "update version of packages: python-common-lib, google-api-wrapper2"
 
   echo "Publishing yarn-dev-tools..."
   poetry build && poetry publish
@@ -126,10 +165,23 @@ function increase-package-versions-in-yarndevtools() {
 function myrepos-upgrade-pythoncommons() {
   GIT_PUSH=1
   show-changes
-  reset
+
+  reset # TODO Make this depend on flag like 'GIT_PUSH'
+
   bump-pythoncommons-version
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
+
   bump-googleapiwrapper-version
-  increase-package-versions-in-yarndevtools
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
+
+  update-package-versions-in-yarndevtools
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
 }
 
 
@@ -142,4 +194,7 @@ function myrepos-upgrade-yarndevtools() {
 
   reset
   bump-yarndevtools-version
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
 }
