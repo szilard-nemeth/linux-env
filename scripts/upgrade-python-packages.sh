@@ -2,15 +2,18 @@
 YARN_DEV_TOOLS_DIR="$HOME/development/my-repos/yarn-dev-tools"
 PYTHON_COMMONS_DIR="$HOME/development/my-repos/python-commons"
 GOOGLE_API_WRAPPER_DIR="$HOME/development/my-repos/google-api-wrapper/"
+PROJ_NAME_YARN_DEV_TOOLS="yarndevtools"
+PROJ_NAME_PYTHON_COMMONS="pythoncommons"
+PROJ_NAME_GOOGLE_API_WRAPPER="googleapiwrapper"
 
 function get-project-dir() {
   local project="$1"
 
-  if [[ ${project} == 'pythoncommons' ]]; then
+  if [[ ${project} == $PROJ_NAME_PYTHON_COMMONS ]]; then
     echo "$PYTHON_COMMONS_DIR"
-  elif [[ ${project} == 'yarndevtools' ]]; then
+  elif [[ ${project} == $PROJ_NAME_YARN_DEV_TOOLS ]]; then
     echo "$YARN_DEV_TOOLS_DIR"
-  elif [[ ${project} == 'googleapiwrapper' ]]; then
+  elif [[ ${project} == $PROJ_NAME_GOOGLE_API_WRAPPER ]]; then
     echo "$GOOGLE_API_WRAPPER_DIR"
   else
     echo "Unknown project: $project"
@@ -106,12 +109,12 @@ function bump-project-version() {
   fi
 
   cd $project_dir
-
   current_version=$(poetry version --short)
   echo "Current version of $project is: $current_version"
 
   poetry version patch
   git --no-pager diff
+
   poetry-build-and-publish $project
   if [[ "$?" -ne 0 ]]; then
     return 1
@@ -121,9 +124,9 @@ function bump-project-version() {
 }
 
 function bump-pythoncommons-version() {
-  bump-project-version "pythoncommons"
+  bump-project-version "$PROJ_NAME_PYTHON_COMMONS"
   if [[ "$?" -ne 0 ]]; then
-    echo "Failed to bump version of pythoncommons"
+    echo "Failed to bump version of $PROJ_NAME_PYTHON_COMMONS"
     return 1
   fi
 
@@ -131,7 +134,7 @@ function bump-pythoncommons-version() {
 }
 
 function bump-googleapiwrapper-version() {
-  echo "Bumping version of: googleapiwrapper"
+  echo "Bumping version of: $PROJ_NAME_GOOGLE_API_WRAPPER"
 
   cd $GOOGLE_API_WRAPPER_DIR
   # NOTE: Apparently, the command below does not work, in contrary to the documentation:
@@ -139,9 +142,9 @@ function bump-googleapiwrapper-version() {
   # Use sed to upgrade the package's version
   sed -i '' -e "s/^python-common-lib = \"[0-9].*/python-common-lib = \"$new_pythoncommons_version\"/" pyproject.toml
 
-  bump-project-version "googleapiwrapper"
+  bump-project-version "$PROJ_NAME_GOOGLE_API_WRAPPER"
   if [[ "$?" -ne 0 ]]; then
-    echo "Failed to bump version of googleapiwrapper"
+    echo "Failed to bump version of $PROJ_NAME_GOOGLE_API_WRAPPER"
     return 1
   fi
 
@@ -149,9 +152,9 @@ function bump-googleapiwrapper-version() {
 }
 
 function bump-yarndevtools-version() {
-  bump-project-version "yarndevtools"
+  bump-project-version $PROJ_NAME_YARN_DEV_TOOLS
   if [[ "$?" -ne 0 ]]; then
-    echo "Failed to bump version of yarndevtools"
+    echo "Failed to bump version of $PROJ_NAME_YARN_DEV_TOOLS"
     return 1
   fi
 
@@ -159,7 +162,7 @@ function bump-yarndevtools-version() {
 }
 
 function update-package-versions-in-yarndevtools() {
-  echo "yarndevtools: Increasing package versions for: googleapiwrapper, pythoncommons"
+  echo "$PROJ_NAME_YARN_DEV_TOOLS: Increasing package versions for: $PROJ_NAME_GOOGLE_API_WRAPPER, $PROJ_NAME_PYTHON_COMMONS"
   cd $YARN_DEV_TOOLS_DIR
   sed -i '' -e "s/^python-common-lib = \"[0-9].*/python-common-lib = \"$new_pythoncommons_version\"/" pyproject.toml
   sed -i '' -e "s/^google-api-wrapper2 = \"[0-9].*/google-api-wrapper2 = \"$new_googleaiwrapper_version\"/" pyproject.toml
@@ -169,7 +172,7 @@ function update-package-versions-in-yarndevtools() {
   poetry update
   commit-version-bump "update version of packages: python-common-lib, google-api-wrapper2"
 
-  echo "Publishing yarn-dev-tools..."
+  echo "Publishing $PROJ_NAME_YARN_DEV_TOOLS..."
   poetry build && poetry publish
 }
 
