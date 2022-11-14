@@ -3,6 +3,22 @@ YARN_DEV_TOOLS_DIR="$HOME/development/my-repos/yarn-dev-tools"
 PYTHON_COMMONS_DIR="$HOME/development/my-repos/python-commons"
 GOOGLE_API_WRAPPER_DIR="$HOME/development/my-repos/google-api-wrapper/"
 
+function get-project-dir() {
+  local project="$1"
+
+  if [[ ${project} == 'pythoncommons' ]]; then
+    echo "$PYTHON_COMMONS_DIR"
+  elif [[ ${project} == 'yarndevtools' ]]; then
+    echo "$YARN_DEV_TOOLS_DIR"
+  elif [[ ${project} == 'googleapiwrapper' ]]; then
+    echo "$GOOGLE_API_WRAPPER_DIR"
+  else
+    echo "Unknown project: $project"
+    return 1
+  fi
+}
+
+# TODO Look for better way to check exit codes ("$?" -ne 0) ?
 function check-git-changes() {
   local repo_dir=$1
   cd $repo_dir
@@ -82,15 +98,10 @@ function bump-project-version() {
   local project="$1"
   echo "Bumping version of: $project"
 
-  project_dir=""
-  if [[ ${project} == 'pythoncommons' ]]; then
-    project_dir="$PYTHON_COMMONS_DIR"
-  elif [[ ${project} == 'yarndevtools' ]]; then
-    project_dir="$YARN_DEV_TOOLS_DIR"
-  elif [[ ${project} == 'googleapiwrapper' ]]; then
-    project_dir="$GOOGLE_API_WRAPPER_DIR"
-  else
-    echo "Unknown project: $project"
+  project_dir=`get-project-dir $project`
+
+  if [[ "$?" -ne 0 ]]; then
+    echo $project_dir
     return 1
   fi
 
