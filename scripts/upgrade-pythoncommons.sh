@@ -90,9 +90,11 @@ function increase-package-versions-in-yarndevtools() {
   poetry build && poetry publish
 }
 
-GIT_PUSH=1
-show-changes
-reset
-bump-pythoncommons-version
-bump-googleapiwrapper-version
-increase-package-versions-in-yarndevtools
+function myrepos-upgrade-pythoncommons() {
+  GIT_PUSH=1
+  show-changes
+  reset
+  bump-pythoncommons-version
+  bump-googleapiwrapper-version
+  increase-package-versions-in-yarndevtools
+}

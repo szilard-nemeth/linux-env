@@ -126,12 +126,15 @@ function source_scripts() {
             printf_debug "Skipping sourcing file again: $f"
             continue
         fi
-        if [[ $f == *"upgrade-pythoncommons.sh"* ]]; then
-          printf_debug "Skip sourcing file: $f"
-        else
-          printf_debug "Sourcing file ${f}"
-          . "$f"
-        fi
+        # Uncomment this if file exclude is required
+#        if [[ $f == *"upgrade-pythoncommons.sh"* ]]; then
+#          printf_debug "Skip sourcing file: $f"
+#        else
+#          printf_debug "Sourcing file ${f}"
+#          . "$f"
+#        fi
+        printf_debug "Sourcing file ${f}"
+        . "$f"
     done
     printf_debug "Done sourcing files from ${source_from}"
 }
