@@ -41,6 +41,6 @@ function gh-apply-patch() {
   fi
 
   PR_ID=$1
-  gh pr diff $PR_ID --patch > /tmp/github-pr-$PR_ID.patch
+  gh pr diff $PR_ID > /tmp/github-pr-$PR_ID.patch
   git apply /tmp/github-pr-$PR_ID.patch
 }
