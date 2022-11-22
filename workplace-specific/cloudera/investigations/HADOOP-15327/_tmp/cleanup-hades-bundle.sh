@@ -4,6 +4,7 @@
 # dir=/Users/snemeth/development/my-repos/linux-env/workplace-specific/cloudera/investigations/HADOOP-15327/testing-on-cluster-hades/2022_11/hades-results-20221108/session-20221107_115726-without-patch
 # dir=/Users/snemeth/development/my-repos/linux-env/workplace-specific/cloudera/investigations/HADOOP-15327/testing-on-cluster-hades/2022_11/hades-results-20221108/session-20221108_084855-with-patch
 
+dir=/Users/snemeth/development/my-repos/linux-env/workplace-specific/cloudera/investigations/HADOOP-15327/testing-on-cluster-hades-downstream
 num_targz=$(find $dir -iname "application_*ccycloud*.tar.gz" -type f | wc -l | tr -s ' ' | cut -d' ' -f2)
 num_app_dirs=$(find $dir -iname "application_*ccycloud*" -type d | 	wc -l | tr -s ' ' | cut -d' ' -f2)
 
