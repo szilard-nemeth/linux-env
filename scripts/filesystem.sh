@@ -13,6 +13,10 @@ function extractall() {
     ls *.zip|awk -F'.zip' '{print "unzip "$0" -d "$1}' | sh
 }
 
+function extract-all-yarn-from-bundle() {
+    find . -type f -iname "*nodemanager*\.gz*" -o -iname "*resourcemanager*\.gz" -execdir gzip -dk '{}' \;
+}
+
 function up() {
   local d=""
   limit=$1
