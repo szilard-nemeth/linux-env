@@ -1,5 +1,0 @@
-# Extract app id
-yarn application -list 2>/dev/null | grep -oe application_[0-9]*_[0-9]*
-
-# Find container logs
-find / 2>/dev/null | grep container_ | grep -v /sys/fs/cgroup > ~/result

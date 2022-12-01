@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<checkstyle version="8.29">
-<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-client-modules/hadoop-client-integration-tests/src/test/java/org/apache/hadoop/example/ITUseMiniCluster.java">
-</file>
-<file name="/home/jenkins/jenkins-home/workspace/hadoop-multibranch_PR-3259/ubuntu-focal/src/hadoop-client-modules/hadoop-client-integration-tests/src/test/java/org/apache/hadoop/example/ITUseHadoopCodecs.java">
-</file>
-</checkstyle>

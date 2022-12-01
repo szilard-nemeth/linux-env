@@ -1,4 +1,0 @@
-{"state": "success", 
-"target_url": "https://ci-hadoop.apache.org/job/hadoop-multibranch/job/PR-3259/6/artifact/out/results-checkstyle-root.txt",
-"description": " root: The patch generated 84 new + 132 unchanged - 12 fixed = 216 total (was 144) ",
-"context":"Apache Yetus(jenkins) warning:  checkstyle "}
