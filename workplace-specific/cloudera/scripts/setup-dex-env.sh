@@ -56,7 +56,7 @@ function dex-export-gopath {
 
 
 # https://github.infra.cloudera.com/CDH/dex-utils/tree/master/cdp-token-chrome
-function cst () {
+function cst {
   local CHROME_PROFILE="Default"
 	env=dev
 	if [[ $# > 0 ]]
@@ -78,7 +78,7 @@ function cst () {
 	fi
 }
 
-function dex-default-env() {
+function dex-default-env {
   CLUSTER_ID="${CLUSTER_ID:-cluster-changeme}"
   VIRTUAL_CLUSTER_NAME="${VIRTUAL_CLUSTER_NAME:-${USER}-SysTest}"
   MOW_ENV="${MOW_ENV:-priv}"
@@ -92,7 +92,12 @@ function dex-default-env() {
 ###################################################################### DEX RUNTIME ######################################################################
 # The following Runtime aliases are based on: https://github.infra.cloudera.com/CDH/dex/blob/develop/docs/developer-workflow-runtime-api.md
 
-function dex-export-runtime-build-env() {
+function dex-export-runtime-build-env {
+  if [[ $# -ne 1 ]]; then
+    echo "Please specifiy CLUSTER_ID as 1st parameter"
+    return 1
+  fi
+
 	export JIRA_NUM=$(git rev-parse --abbrev-ref HEAD)
 	export VERSION=1.18.0-dev
 	export INSTANCE_NAME=snemeth-test
@@ -102,13 +107,26 @@ function dex-export-runtime-build-env() {
 	export INGRESS_PATH=dex
 
 	echo "##############################################"
-	echo "# JIRA_NUM=$JIRA_NUM"
-	echo "# VERSION=$VERSION"
-	echo "# INSTANCE_NAME=$INSTANCE_NAME"
-	echo "# REGISTRY_NAMESPACE=$REGISTRY_NAMESPACE"
-	echo "# CLUSTER_ID=$CLUSTER_ID"
-	echo "# INGRESS_PATH=$INGRESS_PATH"
+	echo "# JIRA_NUM=$JIRA_NUM (used by build)"
+	echo "# VERSION=$VERSION (used by build)"
+	echo "# REGISTRY_NAMESPACE=$REGISTRY_NAMESPACE (used by build)"
+	echo "# INSTANCE_NAME=$INSTANCE_NAME (used by deploy)"
+	echo "# CLUSTER_ID=$CLUSTER_ID (used by deploy)"
+	echo "# INGRESS_PATH=$INGRESS_PATH (used by deploy)"
 	echo "##############################################"
+}
+
+function dex-pvc-export-runtime-build-env {
+  export JIRA_NUM=$(git rev-parse --abbrev-ref HEAD)
+  export VERSION=1.18.2
+  export REGISTRY_NAMESPACE=${USER}
+
+
+  echo "##############################################"
+  echo "# JIRA_NUM=$JIRA_NUM"
+  echo "# VERSION=$VERSION"
+  echo "# REGISTRY_NAMESPACE=$REGISTRY_NAMESPACE"
+  echo "##############################################"
 }
 
 
@@ -205,32 +223,63 @@ function dex-build-cp {
   _dex-increase-docker-tag-counter "dex-cp"
 }
 
-function dex-deploy-runtime-dev-auto {
-  # Setting the pull policy to always means you can push multiple iterations to the same docker tag when testing.
+function dex-deploy-new-vc-runtime-mowdev {
+  _dex-deploy-runtime-dev-auto "mow-dev"
+}
 
-  dex_deploy_url="https://console.dps.mow-dev.cloudera.com/${INGRESS_PATH}/api/v1/cluster/${CLUSTER_ID}/instance"
+function dex-deploy-new-vc-runtime-mowpriv {
+  _dex-deploy-runtime-dev-auto "mow-priv"
+}
+
+function _dex-deploy-runtime-dev-auto {
+  set -x
+  local mow_env="$1"
+  # Setting the pull policy to always means you can push multiple iterations to the same Docker tag when testing.
+
+  if [[ -z $CLUSTER_ID ]]; then
+        echo "CLUSTER_ID must be set" >&2
+        return 1
+  fi
+
+  if [[ -z $INGRESS_PATH ]]; then
+        echo "INGRESS_PATH must be set" >&2
+        return 1
+  fi
+
+  if [[ -z $INSTANCE_NAME ]]; then
+        echo "INSTANCE_NAME must be set" >&2
+        return 1
+  fi
+
+  if [[ "$mow_env" == "mow-dev" ]]; then
+      local dex_deploy_url="https://console.dps.mow-dev.cloudera.com/${INGRESS_PATH}/api/v1/cluster/${CLUSTER_ID}/instance"
+  elif [[ "$mow_env" == "mow-priv" ]]; then
+      local dex_deploy_url="https://console.cdp-priv.mow-dev.cloudera.com/${INGRESS_PATH}/api/v1/cluster/${CLUSTER_ID}/instance"
+  fi
+
   echo "Using DEX deploy URL: $dex_deploy_url"
 
   cst; curl -H 'Content-Type: application/json' -d '{
-	    "name": "'${INSTANCE_NAME}'",
-	    "description": "DESCRIPTION",
-	    "config": {
-	      "properties": {
-	        "livy.ingress.enabled": "true",
-	        "spark.version": "3.2.0"
-	      },
-	      "resources": {
-	        "cpu_requests": "20",
-	        "mem_requests": "80Gi"
-	      },
-	      "chartValueOverrides": {
-	        "dex-app": {
-	          "dexapp.api.image.override": "docker-registry.infra.cloudera.com/'${REGISTRY_NAMESPACE}'/dex-runtime-api-server:'${VERSION}'-'${JIRA_NUM}'",
-	          "dexapp.api.image.pullPolicy": "Always"
-	        }
-	      }
-	    }
-	  }' -s -b cdp-session-token=${CST} $dex_deploy_url | jq
+      "name": "'${INSTANCE_NAME}'",
+      "description": "DESCRIPTION",
+      "config": {
+        "properties": {
+          "livy.ingress.enabled": "true",
+          "spark.version": "3.2.0"
+        },
+        "resources": {
+          "cpu_requests": "20",
+          "mem_requests": "80Gi"
+        },
+        "chartValueOverrides": {
+          "dex-app": {
+            "dexapp.api.image.override": "docker-registry.infra.cloudera.com/'${REGISTRY_NAMESPACE}'/dex-runtime-api-server:'${VERSION}'-'${JIRA_NUM}'",
+            "dexapp.api.image.pullPolicy": "Always"
+          }
+        }
+      }
+    }' -s -b cdp-session-token=${CST} $dex_deploy_url | jq
+  set +x
 }
 
 function dex-namespace-k9s {
@@ -247,7 +296,7 @@ function dex-namespace-k9s {
         return 1
   fi
 
-  cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev --auth cst k9s --namespace $DEX_NS
+  cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst k9s --namespace $DEX_NS
 }
 
 function dex-namespace-shell {
@@ -264,7 +313,7 @@ function dex-namespace-shell {
         return 1
   fi
 
-  cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev --auth cst zsh
+  cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst zsh
 }
 
 function dex-stern-dex-api {
@@ -281,7 +330,7 @@ function dex-stern-dex-api {
         return 1
   fi
 
-  cst && dexw -a cst --cluster-id ${CLUSTER_ID} -cst $CST --mow-env dev stern -n $DEX_NS -l app.kubernetes.io/name=dex-app-api
+  cst && dexw -a cst --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv stern -n $DEX_NS -l app.kubernetes.io/name=dex-app-api
 }
 
 function dex-open-private-stack-bteke {
@@ -317,6 +366,8 @@ function dex-create-service-in-stack {
 
 function dex-create-private-stack {
   echo "Moonlander / make"
+  # TODO git pull?
+  
   cd $CSI_HOME/moonlander && make;
 
 
@@ -403,6 +454,16 @@ function dex-private-stack-replace-runtime {
 }
 
 function dex-private-stack-get-logs-follow {
+  if [[ -z $CLUSTER_ID ]]; then
+        echo "CLUSTER_ID is not defined"
+        return 1
+  fi
+
+  if [[ -z $DEX_APP_NS ]]; then
+        echo "DEX_APP_NS is not defined"
+        return 1
+  fi
+
   DEX_API_POD=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods | grep -o -e "dex-app-.*-api-\S*")
   echo "API pod: $DEX_API_POD"
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD
@@ -433,13 +494,20 @@ function dex-launch-jobs {
 }
 
 
-function dex-dexk() {
+function dex-dexk {
     CLUSTER_ID=$1
     if [[ -z $CLUSTER_ID ]]; then
         echo "Usage: dex-dexk cluster-id" >&2
         return 1
     fi
     cst && dexk --cluster-id $clusterId --cdp-token $CST --ingress dex --mow-env priv --workspace-name ${USER}
+}
+
+function dex-pvc-get-vault-kubeconfig {
+  export VAULT_ADDR="https://vault-shared-os-dev-01-control-plane-vault.apps.shared-os-dev-01.kcloud.cloudera.com/"
+  export VAULT_SKIP_VERIFY="True"
+  vault login -method=ldap username=snemeth@cloudera.com
+  # TODO Complete this function and figure out what's the issue with vault login
 }
 
 ###################################################################### DEX RUNTIME ######################################################################
