@@ -14,6 +14,8 @@ alias goto-eyarn="cd $EYARN_DIR"
 alias goto-bundlelogprocessor="cd $CLOUDERA_DEV_ROOT/YARN-tools/bundle-log-processor"
 alias goto-dex="cd $DEX_DEV_ROOT"
 alias goto-hades="cd $HOME/development/other-repos/gandras/hades/"
+alias goto-cldr-tasks="cd $HOME/development/my-repos/knowledge-base-private/cloudera/tasks"
+alias goto-dex-7712-clitesting="cd /Users/snemeth/development/my-repos/knowledge-base-private/cloudera/tasks/cde/DEX-7712/dev-work-from-20221129/cli-testing"
 
 #git / gerrit commands
 alias gerrit-branches5="git br -r | grep gerrit | grep -e '5.1\d.*' | cut -d_ -f 2-3 | sort -u | grep -v patch"
@@ -71,7 +73,7 @@ alias mvn-hadoop-cdpd-2="asdf uninstall protoc && asdf uninstall maven && cp /us
 alias mvn-hadoop-upstream-build="asdf plugin-remove yarn;mvn clean install -Pdist -DskipTests -Dmaven.javadoc.skip=true -DskipShade"
 alias mvn-hadoop-upstream-native=build="mvn clean install -Pdist -Pnative -DskipTests -Dmaven.javadoc.skip=true -DskipShade"
 alias mvn-generate-proto="mvn generate-sources"
-alias cluster-roulette="$HOME/Google\ Drive\ File\ Stream/My\ Drive/development/scripts/cluster-roulette.sh"
+alias cluster-roulette="$HOME/googledrive/development/scripts/cluster-roulette.sh"
 
 #CM specific commands
 CM_SKIPTESTS="-DskipTests"
