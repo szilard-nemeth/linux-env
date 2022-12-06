@@ -3,7 +3,7 @@
 #GOTO aliases
 alias goto-cldr="cd $CLOUDERA_DEV_ROOT"
 alias goto-cldr-hadoop="cd $CLOUDERA_HADOOP_ROOT"
-alias goto-tasks="cd $HOME/Google Drive File Stream/My Drive/development/tasks/"
+alias goto-tasks="cd $HOME/googledrive/development/tasks/"
 alias goto-hadoop="cd $HADOOP_DEV_DIR"
 alias goto-hadoop-mvn="cd $HADOOP_MVN_DIR"
 alias goto-hadoop-commit="cd $HOME/development/apache/hadoop-commit"
