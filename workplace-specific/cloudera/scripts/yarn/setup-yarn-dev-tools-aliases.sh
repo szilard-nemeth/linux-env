@@ -54,13 +54,13 @@ function setup-aliases-yarndevtools-source {
 function setup-aliases-yarndevtools-package {
   YARN_DEV_TOOLS_ENV="export HADOOP_DEV_DIR;export CLOUDERA_HADOOP_ROOT"
 
-  alias yarn-backport="$YARN_DEV_TOOLS_ENV; yarndevtools BACKPORT; popd"
-  alias yarn-save-patch="$YARN_DEV_TOOLS_ENV; yarndevtools SAVE_PATCH; popd"
-  alias yarn-create-review-branch="$YARN_DEV_TOOLS_ENV; yarndevtools CREATE_REVIEW_BRANCH; popd"
-  alias yarn-upstream-commit-pr="$YARN_DEV_TOOLS_ENV; yarndevtools UPSTREAM_PR_FETCH; popd"
-  alias yarn-diff-patches="$YARN_DEV_TOOLS_ENV; yarndevtools DIFF_PATCHES_OF_JIRA; popd"
-  alias yarn-save-diff-as-patches="$YARN_DEV_TOOLS_ENV; yarndevtools SAVE_DIFF_AS_PATCHES; popd"
-  alias yarn-get-umbrella-data="$YARN_DEV_TOOLS_ENV; yarndevtools FETCH_JIRA_UMBRELLA_DATA; popd"
+  alias yarn-backport="$YARN_DEV_TOOLS_ENV; yarndevtools BACKPORT"
+  alias yarn-save-patch="$YARN_DEV_TOOLS_ENV; yarndevtools SAVE_PATCH"
+  alias yarn-create-review-branch="$YARN_DEV_TOOLS_ENV; yarndevtools CREATE_REVIEW_BRANCH"
+  alias yarn-upstream-commit-pr="$YARN_DEV_TOOLS_ENV; yarndevtools UPSTREAM_PR_FETCH"
+  alias yarn-diff-patches="$YARN_DEV_TOOLS_ENV; yarndevtools DIFF_PATCHES_OF_JIRA"
+  alias yarn-save-diff-as-patches="$YARN_DEV_TOOLS_ENV; yarndevtools SAVE_DIFF_AS_PATCHES"
+  alias yarn-get-umbrella-data="$YARN_DEV_TOOLS_ENV; yarndevtools FETCH_JIRA_UMBRELLA_DATA"
 
   if [[ $LINUXENV_DEBUG_YARNDEVTOOLS == 1 ]]; then
     print-yarn-dev-tools-aliases
