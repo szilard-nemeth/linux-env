@@ -86,13 +86,14 @@ function show-changes() {
 
 function reset() {
   cd $PYTHON_COMMONS_DIR
-  git reset --hard origin/master
+  # TODO Show diff and ask confirmation before doing git reset --hard
+  #git reset --hard origin/master
 
   cd $GOOGLE_API_WRAPPER_DIR
-  git reset --hard origin/master
+  #git reset --hard origin/master
 
   cd $YARN_DEV_TOOLS_DIR
-  git reset --hard origin/master
+  #git reset --hard origin/master
 }
 
 function poetry-build-and-publish() {
@@ -109,14 +110,16 @@ function poetry-build-and-publish() {
 }
 
 function commit-version-bump() {
-  # TODO Add git tag to commit
-  # TODO Add new version number to commit message
-
   commit_msg="$1"
+  new_version="$2"
   echo "Committing version bump..."
-  git commit -am "\"$commit_msg\""
+  git commit -am "$commit_msg"
+
   if [[ $GIT_PUSH -eq 1 ]]; then
+    tag_name="$new_version"
     git push
+    git tag $tag_name -a -m "Release created by shell script: $new_version"
+    git push origin $tag_name
   fi
 }
 
@@ -142,7 +145,8 @@ function bump-project-version() {
   if [[ "$?" -ne 0 ]]; then
     return 1
   else
-    commit-version-bump "bump version (patch)"
+    new_version=$(poetry version --short)
+    commit-version-bump "Bump version to $new_version (patch)" "$new_version"
   fi
 }
 
@@ -193,10 +197,16 @@ function update-package-versions-in-yarndevtools() {
   # TODO Check if two lines modified or user should manually confirm if git diff looks okay
   poetry version patch
   poetry update
-  commit-version-bump "update version of packages: python-common-lib, google-api-wrapper2"
+
 
   echo "Publishing $PROJ_NAME_YARN_DEV_TOOLS..."
   poetry build && poetry publish
+  if [[ "$?" -ne 0 ]]; then
+    echo "Failed to publish yarndevtools"
+  else
+    new_version=$(poetry version --short)
+    commit-version-bump "update version of packages: python-common-lib, google-api-wrapper2" "$new_version"
+  fi
 }
 
 function myrepos-upgrade-pythoncommons() {
