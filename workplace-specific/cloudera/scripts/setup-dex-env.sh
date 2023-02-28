@@ -99,7 +99,7 @@ function dex-export-runtime-build-env {
   fi
 
 	export JIRA_NUM=$(git rev-parse --abbrev-ref HEAD)
-	export VERSION=1.18.0-dev
+	export VERSION=1.19.0-dev
 	export INSTANCE_NAME=snemeth-test
 	export REGISTRY_NAMESPACE=${USER}
 	export CLUSTER_ID=$1
@@ -289,14 +289,14 @@ function dex-namespace-k9s {
   fi
 
   CLUSTER_ID="${CLUSTER_ID:-noclusterid}"
-  DEX_NS=$1
+  DEX_APP_NS=$1
 
   if [[ "$CLUSTER_ID" == 'noclusterid' ]]; then
         echo "CLUSTER_ID should be set"
         return 1
   fi
 
-  cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst k9s --namespace $DEX_NS
+  cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst k9s --namespace $DEX_APP_NS
 }
 
 function dex-namespace-shell {
@@ -306,7 +306,7 @@ function dex-namespace-shell {
   fi
 
   CLUSTER_ID="${CLUSTER_ID:-noclusterid}"
-  DEX_NS=$1
+  DEX_APP_NS=$1
 
   if [[ "$CLUSTER_ID" == 'noclusterid' ]]; then
         echo "CLUSTER_ID should be set"
@@ -323,14 +323,14 @@ function dex-stern-dex-api {
   fi
 
   CLUSTER_ID="${CLUSTER_ID:-noclusterid}"
-  DEX_NS=$1
+  DEX_APP_NS=$1
 
   if [[ "$CLUSTER_ID" == 'noclusterid' ]]; then
         echo "CLUSTER_ID should be set"
         return 1
   fi
 
-  cst && dexw -a cst --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv stern -n $DEX_NS -l app.kubernetes.io/name=dex-app-api
+  cst && dexw -a cst --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv stern -n $DEX_APP_NS -l app.kubernetes.io/name=dex-app-api
 }
 
 function dex-open-private-stack-bteke {
@@ -344,13 +344,13 @@ function dex-open-private-stack-bteke {
 
 
 function dex-create-service-in-stack {
-    dex-cst; curl -H 'Content-Type: application/json' -d '{
-      "name": "snemeth-cde-DEX7712",
-      "env": "dex-priv-default-aws-env-3",
+    cst; curl -H 'Content-Type: application/json' -d '{
+      "name": "snemeth-cde-DEX-7712",
+      "env": "dex-priv-default-aws-env",
       "config": {
           "properties": {
               "loadbalancer.internal":"true",
-              "cde.version": "1.18.0"
+              "cde.version": "1.19.0"
           },
           "resources": {
               "instance_type": "m5.2xlarge",
@@ -366,7 +366,7 @@ function dex-create-service-in-stack {
 
 function dex-create-private-stack {
   echo "Moonlander / make"
-  # TODO git pull?
+  # TODO git pull CSI?
   
   cd $CSI_HOME/moonlander && make;
 
@@ -379,6 +379,7 @@ function dex-create-private-stack {
   DATE_OF_START=`date +%F-%H%M%S`
   logfilename="~/.dex/logs/dexprivatestack_$DATE_OF_START.log"
   mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 | tee $logfilename
+  # mow-priv k9s --> Validate if snemeth pods are running (by name)
 
   # 3. Create service with curl: https://github.infra.cloudera.com/CDH/dex/wiki/Upgrade-Testing
   #### UNCOMMENT THIS TO CREATE SERVICE
