@@ -113,6 +113,7 @@ function commit-version-bump() {
   commit_msg="$1"
   new_version="$2"
   echo "Committing version bump..."
+  set -x
   git commit -am "$commit_msg"
 
   if [[ $GIT_PUSH -eq 1 ]]; then
@@ -120,7 +121,10 @@ function commit-version-bump() {
     git push
     git tag $tag_name -a -m "Release created by shell script: $new_version"
     git push origin $tag_name
+  else
+    echo "Skipping git push"
   fi
+  set +x
 }
 
 function bump-project-version() {
