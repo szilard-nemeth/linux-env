@@ -104,6 +104,8 @@ alias dex-sync-branch="git fetch origin && git checkout develop && git rebase or
 alias dex-test-with-clean="goto-dex;make clean-mocks && make gen-mocks && make test"
 alias dex-test="goto-dex;make test"
 alias dex-update-dev-env="goto-dex;make update-dev-env"
+alias dex-docker-cleanup="docker rmi $(docker images | grep \"1\.18\.0\" | tr -s ' ' | cut -d ' ' -f 3) -f"
+
 
 ### DEX, Beni
 alias dex-saml2aws="saml2aws exec --exec-profile cu_dex_dev -- bash"
