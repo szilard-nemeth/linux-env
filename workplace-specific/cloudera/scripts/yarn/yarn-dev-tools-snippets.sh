@@ -99,3 +99,18 @@ function yarn-listupstreamversions() {
         printf "\n"
     done
 }
+
+function yarn-downstream-version-pc-for-upstream-change {
+    goto-cldr-hadoop
+    res=$(git log --oneline --grep=$1)
+    count=$(echo "$res" | wc -l | tr -s ' ')
+    
+    if [[ "$count" -ne 1 ]]; then
+        echo "ERROR! Found zero or multiple lines for $1. Result: $res"
+        return 1
+    fi
+
+    c_hash=$(git log -3 --pretty=format:"%h" --grep=$1)
+    echo "Found commit hash: $c_hash"
+    git show $c_hash:pom.xml | grep version | head -n5
+}
