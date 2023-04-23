@@ -13,6 +13,12 @@ function extractall() {
     ls *.zip|awk -F'.zip' '{print "unzip "$0" -d "$1}' | sh
 }
 
+function extract-all-multipart {
+    mkdir all
+    for x in *.zip ; do unzip -d all -o -u $x ; done
+    #zip -r all.zip all
+}
+
 function extract-all-yarn-from-bundle() {
     find . -type f -iname "*nodemanager*\.gz*" -o -iname "*resourcemanager*\.gz" -execdir gzip -dk '{}' \;
 }
