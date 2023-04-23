@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 
 echo "Setting up DEX env..."
+
+############## VARS ##############
+DOCKER_ROOT_CLOUDERA="docker-registry.infra.cloudera.com"
+DEX_DOCKER_IMAGES_GENERATED_FILE="$DEX_DEV_ROOT/cloudera/docker_images.generated.yaml"
+
+
+############## VARS ##############
+
 # asdf setup
 . /usr/local/opt/asdf/libexec/asdf.sh
 
@@ -92,19 +100,30 @@ function dex-default-env {
 ###################################################################### DEX RUNTIME ######################################################################
 # The following Runtime aliases are based on: https://github.infra.cloudera.com/CDH/dex/blob/develop/docs/developer-workflow-runtime-api.md
 
-function dex-export-runtime-build-env {
-  if [[ $# -ne 1 ]]; then
-    echo "Please specifiy CLUSTER_ID as 1st parameter"
-    return 1
-  fi
+function dex-export-common {
+  export JIRA_NUM=$(git rev-parse --abbrev-ref HEAD)
+  export VERSION=1.19.0-dev
+  export INSTANCE_NAME=snemeth-test
+  export REGISTRY_NAMESPACE=${USER}
+  export DOCKER_NAMESPACE_ROOT="$DOCKER_ROOT_CLOUDERA/$REGISTRY_NAMESPACE"
+  # should be simply 'dex' if using main mow-dev CDE service
+  export INGRESS_PATH=dex
+}
 
-	export JIRA_NUM=$(git rev-parse --abbrev-ref HEAD)
-	export VERSION=1.19.0-dev
-	export INSTANCE_NAME=snemeth-test
-	export REGISTRY_NAMESPACE=${USER}
-	export CLUSTER_ID=$1
-	# should be simply 'dex' if using main mow-dev CDE service
-	export INGRESS_PATH=dex
+function dex-export-runtime-build-env {
+  # https://superuser.com/a/556006/640183
+  read "CLUSTER_ID?Enter service id (e.g. 'cluster-6lznwhlx'): "
+  read "DEX_APP_NS?Enter VC id (e.g. 'dex-app-25fcmch8': "
+  read "PROVISIONER_ID?Enter provisioner ID (e.g. liftie-cwzvgrxp): "
+  read "CLUSTER_URL?Enter cluster URL (e.g. http://snemeth-console.cdp-priv.mow-dev.cloudera.com/dex): "
+
+  local curr_date=`date +%F-%H%M%S`
+  echo "$curr_date PROVISIONER_ID: $PROVISIONER_ID" >> ~/.cde/clusters-provisioned
+  echo "$curr_date CLUSTER_ID: $CLUSTER_ID" >> ~/.cde/clusters-provisioned
+  echo "$curr_date DEX_APP_NS: $DEX_APP_NS" >> ~/.cde/clusters-provisioned
+  echo "$curr_date CLUSTER_URL: $CLUSTER_URL" >> ~/.cde/clusters-provisioned
+
+	dex-export-common
 
 	echo "##############################################"
 	echo "# JIRA_NUM=$JIRA_NUM (used by build)"
@@ -112,8 +131,33 @@ function dex-export-runtime-build-env {
 	echo "# REGISTRY_NAMESPACE=$REGISTRY_NAMESPACE (used by build)"
 	echo "# INSTANCE_NAME=$INSTANCE_NAME (used by deploy)"
 	echo "# CLUSTER_ID=$CLUSTER_ID (used by deploy)"
+  echo "# DEX_APP_NS (VC ID)=$DEX_APP_NS (used by deploy)"
 	echo "# INGRESS_PATH=$INGRESS_PATH (used by deploy)"
 	echo "##############################################"
+
+  dex-parse-latest-cluster-vars
+}
+
+function dex-parse-latest-cluster-vars {
+  PROVISIONER_ID=$(grep PROVISIONER_ID ~/.cde/clusters-provisioned | tail -n 1 | cut -d : -f 2 | awk '{$1=$1};1')
+  CLUSTER_ID=$(grep CLUSTER_ID ~/.cde/clusters-provisioned | tail -n 1 | cut -d : -f 2 | awk '{$1=$1};1')
+  DEX_APP_NS=$(grep DEX_APP_NS ~/.cde/clusters-provisioned | tail -n 1 | cut -d : -f 2 | awk '{$1=$1};1')
+  CLUSTER_URL=$(grep CLUSTER_URL ~/.cde/clusters-provisioned | tail -n 1 | cut -d : -f 2- | awk '{$1=$1};1')
+
+
+  echo "##################PARSED DATA FROM FILE##################"
+  echo "# PROVISIONER_ID=$PROVISIONER_ID"
+  echo "# CLUSTER_ID=$CLUSTER_ID"
+  echo "# DEX_APP_NS=$DEX_APP_NS"
+  echo "# CLUSTER_URL=$CLUSTER_URL"
+  echo "#########################################################"
+
+  set -x
+  dex-export-common
+  export CLUSTER_ID
+  export DEX_APP_NS
+  export CLUSTER_URL
+  set +x
 }
 
 function dex-pvc-export-runtime-build-env {
@@ -131,39 +175,60 @@ function dex-pvc-export-runtime-build-env {
 
 
 function _dex-build {
-  if [ $# -ne 1 ]; then
-    echo "Usage: _dex-build <service>" 1>&2
-    exit 1
-  fi
-  service_to_build="$1"
-
   if [ -z ${REGISTRY_NAMESPACE+x} ]; then
 			echo "REGISTRY_NAMESPACE is not set. Call 'dex-export-runtime-build-env' first";
 			return
 		else
 			echo "REGISTRY_NAMESPACE set to '$REGISTRY_NAMESPACE'";
-		fi
+	fi
 
 
     # Should call manually: dex-export-runtime-build-env
   	cd $DEX_DEV_ROOT/docker
     make $service_to_build
-
-    echo "Listing images..."
-    docker images | grep $service_to_build | grep $VERSION
-    docker tag docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:${VERSION}-${JIRA_NUM}
-    # docker tag docker-registry.infra.cloudera.com/cloudera/dex/$service_to_build:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:${VERSION}-${JIRA_NUM}
-    docker push docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:${VERSION}-${JIRA_NUM}
     cd -
+
+    if [ "$?" -ne 0 ]; then
+      echo "Failed to build service: $service_to_build"
+      return 1
+    fi
+}
+
+function _dex-tag-and-push-image {
+  echo "Listing images for service $service_to_build..."
+  docker images | grep $service_to_build | grep $VERSION
+
+  image_to_tag=$DOCKER_NAMESPACE_ROOT/$service_to_build:${VERSION}
+  docker image inspect $image_to_tag >/dev/null 2>&1
+
+  if [ "$?" -ne 0 ]; then
+      echo "Docker image does not exist: $image_to_tag"
+      echo "All docker images found for service: "
+      docker images | grep $service_to_build
+
+      
+      
+      echo "Trying to be smart and grep for built Airflow image name from $DEX_DOCKER_IMAGES_GENERATED_FILE"
+      # sed 1: remove all leading whitespaces
+      # sed 2: remove all trailing } characters
+      found_service_img=$(grep $service_to_build $DEX_DOCKER_IMAGES_GENERATED_FILE | cut -d':' -f2 | tr -s ' ' | sed -e 's/^[ \t]*//' | sed 's/}*$//')
+
+      if [[ -z $found_service_img ]]; then
+        echo "Couldn't find Docker image for service $service_to_build in file: $DEX_DOCKER_IMAGES_GENERATED_FILE"
+        return 1
+      else
+        service_to_build=$(echo $found_service_img | grep -o "$service_to_build.*")
+        return 0
+      fi
+  fi
+
+  set -x
+  docker tag $image_to_tag $image_to_tag-${JIRA_NUM}
+  docker push $image_to_tag-${JIRA_NUM}
+  set +x
 }
 
 function _dex-increase-docker-tag-counter {
-  if [ $# -ne 1 ]; then
-    echo "Usage: _dex-increase-docker-tag-counter <service>" 1>&2
-    exit 1
-  fi
-  service_to_build="$1"
-
   if [[ -z $VERSION ]]; then
     echo "VERSION must be set"
     return 1
@@ -184,7 +249,7 @@ function _dex-increase-docker-tag-counter {
   arr=($(docker images | grep $service_to_build | grep $JIRA_NUM-iteration- | grep $VERSION-$JIRA_NUM | tail -n 1 | tr -s ' '))
 
   if [[ ${#arr[@]} == 0 ]];then
-    echo "Counter not found for Docker image '${arr[1]}'"
+    echo "Counter not found for Docker image '${arr[1]}'. Setting counter to 0"
     counter=0
   else
     unset counter
@@ -203,24 +268,55 @@ function _dex-increase-docker-tag-counter {
 
   new_tag="${VERSION}-${JIRA_NUM}-iteration-$counter"
 
-  docker tag docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:${VERSION} docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:$new_tag
-  docker push docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:$new_tag
+
+  image_to_tag=$DOCKER_NAMESPACE_ROOT/$service_to_build:${VERSION}
+  image_tagged=$DOCKER_NAMESPACE_ROOT/$service_to_build:$new_tag
+
+  # TODO this wrongly assumes that '$DOCKER_ROOT_CLOUDERA/${REGISTRY_NAMESPACE}/$service_to_build' image exists
+  docker tag $image_to_tag $image_tagged
+  docker push $image_tagged
 
   # TODO Filter images with docker images itself - https://stackoverflow.com/questions/24659300/how-to-use-docker-images-filter
-  docker images | grep docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:$new_tag
+  docker images | grep $image_tagged
 
-  echo "Use this image to replace service:"
-  echo "docker-registry.infra.cloudera.com/${REGISTRY_NAMESPACE}/$service_to_build:$new_tag"
+  echo "Use this image to replace service on cluster:"
+  echo $image_tagged
 }
 
 function dex-build-runtime {
-  _dex-build "dex-runtime-api-server"
-  _dex-increase-docker-tag-counter "dex-runtime-api-server"
+  service_to_build="dex-runtime-api-server"
+  _dex-build
+  
+  _dex-tag-and-push-image
+  if [ "$?" -ne 0 ]; then
+    return 1
+  fi
+
+  _dex-increase-docker-tag-counter
+}
+
+function dex-build-airflow {
+  service_to_build="dex-airflow"
+  _dex-build
+  
+  _dex-tag-and-push-image
+  if [ "$?" -ne 0 ]; then
+    return 1
+  fi
+
+  _dex-increase-docker-tag-counter
 }
 
 function dex-build-cp {
-  _dex-build "dex-cp"
-  _dex-increase-docker-tag-counter "dex-cp"
+  service_to_build="dex-cp"
+  _dex-build
+ 
+ _dex-tag-and-push-image
+  if [ "$?" -ne 0 ]; then
+    return 1
+  fi
+
+  _dex-increase-docker-tag-counter
 }
 
 function dex-deploy-new-vc-runtime-mowdev {
@@ -232,7 +328,6 @@ function dex-deploy-new-vc-runtime-mowpriv {
 }
 
 function _dex-deploy-runtime-dev-auto {
-  set -x
   local mow_env="$1"
   # Setting the pull policy to always means you can push multiple iterations to the same Docker tag when testing.
 
@@ -273,30 +368,46 @@ function _dex-deploy-runtime-dev-auto {
         },
         "chartValueOverrides": {
           "dex-app": {
-            "dexapp.api.image.override": "docker-registry.infra.cloudera.com/'${REGISTRY_NAMESPACE}'/dex-runtime-api-server:'${VERSION}'-'${JIRA_NUM}'",
+            "dexapp.api.image.override": '$DOCKER_NAMESPACE_ROOT'/dex-runtime-api-server:'${VERSION}'-'${JIRA_NUM}'",
             "dexapp.api.image.pullPolicy": "Always"
           }
         }
       }
     }' -s -b cdp-session-token=${CST} $dex_deploy_url | jq
+}
+
+function dex-vc-logs-runtime-api {
+  if [[ -z $CLUSTER_ID ]]; then
+        echo "CLUSTER_ID is not defined"
+        return 1
+  fi
+
+  if [[ -z $DEX_APP_NS ]]; then
+        echo "DEX_APP_NS is not defined"
+        return 1
+  fi
+
+  set -x
+  DEX_API_POD=$(cst;dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods | grep -o -e "dex-app-.*-api-\S*")
+  echo "API pod: $DEX_API_POD"
+  cst;dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD
   set +x
 }
 
 function dex-namespace-k9s {
-  if [[ $# -ne 1 ]]; then
-    echo "Usage: dex-k9s-namespace [namespace]"
-    return 1
-  fi
-
-  CLUSTER_ID="${CLUSTER_ID:-noclusterid}"
-  DEX_APP_NS=$1
-
-  if [[ "$CLUSTER_ID" == 'noclusterid' ]]; then
+  if [[ -z "$CLUSTER_ID" ]]; then
         echo "CLUSTER_ID should be set"
         return 1
   fi
 
+  if [[ -z "$DEX_APP_NS" ]]; then
+        echo "DEX_APP_NS should be set"
+        return 1
+  fi
+
+  set -x
   cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst k9s --namespace $DEX_APP_NS
+  set +x
 }
 
 function dex-namespace-shell {
@@ -365,10 +476,9 @@ function dex-create-service-in-stack {
 }
 
 function dex-create-private-stack {
-  echo "Moonlander / make"
-  # TODO git pull CSI?
-  
-  cd $CSI_HOME/moonlander && make;
+  echo "Moonlander..."
+  echo "git pull / running make..."
+  cd $CSI_HOME/moonlander && git pull && make;
 
 
   gimme-aws-creds
@@ -378,7 +488,7 @@ function dex-create-private-stack {
   # 2. moonlander install
   DATE_OF_START=`date +%F-%H%M%S`
   logfilename="~/.dex/logs/dexprivatestack_$DATE_OF_START.log"
-  mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 | tee $logfilename
+  mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 | tee "$logfilename"
   # mow-priv k9s --> Validate if snemeth pods are running (by name)
 
   # 3. Create service with curl: https://github.infra.cloudera.com/CDH/dex/wiki/Upgrade-Testing
@@ -446,7 +556,7 @@ function dex-private-stack-replace-runtime {
   echo "Listing original image of dex-app-api (runtime): "
 	dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS describe deployment $DEX_APP_DEPL | grep -i image
 
-  dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS set image deployment/$DEX_APP_DEPL dex-app-api=docker-registry.infra.cloudera.com/snemeth/dex-runtime-api-server:$NEW_IMAGE_TAG
+  dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS set image deployment/$DEX_APP_DEPL dex-app-api=$DOCKER_ROOT_CLOUDERA/snemeth/dex-runtime-api-server:$NEW_IMAGE_TAG
 
   echo "Listing modified image of dex-app-api (runtime): "
 	dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS describe deployment $DEX_APP_DEPL | grep -i image
