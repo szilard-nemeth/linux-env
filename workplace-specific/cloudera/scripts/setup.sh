@@ -9,6 +9,11 @@ export DEX_DEV_ROOT="$HOME/development/cloudera/cde/dex/"
 
 CLOUDERA_DIR="$HOME_LINUXENV_DIR/workplace-specific/cloudera/"
 export CLOUDERA_DIR
+
+CLOUDERA_TASKS_DIR="$HOME/development/my-repos/knowledge-base-private/cloudera/tasks"
+CLOUDERA_TASKS_CDE_DIR="$CLOUDERA_TASKS_DIR/cde"
+export CLOUDERA_TASKS_DIR
+export CLOUDERA_TASKS_CDE_DIR
 #===============================================
 
 #export PATH="/usr/local/opt/protobuf@2.5/bin:$PATH"

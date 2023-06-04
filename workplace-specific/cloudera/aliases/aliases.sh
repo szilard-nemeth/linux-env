@@ -13,9 +13,10 @@ alias goto-yarn-tasks="cd $HOME/yarn-tasks"
 alias goto-eyarn="cd $EYARN_DIR"
 alias goto-bundlelogprocessor="cd $CLOUDERA_DEV_ROOT/YARN-tools/bundle-log-processor"
 alias goto-dex="cd $DEX_DEV_ROOT"
+alias goto-thunderhead="cd $DEX_DEV_ROOT../thunderhead"
 alias goto-hades="cd $HOME/development/other-repos/gandras/hades/"
-alias goto-cldr-tasks="cd $HOME/development/my-repos/knowledge-base-private/cloudera/tasks"
-alias goto-dex-7712-clitesting="cd /Users/snemeth/development/my-repos/knowledge-base-private/cloudera/tasks/cde/DEX-7712/dev-work-from-20221129/cli-testing"
+alias goto-cldr-tasks="cd $CLOUDERA_TASKS_DIR"
+
 
 #git / gerrit commands
 alias gerrit-branches5="git br -r | grep gerrit | grep -e '5.1\d.*' | cut -d_ -f 2-3 | sort -u | grep -v patch"
@@ -100,11 +101,12 @@ function backup-currdir() {
 alias python-precommit-all="pre-commit run --all-files"
 
 #### DEX
-alias dex-sync-branch="git fetch origin && git checkout develop && git rebase origin/develop && git co - && git rebase develop && git --no-pager log -1 --oneline"
 alias dex-test-with-clean="goto-dex;make clean-mocks && make gen-mocks && make test"
 alias dex-test="goto-dex;make test"
 alias dex-update-dev-env="goto-dex;make update-dev-env"
 alias dex-docker-cleanup="docker rmi $(docker images | grep \"1\.18\.0\" | tr -s ' ' | cut -d ' ' -f 3) -f"
+alias goto-dex-7712-clitesting="cd $CLOUDERA_TASKS_CDE_DIR/dev-work-from-20221129/cli-testing"
+alias dex-print-tasks-dir="echo $CLOUDERA_TASKS_CDE_DIR"
 
 
 ### DEX, Beni
