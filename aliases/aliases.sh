@@ -32,7 +32,6 @@ alias git-commit-msg="git log -n 1 --pretty=format:%s"
 alias git-remove-trailing-ws="git diff-tree --no-commit-id --name-only -r HEAD | xargs sed -i 's/[[:space:]]*$//'"
 alias git-fix-author-info-private="git config user.email 'szilard.nemeth88@gmail.com' && git config user.name 'Szilard Nemeth' && git commit --amend --reset-author"
 alias git-fix-author-info-cloudera="git config user.email 'snemeth@cloudera.com' && git config user.name 'Szilard Nemeth' && git commit --amend --reset-author"
-#alias git-save-all-commits="git format-patch $(git rev-list --max-parents=0 HEAD)..HEAD -o /tmp/patches"
 alias git-add-all-tracked="git status -s | grep -v \"??\" | cut -c 4- | xargs git add"
 
 ## REVIEW ALIASES

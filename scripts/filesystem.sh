@@ -13,6 +13,10 @@ function extractall() {
     ls *.zip|awk -F'.zip' '{print "unzip "$0" -d "$1}' | sh
 }
 
+function extractall2 {
+    for x in *.zip ; do unzip -d all -o -u $x ; done
+}
+
 function extract-all-multipart {
     mkdir all
     for x in *.zip ; do unzip -d all -o -u $x ; done

@@ -45,7 +45,7 @@ function gh-apply-patch() {
   git apply /tmp/github-pr-$PR_ID.patch
 }
 
-
+# TODO Move all cde aliases to a separate git.sh script
 function git-sync-cde-develop {
     set -x
     orig_branch=$(git rev-parse --abbrev-ref HEAD)
@@ -66,5 +66,43 @@ function git-sync-cde-featurebranch {
     git status
     git checkout $orig_branch
     git rebase develop
+    git --no-pager log -1 --oneline
     set +x
 }
+
+function git-format-patch {
+    #alias git-save-all-commits="git format-patch $(git rev-list --max-parents=0 HEAD)..HEAD -o /tmp/patches"
+    if [ $# -ne 2 ]; then
+        echo "Usage: git-format-patch <base branch> <destination dir>" 1>&2
+        return 1
+    fi
+    local base_branch=$1
+    local dest_dir=$2
+
+    git format-patch $base_branch..HEAD -o $dest_dir
+}
+
+function git-format-patch-cde-feature {
+    #cd $DEX_DEV_ROOT
+    local branch=$(git rev-parse --abbrev-ref HEAD)
+    local output_dir="$CLOUDERA_TASKS_CDE_DIR/$branch/backup-patches/$(date-formatted)"
+    echo "Output dir: $output_dir"
+    mkdir -p $output_dir
+
+    git-format-patch develop $output_dir
+}
+
+function git-backup-patch-develop-simple {
+    set -x
+    local branch=$(git rev-parse --abbrev-ref HEAD)
+    local output_dir="$CLOUDERA_TASKS_CDE_DIR/$branch/backup-patches-single/"
+    mkdir -p $output_dir
+    local output_file="$output_dir/backup-$branch-$(date-formatted).patch"
+    echo "Creating patch based on develop to: $output_file"
+    git diff develop..HEAD > $output_file
+    set +x
+}
+
+
+
+
