@@ -39,7 +39,7 @@ complete -C '/usr/local/bin/aws_completer' aws
 # DEX Variables, Add them to path
 export CSI_HOME="$HOME/development/cloudera/cde/cloud-services-infra/"
 export DEX_DEV_TOOLS="$DEX_DEV_ROOT/dev-tools"
-export PATH=$PATH:$CSI_HOME/bin:$CSI_HOME/moonlander:$DEX_DEV_TOOLS
+export PATH=$PATH:$CSI_HOME/bin:$CSI_HOME/moonlander:$DEX_DEV_TOOLS:$DEX_DEV_ROOT/build
 
 
 # Moonlander / Private stacks: https://github.infra.cloudera.com/CDH/dex/wiki/Private-Stacks-Moonlander
@@ -112,10 +112,10 @@ function dex-export-common {
 
 function dex-export-runtime-build-env {
   # https://superuser.com/a/556006/640183
-  read "CLUSTER_ID?Enter service id (e.g. 'cluster-6lznwhlx'): "
-  read "DEX_APP_NS?Enter VC id (e.g. 'dex-app-25fcmch8': "
-  read "PROVISIONER_ID?Enter provisioner ID (e.g. liftie-cwzvgrxp): "
-  read "CLUSTER_URL?Enter cluster URL (e.g. http://snemeth-console.cdp-priv.mow-dev.cloudera.com/dex): "
+  read "CLUSTER_ID?Enter service id [cluster-6lznwhlx]: "
+  read "DEX_APP_NS?Enter VC id [dex-app-25fcmch8]: "
+  read "PROVISIONER_ID?Enter provisioner ID [liftie-cwzvgrxp]: "
+  read "CLUSTER_URL?Enter cluster URL [https://console.cdp-priv.mow-dev.cloudera.com/dex]: "
 
   local curr_date=`date +%F-%H%M%S`
   echo "$curr_date PROVISIONER_ID: $PROVISIONER_ID" >> ~/.cde/clusters-provisioned
@@ -145,7 +145,7 @@ function dex-parse-latest-cluster-vars {
   CLUSTER_URL=$(grep CLUSTER_URL ~/.cde/clusters-provisioned | tail -n 1 | cut -d : -f 2- | awk '{$1=$1};1')
 
 
-  echo "##################PARSED DATA FROM FILE##################"
+  echo "##################PARSED DATA FROM FILE: $HOME/.cde/clusters-provisioned ##################"
   echo "# PROVISIONER_ID=$PROVISIONER_ID"
   echo "# CLUSTER_ID=$CLUSTER_ID"
   echo "# DEX_APP_NS=$DEX_APP_NS"
@@ -158,6 +158,9 @@ function dex-parse-latest-cluster-vars {
   export DEX_APP_NS
   export CLUSTER_URL
   set +x
+
+  # TODO validate if CLUSTER_ID starts with cluster-
+  # TODO validate if DEX_APP_NS starts with dex-app-
 }
 
 function dex-pvc-export-runtime-build-env {
@@ -176,8 +179,8 @@ function dex-pvc-export-runtime-build-env {
 
 function _dex-build {
   if [ -z ${REGISTRY_NAMESPACE+x} ]; then
-			echo "REGISTRY_NAMESPACE is not set. Call 'dex-export-runtime-build-env' first";
-			return
+			echo "REGISTRY_NAMESPACE is not set. Call 'dex-export-runtime-build-env' or 'dex-parse-latest-cluster-vars' first";
+			return 1
 		else
 			echo "REGISTRY_NAMESPACE set to '$REGISTRY_NAMESPACE'";
 	fi
@@ -186,12 +189,14 @@ function _dex-build {
     # Should call manually: dex-export-runtime-build-env
   	cd $DEX_DEV_ROOT/docker
     make $service_to_build
-    cd -
 
     if [ "$?" -ne 0 ]; then
       echo "Failed to build service: $service_to_build"
+      cd -
       return 1
     fi
+
+    cd -
 }
 
 function _dex-tag-and-push-image {
@@ -229,6 +234,7 @@ function _dex-tag-and-push-image {
 }
 
 function _dex-increase-docker-tag-counter {
+  set -x
   if [[ -z $VERSION ]]; then
     echo "VERSION must be set"
     return 1
@@ -246,7 +252,7 @@ function _dex-increase-docker-tag-counter {
   fi
 
   #docker-registry.infra.cloudera.com/snemeth/dex-runtime-api-server 1.18.0-dev-DEX-7712 06bb27949544 2 hours ago 646MB
-  arr=($(docker images | grep $service_to_build | grep $JIRA_NUM-iteration- | grep $VERSION-$JIRA_NUM | tail -n 1 | tr -s ' '))
+  arr=($(docker images | grep $service_to_build | grep $JIRA_NUM-iteration- | grep $VERSION-$JIRA_NUM | head -n 1 | tr -s ' '))
 
   if [[ ${#arr[@]} == 0 ]];then
     echo "Counter not found for Docker image '${arr[1]}'. Setting counter to 0"
@@ -285,11 +291,18 @@ function _dex-increase-docker-tag-counter {
 
 function dex-build-runtime {
   service_to_build="dex-runtime-api-server"
+
   _dex-build
+  if [ "$?" -ne 0 ]; then
+    echo "Build unsuccessful!"
+    return 1
+  fi
   
+
   _dex-tag-and-push-image
   if [ "$?" -ne 0 ]; then
-    return 1
+    echo "Tag and push Docker image unsuccessful!"
+    return 2
   fi
 
   _dex-increase-docker-tag-counter
@@ -297,11 +310,17 @@ function dex-build-runtime {
 
 function dex-build-airflow {
   service_to_build="dex-airflow"
+
   _dex-build
+  if [ "$?" -ne 0 ]; then
+    echo "Build unsuccessful!"
+    return 1
+  fi
   
   _dex-tag-and-push-image
   if [ "$?" -ne 0 ]; then
-    return 1
+    echo "Tag and push Docker image unsuccessful!"
+    return 2
   fi
 
   _dex-increase-docker-tag-counter
@@ -311,9 +330,15 @@ function dex-build-cp {
   service_to_build="dex-cp"
   _dex-build
  
- _dex-tag-and-push-image
-  if [ "$?" -ne 0 ]; then
+ if [ "$?" -ne 0 ]; then
+    echo "Build unsuccessful!"
     return 1
+  fi
+  
+  _dex-tag-and-push-image
+  if [ "$?" -ne 0 ]; then
+    echo "Tag and push Docker image unsuccessful!"
+    return 2
   fi
 
   _dex-increase-docker-tag-counter
@@ -444,13 +469,12 @@ function dex-stern-dex-api {
   cst && dexw -a cst --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv stern -n $DEX_APP_NS -l app.kubernetes.io/name=dex-app-api
 }
 
-function dex-open-private-stack-bteke {
-  CLUSTER_ID=$1
-    if [[ -z $CLUSTER_ID ]]; then
-        echo "Usage: dex-open-private-stack-bteke cluster-id" >&2
-        return 1
-    fi
-  dexw -cst $CST --cluster-id cluster-8gr6wwvt --mow-env priv --csi-workspace bteke k9s
+function dex-private-stack-connect-to-service {
+  dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv --csi-workspace bteke k9s
+}
+
+function dex-private-stack-connect-to-cp {
+  mow-priv k9s
 }
 
 
@@ -487,7 +511,8 @@ function dex-create-private-stack {
 
   # 2. moonlander install
   DATE_OF_START=`date +%F-%H%M%S`
-  logfilename="~/.dex/logs/dexprivatestack_$DATE_OF_START.log"
+  logfilename="/.dex/logs/dexprivatestack_$DATE_OF_START.log"
+  touch $logfilename
   mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 | tee "$logfilename"
   # mow-priv k9s --> Validate if snemeth pods are running (by name)
 
