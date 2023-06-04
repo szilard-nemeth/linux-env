@@ -44,11 +44,13 @@ function get-project-dir() {
 # TODO Look for better way to check exit codes ("$?" -ne 0) ?
 function check-git-changes() {
   local repo_dir=$1
+  local git_branch=$2
+  
   cd $repo_dir
   current_br=$(git rev-parse --abbrev-ref HEAD)
 
-  if [[ "master" != "$current_br" ]]; then
-    echo "Current branch is not master in $(pwd)! Exiting..."
+  if [[ "$git_branch" != "$current_br" ]]; then
+    echo "Current branch is not $git_branch in $(pwd)! Exiting..."
     return 1
   fi
 
@@ -57,28 +59,31 @@ function check-git-changes() {
     return 2
   fi
 
-  if [[ ! -z $(git --no-pager log origin/master..HEAD) ]]; then
+  if [[ ! -z $(git --no-pager log origin/$git_branch..HEAD) ]]; then
     echo "There are unpushed commits in $repo_dir. Please push or remove these commits and re-run this script"
     return 2
   fi
 }
 
 function show-changes() {
-  echo "Listing changes in $PYTHON_COMMONS_DIR ..." && cd $PYTHON_COMMONS_DIR && git --no-pager log origin/master..HEAD
-  echo "Listing changes in $GOOGLE_API_WRAPPER_DIR ..." && cd $GOOGLE_API_WRAPPER_DIR && git --no-pager log origin/master..HEAD
-  echo "Listing changes in $YARN_DEV_TOOLS_DIR ..." && cd $YARN_DEV_TOOLS_DIR && git --no-pager log origin/master..HEAD
+  echo "Listing changes in $PYTHON_COMMONS_DIR ..." && cd $PYTHON_COMMONS_DIR && git --no-pager log origin/$UPGRADE_PYTHON_PACKAGES_BRANCH..HEAD
+  echo "Listing changes in $GOOGLE_API_WRAPPER_DIR ..." && cd $GOOGLE_API_WRAPPER_DIR && git --no-pager log origin/$UPGRADE_PYTHON_PACKAGES_BRANCH..HEAD
+  echo "Listing changes in $YARN_DEV_TOOLS_DIR ..." && cd $YARN_DEV_TOOLS_DIR && git --no-pager log origin/$UPGRADE_PYTHON_PACKAGES_BRANCH..HEAD
 
-  check-git-changes $PYTHON_COMMONS_DIR
+  echo $UPGRADE_PYTHON_PACKAGES_BRANCH
+  echo $UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH
+
+  check-git-changes $PYTHON_COMMONS_DIR $UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH
   if [[ "$?" -ne 0 ]]; then
     return 1
   fi
 
-  check-git-changes $GOOGLE_API_WRAPPER_DIR
+  check-git-changes $GOOGLE_API_WRAPPER_DIR $UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH
   if [[ "$?" -ne 0 ]]; then
     return 1
   fi
 
-  check-git-changes $YARN_DEV_TOOLS_DIR
+  check-git-changes $YARN_DEV_TOOLS_DIR $UPGRADE_PYTHON_PACKAGES_BRANCH
   if [[ "$?" -ne 0 ]]; then
     return 1
   fi
@@ -87,13 +92,13 @@ function show-changes() {
 function reset() {
   cd $PYTHON_COMMONS_DIR
   # TODO Show diff and ask confirmation before doing git reset --hard
-  #git reset --hard origin/master
+  #git reset --hard origin/$UPGRADE_PYTHON_PACKAGES_BRANCH
 
   cd $GOOGLE_API_WRAPPER_DIR
-  #git reset --hard origin/master
+  #git reset --hard origin/$UPGRADE_PYTHON_PACKAGES_BRANCH
 
   cd $YARN_DEV_TOOLS_DIR
-  #git reset --hard origin/master
+  #git reset --hard origin/$UPGRADE_PYTHON_PACKAGES_BRANCH
 }
 
 function poetry-build-and-publish() {
@@ -116,11 +121,11 @@ function commit-version-bump() {
   set -x
   git commit -am "$commit_msg"
 
-  if [[ $GIT_PUSH -eq 1 ]]; then
+  if [[ $UPGRADE_PYTHON_PACKAGES_GIT_PUSH -eq 1 ]]; then
     tag_name="$new_version"
     git push
     git tag $tag_name -a -m "Release created by shell script: $new_version"
-    git push origin $tag_name
+    git push origin $tag_name --dry-run
   else
     echo "Skipping git push"
   fi
@@ -214,11 +219,11 @@ function update-package-versions-in-yarndevtools() {
 }
 
 function myrepos-upgrade-pythoncommons() {
-  GIT_PUSH=1
+  UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   cleanup-yarndevtools-links
   show-changes
 
-  reset # TODO Make this depend on flag like 'GIT_PUSH'
+  reset # TODO Make this depend on flag like 'UPGRADE_PYTHON_PACKAGES_GIT_PUSH'
 
   bump-pythoncommons-version
   if [[ "$?" -ne 0 ]]; then
@@ -238,7 +243,11 @@ function myrepos-upgrade-pythoncommons() {
 
 
 function myrepos-upgrade-yarndevtools() {
-  GIT_PUSH=0
+  set -x
+  UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
+  UPGRADE_PYTHON_PACKAGES_BRANCH="cloudera-mirror-version"
+  UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
+  
   cleanup-yarndevtools-links
   show-changes
   if [[ "$?" -ne 0 ]]; then
