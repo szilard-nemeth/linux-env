@@ -227,3 +227,13 @@ function yarndevtools-run-tests {
   --cov-report=html
   # MAIL_ACC_PASSWORD=fake MAIL_ACC_USER=jenkinstestreporter@gmail.com poetry run python -m pytest -k 'CdswConfigReaderTest' --html=report.html --self-contained-html --doctest-ignore-import-errors --doctest-modules --junitxml=junit/test-resultpy39.xml --cov=./ --cov-report=xml --cov-report=html
 }
+
+function email-sorter-nsziszy {
+  cd /Users/snemeth/development/my-repos/email-sorter/
+  (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 /Users/snemeth/development/my-repos/email-sorter/emailsorter/cli.py -d --account-email nsziszy@gmail.com discover-inbox)
+}
+
+function email-sorter-snemeth {
+  cd /Users/snemeth/development/my-repos/email-sorter/
+  (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 /Users/snemeth/development/my-repos/email-sorter/emailsorter/cli.py -d --account-email snemeth@cloudera.com discover-inbox)
+}
