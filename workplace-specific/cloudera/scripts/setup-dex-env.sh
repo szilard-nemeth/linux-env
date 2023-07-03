@@ -251,23 +251,7 @@ function _dex-increase-docker-tag-counter {
     return 1
   fi
 
-  #docker-registry.infra.cloudera.com/snemeth/dex-runtime-api-server 1.18.0-dev-DEX-7712 06bb27949544 2 hours ago 646MB
-  arr=($(docker images | grep $service_to_build | grep $JIRA_NUM-iteration- | grep $VERSION-$JIRA_NUM | head -n 1 | tr -s ' '))
-
-  if [[ ${#arr[@]} == 0 ]];then
-    echo "Counter not found for Docker image '${arr[1]}'. Setting counter to 0"
-    counter=0
-  else
-    unset counter
-    d_tag=${arr[2]}
-    [[ $d_tag =~ '^[0-9A-Za-z_\.\-]+-iteration-([0-9]+)$' ]] && counter=$match[1]
-
-    if [[ -z $counter ]]; then
-      echo "Counter not found for Docker image '${arr[1]}'"
-      counter=0
-    fi
-  fi
-
+  counter=$(_get_latest_counter_for_image | tail -1)
   echo "Current tag counter for Docker image '${arr[1]}': $counter"
   let "counter++"
   echo "Increased tag counter for Docker image '${arr[1]}': $counter"
@@ -287,6 +271,29 @@ function _dex-increase-docker-tag-counter {
 
   echo "Use this image to replace service on cluster:"
   echo $image_tagged
+}
+
+function _get_latest_counter_for_image {
+  #docker-registry.infra.cloudera.com/snemeth/dex-runtime-api-server 1.18.0-dev-DEX-7712 06bb27949544 2 hours ago 646MB
+  arr=($(docker images | grep $service_to_build | grep $JIRA_NUM-iteration- | grep $VERSION-$JIRA_NUM | head -n 1 | tr -s ' '))
+
+  if [[ ${#arr[@]} == 0 ]];then
+    echo "Counter not found for Docker image '${arr[1]}'. Setting counter to 0"
+    # counter=0
+    echo "0"
+  else
+    unset counter
+    d_tag=${arr[2]}
+    [[ $d_tag =~ '^[0-9A-Za-z_\.\-]+-iteration-([0-9]+)$' ]] && counter=$match[1]
+
+    if [[ -z $counter ]]; then
+      echo "Counter not found for Docker image '${arr[1]}'"
+      #counter=0
+      echo "0"
+    else
+      echo "$counter"
+    fi
+  fi
 }
 
 function dex-build-runtime {
@@ -470,7 +477,7 @@ function dex-stern-dex-api {
 }
 
 function dex-private-stack-connect-to-service {
-  dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv --csi-workspace bteke k9s
+  dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv --csi-workspace $USER k9s
 }
 
 function dex-private-stack-connect-to-cp {
@@ -499,7 +506,17 @@ function dex-create-service-in-stack {
 
 }
 
-function dex-create-private-stack {
+function dex-create-private-stack-mowpriv {
+  _dex-create-private-stack "mow-priv"
+}
+
+function dex-create-private-stack-mowdev {
+  _dex-create-private-stack "mow-dev"
+}
+
+function _dex-create-private-stack {
+  set -x
+  local mow_env="$1"
   echo "Moonlander..."
   echo "git pull / running make..."
   cd $CSI_HOME/moonlander && git pull && make;
@@ -511,11 +528,18 @@ function dex-create-private-stack {
 
   # 2. moonlander install
   DATE_OF_START=`date +%F-%H%M%S`
-  logfilename="/.dex/logs/dexprivatestack_$DATE_OF_START.log"
+  logfilename="$HOME/.dex/logs/dexprivatestack_env-$mow_env""_""$DATE_OF_START.log"
   touch $logfilename
-  mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 | tee "$logfilename"
-  # mow-priv k9s --> Validate if snemeth pods are running (by name)
 
+  if [[ "$mow_env" == "mow-dev" ]]; then
+      mow-dev ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 | tee "$logfilename"
+      # mow-dev ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
+  elif [[ "$mow_env" == "mow-priv" ]]; then
+      mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 | tee "$logfilename"
+  fi
+  set +x
+
+  # mow-priv k9s --> Validate if snemeth pods are running (by name)
   # 3. Create service with curl: https://github.infra.cloudera.com/CDH/dex/wiki/Upgrade-Testing
   #### UNCOMMENT THIS TO CREATE SERVICE
   # dex-create-service-in-stack
@@ -540,6 +564,105 @@ function dex-private-stack-replace-dexcp {
   #export DEX_IMAGE_TAG=$DEX_MOONLANDER_CP_IMAGE_TAG
   mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --skip-build --version $DEX_MOONLANDER_CP_IMAGE_TAG
 }
+
+function dex-private-stack-replace-dexcp-deployment {
+  dex-export-common
+  service_to_build="dex-cp"
+
+  # 1. Build DEX-CP
+  dex-build-cp
+  
+  set -x
+  # 2. Get counter
+  counter=$(_get_latest_counter_for_image | tail -1)
+  tag="${VERSION}-${JIRA_NUM}-iteration-$counter"
+  new_image=$DOCKER_NAMESPACE_ROOT/$service_to_build:$tag
+  echo "new image: $new_image"
+
+  set +x
+  # 3. Replace deployment
+  set -x
+  kubectl -n snemeth-dex describe deployment snemeth-dex-dex-cp | grep -i image
+  kubectl -n snemeth-dex set image deployment/snemeth-dex-dex-cp dex-cp=$new_image
+  set +x
+
+  #4. Get pods
+  echo "sleeping 30 seconds..."
+  sleep 30
+  get-private-stack-pods
+
+  echo "Showing pods (if image replaced the pods age should be new)"
+  kubectl -n snemeth-dex get pods
+  # for pod in ${snemeth_pods}; do
+  #   echo "pod: $pod"
+    
+  # done
+}
+
+function dex-private-stack-upgrade-start {
+  cst;
+  
+  dex_url="https://snemeth-console.cdp-priv.mow-dev.cloudera.com/dex"
+  full_url="${dex_url}/api/v1/cluster/$CLUSTER_URL"
+  echo "Starting to upgrade cluster: $CLUSTER_URL. Using DEX URL: $dex_url. Full URL: $full_url"
+  
+  set -x
+  curl -X PATCH -H 'Content-Type: application/json' -d '{
+      "upgrade": {
+          "to_version": "latest"
+      }
+  }' -s -b cdp-session-token=${CST} ${full_url}
+  set +x
+}
+
+function dex-private-stack-save-dexcp-logs {
+  get-private-stack-pods
+
+    mkdir -p /tmp/dexlogs/
+    gen_files=()
+
+    echo "Saving logs from private stack pods..."
+    for pod in ${snemeth_pods}; do
+        echo "Saving log from pod: $pod"
+        #kubectl -n snemeth-dex logs $pod | grep "\*\*" | tee /tmp/dexlogs/$pod-grep.log
+        #gen_files+=(/tmp/dexlogs/$pod-grep.log)
+        kubectl -n snemeth-dex logs $pod > /tmp/dexlogs/$pod.log
+        gen_files+=(/tmp/dexlogs/$pod.log)
+    done
+    subl "${gen_files[@]}"
+}
+
+function get-private-stack-pods {
+  echo "Getting private stack pods..."
+  snemeth_pods=()
+  IFS=$'\n' read -r -d '' -A snemeth_pods < <( kubectl -n snemeth-dex get pods -l app.kubernetes.io/name=dex-cp -o json | jq -r '.items[].metadata.name' | sort | uniq && printf '\0' )
+  for pod in ${snemeth_pods}; do
+    echo "Found pod: $pod"
+  done
+}
+
+
+function dex-private-stack-deploy-dexcp-and-kickoff-upgrade {
+    # Set up vars
+    #dex_url="https://snemeth-console.cdp-priv.mow-dev.cloudera.com/dex"
+    cst; echo $CST
+
+    # TODO verify if CLUSTER_URL is set!
+    echo "Using CLUSTER_URL: $CLUSTER_URL"
+
+
+    # Build CP, deploy CP to private stack / alias from linux-env
+    dex-private-stack-replace-dexcp-deployment 
+
+
+    # Initiate upgrade / 
+    dex-upgrade-start
+
+
+    # Save dexcp logs / alias from linux-env
+    dex-private-stack-save-dexcp-logs
+}
+
 
 function dex-private-stack-replace-runtime {
   if [[ -z $CLUSTER_ID ]]; then
@@ -610,6 +733,34 @@ function dex-private-stack-get-logs-followgrep {
   DEX_API_POD=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods | grep -o -e "dex-app-.*-api-\S*")
   echo "API pod: $DEX_API_POD"
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD | grep $grepfor
+}
+
+function dex-private-stack-save-logs-cp {
+  #set -x
+  local namespace="snemeth-dex"
+  local grep_for="\*\*"
+  
+  cp_pods=$(kubectl -n $namespace get pods --no-headers -o custom-columns=":metadata.name")
+  #for pod in $cp_pods 
+  while IFS= read -r pod; do
+    local target_file="/tmp/pod-log-$pod-full.txt"
+    local target_file_grep="/tmp/pod-log-$pod-grep.txt"
+    echo "Saving logs from pod: $pod to $target_file"
+    kubectl -n $namespace logs $pod > $target_file
+    grep $grep_for $target_file > $target_file_grep
+    
+  done <<< $cp_pods
+
+
+  echo "To copy the files, execute these: "
+  while IFS= read -r pod; do
+    echo "find /tmp/ -type f -iregex \".*pod-log-$pod.*\" -exec cp {} \$RES_DIR \;"
+  done <<< $cp_pods
+
+  echo "Listing result files..."
+  while IFS= read -r pod; do
+    ls -latr /tmp/pod-log-$pod-*
+  done <<< $cp_pods
 }
 
 function dex-launch-jobs {
