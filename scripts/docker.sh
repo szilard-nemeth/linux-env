@@ -50,3 +50,18 @@ function docker-rm-all-for-img {
 function docker-listmounts() {
   docker inspect -f '{{ .Mounts }}' $1
 }
+
+function docker-cleanup-guidance {
+    echo "docker system df"
+    echo "docker image prune"
+    echo "docker container prune"
+    echo "docker system prune --force"
+    echo "docker system df"
+
+    echo "Delete first 80 images: "
+    echo "docker images | awk '{print $3}' | tail -n 80 | xargs docker rmi"
+
+    echo "Delete Docker images with grepping for image name"
+    echo "docker images | grep \"DEX-9645\|DEX-7712\|DEX-7051\" | awk '{print $3}' | xargs docker rmi"
+    echo "docker images | grep 1.19.0-dev | awk '{print $3}' | xargs docker rmi"
+}

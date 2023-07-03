@@ -103,6 +103,13 @@ function git-backup-patch-develop-simple {
     set +x
 }
 
+function git-squash-all-based-on-develop {
+    # git checkout yourBranch
+    COMMIT_MSG="$(git branch --show-current) squashed"
+    git reset $(git merge-base develop $(git branch --show-current))
+    git add -A
+    git commit -m "$COMMIT_MSG"
+}
 
 
 
