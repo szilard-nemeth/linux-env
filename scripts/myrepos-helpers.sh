@@ -123,6 +123,16 @@ function myrepos-install-googleapiwrapper-dev {
     echo "Current Poetry env: $env_path"
     sh -c 'cd $env_path/;poetry update google-api-wrapper2' && say "Google API wrapper completed"
   done
+
+  # 3. Poetry dev
+  # Tried the following poetry commands, neither of them worked:
+  # poetry update --only localdev google-api-wrapper2 -vvv
+  # poetry update --only localdev -vvv --no-cache | subl
+  # poetry update google-api-wrapper2 --only localdev -vvv --no-cache 
+  venv=$(poetry env list --full-path | cut -d ' ' -f1)
+  # cp -R ~/development/my-repos/google-api-wrapper/googleapiwrapper/  /Users/snemeth/Library/Caches/pypoetry/virtualenvs/email-sorter-sOW-XU4m-py3.8/lib/python3.8/site-packages/googleapiwrapper
+  cp -R ~/development/my-repos/google-api-wrapper/googleapiwrapper/ $venv/lib/python3.8/site-packages/googleapiwrapper
+  cp -R ~/development/my-repos/python-commons/pythoncommons/ $venv/lib/python3.8/site-packages/pythoncommons
 }
 
 
