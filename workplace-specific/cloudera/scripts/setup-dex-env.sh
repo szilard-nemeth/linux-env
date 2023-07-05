@@ -6,6 +6,11 @@ echo "Setting up DEX env..."
 DOCKER_ROOT_CLOUDERA="docker-registry.infra.cloudera.com"
 DEX_DOCKER_IMAGES_GENERATED_FILE="$DEX_DEV_ROOT/cloudera/docker_images.generated.yaml"
 
+# dummy workplace will resolve to mow-priv as: 
+# s-console.cdp-priv.mow-dev.cloudera.com redirects to mow-priv
+DUMMY_CSI_WORKSPACE="s"
+PRIVATE_STACK_CSI_WORKSPACE=$(whoami)
+
 
 ############## VARS ##############
 
@@ -420,6 +425,7 @@ function dex-vc-logs-runtime-api {
   fi
 
   set -x
+  # TODO k8s grep replace with yaml expression
   DEX_API_POD=$(cst;dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods | grep -o -e "dex-app-.*-api-\S*")
   echo "API pod: $DEX_API_POD"
   cst;dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD
@@ -618,18 +624,50 @@ function dex-private-stack-upgrade-start {
 function dex-private-stack-save-dexcp-logs {
   get-private-stack-pods
 
-    mkdir -p /tmp/dexlogs/
-    gen_files=()
+  mkdir -p /tmp/dexlogs-privatestack/
+  gen_files=()
 
-    echo "Saving logs from private stack pods..."
-    for pod in ${snemeth_pods}; do
-        echo "Saving log from pod: $pod"
-        #kubectl -n snemeth-dex logs $pod | grep "\*\*" | tee /tmp/dexlogs/$pod-grep.log
-        #gen_files+=(/tmp/dexlogs/$pod-grep.log)
-        kubectl -n snemeth-dex logs $pod > /tmp/dexlogs/$pod.log
-        gen_files+=(/tmp/dexlogs/$pod.log)
-    done
-    subl "${gen_files[@]}"
+  echo "Saving logs from private stack pods..."
+  for pod in ${snemeth_pods}; do
+      echo "Saving log from pod: $pod"
+      #kubectl -n snemeth-dex logs $pod | grep "\*\*" | tee /tmp/dexlogs/$pod-grep.log
+      #gen_files+=(/tmp/dexlogs/$pod-grep.log)
+      kubectl -n snemeth-dex logs $pod > /tmp/dexlogs-privatestack/$pod.log
+      gen_files+=(/tmp/dexlogs/$pod.log)
+  done
+  subl "${gen_files[@]}"
+}
+
+function dex-save-logs-runtime-api-mow-priv {
+  set -x
+  if [[ -z $CLUSTER_ID ]]; then
+    echo "CLUSTER_ID is not defined"
+    return 1
+  fi
+
+  if [[ -z $DEX_APP_NS ]]; then
+    echo "DEX_APP_NS is not defined"
+    return 1
+  fi
+
+  get-mow-priv-pods
+
+
+  cst;
+  mkdir -p /tmp/dexlogs-mowpriv/
+  gen_files=()
+  DEX_CSI_WORKSPACE=$DUMMY_CSI_WORKSPACE
+  dexw_common_args=( -cst $CST --cluster-id $CLUSTER_ID --mow-env priv -w $DEX_CSI_WORKSPACE )
+  dexw_k8s_common_args=( -n $DEX_APP_NS )
+
+
+  echo "Saving logs from mow-priv pods. Cluster: $CLUSTER_ID, DEX APP: $DEX_APP_NS"
+  for pod in ${mowpriv_pods}; do
+      echo "Saving log from pod: $pod"
+      dexw ${dexw_common_args[@]} kubectl ${dexw_k8s_common_args[@]} logs $pod > /tmp/dexlogs-mowpriv/$pod.log
+      gen_files+=(/tmp/dexlogs-mowpriv/$pod.log)
+  done
+  subl "${gen_files[@]}"
 }
 
 function get-private-stack-pods {
@@ -637,7 +675,31 @@ function get-private-stack-pods {
   snemeth_pods=()
   IFS=$'\n' read -r -d '' -A snemeth_pods < <( kubectl -n snemeth-dex get pods -l app.kubernetes.io/name=dex-cp -o json | jq -r '.items[].metadata.name' | sort | uniq && printf '\0' )
   for pod in ${snemeth_pods}; do
-    echo "Found pod: $pod"
+    echo "Found pod on private stack: $pod"
+  done
+}
+
+function get-mow-priv-pods {
+  if [[ -z $CLUSTER_ID ]]; then
+    echo "CLUSTER_ID is not defined"
+    return 1
+  fi
+
+  if [[ -z $DEX_APP_NS ]]; then
+    echo "DEX_APP_NS is not defined"
+    return 1
+  fi
+
+  cst;
+  DEX_CSI_WORKSPACE=$DUMMY_CSI_WORKSPACE
+  dexw_common_args=( -cst $CST --cluster-id $CLUSTER_ID --mow-env priv -w $DEX_CSI_WORKSPACE )
+  dexw_k8s_common_args=( -n $DEX_APP_NS )
+  
+  echo "Getting mow-priv pods..."
+  mowpriv_pods=()
+  IFS=$'\n' read -r -d '' -A mowpriv_pods < <( dexw ${dexw_common_args[@]} kubectl ${dexw_k8s_common_args[@]} get pods -l app.kubernetes.io/name=dex-app-api -o json | jq -r '.items[].metadata.name' | sort | uniq && printf '\0' )
+  for pod in ${mowpriv_pods}; do
+    echo "Found pod on mow-priv: $pod"
   done
 }
 
@@ -656,7 +718,7 @@ function dex-private-stack-deploy-dexcp-and-kickoff-upgrade {
 
 
     # Initiate upgrade / 
-    dex-upgrade-start
+    dex-private-stack-upgrade-start
 
 
     # Save dexcp logs / alias from linux-env
@@ -665,51 +727,72 @@ function dex-private-stack-deploy-dexcp-and-kickoff-upgrade {
 
 
 function dex-private-stack-replace-runtime {
+  DEX_CSI_WORKSPACE=$PRIVATE_STACK_CSI_WORKSPACE
+  _dex-replace-runtime-api-server
+}
+
+function dex-replace-runtime-mowpriv {
+  DEX_CSI_WORKSPACE=$DUMMY_CSI_WORKSPACE 
+  _dex-replace-runtime-api-server
+}
+
+
+function _dex-replace-runtime-api-server {
+  set -x
   if [[ -z $CLUSTER_ID ]]; then
         echo "CLUSTER_ID is not defined"
         return 1
   fi
 
-  NEW_IMAGE_TAG="$1"
+  # Get latest image tag for runtime api server
+  service_to_build="dex-runtime-api-server"
+  counter=$(_get_latest_counter_for_image | tail -1)
+  tag="${VERSION}-${JIRA_NUM}-iteration-$counter"
+  new_image=$DOCKER_NAMESPACE_ROOT/$service_to_build:$tag
+  echo "Parsed docker image: $new_image"
 
-  # TODO Determine latest image for runtime (iteration-*)
-  if [[ -z $NEW_IMAGE_TAG ]]; then
-        echo "Usage: dex-private-stack-replace-runtime <new image tag>"
-        return 1
-  fi
+  cst;
 
-  cst
+  # setup common args
+  dexw_common_args=( -cst $CST --cluster-id $CLUSTER_ID --mow-env priv -w $DEX_CSI_WORKSPACE )
+  dexw_k8s_common_args=( -n $DEX_APP_NS )
+  
 
   if [[ -z $DEX_APP_NS ]]; then
     # Get and store dex-app's Namespace from Private stack
-	  DEX_APP_NS=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n dex get namespaces | grep "dex-app-" | awk '{print $1}' 2>/dev/null | tail -n 1)
-	  export DEX_APP_NS
-	  echo "Queried namespace of dex-app: $DEX_APP_NS"
-	else
-	  echo "Found cached namespace of dex-app: $DEX_APP_NS"
-	fi
+    # TODO k8s grep replace with yaml expression
+    DEX_APP_NS=$(dexw ${dexw_common_args[@]} kubectl -n dex get namespaces | grep "dex-app-" | awk '{print $1}' 2>/dev/null | tail -n 1)
+    export DEX_APP_NS
+    echo "Fetched namespace of dex-app: $DEX_APP_NS"
+  else
+    echo "Found cached namespace of dex-app: $DEX_APP_NS"
+  fi
 
   if [[ -z $DEX_APP_DEPL ]]; then
     # Get dex-app-api deployment from dex-app namespace
-    DEX_APP_DEPL=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get deployments  | grep "dex-app.*-api" | awk '{print $1}' 2>/dev/null | tail -n 1)
+    # TODO k8s grep replace with yaml expression
+    DEX_APP_DEPL=$(dexw ${dexw_common_args[@]} kubectl -n $DEX_APP_NS get deployments  | grep "dex-app.*-api" | awk '{print $1}' 2>/dev/null | tail -n 1)
     export DEX_APP_DEPL
-    echo "Queried deployment of dex-app-api: $DEX_APP_DEPL"
+    echo "Fetched deployment of dex-app-api: $DEX_APP_DEPL"
   else
       echo "Found cached deployment of dex-app: $DEX_APP_DEPL"
   fi
 
-	# Uncomment to describe deployment
-	# dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS describe deployment $DEX_APP_DEPL
+  # Uncomment to describe deployment
+  # dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS describe deployment $DEX_APP_DEPL
 
-  echo "Listing original image of dex-app-api (runtime): "
-	dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS describe deployment $DEX_APP_DEPL | grep -i image
+  echo "Listing original image of $service_to_build: "
+  # TODO k8s grep replace with yaml expression
+  dexw ${dexw_common_args[@]} kubectl ${dexw_k8s_common_args[@]} describe deployment $DEX_APP_DEPL | grep -i image
 
-  dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS set image deployment/$DEX_APP_DEPL dex-app-api=$DOCKER_ROOT_CLOUDERA/snemeth/dex-runtime-api-server:$NEW_IMAGE_TAG
+  dexw ${dexw_common_args[@]} kubectl ${dexw_k8s_common_args[@]} set image deployment/$DEX_APP_DEPL dex-app-api=$new_image
 
-  echo "Listing modified image of dex-app-api (runtime): "
-	dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS describe deployment $DEX_APP_DEPL | grep -i image
+  echo "Listing modified image of $service_to_build: "
+  # TODO k8s grep replace with yaml expression
+  dexw ${dexw_common_args[@]} kubectl ${dexw_k8s_common_args[@]} describe deployment $DEX_APP_DEPL | grep -i image
 
-	dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods
+  dexw ${dexw_common_args[@]} kubectl ${dexw_k8s_common_args[@]} get pods
+  set +x
 }
 
 function dex-private-stack-get-logs-follow {
@@ -723,6 +806,7 @@ function dex-private-stack-get-logs-follow {
         return 1
   fi
 
+  # TODO k8s grep replace with yaml expression
   DEX_API_POD=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods | grep -o -e "dex-app-.*-api-\S*")
   echo "API pod: $DEX_API_POD"
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD
@@ -730,6 +814,7 @@ function dex-private-stack-get-logs-follow {
 
 function dex-private-stack-get-logs-followgrep {
   local grepfor="$1"
+  # TODO k8s grep replace with yaml expression
   DEX_API_POD=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods | grep -o -e "dex-app-.*-api-\S*")
   echo "API pod: $DEX_API_POD"
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD | grep $grepfor
