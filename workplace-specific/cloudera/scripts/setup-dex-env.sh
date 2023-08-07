@@ -482,11 +482,11 @@ function dex-stern-dex-api {
   cst && dexw -a cst --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv stern -n $DEX_APP_NS -l app.kubernetes.io/name=dex-app-api
 }
 
-function dex-private-stack-connect-to-service {
+function dex-k9s-connect-service-privatestack {
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv --csi-workspace $USER k9s
 }
 
-function dex-private-stack-connect-to-cp {
+function dex-k9s-connect-cp-privatestack {
   mow-priv k9s
 }
 
@@ -537,6 +537,8 @@ function _dex-create-private-stack {
   logfilename="$HOME/.dex/logs/dexprivatestack_env-$mow_env""_""$DATE_OF_START.log"
   touch $logfilename
 
+
+  # TODO Specify skip build option?
   if [[ "$mow_env" == "mow-dev" ]]; then
       mow-dev ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 | tee "$logfilename"
       # mow-dev ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
@@ -551,27 +553,132 @@ function _dex-create-private-stack {
   # dex-create-service-in-stack
 }
 
-function dex-private-stack-replace-dexcp {
-  #- k9s -n snemeth-dex
-  #- kubectl -n snemeth-dex describe deployment snemeth-dex-dex-cp | grep -i image
-  #- kubectl -n snemeth-dex set image deployment/snemeth-dex-dex-cp dex-cp=docker-registry.infra.cloudera.com/snemeth/dex-cp:1.18.0-dev-DEX-7712-iteration-4
-  if [[ -z $DEX_MOONLANDER_CP_IMAGE_TAG ]]; then
-    echo "DEX_MOONLANDER_CP_IMAGE_TAG must be set"
+function dex-start-upgrade-privatestack {
+  cst;
+  
+  if [[ -z $CLUSTER_ID ]]; then
+      echo "CLUSTER_ID must be set" >&2
+      return 1
+  fi
+
+
+  dex_url="https://snemeth-console.cdp-priv.mow-dev.cloudera.com/dex"
+  full_url="${dex_url}/api/v1/cluster/$CLUSTER_ID"
+  echo "Starting to upgrade cluster with id: $CLUSTER_ID. Using DEX URL: $dex_url. Full URL: $full_url"
+  
+  set -x
+  curl -X PATCH -H 'Content-Type: application/json' -d '{
+      "upgrade": {
+          "to_version": "latest"
+      }
+  }' -s -b cdp-session-token=${CST} ${full_url}
+  set +x
+}
+
+function dex-save-logs-runtime-api-mow-priv-privatestack {
+  DEX_CSI_WORKSPACE=$PRIVATE_STACK_CSI_WORKSPACE
+  _dex-save-logs-runtime-api
+}
+
+
+function dex-save-logs-runtime-api-mow-priv {
+  DEX_CSI_WORKSPACE=$DUMMY_CSI_WORKSPACE
+  _dex-save-logs-runtime-api
+}
+
+function _dex-save-logs-runtime-api {
+  set -x
+  if [[ -z $CLUSTER_ID ]]; then
+    echo "CLUSTER_ID is not defined"
     return 1
   fi
 
-  # TODO Get latest iteration image tag
-  # DEX_MOONLANDER_CP_IMAGE_TAG=1.18.0-dev-DEX-7712-iteration-4
-  echo "DEX_MOONLANDER_CP_IMAGE_TAG=$DEX_MOONLANDER_CP_IMAGE_TAG"
+  if [[ -z $DEX_APP_NS ]]; then
+    echo "DEX_APP_NS is not defined"
+    return 1
+  fi
+
+  get-mow-priv-pods
+
 
   cst;
-  goto-dex
-  #export SKIP_BUILD=true
-  #export DEX_IMAGE_TAG=$DEX_MOONLANDER_CP_IMAGE_TAG
-  mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --skip-build --version $DEX_MOONLANDER_CP_IMAGE_TAG
+  mkdir -p /tmp/dexlogs-mowpriv/
+  gen_files=()
+  dexw_common_args=( -cst $CST --cluster-id $CLUSTER_ID --mow-env priv -w $DEX_CSI_WORKSPACE )
+  dexw_k8s_common_args=( -n $DEX_APP_NS )
+
+
+  echo "Saving logs from mow-priv pods. Cluster: $CLUSTER_ID, DEX APP: $DEX_APP_NS"
+  for pod in ${mowpriv_pods}; do
+      echo "Saving log from pod: $pod"
+      dexw ${dexw_common_args[@]} kubectl ${dexw_k8s_common_args[@]} logs $pod > /tmp/dexlogs-mowpriv/$pod.log
+      gen_files+=(/tmp/dexlogs-mowpriv/$pod.log)
+  done
+  echo "Generated files: ${gen_files[@]}"
+  subl "${gen_files[@]}"
 }
 
-function dex-private-stack-replace-dexcp-deployment {
+function get-pods-privatestack {
+  echo "Getting private stack pods..."
+  snemeth_pods=()
+  IFS=$'\n' read -r -d '' -A snemeth_pods < <( kubectl -n snemeth-dex get pods -l app.kubernetes.io/name=dex-cp -o json | jq -r '.items[].metadata.name' | sort | uniq && printf '\0' )
+  for pod in ${snemeth_pods}; do
+    echo "Found pod on private stack: $pod"
+  done
+}
+
+function get-mow-priv-pods {
+  set -x
+  if [[ -z $CLUSTER_ID ]]; then
+    echo "CLUSTER_ID is not defined"
+    return 1
+  fi
+
+  if [[ -z $DEX_APP_NS ]]; then
+    echo "DEX_APP_NS is not defined"
+    return 1
+  fi
+
+  cst;
+  #DEX_CSI_WORKSPACE=$DUMMY_CSI_WORKSPACE
+  dexw_common_args=( -cst $CST --cluster-id $CLUSTER_ID --mow-env priv -w $DEX_CSI_WORKSPACE )
+  dexw_k8s_common_args=( -n $DEX_APP_NS )
+  
+  echo "Getting mow-priv pods..."
+  mowpriv_pods=()
+  IFS=$'\n' read -r -d '' -A mowpriv_pods < <( dexw ${dexw_common_args[@]} kubectl ${dexw_k8s_common_args[@]} get pods -l app.kubernetes.io/name=dex-app-api -o json | jq -r '.items[].metadata.name' | sort | uniq && printf '\0' )
+  for pod in ${mowpriv_pods}; do
+    echo "Found pod on mow-priv: $pod"
+  done
+  set +x
+}
+
+
+function dex-private-stack-deploy-dexcp-and-kickoff-upgrade {
+    # Set up vars
+    #dex_url="https://snemeth-console.cdp-priv.mow-dev.cloudera.com/dex"
+    cst; echo $CST
+
+    if [[ -z $CLUSTER_ID ]]; then
+      echo "CLUSTER_ID must be set" >&2
+      return 1
+    fi
+    echo "Using CLUSTER_ID: $CLUSTER_ID"
+
+
+    # Build CP, deploy CP to private stack / alias from linux-env
+    dex-private-stack-replace-dexcp-deployment 
+
+
+    # Initiate upgrade / 
+    dex-start-upgrade-privatestack
+
+
+    # Save dexcp logs / alias from linux-env
+    dex-private-stack-save-dexcp-logs
+}
+
+function dex-replace-dexcp-deployment-privatestack {
   dex-export-common
   service_to_build="dex-cp"
 
@@ -595,7 +702,7 @@ function dex-private-stack-replace-dexcp-deployment {
   #4. Get pods
   echo "sleeping 30 seconds..."
   sleep 30
-  get-private-stack-pods
+  get-pods-privatestack
 
   echo "Showing pods (if image replaced the pods age should be new)"
   kubectl -n snemeth-dex get pods
@@ -605,128 +712,30 @@ function dex-private-stack-replace-dexcp-deployment {
   # done
 }
 
-function dex-private-stack-upgrade-start {
-  cst;
-  
-  dex_url="https://snemeth-console.cdp-priv.mow-dev.cloudera.com/dex"
-  full_url="${dex_url}/api/v1/cluster/$CLUSTER_URL"
-  echo "Starting to upgrade cluster: $CLUSTER_URL. Using DEX URL: $dex_url. Full URL: $full_url"
-  
-  set -x
-  curl -X PATCH -H 'Content-Type: application/json' -d '{
-      "upgrade": {
-          "to_version": "latest"
-      }
-  }' -s -b cdp-session-token=${CST} ${full_url}
-  set +x
-}
 
-function dex-private-stack-save-dexcp-logs {
-  get-private-stack-pods
-
-  mkdir -p /tmp/dexlogs-privatestack/
-  gen_files=()
-
-  echo "Saving logs from private stack pods..."
-  for pod in ${snemeth_pods}; do
-      echo "Saving log from pod: $pod"
-      #kubectl -n snemeth-dex logs $pod | grep "\*\*" | tee /tmp/dexlogs/$pod-grep.log
-      #gen_files+=(/tmp/dexlogs/$pod-grep.log)
-      kubectl -n snemeth-dex logs $pod > /tmp/dexlogs-privatestack/$pod.log
-      gen_files+=(/tmp/dexlogs/$pod.log)
-  done
-  subl "${gen_files[@]}"
-}
-
-function dex-save-logs-runtime-api-mow-priv {
-  set -x
-  if [[ -z $CLUSTER_ID ]]; then
-    echo "CLUSTER_ID is not defined"
+function dex-replace-dexcp-privatestack {
+  # TODO dupe of dex-replace-dexcp-deployment-privatestack ? 
+  #- k9s -n snemeth-dex
+  #- kubectl -n snemeth-dex describe deployment snemeth-dex-dex-cp | grep -i image
+  #- kubectl -n snemeth-dex set image deployment/snemeth-dex-dex-cp dex-cp=docker-registry.infra.cloudera.com/snemeth/dex-cp:1.18.0-dev-DEX-7712-iteration-4
+  if [[ -z $DEX_MOONLANDER_CP_IMAGE_TAG ]]; then
+    echo "DEX_MOONLANDER_CP_IMAGE_TAG must be set"
     return 1
   fi
 
-  if [[ -z $DEX_APP_NS ]]; then
-    echo "DEX_APP_NS is not defined"
-    return 1
-  fi
-
-  get-mow-priv-pods
-
+  # TODO Get latest iteration image tag
+  # DEX_MOONLANDER_CP_IMAGE_TAG=1.18.0-dev-DEX-7712-iteration-4
+  echo "DEX_MOONLANDER_CP_IMAGE_TAG=$DEX_MOONLANDER_CP_IMAGE_TAG"
 
   cst;
-  mkdir -p /tmp/dexlogs-mowpriv/
-  gen_files=()
-  DEX_CSI_WORKSPACE=$DUMMY_CSI_WORKSPACE
-  dexw_common_args=( -cst $CST --cluster-id $CLUSTER_ID --mow-env priv -w $DEX_CSI_WORKSPACE )
-  dexw_k8s_common_args=( -n $DEX_APP_NS )
-
-
-  echo "Saving logs from mow-priv pods. Cluster: $CLUSTER_ID, DEX APP: $DEX_APP_NS"
-  for pod in ${mowpriv_pods}; do
-      echo "Saving log from pod: $pod"
-      dexw ${dexw_common_args[@]} kubectl ${dexw_k8s_common_args[@]} logs $pod > /tmp/dexlogs-mowpriv/$pod.log
-      gen_files+=(/tmp/dexlogs-mowpriv/$pod.log)
-  done
-  subl "${gen_files[@]}"
-}
-
-function get-private-stack-pods {
-  echo "Getting private stack pods..."
-  snemeth_pods=()
-  IFS=$'\n' read -r -d '' -A snemeth_pods < <( kubectl -n snemeth-dex get pods -l app.kubernetes.io/name=dex-cp -o json | jq -r '.items[].metadata.name' | sort | uniq && printf '\0' )
-  for pod in ${snemeth_pods}; do
-    echo "Found pod on private stack: $pod"
-  done
-}
-
-function get-mow-priv-pods {
-  if [[ -z $CLUSTER_ID ]]; then
-    echo "CLUSTER_ID is not defined"
-    return 1
-  fi
-
-  if [[ -z $DEX_APP_NS ]]; then
-    echo "DEX_APP_NS is not defined"
-    return 1
-  fi
-
-  cst;
-  DEX_CSI_WORKSPACE=$DUMMY_CSI_WORKSPACE
-  dexw_common_args=( -cst $CST --cluster-id $CLUSTER_ID --mow-env priv -w $DEX_CSI_WORKSPACE )
-  dexw_k8s_common_args=( -n $DEX_APP_NS )
-  
-  echo "Getting mow-priv pods..."
-  mowpriv_pods=()
-  IFS=$'\n' read -r -d '' -A mowpriv_pods < <( dexw ${dexw_common_args[@]} kubectl ${dexw_k8s_common_args[@]} get pods -l app.kubernetes.io/name=dex-app-api -o json | jq -r '.items[].metadata.name' | sort | uniq && printf '\0' )
-  for pod in ${mowpriv_pods}; do
-    echo "Found pod on mow-priv: $pod"
-  done
+  goto-dex
+  #export SKIP_BUILD=true
+  #export DEX_IMAGE_TAG=$DEX_MOONLANDER_CP_IMAGE_TAG
+  mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --skip-build --version $DEX_MOONLANDER_CP_IMAGE_TAG
 }
 
 
-function dex-private-stack-deploy-dexcp-and-kickoff-upgrade {
-    # Set up vars
-    #dex_url="https://snemeth-console.cdp-priv.mow-dev.cloudera.com/dex"
-    cst; echo $CST
-
-    # TODO verify if CLUSTER_URL is set!
-    echo "Using CLUSTER_URL: $CLUSTER_URL"
-
-
-    # Build CP, deploy CP to private stack / alias from linux-env
-    dex-private-stack-replace-dexcp-deployment 
-
-
-    # Initiate upgrade / 
-    dex-private-stack-upgrade-start
-
-
-    # Save dexcp logs / alias from linux-env
-    dex-private-stack-save-dexcp-logs
-}
-
-
-function dex-private-stack-replace-runtime {
+function dex-replace-runtime-mowpriv-privatestack {
   DEX_CSI_WORKSPACE=$PRIVATE_STACK_CSI_WORKSPACE
   _dex-replace-runtime-api-server
 }
@@ -740,9 +749,16 @@ function dex-replace-runtime-mowpriv {
 function _dex-replace-runtime-api-server {
   set -x
   if [[ -z $CLUSTER_ID ]]; then
-        echo "CLUSTER_ID is not defined"
-        return 1
+    echo "CLUSTER_ID is not defined"
+    return 1
   fi
+
+  dex-build-runtime
+  if [ "$?" -ne 0 ]; then
+    echo "Runtime build unsuccessful!"
+    return 1
+  fi
+
 
   # Get latest image tag for runtime api server
   service_to_build="dex-runtime-api-server"
@@ -795,7 +811,7 @@ function _dex-replace-runtime-api-server {
   set +x
 }
 
-function dex-private-stack-get-logs-follow {
+function dex-get-logs-follow-privatestack {
   if [[ -z $CLUSTER_ID ]]; then
         echo "CLUSTER_ID is not defined"
         return 1
@@ -812,7 +828,7 @@ function dex-private-stack-get-logs-follow {
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD
 }
 
-function dex-private-stack-get-logs-followgrep {
+function dex-get-logs-follow-grep-privatestack {
   local grepfor="$1"
   # TODO k8s grep replace with yaml expression
   DEX_API_POD=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods | grep -o -e "dex-app-.*-api-\S*")
@@ -820,7 +836,26 @@ function dex-private-stack-get-logs-followgrep {
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD | grep $grepfor
 }
 
-function dex-private-stack-save-logs-cp {
+function dex-save-logs-cp-privatestack {
+  get-pods-privatestack
+
+  mkdir -p /tmp/dexlogs-privatestack/
+  gen_files=()
+
+  echo "Saving logs from private stack pods..."
+  for pod in ${snemeth_pods}; do
+      echo "Saving log from pod: $pod"
+      #kubectl -n snemeth-dex logs $pod | grep "\*\*" | tee /tmp/dexlogs/$pod-grep.log
+      #gen_files+=(/tmp/dexlogs/$pod-grep.log)
+      kubectl -n snemeth-dex logs $pod > /tmp/dexlogs-privatestack/$pod.log
+      gen_files+=(/tmp/dexlogs-privatestack/$pod.log)
+  done
+  subl "${gen_files[@]}"
+}
+
+
+function dex-save-logs-cp-privatestack2 {
+  # TODO Duplicate of dex-save-logs-cp-privatestack ? 
   #set -x
   local namespace="snemeth-dex"
   local grep_for="\*\*"
@@ -880,6 +915,14 @@ function dex-pvc-get-vault-kubeconfig {
   export VAULT_SKIP_VERIFY="True"
   vault login -method=ldap username=snemeth@cloudera.com
   # TODO Complete this function and figure out what's the issue with vault login
+}
+
+function dex-print-dexw-guidance {
+  echo "Connect to mow-priv cluster:"
+  echo "dexw -v --cluster-id \$CLUSTER_ID -cst \$CST --mow-env priv --auth cst k9s -n \$DEX_APP_NS"
+
+  echo "Connect to mow-priv service:"
+  echo "dexw -v --cluster-id \$CLUSTER_ID -cst \$CST --mow-env priv --auth cst k9s"
 }
 
 ###################################################################### DEX RUNTIME ######################################################################
