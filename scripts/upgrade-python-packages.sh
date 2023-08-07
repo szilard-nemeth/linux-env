@@ -2,9 +2,13 @@
 YARN_DEV_TOOLS_DIR="$HOME/development/my-repos/yarn-dev-tools"
 PYTHON_COMMONS_DIR="$HOME/development/my-repos/python-commons"
 GOOGLE_API_WRAPPER_DIR="$HOME/development/my-repos/google-api-wrapper/"
+BACKUP_MANAGER_DIR="$HOME/development/my-repos/backup-manager/"
 PROJ_NAME_YARN_DEV_TOOLS="yarndevtools"
 PROJ_NAME_PYTHON_COMMONS="pythoncommons"
 PROJ_NAME_GOOGLE_API_WRAPPER="googleapiwrapper"
+PROJ_NAME_BACKUP_MANAGER="backup-manager"
+
+SKIP_POETRY_PUBLISH=0
 
 function remove-links-with-target() {
   local lnk_target_to_remove_1="$1"
@@ -25,6 +29,7 @@ function remove-links-with-target() {
 function cleanup-yarndevtools-links() {
   remove-links-with-target "/tmp/.*" "/home/cdsw/snemeth-dev-projects.*"
 }
+
 
 function get-project-dir() {
   local project="$1"
@@ -65,26 +70,41 @@ function check-git-changes() {
   fi
 }
 
-function show-changes() {
-  echo "Listing changes in $PYTHON_COMMONS_DIR ..." && cd $PYTHON_COMMONS_DIR && git --no-pager log origin/$UPGRADE_PYTHON_PACKAGES_BRANCH..HEAD
-  echo "Listing changes in $GOOGLE_API_WRAPPER_DIR ..." && cd $GOOGLE_API_WRAPPER_DIR && git --no-pager log origin/$UPGRADE_PYTHON_PACKAGES_BRANCH..HEAD
-  echo "Listing changes in $YARN_DEV_TOOLS_DIR ..." && cd $YARN_DEV_TOOLS_DIR && git --no-pager log origin/$UPGRADE_PYTHON_PACKAGES_BRANCH..HEAD
+function show-changes-all {
+  echo "UPGRADE_PYTHON_PACKAGES_BRANCH=$UPGRADE_PYTHON_PACKAGES_BRANCH"
+  echo "UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH=$UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH"
+  _show-changes-pythoncommons
+  _show-changes-googleapiwrapper
+  _show-changes-yarndevtools
+  if [[ "$?" -ne 0 ]]; then
+    echo "Uncommitted changes detected, see messages above"
+    return 1
+  fi
+}
 
-  echo $UPGRADE_PYTHON_PACKAGES_BRANCH
-  echo $UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH
-
+function _show-changes-pythoncommons {
+  echo "Listing changes in $PYTHON_COMMONS_DIR ..." && cd $PYTHON_COMMONS_DIR && git --no-pager log origin/$UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH..HEAD
   check-git-changes $PYTHON_COMMONS_DIR $UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH
   if [[ "$?" -ne 0 ]]; then
+    echo "Uncommitted changes detected in dir: $PYTHON_COMMONS_DIR"
     return 1
   fi
+}
 
+function _show-changes-googleapiwrapper {
+  echo "Listing changes in $GOOGLE_API_WRAPPER_DIR ..." && cd $GOOGLE_API_WRAPPER_DIR && git --no-pager log origin/$UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH..HEAD
   check-git-changes $GOOGLE_API_WRAPPER_DIR $UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH
   if [[ "$?" -ne 0 ]]; then
+    echo "Uncommitted changes detected in dir: $GOOGLE_API_WRAPPER_DIR"
     return 1
   fi
+}
 
+function _show-changes-yarndevtools {
+  echo "Listing changes in $YARN_DEV_TOOLS_DIR ..." && cd $YARN_DEV_TOOLS_DIR && git --no-pager log origin/$UPGRADE_PYTHON_PACKAGES_BRANCH..HEAD
   check-git-changes $YARN_DEV_TOOLS_DIR $UPGRADE_PYTHON_PACKAGES_BRANCH
   if [[ "$?" -ne 0 ]]; then
+    echo "Uncommitted changes detected in dir: $YARN_DEV_TOOLS_DIR"
     return 1
   fi
 }
@@ -131,10 +151,10 @@ function commit-version-bump() {
   fi
   set +x
 }
-
+  
 function bump-project-version() {
   local project="$1"
-  echo "Bumping version of: $project"
+  echo "Bumping version of $project"
 
   project_dir=`get-project-dir $project`
 
@@ -170,7 +190,7 @@ function bump-pythoncommons-version() {
 }
 
 function bump-googleapiwrapper-version() {
-  echo "Bumping version of: $PROJ_NAME_GOOGLE_API_WRAPPER"
+  echo "Bumping version of $PROJ_NAME_GOOGLE_API_WRAPPER"
 
   cd $GOOGLE_API_WRAPPER_DIR
   # NOTE: Apparently, the command below does not work, in contrary to the documentation:
@@ -184,7 +204,7 @@ function bump-googleapiwrapper-version() {
     return 1
   fi
 
-  new_googleaiwrapper_version=$(poetry version --short)
+  new_googleapiwrapper_version=$(poetry version --short)
 }
 
 function bump-yarndevtools-version() {
@@ -198,30 +218,88 @@ function bump-yarndevtools-version() {
 }
 
 function update-package-versions-in-yarndevtools() {
-  echo "$PROJ_NAME_YARN_DEV_TOOLS: Increasing package versions for: $PROJ_NAME_GOOGLE_API_WRAPPER, $PROJ_NAME_PYTHON_COMMONS"
-  cd $YARN_DEV_TOOLS_DIR
+  _update-package-versions-in-project $PROJ_NAME_YARN_DEV_TOOLS $YARN_DEV_TOOLS_DIR
+  if [[ "$?" -ne 0 ]]; then
+    echo "Failed to upgrade package dependencies"
+    return 1
+  fi
+}
+
+function update-package-versions-in-backup-manager() {
+  _update-package-versions-in-project $PROJ_NAME_BACKUP_MANAGER $BACKUP_MANAGER_DIR
+  if [[ "$?" -ne 0 ]]; then
+    echo "Failed to upgrade package dependencies"
+    return 1
+  fi
+}
+
+function _update-package-versions-in-project {
+  local project_name=$1
+  local project_dir=$2
+
+  cd $project_dir
+  if [[ ! -z $(git status -s) ]]; then
+    echo "Uncommitted changes detected in $project_dir. Exiting.."
+    return 1
+  fi
+
+  echo "UPDATING PACKAGE VERSIONS FOR PROJECT: $project_name: Increasing package versions for dependencies: $PROJ_NAME_GOOGLE_API_WRAPPER, $PROJ_NAME_PYTHON_COMMONS"
   sed -i '' -e "s/^python-common-lib = \"[0-9].*/python-common-lib = \"$new_pythoncommons_version\"/" pyproject.toml
-  sed -i '' -e "s/^google-api-wrapper2 = \"[0-9].*/google-api-wrapper2 = \"$new_googleaiwrapper_version\"/" pyproject.toml
+  sed -i '' -e "s/^google-api-wrapper2 = \"[0-9].*/google-api-wrapper2 = \"$new_googleapiwrapper_version\"/" pyproject.toml
+  
+
   git --no-pager diff
   # TODO Check if two lines modified or user should manually confirm if git diff looks okay
+  
+
   poetry version patch
   poetry update
 
 
-  echo "Publishing $PROJ_NAME_YARN_DEV_TOOLS..."
-  poetry build && poetry publish
+
+  # Need to have this symlink hack for now :(
+  # Temporarily remove symlinks
+  ## Related github issues:
+  # https://github.com/python-poetry/poetry/issues/3589
+  # https://github.com/python-poetry/poetry/issues/4697
+  # https://github.com/python-poetry/poetry/issues/1998
+  rm modules/trello-backup/config.py
+
+  echo "Building $project_name..."
+  poetry build
   if [[ "$?" -ne 0 ]]; then
-    echo "Failed to publish yarndevtools"
+    echo "Failed to build $project_name"
+    return 1
+  fi
+
+
+  if [[ $SKIP_POETRY_PUBLISH -eq 0 ]]; then
+    echo "Publishing $project_name..."
+    poetry publish
+  else
+    echo "Skip publishing $project_name"
+  fi
+  
+
+  # Add back original symlinks
+  ln -s ~/development/my-repos/project-data/input-data/backup-manager/trello-backup/config.py modules/trello-backup/config.py
+
+  if [[ "$?" -ne 0 ]]; then
+    echo "Failed to publish $project_name"
+    return 2
   else
     new_version=$(poetry version --short)
     commit-version-bump "update version of packages: python-common-lib, google-api-wrapper2" "$new_version"
   fi
 }
 
-function myrepos-upgrade-pythoncommons() {
+function myrepos-upgrade-pythoncommons-in-yarndevtools() {
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   cleanup-yarndevtools-links
-  show-changes
+  show-changes-all
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
 
   reset # TODO Make this depend on flag like 'UPGRADE_PYTHON_PACKAGES_GIT_PUSH'
 
@@ -241,15 +319,51 @@ function myrepos-upgrade-pythoncommons() {
   fi
 }
 
+function myrepos-upgrade-pythoncommons-in-backup-manager() {
+  UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
+  UPGRADE_PYTHON_PACKAGES_BRANCH="cloudera-mirror-version"
+  UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
+
+  echo "UPGRADE_PYTHON_PACKAGES_BRANCH=$UPGRADE_PYTHON_PACKAGES_BRANCH"
+  echo "UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH=$UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH"
+  _show-changes-pythoncommons
+  _show-changes-googleapiwrapper
+  if [[ "$?" -ne 0 ]]; then
+    echo "Uncommitted changes detected, see messages above"
+    return 1
+  fi
+
+  #reset # TODO Make this depend on flag like 'UPGRADE_PYTHON_PACKAGES_GIT_PUSH'
+
+  bump-pythoncommons-version
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
+
+  bump-googleapiwrapper-version
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
+
+  new_googleapiwrapper_version=$(cd $GOOGLE_API_WRAPPER_DIR && echo $(poetry version --short))
+  new_pythoncommons_version=$(cd $PYTHON_COMMONS_DIR && echo $(poetry version --short))
+
+  SKIP_POETRY_PUBLISH=1
+  remove-links-with-target "/tmp/.*" "$HOME/development/my-repos/project-data/input-data/backup-manager.*"
+  update-package-versions-in-backup-manager
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
+}
+
 
 function myrepos-upgrade-yarndevtools() {
-  set -x
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   UPGRADE_PYTHON_PACKAGES_BRANCH="cloudera-mirror-version"
   UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
   
   cleanup-yarndevtools-links
-  show-changes
+  show-changes-all
   if [[ "$?" -ne 0 ]]; then
     return 1
   fi
