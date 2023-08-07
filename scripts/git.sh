@@ -82,7 +82,7 @@ function git-format-patch {
     git format-patch $base_branch..HEAD -o $dest_dir
 }
 
-function git-format-patch-cde-feature {
+function git-backup-patch-develop-formatpatch {
     #cd $DEX_DEV_ROOT
     local branch=$(git rev-parse --abbrev-ref HEAD)
     local output_dir="$CLOUDERA_TASKS_CDE_DIR/$branch/backup-patches/$(date-formatted)"

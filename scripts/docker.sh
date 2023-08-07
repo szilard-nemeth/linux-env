@@ -64,4 +64,5 @@ function docker-cleanup-guidance {
     echo "Delete Docker images with grepping for image name"
     echo "docker images | grep \"DEX-9645\|DEX-7712\|DEX-7051\" | awk '{print $3}' | xargs docker rmi"
     echo "docker images | grep 1.19.0-dev | awk '{print $3}' | xargs docker rmi"
+    echo "docker images | grep \"DEX-\" | grep -v \"DEX-7325\" | awk '{print $3}' | xargs docker rmi -f"
 }
