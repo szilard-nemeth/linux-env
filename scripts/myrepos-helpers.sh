@@ -135,6 +135,30 @@ function myrepos-install-googleapiwrapper-dev {
   cp -R ~/development/my-repos/python-commons/pythoncommons/ $venv/lib/python3.8/site-packages/pythoncommons
 }
 
+function myrepos-install-pythoncommons-dev-to-backupmanager {
+  cd ~/development/my-repos/backup-manager
+  venv=$(poetry env list --full-path | grep "3\.8" | cut -d ' ' -f1)
+  echo "Copying pythoncommons to venv: $venv"
+  cp -R ~/development/my-repos/python-commons/pythoncommons/ $venv/lib/python3.8/site-packages/pythoncommons 
+  ls -latr $venv/lib/python3.8/site-packages/pythoncommons 
+}
+
+function myrepos-install-pythoncommons-dev-to-yarndevtools {
+  cd ~/development/my-repos/yarn-dev-tools
+  venv=$(poetry env list --full-path | grep "3\.8" | cut -d ' ' -f1)
+  echo "Copying pythoncommons to venv: $venv"
+  cp -R ~/development/my-repos/python-commons/pythoncommons/ $venv/lib/python3.8/site-packages/pythoncommons 
+  ls -latr $venv/lib/python3.8/site-packages/pythoncommons 
+}
+
+function myrepos-install-googleapiwrapper-dev-to-yarndevtools {
+  cd ~/development/my-repos/yarn-dev-tools
+  venv=$(poetry env list --full-path | grep "3\.8" | cut -d ' ' -f1)
+  echo "Copying pythoncommons to venv: $venv"
+  cp -R ~/development/my-repos/google-api-wrapper/googleapiwrapper/ $venv/lib/python3.8/site-packages/googleapiwrapper 
+  ls -latr $venv/lib/python3.8/site-packages/googleapiwrapper 
+}
+
 
 function myrepos-rm-pythoncommons() {
   # Remove python-commons from all locations

@@ -342,31 +342,35 @@ function _update-package-versions-in-project {
   # https://github.com/python-poetry/poetry/issues/1998
   rm modules/trello-backup/config.py
 
-  echo "Building $project_name..."
-  poetry build
-  if [[ "$?" -ne 0 ]]; then
-    echo "Failed to build $project_name"
-    return 1
-  fi
 
+  # TODO Can be refactored to use poetry-build-and-publish
+  # ================================
+      echo "Building $project_name..."
+      poetry build
+      if [[ "$?" -ne 0 ]]; then
+        echo "Failed to build $project_name"
+        return 1
+      fi
 
-  if [[ $SKIP_POETRY_PUBLISH -eq 0 ]]; then
-    echo "Publishing $project_name..."
-    poetry publish
-  else
-    echo "Skip publishing $project_name"
-  fi
-  
-  if [[ "$?" -ne 0 ]]; then
-    echo "Failed to publish $project_name"
-    return 2
-  else
-    new_version=$(poetry version --short)
-    commit-version-bump $commit_msg "$new_version"
+      if [[ $SKIP_POETRY_PUBLISH -eq 0 ]]; then
+        echo "Publishing $project_name..."
+        poetry publish
+      else
+        echo "Skip publishing $project_name"
+      fi
+      
+      if [[ "$?" -ne 0 ]]; then
+        echo "Failed to publish $project_name"
+        return 2
+      else
+        new_version=$(poetry version --short)
+        commit-version-bump $commit_msg "$new_version"
 
-    # Add back original symlinks
-    ln -s ~/development/my-repos/project-data/input-data/backup-manager/trello-backup/config.py modules/trello-backup/config.py
-  fi
+        # Add back original symlinks
+        ln -s ~/development/my-repos/project-data/input-data/backup-manager/trello-backup/config.py modules/trello-backup/config.py
+      fi
+  # END OF TODO
+  # ================================
 }
 
 function myrepos-upgrade-pythoncommons-in-yarndevtools() {
@@ -384,6 +388,12 @@ function myrepos-upgrade-pythoncommons-in-yarndevtools() {
     return 1
   fi
   new_pythoncommons_version=$(cd $PYTHON_COMMONS_DIR && echo $(poetry version --short))
+
+  # TODO this is wrong, it should not be just bumped, it should match the version of googleapiwrapper from pythoncommons pyproject.toml to avoid: 
+  # ERROR: Cannot install yarn-dev-tools and yarn-dev-tools==1.1.13 because these package versions have conflicting dependencies.
+# The conflict is caused by:
+#     yarn-dev-tools 1.1.13 depends on python-common-lib==1.0.8
+#     google-api-wrapper2 1.0.4 depends on python-common-lib==1.0.4
 
   bump-googleapiwrapper-version
   if [[ "$?" -ne 0 ]]; then
@@ -478,7 +488,7 @@ function myrepos-upgrade-pythoncommons-in-backup-manager() {
 }
 
 
-function myrepos-upgrade-yarndevtools() {
+function myrepos-release-yarndevtools() {
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   UPGRADE_PYTHON_PACKAGES_BRANCH="cloudera-mirror-version" # only used in _show-changes-yarndevtools
   UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
@@ -495,4 +505,5 @@ function myrepos-upgrade-yarndevtools() {
     return 1
   fi
   new_yarndevtools_version=$(cd $YARN_DEV_TOOLS_DIR && echo $(poetry version --short))
+  echo "Newly released version of $PROJ_NAME_YARN_DEV_TOOLS: $new_yarndevtools_version"
 }
