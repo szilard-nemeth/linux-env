@@ -62,7 +62,13 @@ function docker-cleanup-guidance {
     echo "docker images | awk '{print $3}' | tail -n 80 | xargs docker rmi"
 
     echo "Delete Docker images with grepping for image name"
-    echo "docker images | grep \"DEX-9645\|DEX-7712\|DEX-7051\" | awk '{print $3}' | xargs docker rmi"
-    echo "docker images | grep 1.19.0-dev | awk '{print $3}' | xargs docker rmi"
-    echo "docker images | grep \"DEX-\" | grep -v \"DEX-7325\" | awk '{print $3}' | xargs docker rmi -f"
+    echo "docker images | grep \"DEX-9645\|DEX-7712\|DEX-7051\" | awk '{print \$3}' | xargs docker rmi"
+    echo "docker images | grep 1.19.0-dev | awk '{print \$3}' | xargs docker rmi"
+    echo "docker images | grep \"DEX-\" | grep -v \"DEX-7325\" | awk '{print \$3}' | xargs docker rmi -f"
+
+    echo "WARNING / TO REMOVE ALL DEX IMAGES"
+    echo "docker images | grep \"dex\" | awk '{print \$3}' | xargs docker rmi -f"
+
+    echo "WARNING / TO REMOVE ALL THUNDERHEAD IMAGES"
+    echo "docker images | grep \"thunderhead\" | awk '{print \$3}' | xargs docker rmi -f"
 }
