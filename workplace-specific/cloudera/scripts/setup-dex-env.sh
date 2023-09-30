@@ -12,6 +12,9 @@ DUMMY_CSI_WORKSPACE="s"
 PRIVATE_STACK_CSI_WORKSPACE=$(whoami)
 
 
+NAMESPACE_PRIVATE_STACK="snemeth-dex"
+NAMESPACE_MOWPRIV="dex"
+
 ############## VARS ##############
 
 # asdf setup
@@ -432,21 +435,6 @@ function dex-vc-logs-runtime-api {
   set +x
 }
 
-function dex-namespace-k9s {
-  if [[ -z "$CLUSTER_ID" ]]; then
-        echo "CLUSTER_ID should be set"
-        return 1
-  fi
-
-  if [[ -z "$DEX_APP_NS" ]]; then
-        echo "DEX_APP_NS should be set"
-        return 1
-  fi
-
-  set -x
-  cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst k9s --namespace $DEX_APP_NS
-  set +x
-}
 
 function dex-namespace-shell {
   if [[ $# -ne 1 ]]; then
@@ -486,8 +474,26 @@ function dex-k9s-connect-service-privatestack {
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv --csi-workspace $USER k9s
 }
 
+function dex-k9s-connect-vc-privatestack {
+  if [[ -z "$CLUSTER_ID" ]]; then
+      echo "CLUSTER_ID should be set"
+      return 1
+  fi
+
+  if [[ -z "$DEX_APP_NS" ]]; then
+      echo "DEX_APP_NS should be set"
+      return 1
+  fi
+
+  cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst k9s --namespace $DEX_APP_NS
+}
+
 function dex-k9s-connect-cp-privatestack {
   mow-priv k9s
+}
+
+function dex-k9s-connect-mow-priv {
+  mow-priv k9s -n $NAMESPACE_MOWPRIV
 }
 
 
@@ -513,10 +519,22 @@ function dex-create-service-in-stack {
 }
 
 function dex-create-private-stack-mowpriv {
+  if [[ $# -gt 0 ]]
+  then
+    mws=$1
+  fi
+
+  moonlander_workspace=""
+  case $mws in
+    (snemeth2) moonlander_workspace="$mws"  ;;
+    (snemeth3) moonlander_workspace="$mws"  ;;
+    (snemeth4) moonlander_workspace="$mws"  ;;
+  esac
   _dex-create-private-stack "mow-priv"
 }
 
 function dex-create-private-stack-mowdev {
+  moonlander_workspace=""
   _dex-create-private-stack "mow-dev"
 }
 
@@ -527,6 +545,12 @@ function _dex-create-private-stack {
   echo "git pull / running make..."
   cd $CSI_HOME/moonlander && git pull && make;
 
+
+  if [[ -z $moonlander_workspace ]]
+  then
+    moonlander_workspace="$PRIVATE_STACK_CSI_WORKSPACE"
+    echo "Failed to resolve Moonlander workspace to predefined workspace names! Defaulting to: $moonlander_workspace"
+  fi
 
   gimme-aws-creds
   goto-dex
@@ -539,11 +563,14 @@ function _dex-create-private-stack {
 
 
   # TODO Specify skip build option?
+  # https://stackoverflow.com/questions/40771781/how-to-append-a-string-in-bash-only-when-the-variable-is-defined-and-not-null
+  MOONLANDER_SKIP_BUILD=1
   if [[ "$mow_env" == "mow-dev" ]]; then
-      mow-dev ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 | tee "$logfilename"
+      mow-dev ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 | tee "$logfilename"
       # mow-dev ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
   elif [[ "$mow_env" == "mow-priv" ]]; then
-      mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 | tee "$logfilename"
+      # mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
+      mow-priv ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 | tee "$logfilename"
   fi
   set +x
 
@@ -619,12 +646,26 @@ function _dex-save-logs-runtime-api {
 }
 
 function get-pods-privatestack {
-  echo "Getting private stack pods..."
-  snemeth_pods=()
-  IFS=$'\n' read -r -d '' -A snemeth_pods < <( kubectl -n snemeth-dex get pods -l app.kubernetes.io/name=dex-cp -o json | jq -r '.items[].metadata.name' | sort | uniq && printf '\0' )
-  for pod in ${snemeth_pods}; do
-    echo "Found pod on private stack: $pod"
-  done
+  _get-pods $NAMESPACE_PRIVATE_STACK "private stack"
+}
+
+function get-pods-mowpriv {
+  _get-pods $NAMESPACE_MOWPRIV "mow-priv"
+}
+
+function _get-pods {
+  local namespace=$1
+  local mode=$1
+
+  set -x
+  echo "Getting $mode pods..."
+  found_pods=()
+  IFS=$'\n' read -r -d '' -A found_pods < <( kubectl -n $namespace get pods -l app.kubernetes.io/name=dex-cp -o json | jq -r '.items[].metadata.name' | sort | uniq && printf '\0' )
+  # for pod in ${found_pods}; do
+  #   echo "Found pod on $mode: $pod"
+  # done
+  echo "Found pods on $mode: ${found_pods[*]}"
+  set +x
 }
 
 function get-mow-priv-pods {
@@ -666,16 +707,15 @@ function dex-private-stack-deploy-dexcp-and-kickoff-upgrade {
     echo "Using CLUSTER_ID: $CLUSTER_ID"
 
 
-    # Build CP, deploy CP to private stack / alias from linux-env
-    dex-private-stack-replace-dexcp-deployment 
+    # 1. Build CP, deploy CP to private stack / alias from linux-env
+    dex-replace-dexcp-deployment-privatestack
 
-
-    # Initiate upgrade / 
+    # 2. Initiate upgrade / 
     dex-start-upgrade-privatestack
 
 
-    # Save dexcp logs / alias from linux-env
-    dex-private-stack-save-dexcp-logs
+    # 3.Save dexcp logs / alias from linux-env
+    dex-save-logs-cp-privatestack2
 }
 
 function dex-replace-dexcp-deployment-privatestack {
@@ -695,8 +735,8 @@ function dex-replace-dexcp-deployment-privatestack {
   set +x
   # 3. Replace deployment
   set -x
-  kubectl -n snemeth-dex describe deployment snemeth-dex-dex-cp | grep -i image
-  kubectl -n snemeth-dex set image deployment/snemeth-dex-dex-cp dex-cp=$new_image
+  kubectl -n $NAMESPACE_PRIVATE_STACK describe deployment snemeth-dex-dex-cp | grep -i image
+  kubectl -n $NAMESPACE_PRIVATE_STACK set image deployment/snemeth-dex-dex-cp dex-cp=$new_image
   set +x
 
   #4. Get pods
@@ -705,8 +745,8 @@ function dex-replace-dexcp-deployment-privatestack {
   get-pods-privatestack
 
   echo "Showing pods (if image replaced the pods age should be new)"
-  kubectl -n snemeth-dex get pods
-  # for pod in ${snemeth_pods}; do
+  kubectl -n $NAMESPACE_PRIVATE_STACK get pods
+  # for pod in ${found_pods}; do
   #   echo "pod: $pod"
     
   # done
@@ -777,7 +817,7 @@ function _dex-replace-runtime-api-server {
   if [[ -z $DEX_APP_NS ]]; then
     # Get and store dex-app's Namespace from Private stack
     # TODO k8s grep replace with yaml expression
-    DEX_APP_NS=$(dexw ${dexw_common_args[@]} kubectl -n dex get namespaces | grep "dex-app-" | awk '{print $1}' 2>/dev/null | tail -n 1)
+    DEX_APP_NS=$(dexw ${dexw_common_args[@]} kubectl -n $NAMESPACE_MOWPRIV get namespaces | grep "dex-app-" | awk '{print $1}' 2>/dev/null | tail -n 1)
     export DEX_APP_NS
     echo "Fetched namespace of dex-app: $DEX_APP_NS"
   else
@@ -837,50 +877,64 @@ function dex-get-logs-follow-grep-privatestack {
 }
 
 function dex-save-logs-cp-privatestack {
+  local namespace="$NAMESPACE_PRIVATE_STACK"
+  local grep_for="\*\*"
+  local target_dir="/tmp/dexlogs-privatestack/"
+
   get-pods-privatestack
-
-  mkdir -p /tmp/dexlogs-privatestack/
-  gen_files=()
-
-  echo "Saving logs from private stack pods..."
-  for pod in ${snemeth_pods}; do
-      echo "Saving log from pod: $pod"
-      #kubectl -n snemeth-dex logs $pod | grep "\*\*" | tee /tmp/dexlogs/$pod-grep.log
-      #gen_files+=(/tmp/dexlogs/$pod-grep.log)
-      kubectl -n snemeth-dex logs $pod > /tmp/dexlogs-privatestack/$pod.log
-      gen_files+=(/tmp/dexlogs-privatestack/$pod.log)
-  done
-  subl "${gen_files[@]}"
+  _dex-save-logs "private-stack" $namespace $grep_for $target_dir
 }
 
 
-function dex-save-logs-cp-privatestack2 {
-  # TODO Duplicate of dex-save-logs-cp-privatestack ? 
-  #set -x
-  local namespace="snemeth-dex"
+function dex-save-logs-cp-mowpriv {
+  local namespace="$NAMESPACE_MOWPRIV"
   local grep_for="\*\*"
-  
-  cp_pods=$(kubectl -n $namespace get pods --no-headers -o custom-columns=":metadata.name")
-  #for pod in $cp_pods 
-  while IFS= read -r pod; do
-    local target_file="/tmp/pod-log-$pod-full.txt"
-    local target_file_grep="/tmp/pod-log-$pod-grep.txt"
+  local target_dir="/tmp/dexlogs-mowpriv/"
+
+  get-pods-mowpriv
+  _dex-save-logs "mow-priv" $namespace $grep_for $target_dir
+}
+
+
+
+function _dex-save-logs {
+  set -x
+  local mode=$1
+  local namespace=$2
+  local grep_for=$3
+  local target_dir=$4
+
+  mkdir -p $target_dir
+  echo "Saving logs from $mode pods..."
+
+  #while IFS= read -r pod; do
+  for pod in ${found_pods}; do
+    echo "Actual pod: $pod"
+    local target_file="$target_dir/pod-log-$pod-full.txt"
+    local target_file_grep="$target_dir/pod-log-$pod-grep.txt"
     echo "Saving logs from pod: $pod to $target_file"
     kubectl -n $namespace logs $pod > $target_file
     grep $grep_for $target_file > $target_file_grep
-    
-  done <<< $cp_pods
+  done
+  #done <<< ${found_pods[*]}
 
 
   echo "To copy the files, execute these: "
-  while IFS= read -r pod; do
-    echo "find /tmp/ -type f -iregex \".*pod-log-$pod.*\" -exec cp {} \$RES_DIR \;"
-  done <<< $cp_pods
+  for pod in ${found_pods}; do
+  #while IFS= read -r pod; do
+    echo "find $target_dir/ -type f -iregex \".*pod-log-$pod.*\" -exec cp {} \$RES_DIR \;"
+  done
+  #done <<< $found_pods
+
 
   echo "Listing result files..."
-  while IFS= read -r pod; do
-    ls -latr /tmp/pod-log-$pod-*
-  done <<< $cp_pods
+  #while IFS= read -r pod; do
+  for pod in ${found_pods}; do
+    ls -latr $target_dir/pod-log-$pod-*
+  #done <<< $found_pods
+  done
+    
+  set +x
 }
 
 function dex-launch-jobs {
@@ -923,6 +977,26 @@ function dex-print-dexw-guidance {
 
   echo "Connect to mow-priv service:"
   echo "dexw -v --cluster-id \$CLUSTER_ID -cst \$CST --mow-env priv --auth cst k9s"
+}
+
+function download-pod-logs-all-containers {
+  # CLUSTER_ID=cluster-7kwp5npg
+  # DEX_APP_NS=dex-app-hvwlfmgs 
+
+  #cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst k9s
+  #dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst kubectl get pods -l app.kubernetes.io/name=dex-cp
+  # dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst kubectl get pods -l app.kubernetes.io/instance=dex-base -l app.kubernetes.io/name=nginx       
+  #dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst kubectl logs $KNOXPOD -n $DEX_APP_NS
+  DEX_NGINX_CONTR_POD=$(dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst kubectl -n dex get pods -l app.kubernetes.io/instance=dex-base -l app.kubernetes.io/name=nginx --no-headers | awk '{print $1}')
+  echo "nginx controller pod: $DEX_NGINX_CONTR_POD"
+
+  CONTAINERS=($(dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst kubectl -n dex get pods $DEX_NGINX_CONTR_POD -o jsonpath='{.spec.containers[*].name}'))
+  for cont in ${CONTAINERS}; do
+    echo "Getting logs of: $DEX_NGINX_CONTR_POD/$cont" 
+    target_file="/tmp/pod-$DEX_NGINX_CONTR_POD-cont-$cont.log"
+    echo "Writing log to $target_file"
+    dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst kubectl -n dex logs $DEX_NGINX_CONTR_POD -c $cont > $target_file
+  done
 }
 
 ###################################################################### DEX RUNTIME ######################################################################

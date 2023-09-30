@@ -96,7 +96,7 @@ function backup-currdir() {
   local backup_path="$HOME/googledrive/backup/codebackup/"
   tar czf "$backup_path/$(basename $(pwd))-$(eval date-formatted).gz" ./
   echo "Backup results in dir: $backup_path"
-  ll -t $backup_path | grep gz | head -n1
+  ls -lat $backup_path | grep gz | head -n1
 }
 
 alias python-precommit-all="pre-commit run --all-files"
