@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+## REVIEW ALIASES
+#Example usage: backport-diff-generator 137729/1
+# REPO: https://github.com/9uapaw/hadoop-scripts
+alias yarn-backport-diff-generator-gerrit="python3 $OTHER_REPOS_DIR/gandras/hadoop-scripts/backport_diff_generator.py" 
+alias yarn-backport-diff-generator-upstream="python3 $OTHER_REPOS_DIR/gandras/hadoop-scripts/github_us_backport_diff_generator.py"
+
+
 function setup() {
     export UPSTREAM_HADOOP_DIR=${HADOOP_DEV_DIR}
     export DOWNSTREAM_HADOOP_DIR=${CLOUDERA_HADOOP_ROOT}
@@ -114,3 +121,4 @@ function yarn-downstream-version-pc-for-upstream-change {
     echo "Found commit hash: $c_hash"
     git show $c_hash:pom.xml | grep version | head -n5
 }
+

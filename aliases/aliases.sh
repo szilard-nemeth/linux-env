@@ -34,13 +34,6 @@ alias git-fix-author-info-private="git config user.email 'szilard.nemeth88@gmail
 alias git-fix-author-info-cloudera="git config user.email 'snemeth@cloudera.com' && git config user.name 'Szilard Nemeth' && git commit --amend --reset-author"
 alias git-add-all-tracked="git status -s | grep -v \"??\" | cut -c 4- | xargs git add"
 
-## REVIEW ALIASES
-#Example usage: backport-diff-generator 137729/1
-# REPO: https://github.com/9uapaw/hadoop-scripts
-alias yarn-backport-diff-generator-gerrit="python3 $OTHER_REPOS_DIR/gandras/hadoop-scripts/backport_diff_generator.py" 
-alias yarn-backport-diff-generator-upstream="python3 $OTHER_REPOS_DIR/gandras/hadoop-scripts/github_us_backport_diff_generator.py"
-
-
 
 #https://stackoverflow.com/a/40884093/1106893 --> 4b825dc642cb6eb9a060e54bf8d69288fbee4904 is the id of the "empty tree"
 alias git-save-all-commits="rm /tmp/patches/*; git format-patch 4b825dc642cb6eb9a060e54bf8d69288fbee4904..HEAD -o /tmp/patches"
