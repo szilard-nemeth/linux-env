@@ -34,15 +34,55 @@ function gitconfig-cloudera() {
     git config user.name "Szilard Nemeth"
 }
 
-function gh-apply-patch() {
+function gh-apply-patch {
   if [ $# -ne 1 ]; then
     echo "Usage: gh-apply-patch <pr_id>" 1>&2
     return 1
   fi
 
   PR_ID=$1
+
+  echo "Showing PR info..."
+  gh pr view $PR_ID | head -n 20
+
+  echo "Applying PR diff..."
   gh pr diff $PR_ID > /tmp/github-pr-$PR_ID.patch
   git apply /tmp/github-pr-$PR_ID.patch
+}
+
+function gh-diff-cde-backport {
+  if [ $# -ne 2 ]; then
+    echo "Usage: gh-apply-patch <pr id for develop> <pr id for feature branch>" 1>&2
+    return 1
+  fi
+  # TODO: Port this to $OTHER_REPOS_DIR/gandras/hadoop-scripts (alias: yarn-backport-diff-generator-upstream)
+  # Example usage: gh-diff-cde-backport 5421 5565
+  # Example 
+  # PR targeting develop: https://github.infra.cloudera.com/CDH/dex/pull/5421
+  # PR targeting CDH:DEX-1.20: https://github.infra.cloudera.com/CDH/dex/pull/5565
+
+  # TODO assert 2 jira ids are the same
+
+  set -x
+  PR_ID_MAIN_BR="$1"
+  PR_ID_FEAT_BR="$2"
+
+  echo "Showing PR info for main branch..."
+  gh pr view $PR_ID_MAIN_BR | head -n 20
+
+  echo "Showing PR info for feature branch..."
+  gh pr view $PR_ID_FEAT_BR | head -n 20
+
+  echo "Saving PR diff for develop..."
+  gh pr diff $PR_ID_MAIN_BR > /tmp/github-pr-$PR_ID_MAIN_BR.patch
+
+  echo "Saving PR diff for feature branch..."
+  gh pr diff $PR_ID_FEAT_BR > /tmp/github-pr-$PR_ID_FEAT_BR.patch
+
+  echo "Making diff of 2 PRs"
+
+  diff /tmp/github-pr-$PR_ID_MAIN_BR.patch /tmp/github-pr-$PR_ID_FEAT_BR.patch > /tmp/github-pr-diff-$PR_ID_MAIN_BR_$PR_ID_FEAT_BR.diff
+  set +x
 }
 
 # TODO Move all cde aliases to a separate git.sh script
