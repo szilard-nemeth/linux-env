@@ -30,8 +30,8 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-python-common-lib = "1.0.2"
-google-api-wrapper2 = "1.0.2"
+python-common-lib = "1.0.6"
+google-api-wrapper2 = "1.0.5"
 yarn-dev-tools = "1.1.1"
 
 
