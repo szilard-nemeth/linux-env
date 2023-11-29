@@ -15,6 +15,9 @@ PRIVATE_STACK_CSI_WORKSPACE=$(whoami)
 NAMESPACE_PRIVATE_STACK="snemeth-dex"
 NAMESPACE_MOWPRIV="dex"
 
+DEX_CFG_GREP_IN_LOGS=0
+DEX_CFG_GREP_FOR="\*\*"
+
 ############## VARS ##############
 
 # asdf setup
@@ -64,7 +67,7 @@ function dex-export-protoc25 {
 
 #Go setup
 function dex-export-gopath {
-	export GOPATH=$(go env GOPATH)
+	export GOPATH=$(go env GOPATH) # /Users/snemeth/.asdf/installs/golang/1.20.7/go
 	export GOBIN=$GOPATH/bin
 	export PATH=$PATH:$GOPATH/bin
 	export GOOS=darwin
@@ -499,7 +502,7 @@ function dex-k9s-connect-mow-priv {
 
 function dex-create-service-in-stack {
     cst; curl -H 'Content-Type: application/json' -d '{
-      "name": "snemeth-cde-DEX-7712",
+      "name": "snemeth-cde-DEX-xxx",
       "env": "dex-priv-default-aws-env",
       "config": {
           "properties": {
@@ -655,10 +658,10 @@ function get-pods-mowpriv {
 
 function _get-pods {
   local namespace=$1
-  local mode=$1
+  local mode=$2
 
   set -x
-  echo "Getting $mode pods..."
+  echo "Getting $mode pods in namespace $namespace..."
   found_pods=()
   IFS=$'\n' read -r -d '' -A found_pods < <( kubectl -n $namespace get pods -l app.kubernetes.io/name=dex-cp -o json | jq -r '.items[].metadata.name' | sort | uniq && printf '\0' )
   # for pod in ${found_pods}; do
@@ -851,7 +854,7 @@ function _dex-replace-runtime-api-server {
   set +x
 }
 
-function dex-get-logs-follow-privatestack {
+function dex-follow-logs-runtimeapi-privatestack {
   if [[ -z $CLUSTER_ID ]]; then
         echo "CLUSTER_ID is not defined"
         return 1
@@ -868,7 +871,7 @@ function dex-get-logs-follow-privatestack {
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD
 }
 
-function dex-get-logs-follow-grep-privatestack {
+function dex-follow-logs-runtimeapi-grep-privatestack {
   local grepfor="$1"
   # TODO k8s grep replace with yaml expression
   DEX_API_POD=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods | grep -o -e "dex-app-.*-api-\S*")
@@ -876,23 +879,61 @@ function dex-get-logs-follow-grep-privatestack {
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD | grep $grepfor
 }
 
+function dex-follow-logs-dexcp-1-privatestack {
+  local namespace="$NAMESPACE_PRIVATE_STACK"
+  get-pods-privatestack
+
+  _dex-follow-log "private-stack" $namespace ${found_pods[1]}
+}
+
+function dex-follow-logs-dexcp-2-privatestack {
+  local namespace="$NAMESPACE_PRIVATE_STACK"
+  get-pods-privatestack
+  _dex-follow-log "private-stack" $namespace ${found_pods[2]}
+}
+
+
 function dex-save-logs-cp-privatestack {
   local namespace="$NAMESPACE_PRIVATE_STACK"
-  local grep_for="\*\*"
   local target_dir="/tmp/dexlogs-privatestack/"
 
   get-pods-privatestack
-  _dex-save-logs "private-stack" $namespace $grep_for $target_dir
+  _dex-save-logs "private-stack" $namespace $target_dir
+}
+
+function dex-save-logs-cp-privatestack-custom {
+  set -x
+  NAMESPACE_PRIVATE_STACK_OLD=$NAMESPACE_PRIVATE_STACK
+  NAMESPACE_PRIVATE_STACK="$1"
+  local namespace="$NAMESPACE_PRIVATE_STACK"
+  local target_dir="/tmp/dexlogs-privatestack-ns-$namespace/"
+
+  get-pods-privatestack
+  _dex-save-logs "private-stack" $namespace $target_dir
+
+  # restore
+  NAMESPACE_PRIVATE_STACK=$NAMESPACE_PRIVATE_STACK_OLD
+}
+
+function dex-kubectl-commands-save-logs-cp-privatestack {
+  get-pods-privatestack
 }
 
 
 function dex-save-logs-cp-mowpriv {
   local namespace="$NAMESPACE_MOWPRIV"
-  local grep_for="\*\*"
   local target_dir="/tmp/dexlogs-mowpriv/"
 
   get-pods-mowpriv
-  _dex-save-logs "mow-priv" $namespace $grep_for $target_dir
+  _dex-save-logs "mow-priv" $namespace $target_dir
+}
+
+function dex-save-logs-cp-mowpriv-custom-ns {
+  local namespace="$1"
+  local target_dir="/tmp/dexlogs-mowpriv-$namespace/"
+
+  _get-pods $namespace "mow-priv"
+  _dex-save-logs "mow-priv" $namespace $target_dir
 }
 
 
@@ -901,8 +942,7 @@ function _dex-save-logs {
   set -x
   local mode=$1
   local namespace=$2
-  local grep_for=$3
-  local target_dir=$4
+  local target_dir=$3
 
   mkdir -p $target_dir
   echo "Saving logs from $mode pods..."
@@ -910,11 +950,16 @@ function _dex-save-logs {
   #while IFS= read -r pod; do
   for pod in ${found_pods}; do
     echo "Actual pod: $pod"
-    local target_file="$target_dir/pod-log-$pod-full.txt"
-    local target_file_grep="$target_dir/pod-log-$pod-grep.txt"
+    local target_file="$target_dir/pod-log-$pod.txt"
     echo "Saving logs from pod: $pod to $target_file"
     kubectl -n $namespace logs $pod > $target_file
-    grep $grep_for $target_file > $target_file_grep
+
+    if [[ $DEX_CFG_GREP_IN_LOGS == 1 ]]; then
+      local target_file_grep="$target_dir/pod-log-$pod-grep.txt"
+      grep $DEX_CFG_GREP_IN_LOGS $target_file > $target_file_grep
+    fi
+
+    
   done
   #done <<< ${found_pods[*]}
 
@@ -934,6 +979,20 @@ function _dex-save-logs {
   #done <<< $found_pods
   done
     
+  set +x
+}
+
+
+function _dex-follow-log {
+  set -x
+  local mode=$1
+  local namespace=$2
+  local pod=$3
+
+  echo "Following log from $mode pod..."
+
+  echo "Current pod: $pod"
+  kubectl -n $namespace logs -f $pod
   set +x
 }
 
@@ -998,6 +1057,156 @@ function download-pod-logs-all-containers {
     dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst kubectl -n dex logs $DEX_NGINX_CONTR_POD -c $cont > $target_file
   done
 }
+
+function dex-get-liftie-data {
+  # PREREQUISITE
+  # Run this in other terminal
+  # TODO: auto-check if port forward is enabled?
+  # mow-priv kubectl port-forward -n computex service/computex-app-cpx-liftie 9999:9999
+
+  # Example: 
+  # dex-get-liftie-data "cluster-kdwgl8pp" "liftie-0581y84l" "snemeth-console"
+
+  if [ "$#" -ne 3 ]; then
+      echo "Usage: dex-get-liftie-data <CLUSTER_ID> <PROVISIONER_ID> <PRIVATE_STACK_NAME>"
+      return 1
+  fi
+
+  CLUSTER_ID="$1"
+  PROVISIONER_ID="$2"
+  PRIVATE_STACK_NAME="$3"
+  
+  cst;
+  set -x
+  curl -H 'Content-Type: application/json' -s -b cdp-session-token=$CST "https://$PRIVATE_STACK_NAME.cdp-priv.mow-dev.cloudera.com/dex/api/v1/cluster/$CLUSTER_ID?pollProvisioner=true" | jq -r ".clusterInfo.ProvisionerClusterView" | base64 -d | yq r - > ./cluster-view-$PROVISIONER_ID
+  set +x
+  
+  # Setup
+  INGRESS_PATH=dex
+  export ACTOR_CRN=`curl -s -b cdp-session-token=${CST} "https://$PRIVATE_STACK_NAME.cdp-priv.mow-dev.cloudera.com/${INGRESS_PATH}/api/v1/cluster/${CLUSTER_ID}" | jq -r '.clusterInfo.CreatorCRN'`
+  export LIFTIE_ID=`curl -s -b cdp-session-token=${CST} "https://$PRIVATE_STACK_NAME.cdp-priv.mow-dev.cloudera.com/${INGRESS_PATH}/api/v1/cluster/${CLUSTER_ID}" | jq -r '.provisionerid'`
+  export TENANT_ID=`curl -s -b cdp-session-token=${CST} "https://$PRIVATE_STACK_NAME.cdp-priv.mow-dev.cloudera.com/${INGRESS_PATH}/api/v1/cluster/${CLUSTER_ID}" | jq -r '.tenantId'`
+  echo "ACTOR_CRN=${ACTOR_CRN}"
+  echo "LIFTIE_ID=${LIFTIE_ID}"
+  echo "TENANT_ID=${TENANT_ID}"
+
+
+  curl -s \
+  -H "X-Cdp-Actor-Crn: ${ACTOR_CRN}" \
+  -H "X-Cdp-Request-Id: `uuidgen`" \
+  "http://localhost:9999/liftie/api/v1/cluster/${LIFTIE_ID}" > ./cluster-record-$PROVISIONER_ID
+}
+
+
+
+function dex-change-deployment-image-privatestack {
+  # k9s deployments
+  # NS: cadence-97gmh4cz, DEPL: cadence-api-server
+  # NS: cadence-worker-rm-97gmh4cz, DEPL: dex-cadence-worker
+
+  # k8s SELECTORS
+  # https://stackoverflow.com/questions/52957227/kubectl-command-to-list-pods-of-a-deployment-in-kubernetes
+  # dex-cadence-worker: Selector:               app.kubernetes.io/instance=dex-cadence-worker,app.kubernetes.io/name=dex-cadence-worker 
+  # cadence-api-server: Selector:               app.kubernetes.io/component=api-server,app.kubernetes.io/instance=dex-cadence,app.kubernetes.io/name=dex-cadence
+
+
+  if [ "$#" -ne 3 ]; then
+      # echo "Usage: dex-change-deployment-image-privatestack <CLUSTER_ID> <DEPLOYMENT_NAME> <NAME_SELECTOR> <NEW_IMAGE_NAME>"
+      echo "Usage: dex-change-deployment-image-privatestack <CLUSTER_ID> <DEPLOYMENT_TYPE> <NEW_IMAGE_NAME>"
+      return 1
+  fi
+
+
+  local curr_date=`date +%F-%H%M%S`
+  local cluster_id="$1"
+  local depl_type="$2"
+  local new_image_name="$3"
+  # Note: Container name in deployment descriptor will be the same as name of the deployment
+  # L_CONTAINER_NAME="$depl_name"
+
+
+  set -x
+  # Set up vars
+  DEX_CSI_WORKSPACE=$PRIVATE_STACK_CSI_WORKSPACE
+  cst;
+  dexw_args=( -cst $CST --cluster-id $cluster_id --mow-env priv -w $DEX_CSI_WORKSPACE )
+  dexw_k8s_args=( -n $DEX_APP_NS )
+  
+  
+
+  # Set DEX app namespace
+  if [[ -z $DEX_APP_NS ]]; then
+    # Get and store dex-app's Namespace from Private stack
+    # TODO k8s grep replace with yaml expression
+    DEX_APP_NS=$(dexw ${dexw_args[@]} kubectl -n $NAMESPACE_MOWPRIV get namespaces | grep "dex-app-" | awk '{print $1}' 2>/dev/null | tail -n 1)
+    export DEX_APP_NS
+    echo "Fetched namespace of dex-app: $DEX_APP_NS"
+  else
+    echo "Found cached namespace of dex-app: $DEX_APP_NS"
+  fi
+
+
+  # Get Cadence namespace names
+  cadence_namespaces=$(dexw ${dexw_args[@]} kubectl -n $NAMESPACE_MOWPRIV get namespaces | grep "cadence-" | awk '{print $1}' 2>/dev/null)
+  echo "Cadence namespaces: $cadence_namespaces"
+
+  cadence_worker_ns=$(echo $cadence_namespaces | grep cadence-worker-rm-.\*)
+  cadence_api_server_ns=$(echo $cadence_namespaces | grep -v cadence-worker-rm-.\*)
+
+  echo "cadence_worker_ns: $cadence_worker_ns"
+  echo "cadence_api_server_ns: $cadence_api_server_ns"
+
+
+  if [[ "$depl_type" == 'cadence-worker' ]]; then
+        local cadence_namespace="$cadence_worker_ns"
+        local depl_name="dex-cadence-worker"
+  
+  elif [[ "$depl_type" == 'cadence-api-server' ]]; then
+        local cadence_namespace="$cadence_worker_ns"
+        local depl_name="cadence-api-server"
+  else
+        echo "Wrong cadence deployment type!"
+        return 1
+  fi
+
+
+  dexw_k8s_args=( -n $cadence_namespace )
+  # 1. Get + Save original deployment
+  echo "Listing deployment: $depl_name"
+  target_file="/tmp/describe-deployment-$cluster_id-$depl_name-orig-$curr_date.txt"
+  dexw ${dexw_args[@]} kubectl ${dexw_k8s_args[@]} describe deployment $depl_name > "$target_file"
+
+  if [ "$?" -ne 0 ]; then
+    echo "Failed to list deployment: $depl_name"
+    return 1
+  fi
+
+  echo "Saved original deployment to: $target_file"
+  echo "Printing original image of deployment: $depl_name"
+  grep -i image "$target_file"
+
+
+  # 2. Modify deployment
+  target_file="/tmp/describe-deployment-$cluster_id-$depl_name-new-$curr_date.txt"
+
+  echo "Scaling down deployment: $depl_name" # Required because: https://stackoverflow.com/a/64248490/1106893
+  dexw ${dexw_args[@]} kubectl ${dexw_k8s_args[@]} scale --replicas=1 deployment/$depl_name
+  
+
+  echo "Setting new image: $new_image_name for deployment: $depl_name"
+  dexw ${dexw_args[@]} kubectl ${dexw_k8s_args[@]} set image deployment/$depl_name $depl_name=$new_image_name
+  dexw ${dexw_args[@]} kubectl ${dexw_k8s_args[@]} describe deployment $depl_name > "$target_file"
+  echo "Saved modified deployment to: $target_file"
+  echo "Listing modified image of deployment: $depl_name"
+  grep -i image "$target_file"
+
+
+  # 3. List pods of modified deployment
+  echo "Listing pods of new deployment: $depl_name"
+  dexw ${dexw_args[@]} kubectl ${dexw_k8s_args[@]} get pods -l app.kubernetes.io/name=$name_selector
+  set +x
+}
+
 
 ###################################################################### DEX RUNTIME ######################################################################
 
