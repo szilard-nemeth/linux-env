@@ -71,4 +71,8 @@ function docker-cleanup-guidance {
 
     echo "WARNING / TO REMOVE ALL THUNDERHEAD IMAGES"
     echo "docker images | grep \"thunderhead\" | awk '{print \$3}' | xargs docker rmi -f"
+
+    # https://forums.docker.com/t/simple-script-needed-to-delete-all-docker-images-over-4-weeks-old/28558/6    
+    echo "REMOVE IMAGES OLDER THAN DATE (3 weeks)"
+    echo "docker image prune --all --filter \"until=504h\""
 }

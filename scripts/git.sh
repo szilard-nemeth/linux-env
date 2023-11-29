@@ -85,6 +85,63 @@ function gh-diff-cde-backport {
   set +x
 }
 
+function gh-checkout-pr {
+    PR_ID="$1"
+    BRANCHNAME="pr-review-$PR_ID"
+    git fetch origin pull/$PR_ID/head:$BRANCHNAME
+    git co $BRANCHNAME
+}
+
+function gh-backport-cde-pr {
+    # Example: gh-backport-cde-pr 5669 DEX-1.20.1
+    PR_ID=$1
+    TARGET_R_BRANCH="$2"
+    TARGET_L_BRANCH="pr-backport-$TARGET_R_BRANCH"
+    FORK_BRANCH=fork
+    FORK_REPO_NAME=snemeth
+
+    #TODO Validate if target branch exists
+    # TODO error if gh does not exist
+
+
+    git fetch
+    COMMIT_HASH=$(gh pr view $PR_ID --json mergeCommit | jq '.mergeCommit.oid' | tr -d "\"")
+    PR_TITLE=$(gh pr view $PR_ID --json title  | jq '.title' | tr -d "\"")
+
+    if git cat-file -t $COMMIT_HASH 2> /dev/null 
+    then 
+        echo "Found commit: $COMMIT_HASH"
+        git --no-pager log  --format=%B -n 1 $COMMIT_HASH
+    else 
+        echo "Commit with hash $COMMIT_HASH not found"
+        return 1
+    fi
+
+    git co -b $TARGET_L_BRANCH remotes/origin/$TARGET_R_BRANCH 
+    git branch --unset-upstream # Untrack remote branch
+    
+    git cherry-pick -x $COMMIT_HASH
+
+    if [[ "$?" -ne 0 ]]; then
+        echo "Failed to cherry-pick commit: $COMMIT_HASH"
+        return 2
+    fi
+    
+
+    echo "Pushing..."
+    #git push --dry-run
+    #echo "Execute: "
+    #echo "git push $TARGET_L_BRANCH -u fork $TARGET_R_BRANCH"
+    set -x
+    git push $TARGET_L_BRANCH -u $FORK_BRANCH $TARGET_R_BRANCH
+    set +x
+
+
+    echo "Creating backport PR..."
+    gh pr create --draft --title $PR_TITLE --body "Backport of #$PR_ID" --base $TARGET_R_BRANCH --head $FORK_REPO_NAME:$TARGET_L_BRANCH 
+    echo "NOTE: Remember to un-draft your PR"
+}
+
 # TODO Move all cde aliases to a separate git.sh script
 function git-sync-cde-develop {
     set -x
@@ -129,7 +186,7 @@ function git-backup-patch-develop-formatpatch {
     echo "Output dir: $output_dir"
     mkdir -p $output_dir
 
-    git-format-patch develop $output_dir
+    git-format-patch origin/develop $output_dir
 }
 
 function git-backup-patch-develop-simple {
@@ -139,7 +196,7 @@ function git-backup-patch-develop-simple {
     mkdir -p $output_dir
     local output_file="$output_dir/backup-$branch-$(date-formatted).patch"
     echo "Creating patch based on develop to: $output_file"
-    git diff develop..HEAD > $output_file
+    git diff origin/develop..HEAD > $output_file
     set +x
 }
 
