@@ -320,6 +320,12 @@ function initial_setup_macos() {
         echo "Installing kitty"
         brew cask install kitty
     fi
+
+    echo "Checking whether kitty is installed..."
+    if ! hash asdf 2>/dev/null; then
+        echo "Installing asdf"
+        brew install asdf
+    fi
     
     echo "Installing fonts..."
     brew_cask_install font-mononoki-nerd-font
