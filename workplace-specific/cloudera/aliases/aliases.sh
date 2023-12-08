@@ -15,6 +15,7 @@ alias goto-eyarn="cd $EYARN_DIR"
 alias goto-bundlelogprocessor="cd $CLOUDERA_DEV_ROOT/YARN-tools/bundle-log-processor"
 alias goto-dex="cd $DEX_DEV_ROOT"
 alias goto-thunderhead="cd $DEX_DEV_ROOT../thunderhead"
+alias goto-csi="cd $DEX_DEV_ROOT../cloud-services-infra"
 alias goto-hades="cd $HOME/development/other-repos/gandras/hades/"
 alias goto-cldr-tasks="cd $CLOUDERA_TASKS_DIR"
 
