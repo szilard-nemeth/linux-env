@@ -21,7 +21,8 @@ DEX_CFG_GREP_FOR="\*\*"
 ############## VARS ##############
 
 # asdf setup
-. /usr/local/opt/asdf/libexec/asdf.sh
+#. /usr/local/opt/asdf/libexec/asdf.sh
+. /opt/homebrew/opt/asdf/libexec/asdf.sh
 
 # aws-okta
 #autoload -U +X bashcompinit && bashcompinit
