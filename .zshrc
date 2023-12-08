@@ -27,6 +27,7 @@ function setup() {
     setup-prompt
     setup-kitty
     setup-sdkman
+    setup-tab-title
 }
 
 function setup-antigen() {
@@ -48,6 +49,9 @@ function setup-antigen() {
     # Load the Spaceship theme.
     antigen theme denysdovhan/spaceship-prompt
     
+    # https://github.com/trystan2k/zsh-tab-title
+    antigen bundle trystan2k/zsh-tab-title
+
     # Tell Antigen that you're done.
     antigen apply
 }
@@ -135,6 +139,13 @@ setup-prompt() {
     SPACESHIP_DOCKER_PREFIX=""
 }
 
+function setup-tab-title {
+    # https://github.com/trystan2k/zsh-tab-title
+    export DISABLE_AUTO_TITLE="true"
+    export ZSH_TAB_TITLE_ENABLE_FULL_COMMAND=true
+    export ZSH_TAB_TITLE_PREFIX=""
+}
+
 function setup-kitty() {
     echo "Setting up kitty..."
     autoload -Uz compinit
@@ -151,6 +162,7 @@ function setup-sdkman() {
         echo "WARN: sdkman init script does not exist at: $HOME/.sdkman/bin/sdkman-init.sh"
     fi
 }
+
 
 function setup-key-bindings() {
     bindkey "^[[1;3C" forward-word
@@ -209,6 +221,7 @@ setup
 set_debug
 run-setup-scripts
 export SKIP_LINUXENV_COPY=1
+
 
 
 print-welcome-screen
