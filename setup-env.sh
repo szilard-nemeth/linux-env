@@ -226,7 +226,7 @@ function brew_cask_install() {
     brew search --casks ${program}
     if [[ "$?" -ne 0 ]]; then
         echo "Installing $program with brew cask..."
-        brew cask install ${program}
+        brew install --cask ${program}
     else
         echo "Note: $program is already installed with brew cask."
     fi
@@ -321,16 +321,28 @@ function initial_setup_macos() {
         brew cask install kitty
     fi
 
-    echo "Checking whether kitty is installed..."
+    echo "Checking whether asdf is installed..."
     if ! hash asdf 2>/dev/null; then
         echo "Installing asdf"
         brew install asdf
     fi
+
+    echo "Checking whether python is installed..."
+    if ! hash python 2>/dev/null; then
+        echo "Installing python"
+        brew install python@3.9
+    fi
+
+    echo "Checking whether sdkman is installed..."
+    if ! hash sdk 2>/dev/null; then
+        echo "Installing sdkman"
+        # https://sdkman.io/install
+        curl -s "https://get.sdkman.io" | bash
+    fi
+    
     
     echo "Installing fonts..."
-    brew_cask_install font-mononoki-nerd-font
-    brew_cask_install font-hack-nerd-font
-    brew_cask_install font-monoid-nerd-font
+    ./install-fonts.sh
     
     ###############################
     echo "Installing custom shell plugins..."
@@ -459,6 +471,10 @@ function setup-pythonpath() {
   ASDF_PYTHON_LIBS=$(asdf where python)/lib/python3.8/site-packages
   STANDARD_PYTHON_LIBS="$HOME/Library/Python/3.8/lib/python/site-packages/"
   export PYTHONPATH="$STANDARD_PYTHON_LIBS:$ASDF_PYTHON_LIBS:${HOME_LINUXENV_DIR}/scripts/python/:$PYTHONPATH"
+}
+
+function linuxenv-initial-setup-mark-incomplete {
+    rm $HOME_ENV/.initial-setup-status
 }
 
 
