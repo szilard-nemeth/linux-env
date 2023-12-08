@@ -106,3 +106,5 @@ alias copy-trello-checklist-script="cat ~/development/my-repos/knowledge-base/co
 alias copy-pushbullet-linksaver-script="cat ~/development/my-repos/knowledge-base/codesnippets/js-html-css/pushbullet-save-links.js | pbcopy"
 alias svim='vim -u ~/.SpaceVim/vimrc'
 alias link-to-project-run-configurations="ln -s ~/development/my-repos/project-run-configurations/pycharm/$PROJECT_TO_LINK/.run ./.run"
+
+alias history="history 1 -1"
