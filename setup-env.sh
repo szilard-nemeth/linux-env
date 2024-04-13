@@ -375,6 +375,20 @@ function initial_setup_macos() {
     #Colorls 
     gem install --user-install colorls
     ###############################
+
+
+    #INSTALL: asdf
+    # TODO: hack
+    echo "Installing asdf..."
+    cp $DIR/dotfiles/.tool-versions $HOME/
+
+    cd $HOME
+    # https://github.com/asdf-vm/asdf/issues/1254
+    awk '{ system("asdf plugin-add " $1) }' < .tool-versions 
+    asdf install
+    cd -
+    ###############################
+
     
     echo "complete" > "${ENV_SETUP_STATUS}"
 }
