@@ -14,6 +14,7 @@ alias goto-cde-tasks="cd $HOME/development/my-repos/knowledge-base-private/cloud
 alias goto-eyarn="cd $EYARN_DIR"
 alias goto-bundlelogprocessor="cd $CLOUDERA_DEV_ROOT/YARN-tools/bundle-log-processor"
 alias goto-dex="cd $DEX_DEV_ROOT"
+alias goto-dexter="cd $HOME/development/cloudera/hackathon2022/dexter "
 alias goto-thunderhead="cd $DEX_DEV_ROOT../thunderhead"
 alias goto-csi="cd $DEX_DEV_ROOT../cloud-services-infra"
 alias goto-hades="cd $HOME/development/other-repos/gandras/hades/"
@@ -109,6 +110,7 @@ alias dex-update-dev-env="goto-dex;make update-dev-env"
 alias dex-docker-cleanup="docker rmi $(docker images | grep \"1\.18\.0\" | tr -s ' ' | cut -d ' ' -f 3) -f"
 alias goto-dex-7712-clitesting="cd $CLOUDERA_TASKS_CDE_DIR/dev-work-from-20221129/cli-testing"
 alias dex-print-tasks-dir="echo $CLOUDERA_TASKS_CDE_DIR"
+alias when-am-i-on-call="~/development/cloudera/pagerduty-helper/when_am_i_on_call.py --user snemeth"
 
 
 ### DEX, Beni

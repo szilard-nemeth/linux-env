@@ -2,6 +2,8 @@
 
 echo "Setting up DEX env..."
 
+source /Users/snemeth/development/cloudera/hackathon2022/dexter/dexter-setup.sh
+
 ############## VARS ##############
 DOCKER_ROOT_CLOUDERA="docker-registry.infra.cloudera.com"
 DEX_DOCKER_IMAGES_GENERATED_FILE="$DEX_DEV_ROOT/cloudera/docker_images.generated.yaml"
@@ -543,7 +545,7 @@ function dex-create-private-stack-mowdev {
 }
 
 function _dex-create-private-stack {
-  set -x
+  #set -x
   local mow_env="$1"
   echo "Moonlander..."
   echo "git pull / running make..."
@@ -563,20 +565,31 @@ function _dex-create-private-stack {
   # 2. moonlander install
   DATE_OF_START=`date +%F-%H%M%S`
   logfilename="$HOME/.dex/logs/dexprivatestack_env-$mow_env""_""$DATE_OF_START.log"
-  touch $logfilename
+  mkdir -p $HOME/.dex/logs/; touch $logfilename
+  echo "****Logs are stored to file: $logfilename"
 
 
+  # NOTE: Play around with these for debugging
+  # export EXTRA_DOCKER_ARGS="--progress=plain --verbose"; echo "Exported EXTRA_DOCKER_ARGS=$EXTRA_DOCKER_ARGS"
+  # export EXTRA_DOCKER_ARGS="--progress=plain"; echo "Exported EXTRA_DOCKER_ARGS=$EXTRA_DOCKER_ARGS"
+  # export DOCKER_BUILD_WITH_NO_CACHE="true"; echo "Exported DOCKER_BUILD_WITH_NO_CACHE=$DOCKER_BUILD_WITH_NO_CACHE"
+  # export ENABLE_MULTI_ARCH_BUILD="false"; echo "Exported ENABLE_MULTI_ARCH_BUILD=$ENABLE_MULTI_ARCH_BUILD"
   # TODO Specify skip build option?
   # https://stackoverflow.com/questions/40771781/how-to-append-a-string-in-bash-only-when-the-variable-is-defined-and-not-null
   MOONLANDER_SKIP_BUILD=1
+
+  # stdout/stderr redirection: https://stackoverflow.com/questions/692000/how-do-i-write-standard-error-to-a-file-while-using-tee-with-a-pipe
+
+  # TODO: piping to tee is not line buffered!
+  #  Consider replacing it with 'script': https://unix.stackexchange.com/a/61833/189441
   if [[ "$mow_env" == "mow-dev" ]]; then
-      mow-dev ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 | tee "$logfilename"
+      mow-dev ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 2>&1 | tee "$logfilename"
       # mow-dev ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
   elif [[ "$mow_env" == "mow-priv" ]]; then
       # mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
-      mow-priv ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 | tee "$logfilename"
+      mow-priv ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 2>&1 | tee "$logfilename"
   fi
-  set +x
+  #set +x
 
   # mow-priv k9s --> Validate if snemeth pods are running (by name)
   # 3. Create service with curl: https://github.infra.cloudera.com/CDH/dex/wiki/Upgrade-Testing

@@ -208,5 +208,8 @@ function git-squash-all-based-on-develop {
     git commit -m "$COMMIT_MSG"
 }
 
+function git-dex-commits-on-feature-branch {
+    git rev-list --no-merges --count HEAD ^develop
+}
 
 

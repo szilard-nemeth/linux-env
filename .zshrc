@@ -94,7 +94,7 @@ setup-prompt() {
       #terraform     # Terraform workspace section
       exec_time     # Execution time
       line_sep      # Line break
-      vi_mode       # Vi-mode indicator
+      #vi_mode       # Vi-mode indicator
       jobs          # Background jobs indicator
       char          # Prompt character
     )

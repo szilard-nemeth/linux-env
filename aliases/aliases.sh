@@ -108,3 +108,4 @@ alias svim='vim -u ~/.SpaceVim/vimrc'
 alias link-to-project-run-configurations="ln -s ~/development/my-repos/project-run-configurations/pycharm/$PROJECT_TO_LINK/.run ./.run"
 
 alias history="history 1 -1"
+alias mgitst="mgitstatus --depth=10 -e"

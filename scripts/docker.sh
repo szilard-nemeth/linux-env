@@ -75,4 +75,5 @@ function docker-cleanup-guidance {
     # https://forums.docker.com/t/simple-script-needed-to-delete-all-docker-images-over-4-weeks-old/28558/6    
     echo "REMOVE IMAGES OLDER THAN DATE (3 weeks)"
     echo "docker image prune --all --filter \"until=504h\""
+    echo "docker rmi \$(docker images --filter \"dangling=true\" -q --no-trunc)"
 }
