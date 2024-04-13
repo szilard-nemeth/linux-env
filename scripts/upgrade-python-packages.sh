@@ -3,10 +3,12 @@ YARN_DEV_TOOLS_DIR="$HOME/development/my-repos/yarn-dev-tools"
 PYTHON_COMMONS_DIR="$HOME/development/my-repos/python-commons"
 GOOGLE_API_WRAPPER_DIR="$HOME/development/my-repos/google-api-wrapper/"
 BACKUP_MANAGER_DIR="$HOME/development/my-repos/backup-manager/"
+DEXTER_DIR="$HOME/development/cloudera/hackathon2022/dexter/"
 PROJ_NAME_YARN_DEV_TOOLS="yarndevtools"
 PROJ_NAME_PYTHON_COMMONS="pythoncommons"
 PROJ_NAME_GOOGLE_API_WRAPPER="googleapiwrapper"
 PROJ_NAME_BACKUP_MANAGER="backup-manager"
+PROJ_NAME_DEXTER="dexter"
 
 SKIP_POETRY_PUBLISH=0
 UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER=0
@@ -146,7 +148,7 @@ function commit-version-bump() {
   commit_msg="$1"
   new_version="$2"
   echo "Committing version bump..."
-  git commit -am "$commit_msg"
+  git commit --no-verify -am "$commit_msg"
 
   if [[ $UPGRADE_PYTHON_PACKAGES_GIT_PUSH -eq 1 ]]; then
     # Push commit
@@ -250,8 +252,16 @@ function update-package-versions-in-yarndevtools() {
   fi
 }
 
-function update-package-versions-in-backup-manager() {
+function update-package-versions-in-backup-manager {
   _update-package-versions-in-project $PROJ_NAME_BACKUP_MANAGER $BACKUP_MANAGER_DIR
+  if [[ "$?" -ne 0 ]]; then
+    echo "Failed to upgrade package dependencies"
+    return 1
+  fi
+}
+
+function update-package-versions-in-dexter {
+  _update-package-versions-in-project $PROJ_NAME_DEXTER $DEXTER_DIR
   if [[ "$?" -ne 0 ]]; then
     echo "Failed to upgrade package dependencies"
     return 1
@@ -446,10 +456,9 @@ function unset-all-package-upgrade-vars {
   UPGRADE_PYTHON_PACKAGE_PYTHONCOMMONS=0
 }
 
-function myrepos-upgrade-pythoncommons-in-backup-manager() {
+function myrepos-upgrade-pythoncommons-in-backup-manager {
   # TODO unify logic with myrepos-upgrade-pythoncommons-in-yarndevtools
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
-  UPGRADE_PYTHON_PACKAGES_BRANCH="cloudera-mirror-version" # only used in _show-changes-yarndevtools
   UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
 
   _show-changes-pythoncommons
@@ -488,6 +497,46 @@ function myrepos-upgrade-pythoncommons-in-backup-manager() {
 }
 
 
+function myrepos-upgrade-pythoncommons-in-dexter {
+  # TODO unify logic with myrepos-upgrade-pythoncommons-in-backup-manager
+  UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
+  UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
+
+  _show-changes-pythoncommons
+  _show-changes-googleapiwrapper
+  
+  if [[ "$?" -ne 0 ]]; then
+    echo "Uncommitted changes detected, see messages above"
+    return 1
+  fi
+
+  bump-pythoncommons-version
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
+  new_pythoncommons_version=$(cd $PYTHON_COMMONS_DIR && echo $(poetry version --short))
+
+  bump-googleapiwrapper-version
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
+  new_googleapiwrapper_version=$(cd $GOOGLE_API_WRAPPER_DIR && echo $(poetry version --short))
+
+  SKIP_POETRY_PUBLISH=1
+  #remove-links-with-target "/tmp/.*" "$HOME/development/my-repos/project-data/input-data/dexter.*"
+
+  UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER=1
+  UPGRADE_PYTHON_PACKAGE_PYTHONCOMMONS=1
+  update-package-versions-in-dexter
+  unset-all-package-upgrade-vars
+
+  if [[ "$?" -ne 0 ]]; then
+    return 1
+  fi
+}
+
+
+
 function myrepos-release-yarndevtools() {
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   UPGRADE_PYTHON_PACKAGES_BRANCH="cloudera-mirror-version" # only used in _show-changes-yarndevtools
@@ -506,4 +555,20 @@ function myrepos-release-yarndevtools() {
   fi
   new_yarndevtools_version=$(cd $YARN_DEV_TOOLS_DIR && echo $(poetry version --short))
   echo "Newly released version of $PROJ_NAME_YARN_DEV_TOOLS: $new_yarndevtools_version"
+}
+
+function _myrepos-upgrade-dependencies-manual {
+  # bump-pythoncommons-version
+  bump-googleapiwrapper-version
+
+  new_pythoncommons_version=$(cd $PYTHON_COMMONS_DIR && echo $(poetry version --short))
+  new_googleapiwrapper_version=$(cd $GOOGLE_API_WRAPPER_DIR && echo $(poetry version --short))
+
+  echo "new_pythoncommons_version=$new_pythoncommons_version"
+  echo "new_googleapiwrapper_version=$new_googleapiwrapper_version"
+
+  UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER=1
+  UPGRADE_PYTHON_PACKAGE_PYTHONCOMMONS=0
+ 
+  _update-package-versions-in-project "calendar-utils" /Users/snemeth/development/my-repos/calendar-utils
 }
