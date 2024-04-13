@@ -318,7 +318,7 @@ function initial_setup_macos() {
     echo "Checking if kitty is installed..."
     if ! hash kitty 2>/dev/null; then
         echo "Installing kitty"
-        brew cask install kitty
+        curl -L https://sw.kovidgoyal.net/kitty/installer.sh | sh /dev/stdin
     fi
 
     echo "Checking if asdf is installed..."
