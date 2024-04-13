@@ -248,7 +248,7 @@ function check_version() {
 
 function initial_setup_macos() {
     echo "=== Running initial macOS setup ==="
-    echo "Checking whether Homebrew is installed..."
+    echo "Checking if Homebrew is installed..."
     if ! hash brew 2>/dev/null; then
         echo "Homebrew not found! Installing Homebrew..."
         # Warning: The Ruby Homebrew installer is now deprecated and has been rewritten in
@@ -256,14 +256,14 @@ function initial_setup_macos() {
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
     fi
     
-    echo "Checking whether GNU sed is installed..."
+    echo "Checking if GNU sed is installed..."
     echo "123 abc" | sed -r 's/[0-9]+/& &/' > /dev/null
     if [[ "$?" -ne 0 ]]; then
         echo "Installing GNU sed"
         brew install gnu-sed --with-default-names
     fi
     
-    echo "Checking whether npm is installed..."
+    echo "Checking if npm is installed..."
     if ! hash node 2>/dev/null; then
         brew install node;
         which node # => /usr/local/bin/node
@@ -296,7 +296,7 @@ function initial_setup_macos() {
         brew install wget
     fi
 
-    echo "Checking whether thefuck is installed..."
+    echo "Checking if thefuck is installed..."
     if ! hash fuck 2>/dev/null; then
         echo "Installing thefuck"
         brew install thefuck
@@ -309,34 +309,41 @@ function initial_setup_macos() {
         brew install zsh
     fi
     
-    echo "Checking whether antigen is installed..."
+    echo "Checking if antigen is installed..."
     if ! hash antigen 2>/dev/null; then
         echo "Installing antigen"
         brew install antigen
     fi
     
-    echo "Checking whether kitty is installed..."
+    echo "Checking if kitty is installed..."
     if ! hash kitty 2>/dev/null; then
         echo "Installing kitty"
         brew cask install kitty
     fi
 
-    echo "Checking whether asdf is installed..."
+    echo "Checking if asdf is installed..."
     if ! hash asdf 2>/dev/null; then
         echo "Installing asdf"
         brew install asdf
     fi
 
-    echo "Checking whether python is installed..."
+    echo "Checking if python is installed..."
     if ! hash python 2>/dev/null; then
         echo "Installing python"
         brew install python@3.9
     fi
 
-    echo "Checking whether sdkman is installed..."
+    echo "Checking if github client is installed..."
+    if ! hash python 2>/dev/null; then
+        echo "Installing github client"
+        echo "  More info: https://formulae.brew.sh/formula/gh)"
+        brew install gh
+    fi
+
+    echo "Checking if sdkman is installed..."
     if ! hash sdk 2>/dev/null; then
         echo "Installing sdkman"
-        # https://sdkman.io/install
+        echo "  More info: https://sdkman.io/install"
         curl -s "https://get.sdkman.io" | bash
     fi
     
