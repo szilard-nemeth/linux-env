@@ -6,7 +6,7 @@
 [[ -z "$PS1" ]] && return
 echo "Sourcing ~/.bashrc"
 
-function setup-history() {
+function setup-history {
     # don't put duplicate lines or lines starting with space in the history.
     # See bash(1) for more options
     HISTCONTROL=ignoreboth
@@ -20,7 +20,7 @@ function setup-history() {
     HISTFILESIZE=
 }
 
-function setup() {
+function setup {
     # check the window size after each command and, if necessary,
     # update the values of LINES and COLUMNS.
     shopt -s checkwinsize
@@ -102,7 +102,7 @@ function setup() {
 
 }
 
-function define-colors() {
+function define-colors {
     LIGHTRED="$(tput bold ; tput setaf 1)"
     LIGHTGREEN="$(tput bold ; tput setaf 2)"
     YELLOW="$(tput bold ; tput setaf 3)"
@@ -113,7 +113,7 @@ function define-colors() {
     NOCOLOR='\[\033[0m\]'
 }
 
-function setup-prompt() {
+function setup-prompt {
     # Start with a newline as some commands don't end their output with one
     PS1="\n$WHITE┌-("
     
@@ -154,14 +154,14 @@ function setup-prompt() {
     esac
 }
 
-function print-welcome-screen() {
+function print-welcome-screen {
     echo -e "${WHITE}";cal;
     echo -ne "${CYAN}";
     echo -ne "${LIGHTPURPLE}Sysinfo:";uptime;echo ""
     echo -e "${NOCOLOR}";echo "";
 }
 
-function run-setup-scripts() {
+function run-setup-scripts {
     LINUX_ENV_REPO=$HOME/development/my-repos/linux-env/
     SETUP_ENV_SCRIPT=${LINUX_ENV_REPO}/setup-env.sh
     

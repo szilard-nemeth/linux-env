@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function sync-kb-private-repo() {
+function sync-kb-private-repo {
     # BASED ON THIS ANSWER: https://github.community/t5/How-to-use-Git-and-GitHub/Adding-a-folder-from-one-repo-to-another/m-p/5574#M1817
     local tmp_dir=$(mktemp -d -t kb-private-XXXXXX)
     local repo_name="knowledge-base-private"

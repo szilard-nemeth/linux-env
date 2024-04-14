@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function ensure-command-available() {
+function ensure-command-available {
     cmd="$1"
     command -v ${cmd} > /dev/null 2>&1
     
@@ -10,19 +10,19 @@ function ensure-command-available() {
     fi
 }
 
-function is-platform-macos() {
+function is-platform-macos {
     if [[ ${platform} == 'macOS' ]]; then
         return 0
     fi
 }
 
-function is-platform-linux() {
+function is-platform-linux {
     if [[ ${platform} == 'linux' ]]; then
         return 0
     fi
 }
 
-function start-app-silently() {
+function start-app-silently {
     APP_NAME=$1
     nohup ${APP_NAME}& > /dev/null 2>&1
 }

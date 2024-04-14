@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-function follow-hadoop() {
+function follow-hadoop {
     tail -f /tmp/??.log
 }

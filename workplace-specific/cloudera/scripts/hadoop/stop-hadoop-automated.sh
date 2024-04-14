@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function stop-hadoop() {
+function stop-hadoop {
     HADOOP_SCRIPTS_DIR=${CLOUDERA_DIR}/scripts/hadoop/
 
     echo "Stopping Hadoop..."

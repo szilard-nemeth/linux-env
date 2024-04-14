@@ -15,7 +15,7 @@
 
 #====================================================
 #### Run commands on cluster:
-function cmhack-init-cluster() {
+function cmhack-init-cluster {
     ##tar CM directories
     tar czhf cm-lib.tar.gz /opt/cloudera/cm/lib/
 }
@@ -23,7 +23,7 @@ function cmhack-init-cluster() {
 
 #====================================================
 ##Run commands on local machine (In CM dev root dir):
-function cmhack-init() {
+function cmhack-init {
     CLUSTER="snemeth-secure514-4-1.snemeth-secure514-4.root.hwx.site"
     BASE_GIT_HASH="db13be490c0"
 
@@ -39,7 +39,7 @@ function cmhack-init() {
 
 #====================================================
 #Should be executed from CM root dir
-function cmhack() {
+function cmhack {
     
     # FILES=`git status *.java | grep '.java' | grep -v -i test | sed s/modified\://g`
     
@@ -104,7 +104,7 @@ function cmhack() {
     sshpass -p "password" ssh root@${CLUSTER} "echo \"Restarting cmf server\" && sudo service cloudera-scm-server restart"
 }
 
-function cmhack2() {
+function cmhack2 {
     #Save script from cluster
     #sshpass -p "password" scp root@$CLUSTER:/opt/cloudera/cm-agent/service/zookeeper/zk-client.sh .
     #cp zk-client.sh agents/cmf/service/zookeeper/zk-client.sh
@@ -112,7 +112,7 @@ function cmhack2() {
     sshpass -p "password" rsync ./agents/cmf/service/zookeeper/zk-client.sh root@${CLUSTER}:/opt/cloudera/cm-agent/service/zookeeper/zk-client.sh
 }
 
-function savePatches() {
+function savePatches {
     rm ~/Downloads/_inprogress/OPSAPS-54755/format-patch/00*
     git format-patch fee2d5ced35
     mv 00* ~/Downloads/_inprogress/OPSAPS-54755/format-patch/

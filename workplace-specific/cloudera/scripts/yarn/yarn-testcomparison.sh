@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
 #TODO MIGRATE WHOLE SCRIPT TO PYTHON
-function print-script-step() {
+function print-script-step {
     echo -e "[SCRIPT-STEP] ------------------------------------------------------------------------"
     echo -e "[SCRIPT-STEP] $1"
     echo -e "[SCRIPT-STEP] ------------------------------------------------------------------------"
 }
 
-function replace-logstrings-with-regexes() {
+function replace-logstrings-with-regexes {
 ##This does not handle strings like "bla\"cc\"bla"
 #TODO handle files or strings
 
@@ -35,11 +35,11 @@ function replace-logstrings-with-regexes() {
     sed -r -e 's/"//g'
 }
 #
-#function find-matched-log-records() {
+#function find-matched-log-records {
 #
 #}
 
-function logs2regex() {
+function logs2regex {
     local BASE_DIR="$1/log2regex"
     local LOG_PATCH=$2
     
@@ -69,7 +69,7 @@ function logs2regex() {
     set +e
 }
 
-function cp-with-prefix() {
+function cp-with-prefix {
     #TODO check if dirs do exist
     COPY_SRC="$1"
     COPY_DST="$2"
@@ -78,7 +78,7 @@ function cp-with-prefix() {
     for f in ${COPY_SRC}/*.*; do cp "$f" "$COPY_DST/$PREFIX-$(basename ${f})"; done
 }
 
-function exec-junit-tests() {
+function exec-junit-tests {
     #TODO check parameter count!
     local TEST_CLASS=$1
     local TEST_RESULT_FILE_PREFIX=$2
@@ -128,7 +128,7 @@ function exec-junit-tests() {
     done
 }
 
-function print-junit-report() {
+function print-junit-report {
     local BASE_DIR=$1
     OLDIFS="$IFS"
     local FAILED_TESTS=($(find ${BASE_DIR} -iname '*failed' | sed "s|$BASE_DIR/||g" | sed 's/^\s+//'))
@@ -155,7 +155,7 @@ function print-junit-report() {
 #    set +x
 }
 
-function grep-in-test-logs() {
+function grep-in-test-logs {
     #TODO check BASE_DIR argument is provided!
     local BASE_DIR=$1
     OLDIFS="$IFS"
@@ -203,7 +203,7 @@ function grep-in-test-logs() {
     done
 }
 
-function cleanup() {
+function cleanup {
     ###6. CLEANUP: Reset git to original state: just the code changes, no log patch
     rv=$?
     git reset HEAD --hard
@@ -216,7 +216,7 @@ function cleanup() {
 #TODO create 2 branches alternatively with code changes and code changes+log changes (for future tracking of which code test was running against)
 #TODO add option: whether to grep in tests results or not!
 #TODO replace all exit calls with return, as exit will terminate the shell process!
-function compare-yarn-rm-test-runs() {
+function compare-yarn-rm-test-runs {
     trap cleanup INT TERM EXIT
 
     #prepare params

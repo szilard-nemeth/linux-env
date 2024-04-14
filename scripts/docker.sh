@@ -5,21 +5,21 @@ then
     return 1
 fi
 
-function docker-execbash() {
+function docker-execbash {
     containerid=`docker ps | grep $1 | cut -d ' ' -f 1`
     docker exec -it ${containerid} bash
 }
 
-function cleanup_docker_images() {
+function cleanup_docker_images {
   #docker rm --force $(docker ps --all --quiet) # remove all docker processes
   docker rmi $(docker images --filter dangling=true --quiet) # clean dangling docker images
 }
 
-function cleanup_docker_volumes() {
+function cleanup_docker_volumes {
   docker volume ls -qf dangling=true | xargs -r docker volume rm
 }
 
-function docker-operation-except() {
+function docker-operation-except {
     FILENAME="$1";
     shift;
     DOCKER_COMMAND="$@";
@@ -47,7 +47,7 @@ function docker-rm-all-for-img {
   docker ps -a | awk '{ print $1,$2 }' | grep $1 | awk '{print $1 }' | xargs -I {} docker rm {}
 }
 
-function docker-listmounts() {
+function docker-listmounts {
   docker inspect -f '{{ .Mounts }}' $1
 }
 

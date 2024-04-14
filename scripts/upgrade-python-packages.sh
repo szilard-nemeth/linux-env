@@ -14,7 +14,7 @@ SKIP_POETRY_PUBLISH=0
 UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER=0
 UPGRADE_PYTHON_PACKAGE_PYTHONCOMMONS=0
 
-function remove-links-with-target() {
+function remove-links-with-target {
   local lnk_target_to_remove_1="$1"
   local lnk_target_to_remove_2="$2"
 
@@ -30,12 +30,12 @@ function remove-links-with-target() {
   done
 }
 
-function cleanup-yarndevtools-links() {
+function cleanup-yarndevtools-links {
   remove-links-with-target "/tmp/.*" "/home/cdsw/snemeth-dev-projects.*"
 }
 
 
-function get-project-dir() {
+function get-project-dir {
   local project="$1"
 
   if [[ ${project} == $PROJ_NAME_PYTHON_COMMONS ]]; then
@@ -51,7 +51,7 @@ function get-project-dir() {
 }
 
 # TODO Look for better way to check exit codes ("$?" -ne 0) ?
-function check-git-changes() {
+function check-git-changes {
   local repo_dir=$1
   local git_branch=$2
   
@@ -113,7 +113,7 @@ function _show-changes-yarndevtools {
   fi
 }
 
-function reset() {
+function reset {
   cd $PYTHON_COMMONS_DIR
   # TODO Show diff and ask confirmation before doing git reset --hard
   #git reset --hard origin/$UPGRADE_PYTHON_PACKAGES_BRANCH
@@ -125,7 +125,7 @@ function reset() {
   #git reset --hard origin/$UPGRADE_PYTHON_PACKAGES_BRANCH
 }
 
-function poetry-build-and-publish() {
+function poetry-build-and-publish {
   local project="$1"
 
   if [[ $SKIP_POETRY_PUBLISH -eq 0 ]]; then
@@ -144,7 +144,7 @@ function poetry-build-and-publish() {
   fi
 }
 
-function commit-version-bump() {
+function commit-version-bump {
   commit_msg="$1"
   new_version="$2"
   echo "Committing version bump..."
@@ -173,7 +173,7 @@ function commit-version-bump() {
   fi
 }
   
-function bump-project-version() {
+function bump-project-version {
   local project="$1"
   echo "Bumping version of $project"
 
@@ -206,7 +206,7 @@ function bump-project-version() {
   fi
 }
 
-function bump-pythoncommons-version() {
+function bump-pythoncommons-version {
   bump-project-version "$PROJ_NAME_PYTHON_COMMONS"
   if [[ "$?" -ne 0 ]]; then
     echo "Failed to bump version of $PROJ_NAME_PYTHON_COMMONS"
@@ -214,7 +214,7 @@ function bump-pythoncommons-version() {
   fi
 }
 
-function bump-googleapiwrapper-version() {
+function bump-googleapiwrapper-version {
   # Wherever bump-pythoncommons-version is called, new_pythoncommons_version is parsed again to a valid version
   # If it is empty, no need to update pythoncommons here
   if [[ ! -z "$new_pythoncommons_version" ]] ; then
@@ -236,7 +236,7 @@ function bump-googleapiwrapper-version() {
   fi
 }
 
-function bump-yarndevtools-version() {
+function bump-yarndevtools-version {
   bump-project-version $PROJ_NAME_YARN_DEV_TOOLS
   if [[ "$?" -ne 0 ]]; then
     echo "Failed to bump version of $PROJ_NAME_YARN_DEV_TOOLS"
@@ -244,7 +244,7 @@ function bump-yarndevtools-version() {
   fi
 }
 
-function update-package-versions-in-yarndevtools() {
+function update-package-versions-in-yarndevtools {
   _update-package-versions-in-project $PROJ_NAME_YARN_DEV_TOOLS $YARN_DEV_TOOLS_DIR
   if [[ "$?" -ne 0 ]]; then
     echo "Failed to upgrade package dependencies"
@@ -383,7 +383,7 @@ function _update-package-versions-in-project {
   # ================================
 }
 
-function myrepos-upgrade-pythoncommons-in-yarndevtools() {
+function myrepos-upgrade-pythoncommons-in-yarndevtools {
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   cleanup-yarndevtools-links
   show-changes-all
@@ -422,7 +422,7 @@ function myrepos-upgrade-pythoncommons-in-yarndevtools() {
   fi
 }
 
-function myrepos-upgrade-googleapiwrapper-in-yarndevtools() {
+function myrepos-upgrade-googleapiwrapper-in-yarndevtools {
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   #UPGRADE_PYTHON_PACKAGES_BRANCH="cloudera-mirror-version" # only used in _show-changes-yarndevtools
   UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
@@ -537,7 +537,7 @@ function myrepos-upgrade-pythoncommons-in-dexter {
 
 
 
-function myrepos-release-yarndevtools() {
+function myrepos-release-yarndevtools {
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   UPGRADE_PYTHON_PACKAGES_BRANCH="cloudera-mirror-version" # only used in _show-changes-yarndevtools
   UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"

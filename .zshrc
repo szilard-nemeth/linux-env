@@ -1,6 +1,6 @@
 echo "$(date) -- .zshrc executed by shell: $0" >> $HOME/.zshrc.log
 
-function setup-history() {  
+function setup-history {  
     export HISTFILESIZE=1000000000          #How many lines of history to keep in memory
     export HISTSIZE=1000000000              #How many lines of history to keep in memory
     HISTFILE=~/.zsh_history                 #Where to save history to disk
@@ -13,7 +13,7 @@ function setup-history() {
     setopt    incappendhistory              #Immediately append to the history file, not just when a term is killed
 }
 
-function setup() {
+function setup {
     # If set, the pattern "**" used in a pathname expansion context will
     # match all files and zero or more directories and subdirectories.
     # shopt -s globstar
@@ -30,7 +30,7 @@ function setup() {
     setup-tab-title
 }
 
-function setup-antigen() {
+function setup-antigen {
     #Load antigen
     source $(brew --prefix)/share/antigen/antigen.zsh
     
@@ -146,7 +146,7 @@ function setup-tab-title {
     export ZSH_TAB_TITLE_PREFIX=""
 }
 
-function setup-kitty() {
+function setup-kitty {
     echo "Setting up kitty..."
     autoload -Uz compinit
     compinit
@@ -154,7 +154,7 @@ function setup-kitty() {
     kitty + complete setup zsh | source /dev/stdin
 }
 
-function setup-sdkman() {
+function setup-sdkman {
     if [ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
         echo "Setting up sdkman..."
         source "$HOME/.sdkman/bin/sdkman-init.sh"
@@ -164,12 +164,12 @@ function setup-sdkman() {
 }
 
 
-function setup-key-bindings() {
+function setup-key-bindings {
     bindkey "^[[1;3C" forward-word
     bindkey "^[[1;3D" backward-word
 }
 
-function print-welcome-screen() {
+function print-welcome-screen {
     echo "";
     echo "WELCOME"
     cal;
@@ -177,7 +177,7 @@ function print-welcome-screen() {
     echo "";
 }
 
-function set_debug() {
+function set_debug {
     HOME_ENV="$HOME/.env/"
     ENV_DEBUG_SETUP_FILE="$HOME_ENV/.debug-setup"
     if [[ ! -f ${ENV_DEBUG_SETUP_FILE} ]]; then
@@ -193,7 +193,7 @@ function set_debug() {
     fi
 }
 
-function run-setup-scripts() {
+function run-setup-scripts {
     LINUX_ENV_REPO=$HOME/development/my-repos/linux-env/
     SETUP_ENV_SCRIPT=${LINUX_ENV_REPO}/setup-env.sh
     

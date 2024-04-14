@@ -6,23 +6,23 @@ MY_APACHE_MAIL="'snemeth@apache.org'"
 MY_APACHE_USERNAME="snemeth"
 PROJECTS="'YARN\|SUBMARINE\|HADOOP'"
 
-function hadoop-upstream-stats-projects() {
+function hadoop-upstream-stats-projects {
     get-hadoop-upstream-stats "$GIT_LOG_PY_SCRIPT --grep $MY_NAME_VARIATIONS --oneline --final-grep $PROJECTS"
 }
 
-function hadoop-upstream-stats-count-projects() {
+function hadoop-upstream-stats-count-projects {
     get-hadoop-upstream-stats "$GIT_LOG_PY_SCRIPT --grep $MY_NAME_VARIATIONS --oneline --count --final-grep $PROJECTS"
 }
 
-function hadoop-upstream-stats-count() {
+function hadoop-upstream-stats-count {
     get-hadoop-upstream-stats "$GIT_LOG_PY_SCRIPT --grep $MY_NAME_VARIATIONS --oneline --count"
 }
 
-function hadoop-upstream-stats-committed() {
+function hadoop-upstream-stats-committed {
     get-hadoop-upstream-stats "$GIT_LOG_PY_SCRIPT --author $MY_APACHE_MAIL --oneline --count"
 }
 
-function hadoop-upstream-stats-all() {
+function hadoop-upstream-stats-all {
     commits=$(get-hadoop-upstream-stats "$GIT_LOG_PY_SCRIPT --grep $MY_NAME_VARIATIONS --oneline --count --trim-count")
     committed=$(get-hadoop-upstream-stats "$GIT_LOG_PY_SCRIPT --author $MY_APACHE_USERNAME --oneline --count --trim-count")
     num_commits=$(echo ${commits} | tail -n1)
@@ -34,18 +34,18 @@ function hadoop-upstream-stats-all() {
 }
 
 # TODO this does not work anymore :(
-function hadoop-upstream-stats-count-by-person() {
+function hadoop-upstream-stats-count-by-person {
     NAME_VARIATIONS="$1"
     get-hadoop-upstream-stats "$GIT_LOG_PY_SCRIPT --grep $NAME_VARIATIONS --oneline --count"
 }
 
 # TODO this does not work anymore :(
-function hadoop-upstream-stats-by-person() {
+function hadoop-upstream-stats-by-person {
     NAME_VARIATIONS="$1"
     get-hadoop-upstream-stats "$GIT_LOG_PY_SCRIPT --grep $NAME_VARIATIONS --oneline"
 }
 
-function get-hadoop-upstream-stats() {
+function get-hadoop-upstream-stats {
 #    set -x
     local cmd=$1
     goto-hadoop;

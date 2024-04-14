@@ -1,6 +1,6 @@
 #! /bin/bash
 
-function yarn-compare-upstream-filter-vs-downstream() {
+function yarn-compare-upstream-filter-vs-downstream {
     # IMPORTANT --> PREREQUISITES
     # 1. Save csv file from jira filter to $DIR
     # 2. CSV file should be in this format: Issue key is expected to be in the 2nd column

@@ -17,7 +17,7 @@
 
 #Should be executed from CM root dir
 
-function cmhack() {
+function cmhack {
     FILES=`git status *.java | grep '.java' | grep -v -i test | sed s/modified\://g`
     #FILES=`git log --name-only HEAD^..HEAD | grep java | grep -v -i test`
     #FILES="web/src/main/java/com/cloudera/cmf/service/yarn/YarnParams.java  web/src/main/java/com/cloudera/cmf/service/yarn/YarnConfigFileDefinitions.java"

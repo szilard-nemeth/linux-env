@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # TODO Now we have 3 copies of the same script --> MIGRATE TO PYTHON
-function sync-yarn-dev-tools-repo-internal() {
+function sync-yarn-dev-tools-repo-internal {
     BRANCH="$1"
     local tmp_dir=$(mktemp -d -t yarn-dev-tools-XXXXXX)
     local repo_name="yarn-dev-tools"
@@ -34,10 +34,10 @@ function sync-yarn-dev-tools-repo-internal() {
     cd ${original_dir}
 }
 
-function sync-yarn-dev-tools-repo() {
+function sync-yarn-dev-tools-repo {
     sync-yarn-dev-tools-repo-internal master
 }
 
-function sync-yarn-dev-tools-repo-branch() {
+function sync-yarn-dev-tools-repo-branch {
     sync-yarn-dev-tools-repo-internal $1
 }

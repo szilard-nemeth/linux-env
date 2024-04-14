@@ -2,7 +2,7 @@
 
 #LOOK_FOR="codehaus/xfire/spring"
 
-function find_names_in_jars() {
+function find_names_in_jars {
     dir="$1"
     JAR_FILE="$2"
     LOOK_FOR="$3"
@@ -19,7 +19,7 @@ function find_names_in_jars() {
 }
 
 
-function find_names_in_all_jars() {
+function find_names_in_all_jars {
     dir="$1"
     LOOK_FOR="$2"
     
@@ -34,13 +34,13 @@ function find_names_in_all_jars() {
     done
 }
 
-function grep_in_nodemanager_jar() {
+function grep_in_nodemanager_jar {
     find /opt/hadoop/share/hadoop/yarn/ -iname 'hadoop-yarn-server*nodemanager*' ! -iname "*test*.jar" ! -iname "*sources*jar" -printf "unzip -c %p | grep -q '$1' && echo %p\n"
     find /opt/hadoop/share/hadoop/yarn/ -iname 'hadoop-yarn-server*nodemanager*' ! -iname "*test*.jar" ! -iname "*sources*jar" -printf "unzip -c %p | grep 'Calling pluginManager' && echo %p\n" | sh
 }
 
 
-function grep_in_code() {
+function grep_in_code {
     SEARCH_FOR="$1"
 
     FIND_RESULTS=$(find /opt/hadoop/share/hadoop/yarn/ -iname 'hadoop-yarn-server*nodemanager*' ! -iname "*test*.jar" ! -iname "*sources*jar")
@@ -54,7 +54,7 @@ function grep_in_code() {
     cd -
 }
 
-function grep_in_code_from_given_jar() {
+function grep_in_code_from_given_jar {
     SEARCH_FOR="$1"
     
      JAR="/opt/hadoop/share/hadoop/yarn/hadoop-yarn-server-nodemanager-3.3.0-SNAPSHOT.jar"

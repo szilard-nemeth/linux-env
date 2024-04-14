@@ -14,7 +14,7 @@ function printf_debug {
 
 #TODO Make setup colored: error messages with red, standard messages with white, etc.
 ###############################
-function initial_setup() {
+function initial_setup {
     if test -n "$ZSH_VERSION"; then
         PROFILE_SHELL=zsh
     elif test -n "$BASH_VERSION"; then
@@ -53,7 +53,7 @@ function initial_setup() {
     fi
 }
 
-function copy_files() {
+function copy_files {
     #echo "Arguments to copy files: $@"
     
     #Init env file mappings
@@ -110,7 +110,7 @@ function copy_files() {
     done
 }
 
-function source_scripts() {
+function source_scripts {
     source_from=$1
     src_first_orig="$2"
     src_first=${source_from}/${src_first_orig}
@@ -139,13 +139,13 @@ function source_scripts() {
     printf_debug "Done sourcing files from ${source_from}"
 }
 
-function source_single_file() {
+function source_single_file {
     src_file=$1
     printf_debug "Sourcing file ${src_file}"
     . "$src_file"
 }
 
-function source_files() {
+function source_files {
     local marker_file_name=$1
     local from_dir="$WORKPLACE_SPECIFIC_DIR"
 
@@ -172,7 +172,7 @@ function source_files() {
     printf_debug "Done sourcing $marker_file_name files from $from_dir"
 }
 
-function add_to_path() {
+function add_to_path {
     marker_file_name=$1
     from_dir="$2"
 
@@ -185,13 +185,13 @@ function add_to_path() {
     printf_debug "Done sourcing $marker_file_name files from $from_dir"
 }
 
-function add_to_path_directly() {
+function add_to_path_directly {
     dir=$1
     printf_debug "Adding directory: $dir to PATH"
     PATH=$PATH:${dir}
 }
 
-function set_matched_dirs() {
+function set_matched_dirs {
     local from_dir=$1
     local marker_file_name=$2
 
@@ -205,7 +205,7 @@ function set_matched_dirs() {
 }
 
 #TODO migrate all programs to use this function
-function brew_install() {
+function brew_install {
     local program=$1
     
     brew ls --versions ${program}
@@ -220,7 +220,7 @@ function brew_install() {
 #TODO migrate all programs to use this function
 #TODO Optimize: brew search --casks is pretty slow: Could query multiple programs to speed up: brew search --casks prog1 prog2 progn
 #https://discourse.brew.sh/t/how-can-i-get-a-list-of-the-available-casks/6769
-function brew_cask_install() {
+function brew_cask_install {
     local program=$1
     
     brew search --casks ${program}
@@ -232,7 +232,7 @@ function brew_cask_install() {
     fi
 }
 
-function check_version() {
+function check_version {
     local program="$1"
     local currentver=$(eval $2)
     local requiredver="$3"
@@ -246,7 +246,7 @@ function check_version() {
     fi
 }
 
-function initial_setup_macos() {
+function initial_setup_macos {
     echo "=== Running initial macOS setup ==="
     echo "Checking if Homebrew is installed..."
     if ! hash brew 2>/dev/null; then
@@ -393,7 +393,7 @@ function initial_setup_macos() {
     echo "complete" > "${ENV_SETUP_STATUS}"
 }
 
-function determine_platform() {
+function determine_platform {
     platform='unknown'
     unamestr=`uname`
     if [[ "$unamestr" == 'Linux' ]]; then
@@ -406,7 +406,7 @@ function determine_platform() {
     echo ${platform}
 }
 
-function remove-stale-scripts() {
+function remove-stale-scripts {
   local scripts_rm_dir="$HOME_LINUXENV_DIR/scripts/"
   local scripts_backup_dir="$HOME/_stale_linuxenv_scripts/"
   mkdir -p $scripts_backup_dir
@@ -440,7 +440,7 @@ function setup-vars-aliases {
 }
 
 
-function copy_files_from_linuxenv_repo_to_home() {
+function copy_files_from_linuxenv_repo_to_home {
     declare -a COPY_LIST=()
     
     #Bash
@@ -487,7 +487,7 @@ function copy_files_from_linuxenv_repo_to_home() {
     #set +e
 }
 
-function setup-pythonpath() {
+function setup-pythonpath {
   echo "Setting up PYTHONPATH"
   ASDF_PYTHON_LIBS=$(asdf where python)/lib/python3.8/site-packages
   STANDARD_PYTHON_LIBS="$HOME/Library/Python/3.8/lib/python/site-packages/"

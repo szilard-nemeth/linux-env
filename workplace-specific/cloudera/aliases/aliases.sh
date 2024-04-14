@@ -94,7 +94,7 @@ alias cm-build-libs-notestbuild="cd ./libs && ../tools/cmf-mvn $CM_SKIPTESTS $CM
 alias backup-devdir="tmpdate=tar czf /tmp/devbackup-$(eval date-formatted).gz $HOME/development/"
 alias backup-home="tar czf /tmp/homedir-backup-$(eval date-formatted).gz $HOME | tee /tmp/homedir-backup-$(date +%Y%m%d_%H%M%S).log"
 
-function backup-currdir() {
+function backup-currdir {
   local backup_path="$HOME/googledrive/backup/codebackup/"
   tar czf "$backup_path/$(basename $(pwd))-$(eval date-formatted).gz" ./
   echo "Backup results in dir: $backup_path"

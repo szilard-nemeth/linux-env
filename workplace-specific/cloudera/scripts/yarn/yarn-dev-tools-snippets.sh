@@ -7,14 +7,14 @@ alias yarn-backport-diff-generator-gerrit="python3 $OTHER_REPOS_DIR/gandras/hado
 alias yarn-backport-diff-generator-upstream="python3 $OTHER_REPOS_DIR/gandras/hadoop-scripts/github_us_backport_diff_generator.py"
 
 
-function setup() {
+function setup {
     export UPSTREAM_HADOOP_DIR=${HADOOP_DEV_DIR}
     export DOWNSTREAM_HADOOP_DIR=${CLOUDERA_HADOOP_ROOT}
     export TASKS_DIR="$HOME/yarn-tasks/"
 }
 
 #####LESS COMPLEX SCRIPTS CAN STAY HERE, AS IT'S NOT WORTH IT TO MIGRATE THESE SMALL SCRIPTS TO PYTHON
-function yarn-get-remote-cm-nm-dir() {
+function yarn-get-remote-cm-nm-dir {
     #Example usage: get-remote-cm-nm-dir bsteinbach-gpu-2.vpc.cloudera.com
     local host="$1"
     local process_dir="/var/run/cloudera-scm-agent/process/"
@@ -22,7 +22,7 @@ function yarn-get-remote-cm-nm-dir() {
     ssh "systest@${host}" "set -x;$get_nm_dir_cmd;sudo ls -latr $process_dir/"'$nm_dir'
 }
 
-function yarn-get-remote-cm-nm-dir-public-cloud() {
+function yarn-get-remote-cm-nm-dir-public-cloud {
     #Example usage: get-remote-cm-nm-dir bsteinbach-gpu-2.vpc.cloudera.com
     local host="$1"
     local process_dir="/var/run/cloudera-scm-agent/process/"
@@ -30,7 +30,7 @@ function yarn-get-remote-cm-nm-dir-public-cloud() {
     ssh -i ~/.ssh/hw-priv-pem-key "cloudbreak@${host}" "set -x;$get_nm_dir_cmd;sudo ls -latr $process_dir/"'$nm_dir'
 }
 
-function yarn-get-remote-cm-rm-dir-public-cloud() {
+function yarn-get-remote-cm-rm-dir-public-cloud {
     #Example usage: get-remote-cm-nm-dir bsteinbach-gpu-2.vpc.cloudera.com
     local host="$1"
     local process_dir="/var/run/cloudera-scm-agent/process/"
@@ -52,7 +52,7 @@ function yarn-fetch-rm-config-from-host-public-cloud {
 }
 
 
-function timezones() {
+function timezones {
     echo -n "Local time: " && TZ=CET date; \
     echo -n "Time in PA: " && TZ=America/Los_Angeles date; \
     echo -n "Time in Melbourne: " && TZ=Australia/Melbourne date; \
@@ -60,7 +60,7 @@ function timezones() {
 }
 
 # TODO outdated path, should use YARN dev tools
-function reviewsync() {
+function reviewsync {
     python $HOME/development/my-repos/hadoop-reviewsync/reviewsync/reviewsync.py \
     --gsheet \
     --gsheet-client-secret "/Users/snemeth/.secret/client_secret_hadoopreviewsync.json" \
@@ -72,7 +72,7 @@ function reviewsync() {
     -b branch-3.2 branch-3.1 -v
 }
 
-function build-upload-yarn-to-cluster() {
+function build-upload-yarn-to-cluster {
     setup
     if [[ $# -ne 1 ]]; then
         echo "Usage: build-upload-yarn-to-cluster [hostname]"
@@ -86,7 +86,7 @@ function build-upload-yarn-to-cluster() {
     mvn clean package -Pdist -DskipTests -Dmaven.javadoc.skip=true && scp hadoop-dist/target/hadoop-${MVN_VER}.tar.gz systest@${HOST_TO_UPLOAD}:~
 }
 
-function yarn-downstream-commits() {
+function yarn-downstream-commits {
     goto-cldr-hadoop
     echo "Branch: cdpd-master, author=snemeth"
     git log cdpd-master --author=snemeth --oneline
@@ -96,7 +96,7 @@ function yarn-downstream-commits() {
     cd -
 }
 
-function yarn-listupstreamversions() {
+function yarn-listupstreamversions {
     # This will be more robust but requires switching branches:
     # https://stackoverflow.com/questions/3545292/how-to-get-maven-project-version-to-the-bash-command-line
     for branch in trunk branch-3.3 branch-3.2 branch-3.1

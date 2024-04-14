@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function mount-iso() {
+function mount-iso {
 #    dir=/home/szyszy/mnt/temp_imagedisk
     dir=$1
     mkdir -p ${dir}
@@ -9,7 +9,7 @@ function mount-iso() {
     ls -l
 }
 
-function extractall() {
+function extractall {
     ls *.zip|awk -F'.zip' '{print "unzip "$0" -d "$1}' | sh
 }
 
@@ -23,11 +23,11 @@ function extract-all-multipart {
     #zip -r all.zip all
 }
 
-function extract-all-yarn-from-bundle() {
+function extract-all-yarn-from-bundle {
     find . -type f -iname "*nodemanager*\.gz*" -o -iname "*resourcemanager*\.gz" -execdir gzip -dk '{}' \;
 }
 
-function up() {
+function up {
   local d=""
   limit=$1
   for ((i=1 ; i <= limit ; i++))
@@ -42,7 +42,7 @@ function up() {
 }
 
 #dirsize - finds directory sizes and lists them for the current directory
-function dirsize () {
+function dirsize  {
     du -shx * .[a-zA-Z0-9_]* 2> /dev/null | \
     egrep '^ *[0-9.]*[MG]' | sort -n > /tmp/list
     egrep '^ *[0-9.]*M' /tmp/list
@@ -50,7 +50,7 @@ function dirsize () {
     rm -rf /tmp/list
 }
 
-function extract () {
+function extract  {
      if [ -f $1 ] ; then
          case $1 in
              *.tar.bz2)   tar xjf $1        ;;
@@ -71,7 +71,7 @@ function extract () {
      fi
 }
 
-function diff_files_in_dirs() {
+function diff_files_in_dirs {
   #EXAMPLE CALL:
   #diff_files_in_dirs ~/development/my-repos/python/yarn-dev-func ~/development/my-repos/linux-env/workplace-specific/cloudera/scripts/yarn/python "*.py"
   if [ $# -ne 3 ]; then
@@ -92,7 +92,7 @@ function diff_files_in_dirs() {
 #  set +x
 }
 
-function zip-directory() {
+function zip-directory {
     #EXAMPLE CALL:
     #zip-directory <dir> <path-to-tar>
     if [ $# -ne 2 ]; then

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function setup-vars() {
+function setup-vars {
     # HADOOP_DEV_DIR and CLOUDERA_HADOOP_ROOT need to be defined
     export UPSTREAM_HADOOP_DIR=${HADOOP_DEV_DIR}
     export DOWNSTREAM_HADOOP_DIR=${CLOUDERA_HADOOP_ROOT}
@@ -9,7 +9,7 @@ function setup-vars() {
     export YARNDEVTOOLS_ROOT="$HOME/.yarndevtools"
 }
 
-function yarndevtools() {
+function yarndevtools {
     ORIG_PYTHONPATH=$PYTHONPATH
     unset PYTHONPATH
 

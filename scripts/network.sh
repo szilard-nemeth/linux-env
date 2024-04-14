@@ -10,7 +10,7 @@ getMyIP() {
 }
 
 #netinfo - shows network information for your system
-function netinfo () {
+function netinfo {
     echo "--------------- Network Information ---------------"
     /sbin/ifconfig | awk /'inet addr/ {print $2}'
     /sbin/ifconfig | awk /'Bcast/ {print $3}'
@@ -19,14 +19,14 @@ function netinfo () {
     echo "---------------------------------------------------"
 }
 
-function setproxy(){
+function setproxy {
     if [[ -z "$http_proxy" ]];
         then export http_proxy=http://159.107.0.62:8080;export https_proxy=http://159.107.0.62:8080;echo "e/// proxy on";
     else unset http_proxy;unset https_proxy;echo "e/// proxy off";
     fi
 }
 
-function net-disconnect() {
+function net-disconnect {
     GW="$(sudo /sbin/route -n | awk '$1=="0.0.0.0" {print $2; exit}')"
     if [ ! -z "$GW" ]; then
         sudo /sbin/route del default gw "$GW"
@@ -34,6 +34,6 @@ function net-disconnect() {
     fi
 }
 
-function net-connect() {
+function net-connect {
     sudo /sbin/route add default gw "$(cat ~/.gateway)"
 }

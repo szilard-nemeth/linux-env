@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function sync-linux-env-repo() {
+function sync-linux-env-repo {
     # BASED ON THIS ANSWER: https://github.community/t5/How-to-use-Git-and-GitHub/Adding-a-folder-from-one-repo-to-another/m-p/5574#M1817
     local tmp_dir=$(mktemp -d -t linux-env-XXXXXX)
     local repo_name="linux-env"

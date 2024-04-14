@@ -160,7 +160,7 @@ function myrepos-install-googleapiwrapper-dev-to-yarndevtools {
 }
 
 
-function myrepos-rm-pythoncommons() {
+function myrepos-rm-pythoncommons {
   # Remove python-commons from all locations
   # Note: This intends to remove python-commons from default location
   rm -rf "/tmp/pcrm/" && mkdir -p "/tmp/pcrm/"
@@ -199,7 +199,7 @@ function myrepos-rm-pythoncommons() {
 	done
 }
 
-function myrepos-reset-pythoncommons() {
+function myrepos-reset-pythoncommons {
   echo "Pushing python-commons"
   cd $PYTHON_COMMONS_ROOT; git push
 
@@ -216,11 +216,11 @@ function myrepos-reset-pythoncommons() {
   myrepos-list-pythoncommons
 }
 
-function myrepos-grep-python() {
+function myrepos-grep-python {
   myrepos_filtered_find.py --extension "*.py" --exclude $COMMON_EXCLUDES | xargs grep $1
 }
 
-function myrepos-grep-all() {
+function myrepos-grep-all {
   # This did not work with files containing spaces:
   #https://serverfault.com/questions/268368/how-can-proj-handle-spaces-in-file-names-when-using-xargs-on-find-results
 
@@ -245,7 +245,7 @@ function myrepos-grep-todos {
 
 # TODO add function that greps for python + shell scripts --> myrepos_filtered_find should accept multiple extensions
 
-function myrepos-grep-C5() {
+function myrepos-grep-C5 {
   myrepos_filtered_find.py --extension "*.py" --exclude $COMMON_EXCLUDES | xargs grep -C5 $1
 }
 

@@ -3,7 +3,7 @@
 #set -x
 usage() { echo "Usage: $0 -h [HOSTNAME] -t [TESTCASEDIR] -s" 1>&2; exit 1; }
 
-function run_yarn_testcases() {
+function run_yarn_testcases {
     local testcase_dir=$1
     local config_script="$2"
     CLDR_YARN_CFG_DIR="/home/systest/yarnconfigs"
