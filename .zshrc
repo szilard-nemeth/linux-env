@@ -28,6 +28,8 @@ function setup {
     setup-kitty
     setup-sdkman
     setup-tab-title
+
+    setopt select_editor
 }
 
 function setup-antigen {
