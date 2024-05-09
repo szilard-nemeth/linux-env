@@ -1221,7 +1221,70 @@ function dex-change-deployment-image-privatestack {
   set +x
 }
 
+function dex-analyse-gbn-tests {
+  # PREREQUISITE #1: https://github.com/jstemmer/go-junit-report
+  # INSTALLATION: go install github.com/jstemmer/go-junit-report/v2@latest
+
+  # PREREQUISITE #2: https://github.com/inorton/junit2html
+  # INSTALLATION: pip3 install junit2html
+
+
+  # Example invocation
+  # dex-analyse-gbn-tests /Users/snemeth/Downloads/cde-flaky-tests-and-failed-builds
+
+  # START LINE
+  # 2024-05-08 22:04:14 - INFO-root::util|431:: go test -count=1 -timeout 15m -race  ./cmd/... ./lib/... ./pkg/...[0m
+
+  # END LINE
+  # 2024-05-08 22:16:18 - INFO-root::util|431:: make: *** [Makefile:118: gotest] Error 1[0m
+
+  local main_dir="$1"
+
+  # 1. Find build.log file from main GBN dir
+  local files=$(find $main_dir -iname build.log)
+
+  IFS=$'\n'
+  files=($(find $main_dir -iname build.log))
+  unset IFS
+
+  echo "Generating JUnit report HTML files..."
+  # set -x
+  for file in "${files[@]}"
+  do
+    dest_dir=$(dirname $file)
+    
+    # 2. Find start line
+    start_line=$(loganalysis-get-linenumber-for-pattern $file "go test ")
+
+    # 3. Find end line
+    end_line=$(loganalysis-get-linenumber-for-pattern $file "Makefile.*gotest")
+
+    if [[ ! "$start_line" || ! "$end_line" ]]; then
+        echo "Skipping file: $file" 
+        # echo "Skipping file: $file as start line and end line for Go test was not found!"
+        continue
+    fi
+
+    local split="/tmp/split_$(date +%s).txt"
+    loganalysis-split-file $start_line $end_line $file $split
+
+    cat $split | go-junit-report -set-exit-code > $dest_dir/junit_report.xml
+    python -m junit2htmlreport $dest_dir/junit_report.xml $dest_dir/junit_report.html
+
+    echo "Generated file: $dest_dir/junit_report.html"
+
+    # Uncomment if you don't want to open files
+    open $dest_dir/junit_report.html
+  done
+  # set +x
+}
+
 
 ###################################################################### DEX RUNTIME ######################################################################
 
 dex-export-gopath
+
+
+
+######### 
+
