@@ -13,6 +13,10 @@ DEX_DOCKER_IMAGES_GENERATED_FILE="$DEX_DEV_ROOT/cloudera/docker_images.generated
 DUMMY_CSI_WORKSPACE="s"
 PRIVATE_STACK_CSI_WORKSPACE=$(whoami)
 
+############## https://github.infra.cloudera.com/thunderhead/thunderhead/tree/master/tools/control-plane-promotion-helper ##############
+export OKTA_USER_NAME=snemeth@cloudera.com
+export JENKINS_API_TOKEN=119706cf7650b35773e2c80d0e18413e17
+
 
 NAMESPACE_PRIVATE_STACK="snemeth-dex"
 NAMESPACE_MOWPRIV="dex"
@@ -53,7 +57,8 @@ complete -C '/usr/local/bin/aws_completer' aws
 # DEX Variables, Add them to path
 export CSI_HOME="$HOME/development/cloudera/cde/cloud-services-infra/"
 export DEX_DEV_TOOLS="$DEX_DEV_ROOT/dev-tools"
-export PATH=$PATH:$CSI_HOME/bin:$CSI_HOME/moonlander:$DEX_DEV_TOOLS:$DEX_DEV_ROOT/build
+log_search="$DEX_DEV_ROOT../log-search/venv/bin"
+export PATH=$PATH:$CSI_HOME/bin:$CSI_HOME/moonlander:$DEX_DEV_TOOLS:$DEX_DEV_ROOT/build:$log_search/
 
 
 # Moonlander / Private stacks: https://github.infra.cloudera.com/CDH/dex/wiki/Private-Stacks-Moonlander
@@ -583,8 +588,8 @@ function _dex-create-private-stack {
   # TODO: piping to tee is not line buffered!
   #  Consider replacing it with 'script': https://unix.stackexchange.com/a/61833/189441
   if [[ "$mow_env" == "mow-dev" ]]; then
-      mow-dev ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 2>&1 | tee "$logfilename"
       # mow-dev ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
+      mow-dev ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 2>&1 | tee "$logfilename"
   elif [[ "$mow_env" == "mow-priv" ]]; then
       # mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
       mow-priv ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 2>&1 | tee "$logfilename"
@@ -1278,6 +1283,75 @@ function dex-analyse-gbn-tests {
   done
   # set +x
 }
+
+function dex-logsearch-last-hour {
+  AWS_PROFILE=cu_logs_dev log-search --env dev --from 'now-1h/h' --to 'now/h' '@app:dex'
+}
+
+function dex-logsearch-dex-13563 {
+  # FROM: May 9 2024 9:18:00 AM 
+  # TO: May 9 2024, 5:12:00 PM --> Add 30 seconds
+  local dest_file=/tmp/logsearch-results-$(date-formatted)
+  echo "Saving results to file: /tmp/logsearch-results"
+  set -x
+  AWS_PROFILE=cu_logs_dev log-search --env dev --from "2024-05-09T09:18:00.000Z" --to "2024-05-09T17:12:30.000Z" --fields-to-print "@timestamp,@message" --print-stats --print-config "@app.keyword:dex AND @cluster:mow AND @env:manowar_dev" > /tmp/logsearch-results
+  set +x
+}
+
+
+function dex-save-logs-and-config-cp-mowpriv {
+  local namespace="$NAMESPACE_MOWPRIV"
+  local target_dir="/tmp/dexlogs-mowpriv/"
+
+  get-pods-mowpriv
+  # _dex-save-logs "mow-priv" $namespace $target_dir
+
+  mkdir -p /tmp/dexconfig-cp/
+
+  # Example output for kubectl cp:
+    # Actual pod: dex-cp-59b598448b-4rw4b
+    # tar: removing leading '/' from member names
+    # warning: skipping symlink: "/tmp/dexconfig-cp/dex-cp-59b598448b-4rw4b/dex.yaml" -> "..data/dex.yaml" (consider using "kubectl exec -n "dex" "dex-cp-59b598448b-4rw4b" -- tar cf - "/etc/dex/conf/dex.yaml" | tar xf -")
+    # Actual pod: dex-cp-59b598448b-bn5vv
+    # warning: skipping symlink: "/tmp/dexconfig-cp/dex-cp-59b598448b-bn5vv/dex.yaml" -> "..data/dex.yaml" (consider using "kubectl exec -n "dex" "dex-cp-59b598448b-bn5vv" -- tar cf - "/etc/dex/conf/dex.yaml" | tar xf -")
+
+  # Example output for kubectl ls: 
+    # Found pods on mow-priv: dex-cp-59b598448b-4rw4b dex-cp-59b598448b-bn5vv dex-cp-59b598448b-qbwnp 
+    # +_get-pods:12> set +x
+    # Actual pod: dex-cp-59b598448b-4rw4b
+    # lrwxrwxrwx    1 root     1345            15 May 21 03:17 /etc/dex/conf/dex.yaml -> ..data/dex.yaml
+    # Actual pod: dex-cp-59b598448b-bn5vv
+    # lrwxrwxrwx    1 root     1345            15 May 21 03:20 /etc/dex/conf/dex.yaml -> ..data/dex.yaml
+  for pod in ${found_pods}; do
+    echo "Actual pod: $pod"
+    mkdir -p /tmp/dexconfig-cp/$pod
+
+    # UNCOMMENT these to understand linking
+    # kubectl exec -n "dex" "$pod" -- ls -al /etc/dex/conf/dex.yaml
+    # kubectl exec -n "dex" "$pod" -- readlink /etc/dex/conf/dex.yaml
+    # kubectl exec -n "dex" "$pod" -- ls -la /etc/dex/conf/..data
+    
+    res=$(kubectl exec -n "dex" "$pod" -- readlink /etc/dex/conf/..data)
+    echo $res
+    kubectl exec -n "dex" "$pod" -- ls -la /etc/dex/conf/$res
+
+    abspath=$(kubectl exec -n "dex" "$pod" -- realpath /etc/dex/conf/$res/dex.yaml)
+    echo "Absolute path: $abspath"
+    # Absolute path should be something like: /etc/dex/conf/..2023_09_11_17_13_14.1679604084/dex.yaml
+    # kubectl cp -n dex -c dex-cp dex/$pod:/etc/dex/conf/dex.yaml /tmp/dexconfig-cp/$pod/dex.yaml
+
+    # kubectl exec -n "dex" $pod -- tar cf - "$abspath" | tar xf - 
+    dex_yaml_file="/tmp/dexconfig-cp/$pod/dex.yaml"
+    echo "Saving pod config to file: $dex_yaml_file"
+    kubectl cp -n dex -c dex-cp dex/$pod:$abspath $dex_yaml_file
+
+    env_file="/tmp/dexconfig-cp/$pod/env.txt"
+    echo "Saving env to file: $env_file"
+    kubectl exec -n "dex" $pod -- env > $env_file
+  done
+}
+
+
 
 
 ###################################################################### DEX RUNTIME ######################################################################
