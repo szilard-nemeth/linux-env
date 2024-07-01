@@ -152,6 +152,7 @@ function setup-kitty {
     echo "Setting up kitty..."
     autoload -Uz compinit
     compinit
+    # TODO https://unix.stackexchange.com/a/470959/189441 / Add zstyle ':completion:*' menu select ?
     # Completion for kitty
     kitty + complete setup zsh | source /dev/stdin
 }
