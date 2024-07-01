@@ -45,9 +45,10 @@ function gh-apply-patch {
   echo "Showing PR info..."
   gh pr view $PR_ID | head -n 20
 
-  echo "Applying PR diff..."
+  local pr_patch_file="/tmp/github-pr-$PR_ID.patch"
   gh pr diff $PR_ID > /tmp/github-pr-$PR_ID.patch
-  git apply /tmp/github-pr-$PR_ID.patch
+  echo "Applying PR diff from file: $pr_patch_file"
+  git apply $pr_patch_file
 }
 
 function gh-diff-cde-backport {
@@ -82,6 +83,10 @@ function gh-diff-cde-backport {
   echo "Making diff of 2 PRs"
 
   diff /tmp/github-pr-$PR_ID_MAIN_BR.patch /tmp/github-pr-$PR_ID_FEAT_BR.patch > /tmp/github-pr-diff-$PR_ID_MAIN_BR_$PR_ID_FEAT_BR.diff
+  echo "Diff saved to file: /tmp/github-pr-diff-$PR_ID_MAIN_BR_$PR_ID_FEAT_BR.diff"
+
+  echo "Showing diff:"
+  diff --color /tmp/github-pr-$PR_ID_MAIN_BR.patch /tmp/github-pr-$PR_ID_FEAT_BR.patch
   set +x
 }
 
@@ -93,18 +98,23 @@ function gh-checkout-pr {
 }
 
 function gh-backport-cde-pr {
-    # Example: gh-backport-cde-pr 5669 DEX-1.20.1
+    if [[ "$#" -ne 2 ]]; then
+        echo "Usage: gh-backport-cde-pr <PR ID> <branch to backport>"
+        echo "Usage example: gh-backport-cde-pr 5669 DEX-1.20.1"
+        return 1
+    fi
+
     PR_ID=$1
     TARGET_R_BRANCH="$2"
-    TARGET_L_BRANCH="pr-backport-$TARGET_R_BRANCH"
-    FORK_BRANCH=fork
+    TARGET_L_BRANCH="pr-backport-$PR_ID-$TARGET_R_BRANCH"
+    FORK_REMOTE=fork
     FORK_REPO_NAME=snemeth
 
     #TODO Validate if target branch exists
     # TODO error if gh does not exist
 
 
-    git fetch
+    git fetch --all
     COMMIT_HASH=$(gh pr view $PR_ID --json mergeCommit | jq '.mergeCommit.oid' | tr -d "\"")
     PR_TITLE=$(gh pr view $PR_ID --json title  | jq '.title' | tr -d "\"")
 
@@ -128,16 +138,20 @@ function gh-backport-cde-pr {
     fi
     
 
-    echo "Pushing..."
-    #git push --dry-run
-    #echo "Execute: "
-    #echo "git push $TARGET_L_BRANCH -u fork $TARGET_R_BRANCH"
+    echo "Pushing (dry-run)"
+    git push --dry-run $FORK_REMOTE -u $TARGET_L_BRANCH
+
     set -x
-    git push $TARGET_L_BRANCH -u $FORK_BRANCH $TARGET_R_BRANCH
+    if ! git push -u $FORK_REMOTE -u $TARGET_L_BRANCH; then
+        echo "Error while pushing commit"
+        # TODO Reset to original branch
+        git checkout origin/develop && git branch -D $TARGET_L_BRANCH
+        return -1
+    fi
     set +x
 
 
-    echo "Creating backport PR..."
+    echo "Git push successful, Creating backport PR..."
     gh pr create --draft --title $PR_TITLE --body "Backport of #$PR_ID" --base $TARGET_R_BRANCH --head $FORK_REPO_NAME:$TARGET_L_BRANCH 
     echo "NOTE: Remember to un-draft your PR"
 }
@@ -212,4 +226,44 @@ function git-dex-commits-on-feature-branch {
     git rev-list --no-merges --count HEAD ^develop
 }
 
+
+function git-diff-file-list-across-commits {
+    # example call: git-diff-file-list-across-commits 5b459b0 fork/DEX-13223
+
+    c1=$(git rev-parse $1)
+    c2=$(git rev-parse $2)
+
+    echo "Commit 1 ref: $1"
+    echo "Commit 1 hash: $c1"
+    echo "Commit 2 ref: $2"
+    echo "Commit 1 hash: $c2"
+
+
+    echo "Commit 1 message: $(git log --oneline $c1 -1)"
+    echo "Commit 2 message: $(git log --oneline $c2 -1)"
+    echo "Commit 1 # of files: $(git diff --name-only $c1 $c1^ | wc -l)"
+    echo "Commit 2 # of files: $(git diff --name-only $c2 $c2^ | wc -l)"
+
+    rm -rf /tmp/commitfilelist/; mkdir -p /tmp/commitfilelist/
+    c1_files="/tmp/commitfilelist/c1-file-list-$c1.txt"
+    c2_files="/tmp/commitfilelist/c2-file-list-$c2.txt"
+    
+    echo "Commit 1 file list: $c1_files"
+    echo "Commit 2 file list: $c2_files"
+
+
+    git diff --name-only $c1 $c1^ > $c1_files
+    git diff --name-only $c2 $c2^ > $c2_files
+    
+    cat $c1_files | sort | uniq > /tmp/commitfilelist/c1-files-sort-uniq-$c1.txt
+    cat $c2_files | sort | uniq > /tmp/commitfilelist/c2-files-sort-uniq-$c2.txt
+
+
+    diff_result=/tmp/commitfilelist/diff-c1-vs-c2.txt
+    diff /tmp/commitfilelist/c1-files-sort-uniq-$c1.txt /tmp/commitfilelist/c2-files-sort-uniq-$c2.txt > $diff_result
+
+    echo "Diff result file: $diff_result"
+
+    echo "complete"
+}
 
