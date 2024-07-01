@@ -7,9 +7,27 @@ function loganalysis-strip-date {
 }
 
 function loganalysis-split-file {
+  if [ $# -ne 3 ]; then
+    echo "Usage: $0 <from line> <to line> <file>"
+    return 1
+  fi
+
   from=$1
   to=$2
   src_file=$3
-  dst_file=$4
-  sed -n "$from,$to"p $src_file > $dst_file
+  sed -n "$from,$to"p $src_file
+}
+
+function loganalysis-head-tail {
+  stdin=$(</dev/stdin)
+  echo $stdin | head -n 15
+  echo "..."
+  echo "..."
+  echo $stdin | tail -n 15
+}
+
+function loganalysis-get-linenumber-for-pattern {
+  src_file="$1"
+  pattern="$2"
+  grep -n $pattern $src_file | grep -Eo '^[^:]+'
 }
