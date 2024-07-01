@@ -5,7 +5,8 @@ CLOUDERA_DEV_ROOT="$HOME/development/cloudera/"
 CLOUDERA_HADOOP_ROOT="$CLOUDERA_DEV_ROOT/hadoop/"
 HADOOP_MVN_DIR="$HOME/development/apache/hadoop-maven/"
 HADOOP_DEV_DIR="$HOME/development/apache/hadoop/"
-export DEX_DEV_ROOT="$HOME/development/cloudera/cde/dex/"
+export CDE_DEV_ROOT="$HOME/development/cloudera/cde/"
+export DEX_DEV_ROOT="$CDE_DEV_ROOT/dex/"
 
 CLOUDERA_DIR="$HOME_LINUXENV_DIR/workplace-specific/cloudera/"
 export CLOUDERA_DIR

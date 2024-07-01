@@ -94,13 +94,6 @@ alias cm-build-libs-notestbuild="cd ./libs && ../tools/cmf-mvn $CM_SKIPTESTS $CM
 alias backup-devdir="tmpdate=tar czf /tmp/devbackup-$(eval date-formatted).gz $HOME/development/"
 alias backup-home="tar czf /tmp/homedir-backup-$(eval date-formatted).gz $HOME | tee /tmp/homedir-backup-$(date +%Y%m%d_%H%M%S).log"
 
-function backup-currdir {
-  local backup_path="$HOME/googledrive/backup/codebackup/"
-  tar czf "$backup_path/$(basename $(pwd))-$(eval date-formatted).gz" ./
-  echo "Backup results in dir: $backup_path"
-  ls -lat $backup_path | grep gz | head -n1
-}
-
 alias python-precommit-all="pre-commit run --all-files"
 
 #### DEX
@@ -110,7 +103,7 @@ alias dex-update-dev-env="goto-dex;make update-dev-env"
 alias dex-docker-cleanup="docker rmi $(docker images | grep \"1\.18\.0\" | tr -s ' ' | cut -d ' ' -f 3) -f"
 alias goto-dex-7712-clitesting="cd $CLOUDERA_TASKS_CDE_DIR/dev-work-from-20221129/cli-testing"
 alias dex-print-tasks-dir="echo $CLOUDERA_TASKS_CDE_DIR"
-alias when-am-i-on-call="~/development/cloudera/pagerduty-helper/when_am_i_on_call.py --user snemeth"
+alias when-am-i-on-call="source ~/development/cloudera/pagerduty-helper/venv/bin/activate;~/development/cloudera/pagerduty-helper/when_am_i_on_call.py --user snemeth"
 
 
 ### DEX, Beni
@@ -120,3 +113,15 @@ alias dex-runtime-k9s="dexw -e dev -cid cluster-sn6sdnlq --auth cst -v -- k9s"
 
 ### DEXter
 alias dexter-clean-repo-branches="cd /Users/snemeth/dexter/dex && git checkout upgradeDexVersion && git reset develop --hard && git checkout dexDepsRelease && git reset develop --hard"
+
+
+function backup-currdir {
+  local backup_path="$HOME/googledrive/backup/codebackup/"
+  tar czf "$backup_path/$(basename $(pwd))-$(eval date-formatted).gz" ./
+  echo "Backup results in dir: $backup_path"
+  ls -lat $backup_path | grep gz | head -n1
+}
+
+function goto-cde-task {
+  cd $CLOUDERA_TASKS_CDE_DIR/$1
+}
