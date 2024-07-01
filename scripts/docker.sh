@@ -76,4 +76,6 @@ function docker-cleanup-guidance {
     echo "REMOVE IMAGES OLDER THAN DATE (3 weeks)"
     echo "docker image prune --all --filter \"until=504h\""
     echo "docker rmi \$(docker images --filter \"dangling=true\" -q --no-trunc)"
+
+    echo "More time based commands: https://dirask.com/posts/Docker-remove-images-older-than-some-specific-period-of-time-DnzWbD"
 }

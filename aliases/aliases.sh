@@ -19,8 +19,8 @@ alias edit-knowledgebase-private="subl ~/development/my-repos/knowledge-base-pri
 
 ## GOTO ALIASES
 alias goto-linuxenv-repo="cd $LINUX_ENV_REPO"
-alias goto-kb-repo="cd $KB_REPO"
-alias goto-kb-private-repo="cd $KB_PRIVATE_REPO"
+alias goto-kb-public="cd $KB_REPO"
+alias goto-kb-private="cd $KB_PRIVATE_REPO"
 alias goto-pythoncommons="cd $PYTHON_COMMONS_REPO"
 alias goto-yarndevtools="cd $YARNDEVTOOLS_REPO"
 
@@ -109,3 +109,5 @@ alias link-to-project-run-configurations="ln -s ~/development/my-repos/project-r
 
 alias history="history 1 -1"
 alias mgitst="mgitstatus --depth=10 -e"
+alias mgitst-myrepos="cd ~/development/my-repos/;mgitst"
+alias mgitst-cloudera="cd ~/development/cloudera/;mgitst"
