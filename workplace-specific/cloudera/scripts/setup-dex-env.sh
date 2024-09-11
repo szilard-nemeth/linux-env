@@ -1227,6 +1227,9 @@ function dex-change-deployment-image-privatestack {
 }
 
 function dex-analyse-gbn-tests {
+  # TO LAUNCH THE SCRIPT, RUN: 
+  # rm -rf ./investigation/gbn-55512206-1.23.0-b128;linuxenv-reload;dex-analyse-gbn-tests gbn-55512206-1.23.0-b128/
+
   # PREREQUISITE #1: https://github.com/jstemmer/go-junit-report
   # INSTALLATION: go install github.com/jstemmer/go-junit-report/v2@latest
 
@@ -1243,6 +1246,7 @@ function dex-analyse-gbn-tests {
   # END LINE
   # 2024-05-08 22:16:18 - INFO-root::util|431:: make: *** [Makefile:118: gotest] Error 1[0m
 
+  # set -x
   local main_dir="$1"
 
   # 1. Find build.log file from main GBN dir
@@ -1252,11 +1256,49 @@ function dex-analyse-gbn-tests {
   files=($(find $main_dir -iname build.log))
   unset IFS
 
+
+  mkdir investigation
+  mkdir -p "./investigation/$main_dir/"
+  
+  echo "Grepping for statuses and errors..."
+
+  grep -i "status: " $main_dir -R | grep -i fail  > "./investigation/$main_dir/grep-statuses.txt"
+  grep "Overall Status: Failed" $main_dir -R | grep "build\.log" | sort > "./investigation/$main_dir/grep-statuses-overall-status-failed.txt"
+
+  echo "'Overall Status: Failed' for build components:"
+  cat "./investigation/$main_dir/grep-statuses-overall-status-failed.txt"
+
+
+  # UNCOMMENT FOR BROADER SET: 
+    # This grep is for a more broad set of files, anything that has 'status: '
+    # status_files=$(grep -li "status: " $main_dir -R  | grep "build\.log" | sort | uniq)
+
+  # This grep is for a more narrow set of files, just grepping for failed overall status
+  status_files=$(grep -li "Overall Status: Failed" $main_dir -R  | grep "build\.log" | sort | uniq)
+  echo "Result files for status grep: $status_files"
+
+  if [ ! -z "$status_files" ]; then
+    for f in $(echo $status_files); do
+      echo "Processing status file: $f"
+      dirname_and_filename=$(echo $f | rev | cut -d '/' -f1-3 | rev)
+      IFS='/' read -rA arr <<< "$dirname_and_filename"
+      grep -i error $f > "./investigation/$main_dir/grep-error-in-${arr[1]}-${arr[2]}-${arr[3]}.txt"  
+    done
+    build_log=$(find $main_dir | grep dag_build/build.log)
+    
+  fi
+  # TODO generate error logs for all types of resulted files in $res
+  # set +x
+
+
+  # set +x
   echo "Generating JUnit report HTML files..."
   # set -x
   for file in "${files[@]}"
   do
-    dest_dir=$(dirname $file)
+    # ouput of dirname contains 'main_dir'
+    dest_dir="./investigation/$(dirname $file)"
+    mkdir -p $dest_dir
     
     # 2. Find start line
     start_line=$(loganalysis-get-linenumber-for-pattern $file "go test ")
@@ -1265,22 +1307,22 @@ function dex-analyse-gbn-tests {
     end_line=$(loganalysis-get-linenumber-for-pattern $file "Makefile.*gotest")
 
     if [[ ! "$start_line" || ! "$end_line" ]]; then
-        echo "Skipping file: $file" 
-        # echo "Skipping file: $file as start line and end line for Go test was not found!"
+        echo "Skipping file: $file, go test execution not found (as start line and end line for Go test was not found)"
         continue
     fi
 
     local split="/tmp/split_$(date +%s).txt"
-    loganalysis-split-file $start_line $end_line $file $split
+    loganalysis-split-file $start_line $end_line $file > $split
 
     cat $split | go-junit-report -set-exit-code > $dest_dir/junit_report.xml
     python -m junit2htmlreport $dest_dir/junit_report.xml $dest_dir/junit_report.html
 
-    echo "Generated file: $dest_dir/junit_report.html"
-
-    # Uncomment if you don't want to open files
-    open $dest_dir/junit_report.html
+    # Uncomment if you want to open files
+    # open $dest_dir/junit_report.html
   done
+
+  echo "Generated files: "
+  echo "$(find ./investigation/$main_dir -type f | sort)"
   # set +x
 }
 
