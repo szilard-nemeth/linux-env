@@ -529,6 +529,104 @@ function dex-create-service-in-stack {
 
 }
 
+function dex-initial-setup-dex-dev-docker {
+  if [[ $# -ne 1 ]]; then
+    echo "Usage: dex-setup-dex-dev-docker <server> <okta username>"
+    return 1
+  fi
+
+  SERVER="$1"
+  USERNAME="$2"
+  SSH_CMD="systest@$SERVER"
+
+  ### INIT: git, docker
+  ssh $SSH_CMD "/bin/bash -c \"$(curl -fsSL https://github.infra.cloudera.com/raw/CDH/dex/develop/dev-tools/bootstrap-buildbox.sh)\""
+
+
+  ### INIT: dex-dev-docker
+  # https://github.infra.cloudera.com/CDH/dex-utils/tree/master/dex-dev-docker
+  ssh $SSH_CMD 'mkdir -p ~/.gnupg'
+  scp -r ~/.gnupg/mow-priv $SSH_CMD:.gnupg/mow-priv
+  ssh $SSH_CMD "cd;git clone https://github.infra.cloudera.com/CDH/dex-utils.git"
+  ssh $SSH_CMD "cd;./dex-utils/dex-dev-docker/init.sh all $USERNAME"
+}
+
+
+function dex-create-private-stack-mowpriv-remote {
+  if [[ $# -ne 3 ]]; then
+    echo "Usage: dex-create-private-stack-mowpriv-remote <server> <hash or branch> <patch-file>"
+    return 1
+  fi
+
+  SERVER="$1"
+  HASH_OR_BRANCH="$2"
+  PATCH_FILE="$3"
+  
+  SSH_CMD="systest@$SERVER"
+  echo "Using remote machine '$SERVER' to build image"
+
+  set -x
+  echo "Copying patch file to remote machine"
+  scp $PATCH_FILE $SSH_CMD:/home/systest/dex-patch.patch
+
+  echo "Pulling DEX"
+  ssh $SSH_CMD "cd /home/systest/cloudera/dex; git reset HEAD --hard;git checkout develop; git pull;"
+
+  echo "Applying patch on git ref: $HASH_OR_BRANCH"
+  ssh $SSH_CMD "cd /home/systest/cloudera/dex;git reset --hard; git checkout $HASH_OR_BRANCH;git apply /home/systest/dex-patch.patch"
+
+  echo "Starting moonlander-cp.sh push-image on remote machine"
+  # ssh $SSH_CMD -t 'bash -l -c "bash;cd /home/systest/cloudera/dex;./dev-tools/moonlander-cp.sh push-image"'
+
+  moonlander_workspace="snemeth"
+  PREPARE_CMD='. /home/systest/.profile && cd /home/systest/cloudera/dex'
+
+  # NOTE: 
+  # Somehow when mow-priv is invoked (either via ssh or simply after SSHing to the host),
+  # mow-priv hangs when it executes this line: 
+  # source "${ROOT_DIR}/bin/aws-creds.sh"
+  # aws-creds.sh eventually runs 'gimme-aws-creds'.
+  # Simply executing gimme-aws-creds from shell works, but if it is executed from that script, it hangs.
+  # Solution: Explicitly set MOW_AUTH_TOOL=none
+  # Override USER to snemeth moonlander-cp.sh
+  
+  # COMMAND: moonlander-cp.sh install
+  # CMD="gimme-aws-creds;export MOW_AUTH_TOOL=none;USER=snemeth mow-priv ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 2>&1"
+  
+  # COMMAND: moonlander-cp.sh push-image
+  CMD="gimme-aws-creds;export MOW_AUTH_TOOL=none;USER=snemeth mow-priv ./dev-tools/moonlander-cp.sh push-image 2>&1"
+
+
+  # In case of SSH git clone issues, check: https://cloudera.atlassian.net/wiki/spaces/ENG/pages/78906426/Set+Up+Your+SSH+Key#Generating-the-SSH-key
+
+  # login, interactive, debug, commands
+  # ssh -t $SSH_CMD "bash -l -i -x -c \"$PREPARE_CMD && $CMD\""
+  ssh -t $SSH_CMD "bash -l -i -c \"$PREPARE_CMD && $CMD\""
+
+  # Should print: 
+  # Pushing image 'd37f8ef22e6c' to 'docker-sandbox.infra.cloudera.com/snemeth/dex/dex-cp:1.24.0-HEAD-084eea44c'
+  # Pushing image 'b3b8eaa696de' to 'docker-sandbox.infra.cloudera.com/snemeth/dex/dex-cp-debug-tools:1.24.0-HEAD-084eea44c'
+  # Pushing image '5fd2fd168502' to 'docker-sandbox.infra.cloudera.com/snemeth/dex/dex-cp-cadence-worker:1.24.0-HEAD-084eea44c'
+}
+
+
+function dex-create-private-stack-mowpriv-remote-with-dex-changes {
+  if [[ $# -ne 2 ]]; then
+    echo "Usage: dex-create-private-stack-mowpriv-remote <server> <hash or branch>"
+    return 1
+  fi
+
+  SERVER="$1"
+  HASH_OR_BRANCH="$2"
+
+  goto-dex
+  rm /tmp/dex-patch.patch
+  git diff > /tmp/dex-patch.patch
+
+
+  dex-create-private-stack-mowpriv-remote $SERVER $HASH_OR_BRANCH /tmp/dex-patch.patch
+}
+
 function dex-create-private-stack-mowpriv {
   if [[ $# -gt 0 ]]
   then
@@ -582,6 +680,8 @@ function _dex-create-private-stack {
   # TODO Specify skip build option?
   # https://stackoverflow.com/questions/40771781/how-to-append-a-string-in-bash-only-when-the-variable-is-defined-and-not-null
   MOONLANDER_SKIP_BUILD=1
+  # MOONLANDER_CP_SH_ARGS="$moonlander_workspace --ttl 168"
+  MOONLANDER_CP_SH_ARGS="$moonlander_workspace --skip-build --ttl 168"
 
   # stdout/stderr redirection: https://stackoverflow.com/questions/692000/how-do-i-write-standard-error-to-a-file-while-using-tee-with-a-pipe
 
@@ -589,10 +689,10 @@ function _dex-create-private-stack {
   #  Consider replacing it with 'script': https://unix.stackexchange.com/a/61833/189441
   if [[ "$mow_env" == "mow-dev" ]]; then
       # mow-dev ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
-      mow-dev ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 2>&1 | tee "$logfilename"
+      mow-dev ./dev-tools/moonlander-cp.sh install $(echo $MOONLANDER_CP_SH_ARGS) 2>&1 | tee "$logfilename"
   elif [[ "$mow_env" == "mow-priv" ]]; then
       # mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
-      mow-priv ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 2>&1 | tee "$logfilename"
+      mow-priv ./dev-tools/moonlander-cp.sh install $(echo $MOONLANDER_CP_SH_ARGS) 2>&1 | tee "$logfilename"
   fi
   #set +x
 
