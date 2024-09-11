@@ -552,9 +552,9 @@ function dex-initial-setup-dex-dev-docker {
 }
 
 
-function dex-create-private-stack-mowpriv-remote {
+function dex-create-private-stack-mowpriv-remote-patch {
   if [[ $# -ne 3 ]]; then
-    echo "Usage: dex-create-private-stack-mowpriv-remote <server> <hash or branch> <patch-file>"
+    echo "Usage: dex-create-private-stack-mowpriv-remote-patch <server> <hash or branch> <patch-file>"
     return 1
   fi
 
@@ -575,6 +575,34 @@ function dex-create-private-stack-mowpriv-remote {
   echo "Applying patch on git ref: $HASH_OR_BRANCH"
   ssh $SSH_CMD "cd /home/systest/cloudera/dex;git reset --hard; git checkout $HASH_OR_BRANCH;git apply /home/systest/dex-patch.patch"
 
+  _dex-create-private-stack-mowpriv-remote-push-image
+}
+
+
+function dex-create-private-stack-mowpriv-remote-repobranch {
+  if [[ $# -ne 3 ]]; then
+    echo "Usage: dex-create-private-stack-mowpriv-remote-repobranch <server> <git-remote> <branch>"
+    return 1
+  fi
+
+  SERVER="$1"
+  GIT_REMOTE="$2"
+  BRANCH="$3"
+  
+  SSH_CMD="systest@$SERVER"
+  echo "Using remote machine '$SERVER' to build image"
+
+  set -x
+  # echo "Copying patch file to remote machine"
+  # scp $PATCH_FILE $SSH_CMD:/home/systest/dex-patch.patch
+
+  echo "Fetching DEX"
+  ssh $SSH_CMD "cd /home/systest/cloudera/dex; git reset HEAD --hard;git fetch --all;git checkout $GIT_REMOTE/$BRANCH;"
+
+  _dex-create-private-stack-mowpriv-remote-push-image
+}
+
+function _dex-create-private-stack-mowpriv-remote-push-image {
   echo "Starting moonlander-cp.sh push-image on remote machine"
   # ssh $SSH_CMD -t 'bash -l -c "bash;cd /home/systest/cloudera/dex;./dev-tools/moonlander-cp.sh push-image"'
 
@@ -612,7 +640,7 @@ function dex-create-private-stack-mowpriv-remote {
 
 function dex-create-private-stack-mowpriv-remote-with-dex-changes {
   if [[ $# -ne 2 ]]; then
-    echo "Usage: dex-create-private-stack-mowpriv-remote <server> <hash or branch>"
+    echo "Usage: dex-create-private-stack-mowpriv-remote-with-dex-changes <server> <hash or branch>"
     return 1
   fi
 
@@ -624,7 +652,7 @@ function dex-create-private-stack-mowpriv-remote-with-dex-changes {
   git diff > /tmp/dex-patch.patch
 
 
-  dex-create-private-stack-mowpriv-remote $SERVER $HASH_OR_BRANCH /tmp/dex-patch.patch
+  dex-create-private-stack-mowpriv-remote-patch $SERVER $HASH_OR_BRANCH /tmp/dex-patch.patch
 }
 
 function dex-create-private-stack-mowpriv {
