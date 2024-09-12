@@ -10,6 +10,10 @@ function cde-open-dex-wiki {
 
 
 function download-gbn-logs {
+  echo "Moved to DEXter, decommissioned."
+  echo "Example usage: dexter triage download-logs"
+  echo "Example usage: dexter triage download-logs 1.23.0 --failed"
+  return 1
 	if [ $# -ne 2 ]; then
     echo "Usage: $0 <GBN> <DEX version>"
     return 1
