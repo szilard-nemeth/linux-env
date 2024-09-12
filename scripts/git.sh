@@ -267,3 +267,37 @@ function git-diff-file-list-across-commits {
     echo "complete"
 }
 
+function git-find-removed-line-simple {
+    # EXAMPLE: git --no-pager log -G "ENABLE_LOGGER_HANDLER_SANITY_CHECK" --oneline
+    git --no-pager log -G "$1" --oneline
+}
+
+function git-find-removed-line-grep {
+    # EXAMPLE: git --no-pager log -G "ENABLE_LOGGER_HANDLER_SANITY_CHECK" --oneline
+
+    local IFS=$'\n' 
+    commits=($(git --no-pager log -G "$1" --oneline))
+    # declare -p commits
+
+    # echo "Found commits: "
+    printf '%s\n' "${commits[@]}"
+
+
+    main_dir="/tmp/git-find-removed-line-$(date +%s)/"
+    mkdir -p "$main_dir"
+
+    echo "Grepping for individual commits..."
+    for commit in "${commits[@]}"
+    do
+        # https://stackoverflow.com/a/35614403
+        # echo -e 'abc\ndef\nghi\nklm' | sed 's/[adgk]/1/g; s/[behl]/2/g; s/[cfim]/3/g'
+        commit_dir=$(echo $commit | sed 's/[ _:.></]/-/g;')
+        commit_hash=$(echo $commit | cut -d " " -f1)
+        grep_result_file="$main_dir/grep-$commit_dir.txt"
+        diff_result_file="$main_dir/diff-$commit_dir.txt"
+        echo "Processing: $commit_hash --> $grep_result_file"
+        
+        git show $commit_hash | grep "$1" > $grep_result_file
+        git show $commit_hash > $diff_result_file
+    done
+}
