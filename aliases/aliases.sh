@@ -92,7 +92,8 @@ alias zip-files="sudo find / -iname *1564501696813_0001_01_000001* -print0 | sud
 
 #https://stackoverflow.com/a/49752003/1106893
 alias zsh-printcolors="for code in {000..255}; do print -P -- "$code: %F{$code}Color%f"; done"
-alias list-aliases-functions="print -rl -- ${(k)aliases} ${(k)functions} ${(k)parameters}"
+alias print-aliases-functions="print -rl -- ${(k)aliases} ${(k)functions} ${(k)parameters}"
+alias print-functions="print -l ${(ok)functions}" # https://superuser.com/a/684256
 
 
 ###WHITESPACE PIPE TRICK: https://superuser.com/a/1503113
