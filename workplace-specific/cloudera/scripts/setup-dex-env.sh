@@ -481,11 +481,11 @@ function dex-stern-dex-api {
   cst && dexw -a cst --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv stern -n $DEX_APP_NS -l app.kubernetes.io/name=dex-app-api
 }
 
-function dex-k9s-connect-service-privatestack {
+function dex-k9s-connect-service-private-stack {
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv --csi-workspace $USER k9s
 }
 
-function dex-k9s-connect-vc-privatestack {
+function dex-k9s-connect-vc-private-stack {
   if [[ -z "$CLUSTER_ID" ]]; then
       echo "CLUSTER_ID should be set"
       return 1
@@ -499,7 +499,7 @@ function dex-k9s-connect-vc-privatestack {
   cst && dexw -v --cluster-id ${CLUSTER_ID} -cst $CST --mow-env priv --auth cst k9s --namespace $DEX_APP_NS
 }
 
-function dex-k9s-connect-cp-privatestack {
+function dex-k9s-connect-cp-private-stack {
   mow-priv k9s
 }
 
@@ -730,7 +730,7 @@ function _dex-create-private-stack {
   # dex-create-service-in-stack
 }
 
-function dex-start-upgrade-privatestack {
+function dex-start-upgrade-private-stack {
   cst;
   
   if [[ -z $CLUSTER_ID ]]; then
@@ -752,7 +752,7 @@ function dex-start-upgrade-privatestack {
   set +x
 }
 
-function dex-save-logs-runtime-api-mow-priv-privatestack {
+function dex-save-logs-runtime-api-mow-priv-private-stack {
   DEX_CSI_WORKSPACE=$PRIVATE_STACK_CSI_WORKSPACE
   _dex-save-logs-runtime-api
 }
@@ -795,7 +795,7 @@ function _dex-save-logs-runtime-api {
   subl "${gen_files[@]}"
 }
 
-function get-pods-privatestack {
+function get-pods-private-stack {
   _get-pods $NAMESPACE_PRIVATE_STACK "private stack"
 }
 
@@ -858,17 +858,17 @@ function dex-private-stack-deploy-dexcp-and-kickoff-upgrade {
 
 
     # 1. Build CP, deploy CP to private stack / alias from linux-env
-    dex-replace-dexcp-deployment-privatestack
+    dex-replace-dexcp-deployment-private-stack
 
     # 2. Initiate upgrade / 
-    dex-start-upgrade-privatestack
+    dex-start-upgrade-private-stack
 
 
     # 3.Save dexcp logs / alias from linux-env
-    dex-save-logs-cp-privatestack2
+    dex-save-logs-cp-private-stack2
 }
 
-function dex-replace-dexcp-deployment-privatestack {
+function dex-replace-dexcp-deployment-private-stack {
   dex-export-common
   service_to_build="dex-cp"
 
@@ -892,7 +892,7 @@ function dex-replace-dexcp-deployment-privatestack {
   #4. Get pods
   echo "sleeping 30 seconds..."
   sleep 30
-  get-pods-privatestack
+  get-pods-private-stack
 
   echo "Showing pods (if image replaced the pods age should be new)"
   kubectl -n $NAMESPACE_PRIVATE_STACK get pods
@@ -903,8 +903,8 @@ function dex-replace-dexcp-deployment-privatestack {
 }
 
 
-function dex-replace-dexcp-privatestack {
-  # TODO dupe of dex-replace-dexcp-deployment-privatestack ? 
+function dex-replace-dexcp-private-stack {
+  # TODO dupe of dex-replace-dexcp-deployment-private-stack ? 
   #- k9s -n snemeth-dex
   #- kubectl -n snemeth-dex describe deployment snemeth-dex-dex-cp | grep -i image
   #- kubectl -n snemeth-dex set image deployment/snemeth-dex-dex-cp dex-cp=docker-registry.infra.cloudera.com/snemeth/dex-cp:1.18.0-dev-DEX-7712-iteration-4
@@ -925,7 +925,7 @@ function dex-replace-dexcp-privatestack {
 }
 
 
-function dex-replace-runtime-mowpriv-privatestack {
+function dex-replace-runtime-mowpriv-private-stack {
   DEX_CSI_WORKSPACE=$PRIVATE_STACK_CSI_WORKSPACE
   _dex-replace-runtime-api-server
 }
@@ -1001,7 +1001,7 @@ function _dex-replace-runtime-api-server {
   set +x
 }
 
-function dex-follow-logs-runtimeapi-privatestack {
+function dex-follow-logs-runtimeapi-private-stack {
   if [[ -z $CLUSTER_ID ]]; then
         echo "CLUSTER_ID is not defined"
         return 1
@@ -1018,7 +1018,7 @@ function dex-follow-logs-runtimeapi-privatestack {
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD
 }
 
-function dex-follow-logs-runtimeapi-grep-privatestack {
+function dex-follow-logs-runtimeapi-grep-private-stack {
   local grepfor="$1"
   # TODO k8s grep replace with yaml expression
   DEX_API_POD=$(dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS get pods | grep -o -e "dex-app-.*-api-\S*")
@@ -1026,44 +1026,44 @@ function dex-follow-logs-runtimeapi-grep-privatestack {
   dexw -cst $CST --cluster-id $CLUSTER_ID --mow-env priv kubectl -n $DEX_APP_NS logs -f $DEX_API_POD | grep $grepfor
 }
 
-function dex-follow-logs-dexcp-1-privatestack {
+function dex-follow-logs-dexcp-1-private-stack {
   local namespace="$NAMESPACE_PRIVATE_STACK"
-  get-pods-privatestack
+  get-pods-private-stack
 
   _dex-follow-log "private-stack" $namespace ${found_pods[1]}
 }
 
-function dex-follow-logs-dexcp-2-privatestack {
+function dex-follow-logs-dexcp-2-private-stack {
   local namespace="$NAMESPACE_PRIVATE_STACK"
-  get-pods-privatestack
+  get-pods-private-stack
   _dex-follow-log "private-stack" $namespace ${found_pods[2]}
 }
 
 
-function dex-save-logs-cp-privatestack {
+function dex-save-logs-cp-private-stack {
   local namespace="$NAMESPACE_PRIVATE_STACK"
   local target_dir="/tmp/dexlogs-privatestack/"
 
-  get-pods-privatestack
+  get-pods-private-stack
   _dex-save-logs "private-stack" $namespace $target_dir
 }
 
-function dex-save-logs-cp-privatestack-custom {
+function dex-save-logs-cp-private-stack-custom {
   set -x
   NAMESPACE_PRIVATE_STACK_OLD=$NAMESPACE_PRIVATE_STACK
   NAMESPACE_PRIVATE_STACK="$1"
   local namespace="$NAMESPACE_PRIVATE_STACK"
   local target_dir="/tmp/dexlogs-privatestack-ns-$namespace/"
 
-  get-pods-privatestack
+  get-pods-private-stack
   _dex-save-logs "private-stack" $namespace $target_dir
 
   # restore
   NAMESPACE_PRIVATE_STACK=$NAMESPACE_PRIVATE_STACK_OLD
 }
 
-function dex-kubectl-commands-save-logs-cp-privatestack {
-  get-pods-privatestack
+function dex-kubectl-commands-save-logs-cp-private-stack {
+  get-pods-private-stack
 }
 
 
@@ -1246,7 +1246,7 @@ function dex-get-liftie-data {
 
 
 
-function dex-change-deployment-image-privatestack {
+function dex-change-deployment-image-private-stack {
   # k9s deployments
   # NS: cadence-97gmh4cz, DEPL: cadence-api-server
   # NS: cadence-worker-rm-97gmh4cz, DEPL: dex-cadence-worker
@@ -1258,8 +1258,8 @@ function dex-change-deployment-image-privatestack {
 
 
   if [ "$#" -ne 3 ]; then
-      # echo "Usage: dex-change-deployment-image-privatestack <CLUSTER_ID> <DEPLOYMENT_NAME> <NAME_SELECTOR> <NEW_IMAGE_NAME>"
-      echo "Usage: dex-change-deployment-image-privatestack <CLUSTER_ID> <DEPLOYMENT_TYPE> <NEW_IMAGE_NAME>"
+      # echo "Usage: dex-change-deployment-image-private-stack <CLUSTER_ID> <DEPLOYMENT_NAME> <NAME_SELECTOR> <NEW_IMAGE_NAME>"
+      echo "Usage: dex-change-deployment-image-private-stack <CLUSTER_ID> <DEPLOYMENT_TYPE> <NEW_IMAGE_NAME>"
       return 1
   fi
 
