@@ -279,3 +279,15 @@ function myprojects-backup-trello {
   source "$( poetry env list --full-path | grep Activated | cut -d' ' -f1 )/bin/activate"
   (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 /Users/snemeth/development/my-repos/backup-manager/modules/trello-backup/trello-backup.py)
 }
+
+function myscript-print-jetbrains-run-configs-all {
+  cd ~/development/my-repos/linux-env
+  venv=$(poetry env list --full-path | grep "3\.9" | cut -d ' ' -f1)
+  $venv/bin/python $(which print_jetbrains_run_configs.py)
+}
+
+function myscript-print-dexter-run-configs {
+  cd ~/development/my-repos/linux-env
+  venv=$(poetry env list --full-path | grep "3\.9" | cut -d ' ' -f1)
+  $venv/bin/python $(which print_jetbrains_run_configs.py) dexter | grep -o "cli.py.*"
+}
