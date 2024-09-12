@@ -64,6 +64,11 @@ export PATH=$PATH:$CSI_HOME/bin:$CSI_HOME/moonlander:$DEX_DEV_TOOLS:$DEX_DEV_ROO
 # Moonlander / Private stacks: https://github.infra.cloudera.com/CDH/dex/wiki/Private-Stacks-Moonlander
 source $DEX_DEV_ROOT/lib/tools/dexk.sh
 
+function print-dex-functions {
+  print -l ${(ok)functions} | grep dex
+}
+
+
 
 #################################### DEX functions ####################################
 function dex-export-protoc25 {
@@ -598,6 +603,11 @@ function dex-create-private-stack-mowpriv-remote-repobranch {
 
   echo "Fetching DEX"
   ssh $SSH_CMD "cd /home/systest/cloudera/dex; git reset HEAD --hard;git fetch --all;git checkout $GIT_REMOTE/$BRANCH;"
+
+  if [ "$?" -ne 0 ]; then
+    echo "SSH command was not successful!"
+    return 1
+  fi
 
   _dex-create-private-stack-mowpriv-remote-push-image
 }
