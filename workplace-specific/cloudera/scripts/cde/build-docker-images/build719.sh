@@ -13,11 +13,6 @@ VERSION=7.1.9.0-999
 # SPARK_VERSION=2.4.8
 # export SPARK_VERSION
 
-if [ -z "$DEX_HOME" ]; then
-  echo "DEX_HOME is unset. Please set and export it!" 1>&2
-  exit 1
-fi
-
 cd $DEX_HOME
 # export PYTHON_VERSION_FOR_BUILDER=python38
 bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec ./export.sh"
