@@ -14,7 +14,7 @@ VERSION=7.1.8.0-999
 # export SPARK_VERSION
 
 cd $DEX_HOME
-# export PYTHON_VERSION_FOR_BUILDER=python36
+ export PYTHON_VERSION_FOR_BUILDER=python36
 bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec ./export.sh"
 bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pvc CDP_PLATFORM=7.1.8 ./cloudera/exec make platform-based-docker-images REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
 

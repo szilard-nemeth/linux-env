@@ -12,7 +12,7 @@ echo "Building PC 7.2.16"
 VERSION=7.2.16.0-999
 cd $DEX_HOME
 
-# export PYTHON_VERSION_FOR_BUILDER=python38
+ export PYTHON_VERSION_FOR_BUILDER=python38
 bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec ./export.sh"
 bash -c "DEX_HOME=${DEX_HOME} FORM_FACTOR=pc CDP_PLATFORM=7.2.16 ./cloudera/exec make platform-based-excluding-spark2-images REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
 
