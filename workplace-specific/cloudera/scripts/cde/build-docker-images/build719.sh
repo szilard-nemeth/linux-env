@@ -12,4 +12,4 @@ export PYTHON_VERSION_FOR_BUILDER=python36
 export FORM_FACTOR=pvc
 export CDP_PLATFORM=7.1.9
 
-./build-generic.sh
+. $DIR/build-generic.sh
