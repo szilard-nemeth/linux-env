@@ -24,9 +24,14 @@ bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec make clean-docker-metadata REGISTR
 
 # Build list of Docker images manually
 cd $DEX_HOME/docker
+echo "***Building public cloud images"
 bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pc CDP_PLATFORM=7.1.7 ./cloudera/exec make dex-spark3-runtime-v2 dex-livy-runtime-spark3-v2  dex-runtime-python-builder-v2 REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
 
+echo "***Building private cloud images"
 bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pvc CDP_PLATFORM=7.1.7 make dex-spark3-runtime-gpu-v2 dex-livy-runtime-spark3-gpu-v2 REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
+
+echo "Images: "
+docker images | grep 7.1.7 | grep cloudera/dex | grep "cde-"
 
 
 # cdhver=$(grep "CDH_VERSION.*=" ./re_vars_cdh_7.1.8.env | cut -d '=' -f2)
