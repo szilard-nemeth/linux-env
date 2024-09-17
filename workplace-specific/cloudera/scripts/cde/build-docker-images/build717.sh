@@ -7,38 +7,9 @@ if [ -z "$DEX_HOME" ]; then
   exit 1
 fi
 
-echo "================================================================================================"
-echo "Building PvC 7.1.7"
-VERSION=7.1.7.0-999
-# SPARK_VERSION=2.4.8
-# export SPARK_VERSION
-
-cd $DEX_HOME
+export VERSION=7.1.7.0-999
 export PYTHON_VERSION_FOR_BUILDER=python36
-bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec ./export.sh"
-bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec make printenv REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
-bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec make clean-docker-metadata REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
-# bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pvc CDP_PLATFORM=7.1.7 ./cloudera/exec make platform-based-docker-images REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
-# bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pvc CDP_PLATFORM=7.1.7 ./cloudera/exec make dex-spark3-runtime-v2 dex-spark3-runtime-gpu-v2 dex-livy-runtime-spark3-v2 dex-livy-runtime-spark3-gpu-v2 dex-runtime-python-builder-v2 REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
+export FORM_FACTOR=pvc
+export CDP_PLATFORM=7.1.7
 
-
-# Build list of Docker images manually
-cd $DEX_HOME/docker
-set -e
-echo "***Building images"
-bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pvc CDP_PLATFORM=7.1.7 make dex-spark3-runtime-v2 dex-spark3-runtime-gpu-v2 dex-livy-runtime-spark3-v2 dex-livy-runtime-spark3-gpu-v2 dex-runtime-python-builder-v2 REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
-
-echo "Built images: "
-docker images | grep 7.1.7 | grep cloudera/dex | grep "cde-"
-
-
-# cdhver=$(grep "CDH_VERSION.*=" ./re_vars_cdh_7.1.8.env | cut -d '=' -f2)
-# echo "Pushing image"
-# SRC_IMG="docker-private.infra.cloudera.com/cloudera/dex/dex-runtime-python-builder-$cdhver:7.1.8.0-999"
-# TARGET_IMG="docker-registry.infra.cloudera.com/snemeth/dex-runtime-python-builder-$cdhver:7.1.8.0-999"
-# set -x
-# docker tag $SRC_IMG $TARGET_IMG
-# docker push $TARGET_IMG
-# set +x
-# echo "================================================================================================"
-
+./build-generic.sh
