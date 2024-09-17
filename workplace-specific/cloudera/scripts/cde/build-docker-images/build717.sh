@@ -24,7 +24,7 @@ bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec make clean-docker-metadata REGISTR
 
 # Build list of Docker images manually
 cd $DEX_HOME/docker
-# bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pc CDP_PLATFORM=7.1.7 ./cloudera/exec make dex-spark3-runtime-v2 dex-livy-runtime-spark3-v2  dex-runtime-python-builder-v2 REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
+bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pc CDP_PLATFORM=7.1.7 ./cloudera/exec make dex-spark3-runtime-v2 dex-livy-runtime-spark3-v2  dex-runtime-python-builder-v2 REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
 
 bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pvc CDP_PLATFORM=7.1.7 make dex-spark3-runtime-gpu-v2 dex-livy-runtime-spark3-gpu-v2 REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
 
