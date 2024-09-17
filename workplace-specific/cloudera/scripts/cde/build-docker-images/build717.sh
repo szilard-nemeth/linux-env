@@ -19,7 +19,9 @@ bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec ./export.sh"
 bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec make printenv REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
 bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec make clean-docker-metadata REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
 # bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pvc CDP_PLATFORM=7.1.7 ./cloudera/exec make platform-based-docker-images REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
-bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pvc CDP_PLATFORM=7.1.7 ./cloudera/exec make dex-spark3-runtime-v2 dex-spark3-runtime-gpu-v2 dex-livy-runtime-spark3-v2 dex-livy-runtime-spark3-gpu-v2 dex-runtime-python-builder-v2 REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
+# bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=pvc CDP_PLATFORM=7.1.7 ./cloudera/exec make dex-spark3-runtime-v2 dex-spark3-runtime-gpu-v2 dex-livy-runtime-spark3-v2 dex-livy-runtime-spark3-gpu-v2 dex-runtime-python-builder-v2 REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
+cd $DEX_HOME/docker
+make dex-spark3-runtime-v2 dex-spark3-runtime-gpu-v2 dex-livy-runtime-spark3-v2 dex-livy-runtime-spark3-gpu-v2 dex-runtime-python-builder-v2 REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}
 
 
 # cdhver=$(grep "CDH_VERSION.*=" ./re_vars_cdh_7.1.8.env | cut -d '=' -f2)
