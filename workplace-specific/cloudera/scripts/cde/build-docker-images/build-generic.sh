@@ -6,11 +6,12 @@ cd $DEX_HOME
 bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec ./export.sh"
 bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec make printenv REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
 bash -c "DEX_HOME=${DEX_HOME} ./cloudera/exec make clean-docker-metadata REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
+
+# METHOD 1: Build docker images like DEX is built
 # bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=$FORM_FACTOR CDP_PLATFORM=$CDP_PLATFORM ./cloudera/exec make platform-based-docker-images REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
-# bash -c "DEX_HOME=${DEX_HOME} ENABLE_MULTI_ARCH_BUILD=false FORM_FACTOR=$FORM_FACTOR CDP_PLATFORM=$CDP_PLATFORM ./cloudera/exec make dex-spark3-runtime-v2 dex-spark3-runtime-gpu-v2 dex-livy-runtime-spark3-v2 dex-livy-runtime-spark3-gpu-v2 dex-runtime-python-builder-v2 REGISTRY=${REGISTRY} VERSION=${VERSION} BUILD_TYPE=${BUILD_TYPE}"
 
 
-# Build list of Docker images manually
+# METHOD 2: Build list of Docker images manually
 cd $DEX_HOME/docker
 set -e
 echo "***Building docker images"

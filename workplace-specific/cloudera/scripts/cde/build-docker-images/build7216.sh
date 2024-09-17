@@ -8,7 +8,7 @@ if [ -z "$DEX_HOME" ]; then
 fi
 
 export VERSION=7.2.16.0-999
-export PYTHON_VERSION_FOR_BUILDER=python36
+export PYTHON_VERSION_FOR_BUILDER=python38
 export FORM_FACTOR=pc
 export CDP_PLATFORM=7.2.16
 
