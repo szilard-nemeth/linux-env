@@ -156,6 +156,49 @@ function gh-backport-cde-pr {
     echo "NOTE: Remember to un-draft your PR"
 }
 
+function gh-create-pr {
+    echo "TODO INCOMPLETE"
+    return 1
+
+    if [[ "$#" -ne 2 ]]; then
+        echo "Usage: gh-create-pr <title> <body>"
+        echo "Usage example: gh-backport-cde-pr 5669 DEX-1.20.1"
+        return 1
+    fi
+
+    if [[ ! "$PWD" =~ cloudera/cde/dex ]]; then
+        echo "Current directory is not DEX repo. Please cd into DEX repo first!"
+        return 1
+    fi
+
+    set -x
+    curr_branch=$(git rev-parse --abbrev-ref HEAD)
+    PR_TITLE="$1"
+    BODY="$2"
+    TARGET_R_BRANCH="develop"
+    FORK_REPO_NAME="fork"
+    FORK_REMOTE=fork
+    TARGET_L_BRANCH="$curr_branch"
+
+
+    echo "Pushing (dry-run)"
+    git push --dry-run $FORK_REMOTE -u $TARGET_L_BRANCH
+
+    set -x
+    if ! git push -u $FORK_REMOTE -u $TARGET_L_BRANCH; then
+        echo "Error while pushing commit"
+        # TODO Reset to original branch
+        git checkout origin/develop && git branch -D $TARGET_L_BRANCH
+        return -1
+    fi
+
+    echo "Git push successful, Creating PR..."
+
+    # TODO https://graphite.dev/guides/create-pr-from-gh-command-line
+    gh pr create --draft --title $PR_TITLE --body "$BODY" --base $TARGET_R_BRANCH --head $FORK_REPO_NAME:$TARGET_L_BRANCH 
+    set +x
+}
+
 # TODO Move all cde aliases to a separate git.sh script
 function git-sync-cde-develop {
     set -x
