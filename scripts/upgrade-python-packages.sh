@@ -77,11 +77,15 @@ function check-git-changes {
 function show-changes-all {
   echo "UPGRADE_PYTHON_PACKAGES_BRANCH=$UPGRADE_PYTHON_PACKAGES_BRANCH"
   echo "UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH=$UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH"
-  _show-changes-pythoncommons
-  _show-changes-googleapiwrapper
-  _show-changes-yarndevtools
-  if [[ "$?" -ne 0 ]]; then
-    echo "Uncommitted changes detected, see messages above"
+  if ! _show-changes-pythoncommons; then
+      return 1
+  fi
+
+  if ! _show-changes-googleapiwrapper; then
+    return 1
+  fi
+
+  if ! _show-changes-yarndevtools; then
     return 1
   fi
 }
@@ -428,8 +432,7 @@ function myrepos-upgrade-googleapiwrapper-in-yarndevtools {
   UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
 
   cleanup-yarndevtools-links
-  _show-changes-googleapiwrapper
-  if [[ "$?" -ne 0 ]]; then
+  if ! _show-changes-googleapiwrapper; then
     return 1
   fi
 
@@ -461,14 +464,13 @@ function myrepos-upgrade-pythoncommons-in-backup-manager {
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
 
-  _show-changes-pythoncommons
-  _show-changes-googleapiwrapper
-  
-  if [[ "$?" -ne 0 ]]; then
-    echo "Uncommitted changes detected, see messages above"
+  if ! _show-changes-pythoncommons; then
     return 1
   fi
-
+  if ! _show-changes-googleapiwrapper; then
+    return 1
+  fi
+  
   #reset # TODO Make this depend on flag like 'UPGRADE_PYTHON_PACKAGES_GIT_PUSH'
 
   bump-pythoncommons-version
@@ -502,9 +504,13 @@ function myrepos-upgrade-pythoncommons-in-dexter {
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
 
-  _show-changes-pythoncommons
-  _show-changes-googleapiwrapper
-  
+  if ! _show-changes-pythoncommons; then
+    return 1
+  fi
+  if ! _show-changes-googleapiwrapper; then
+    return 1
+  fi
+
   if [[ "$?" -ne 0 ]]; then
     echo "Uncommitted changes detected, see messages above"
     return 1
