@@ -241,7 +241,7 @@ function git-sync-cde-develop {
     orig_branch=$(git rev-parse --abbrev-ref HEAD)
     git fetch origin
     git checkout develop
-    git rebase origin/develop
+    git merge origin/develop
     git status
     git checkout $orig_branch
     set +x
@@ -255,7 +255,7 @@ function git-sync-cde-featurebranch {
     git rebase origin/develop
     git status
     git checkout $orig_branch
-    git rebase develop
+    git merge develop
     git --no-pager log -1 --oneline
     set +x
 }
