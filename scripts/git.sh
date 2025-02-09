@@ -36,7 +36,7 @@ function gitconfig-cloudera {
 
 function gh-apply-patch {
   if [ $# -ne 1 ]; then
-    echo "Usage: gh-apply-patch <pr_id>" 1>&2
+    echo "Usage: $0 <pr_id>" 1>&2
     return 1
   fi
 
@@ -53,7 +53,7 @@ function gh-apply-patch {
 
 function gh-diff-cde-backport {
   if [ $# -ne 2 ]; then
-    echo "Usage: gh-apply-patch <pr id for develop> <pr id for feature branch>" 1>&2
+    echo "Usage: $0 <pr id for develop> <pr id for feature branch>" 1>&2
     return 1
   fi
   # TODO: Port this to $OTHER_REPOS_DIR/gandras/hadoop-scripts (alias: yarn-backport-diff-generator-upstream)
@@ -91,6 +91,12 @@ function gh-diff-cde-backport {
 }
 
 function gh-checkout-pr {
+    if [[ "$#" -ne 1 ]]; then
+        echo "Usage: $0 <PR ID>"
+        echo "Usage example: $0 12345"
+        return 1
+    fi
+
     PR_ID="$1"
     BRANCHNAME="pr-review-$PR_ID"
     git fetch origin pull/$PR_ID/head:$BRANCHNAME
@@ -99,8 +105,8 @@ function gh-checkout-pr {
 
 function gh-backport-cde-pr {
     if [[ "$#" -ne 2 ]]; then
-        echo "Usage: gh-backport-cde-pr <PR ID> <branch to backport>"
-        echo "Usage example: gh-backport-cde-pr 5669 DEX-1.20.1"
+        echo "Usage: $0 <PR ID> <branch to backport>"
+        echo "Usage example: $0 5669 DEX-1.20.1"
         return 1
     fi
 
@@ -142,7 +148,7 @@ function gh-backport-cde-pr {
     git push --dry-run $FORK_REMOTE -u $TARGET_L_BRANCH
 
     set -x
-    if ! git push -u $FORK_REMOTE -u $TARGET_L_BRANCH; then
+    if ! git push $FORK_REMOTE -u $TARGET_L_BRANCH; then
         echo "Error while pushing commit"
         # TODO Reset to original branch
         git checkout origin/develop && git branch -D $TARGET_L_BRANCH
