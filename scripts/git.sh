@@ -163,12 +163,12 @@ function gh-backport-cde-pr {
 }
 
 function gh-create-pr {
-    echo "TODO INCOMPLETE"
-    return 1
+    # echo "TODO INCOMPLETE"
+    # return 1
 
-    if [[ "$#" -ne 2 ]]; then
-        echo "Usage: gh-create-pr <title> <body>"
-        echo "Usage example: gh-backport-cde-pr 5669 DEX-1.20.1"
+    if [[ "$#" -ne 1 ]]; then
+        echo "Usage: $0 <PR title>"
+        echo "Usage example: $0 DEX-5669"
         return 1
     fi
 
@@ -180,11 +180,11 @@ function gh-create-pr {
     set -x
     curr_branch=$(git rev-parse --abbrev-ref HEAD)
     PR_TITLE="$1"
-    BODY="$2"
     TARGET_R_BRANCH="develop"
     FORK_REPO_NAME="fork"
     FORK_REMOTE=fork
     TARGET_L_BRANCH="$curr_branch"
+    TARGET_R_BRANCH="snemeth-$TARGET_L_BRANCH"
 
 
     echo "Pushing (dry-run)"
@@ -195,13 +195,43 @@ function gh-create-pr {
         echo "Error while pushing commit"
         # TODO Reset to original branch
         git checkout origin/develop && git branch -D $TARGET_L_BRANCH
-        return -1
+        return 2
     fi
 
-    echo "Git push successful, Creating PR..."
+    echo "Pushing code to forked repo..."
+    git push $FORK_REPO_NAME $TARGET_L_BRANCH:$TARGET_L_BRANCH
 
-    # TODO https://graphite.dev/guides/create-pr-from-gh-command-line
-    gh pr create --draft --title $PR_TITLE --body "$BODY" --base $TARGET_R_BRANCH --head $FORK_REPO_NAME:$TARGET_L_BRANCH 
+    echo "Pushing code to origin..."
+    git push -u origin $TARGET_L_BRANCH:"$TARGET_R_BRANCH"
+
+
+    pr_template_file_path=$(find $HOME_LINUXENV_DIR -iname cde-github-pr-template.txt)
+    echo "Git push successful, Creating PR with PR template from file: $pr_template_file_path"
+
+
+
+    # NOTE: gh pr create does not seem to work well with a forked repo!
+    # Related links: 
+    #   https://zakuarbor.github.io/blog/github-app-limitation-not-all-refs-are-readable-error/
+    #   https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps
+    #   https://stackoverflow.com/questions/67628262/oauth-scope-required-for-creating-github-pull-requests-with-personal-access-toke
+    #   https://github.com/cli/cli/issues/2691
+    #   https://github.com/cli/cli/issues/575#issuecomment-1163143215
+    #   https://graphite.dev/guides/create-pr-from-gh-command-line
+    #   https://stackoverflow.com/questions/64853120/how-to-make-a-pull-request-using-the-new-github-cli-to-a-remote-repo-without-pu
+
+    # !! DID NOT WORK !!
+    # gh pr create --draft --title DEX-15745 --body 'test body' --base develop --head fork:$TARGET_L_BRANCH
+    # gh pr create --draft --fill-first --base develop --head DEX-15714
+
+    # OUTPUT: 
+    # +gh-create-pr:60> gh pr create --draft --title DEX-15745 --body 'test body' --base develop --head fork:DEX-15745
+    # Creating draft pull request for fork:DEX-15745 into develop in CDH/dex
+    # pull request create failed: GraphQL: Head sha can't be blank, Base sha can't be blank, Head user can't be blank, Head repository can't be blank, No commits between CDH:develop and , Head ref must be a branch, not all refs are readable (createPullRequest)
+    
+    # From same repo it works!
+    # https://graphite.dev/guides/create-pr-from-gh-command-line
+    gh pr create --draft --title DEX-15745 --body-file $pr_template_file_path  --base develop --head $TARGET_R_BRANCH
     set +x
 }
 
