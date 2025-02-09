@@ -293,6 +293,22 @@ function git-backup-patch-develop-simple {
     set +x
 }
 
+function git-backup-patch-from-branch-simple {
+    if [ $# -ne 1 ]; then
+        echo "Usage: $0 <base branch>" 1>&2
+        return 1
+    fi
+
+    local base_branch=$1
+    local branch=$(git rev-parse --abbrev-ref HEAD)
+    # local output_dir=$(mktemp -d)
+    local output_dir="$CLOUDERA_TASKS_CDE_DIR/$branch/backup-patches-single/"
+    mkdir -p $output_dir
+    local output_file="$output_dir/backup-$branch-$(date-formatted).patch"
+    echo "Creating patch based on $base_branch to: $output_file"
+    git diff origin/$base_branch..HEAD > $output_file
+}
+
 function git-squash-all-based-on-develop {
     # git checkout yourBranch
     COMMIT_MSG="$(git branch --show-current) squashed"
