@@ -256,10 +256,11 @@ function _gh-list-branches {
     # 8 snemeth:DEX-15259-2
 
     # Ignore PRs merged from main or master branches
+
     IFS=' ' mapfile -t arr < <(gh pr list --state merged | awk -F '\t' '{print $1, $3}' | grep -Ev '(main|master)')
     echo "All array elements: ${arr[@]}"
 
-    # set -x
+    rm -rf "/tmp/gh-list-branches"; mkdir "/tmp/gh-list-branches"
     for i in "${arr[@]}"
     do
         readarray -d " " -t pair <<< "$i"
@@ -275,18 +276,18 @@ function _gh-list-branches {
         pr_c_hash=$(git log origin/master --grep "#$pr_id" --pretty=format:%h)
 
 
+        echo;echo
+        echo "Processing PR #$pr_id: $pr_title (Author: $pr_author), branch: $branch, commit hash: $pr_c_hash"
+
         # TODO Handle revert commits
-        if [[ "$commit" == *$'\n'* ]]; then
+        if [[ "$pr_commit" == *$'\n'* ]]; then
             echo "Multiple commits found"
             echo "$pr_commit"
             continue
         fi
 
-        echo;echo
-        echo "Processing PR #$pr_id: $pr_title (Author: $pr_author), branch: $branch, commit hash: $pr_c_hash"
-
         if [ ! `git rev-parse --verify $branch 2>/dev/null` ]; then
-            printf "\nBranch does not exist: $branch, skipping"
+            echo "Branch does not exist: $branch, skipping"
             continue
         fi
 
@@ -295,22 +296,41 @@ function _gh-list-branches {
             continue
         fi
         # Diff of merge commit of PR
-        git diff $pr_c_hash^! > "/tmp/gh-list-branches-$pr_c_hash.diff"
+        diff_merge_commit="/tmp/gh-list-branches/$branch_pr_diff.diff"
+        diff_branch="/tmp/gh-list-branches/$branch.diff"
 
+        git diff $pr_c_hash^! > $diff_merge_commit
 
 
         # List all commits of branch
-        merge_base=$(git merge-base master $branch)
-        echo "Commits for branch: $branch, merge-base: $merge_base (command: 'git merge-base master $branch')"
-        branch_commits=$(git rev-list --ancestry-path $merge_base..$branch)
-        for commit in $branch_commits; do
-            git --no-pager log -n1 --oneline $commit
-        done
+        # set -x
+        echo "Commits for branch: $branch"
+        branch_commits=$(git --no-pager log $branch --no-merges --pretty=format:%h --not master)
+        
+        # echo "$branch_commits"
+        # Important to echo it surrounded with double quotes to preserve newlines
+        last_commit=$(echo "$branch_commits" | head -n 1)
+        first_commit=$(echo "$branch_commits" | tail -n 1)
 
-        # Combined diff of all commits on branch
+        # Uncomment to print commits
+        # for commit in $branch_commits; do
+        #     git --no-pager log -n1 --oneline $commit
+        # done
+        echo "Last commit: $last_commit"
+        echo "First commit: $first_commit"
 
-        # TODO diff of combined diff vs. "/tmp/gh-list-branches-$pr_c_hash.diff"
+        # diff of all commits on branch
+        git diff $first_commit^..$last_commit > $diff_branch
+
+        # Final diff of diffs
+        if ! diff $diff_merge_commit $diff_branch > /dev/null; then
+            echo "Diff files are different: diff $diff_merge_commit $diff_branch"
+        else
+            echo "Branch can be safely deleted: $branch"
+        fi
     done
+    echo "Generated files: "
+    ls -la "/tmp/gh-list-branches"
 }
 
 # TODO Move all cde aliases to a separate git.sh script
