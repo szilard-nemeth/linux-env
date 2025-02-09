@@ -235,6 +235,84 @@ function gh-create-pr {
     set +x
 }
 
+function gh-list-branches {
+    git_script=$(find $HOME_LINUXENV_DIR/scripts -iname git.sh)
+    # export -f _gh-list-branches
+    bash -c "source $git_script; _gh-list-branches"
+}
+
+function _gh-list-branches {
+    # https://stackoverflow.com/a/77609166
+    # https://stackoverflow.com/questions/226976/how-can-i-know-if-a-branch-has-been-already-merged-into-master
+    local_branches=$(git branch -l | grep -Ev '(main|master)')
+
+    # Example output: 
+    # ➜ gh pr list --state closed | awk -F '\t' '{print $1, $3}' 
+    # 17 DEX-15961
+    # 16 DEX-15259-ci-fixes
+    # 1  master
+    # 10 irashid:triage_jira_pivot
+    # 9 snemeth:DEX-15259-3
+    # 8 snemeth:DEX-15259-2
+
+    # Ignore PRs merged from main or master branches
+    IFS=' ' mapfile -t arr < <(gh pr list --state merged | awk -F '\t' '{print $1, $3}' | grep -Ev '(main|master)')
+    echo "All array elements: ${arr[@]}"
+
+    # set -x
+    for i in "${arr[@]}"
+    do
+        readarray -d " " -t pair <<< "$i"
+        pr_id=${pair[0]}
+        branch=${pair[1]//$'\n'/}
+        # If branch looks like "snemeth:DEX-1234", cut the remote and keep 'DEX-1234'
+        branch=$(echo $branch | sed -re "s/.*://g")
+
+        pr_data=$(gh pr view $pr_id --json title,author)
+        pr_title=$(echo $pr_data | jq '.title' | tr -d "\"")
+        pr_author=$(echo $pr_data | jq '.author.login' | tr -d "\"")
+        pr_commit=$(git log origin/master --grep "#$pr_id" --oneline)
+        pr_c_hash=$(git log origin/master --grep "#$pr_id" --pretty=format:%h)
+
+
+        # TODO Handle revert commits
+        if [[ "$commit" == *$'\n'* ]]; then
+            echo "Multiple commits found"
+            echo "$pr_commit"
+            continue
+        fi
+
+        echo;echo
+        echo "Processing PR #$pr_id: $pr_title (Author: $pr_author), branch: $branch, commit hash: $pr_c_hash"
+
+        if [ ! `git rev-parse --verify $branch 2>/dev/null` ]; then
+            printf "\nBranch does not exist: $branch, skipping"
+            continue
+        fi
+
+        if [ -z "${pr_commit}" ] || [ -z "${pr_c_hash}" ]; then
+            echo "Empty commit or commit hash. Commit: $pr_commit, hash: $pr_c_hash"
+            continue
+        fi
+        # Diff of merge commit of PR
+        git diff $pr_c_hash^! > "/tmp/gh-list-branches-$pr_c_hash.diff"
+
+
+
+        # List all commits of branch
+        merge_base=$(git merge-base master $branch)
+        echo "Commits for branch: $branch, merge-base: $merge_base (command: 'git merge-base master $branch')"
+        branch_commits=$(git rev-list --ancestry-path $merge_base..$branch)
+        for commit in $branch_commits; do
+            git --no-pager log -n1 --oneline $commit
+        done
+
+        # Combined diff of all commits on branch
+
+        # TODO diff of combined diff vs. "/tmp/gh-list-branches-$pr_c_hash.diff"
+    done
+}
+
 # TODO Move all cde aliases to a separate git.sh script
 function git-sync-cde-develop {
     set -x
@@ -263,7 +341,7 @@ function git-sync-cde-featurebranch {
 function git-format-patch {
     #alias git-save-all-commits="git format-patch $(git rev-list --max-parents=0 HEAD)..HEAD -o /tmp/patches"
     if [ $# -ne 2 ]; then
-        echo "Usage: git-format-patch <base branch> <destination dir>" 1>&2
+        echo "Usage: $0 <base branch> <destination dir>" 1>&2
         return 1
     fi
     local base_branch=$1
