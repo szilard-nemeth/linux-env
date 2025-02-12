@@ -52,30 +52,35 @@ function docker-listmounts {
 }
 
 function docker-cleanup-guidance {
+    echo "GENERIC CLEANUP COMMANDS:"
     echo "docker system df"
     echo "docker image prune"
     echo "docker container prune"
     echo "docker system prune --force"
     echo "docker system df"
 
-    echo "Delete first 80 images: "
+    echo; echo "Delete first 80 images: "
     echo "docker images | awk '{print $3}' | tail -n 80 | xargs docker rmi"
 
-    echo "Delete Docker images with grepping for image name"
+    echo; echo "Delete Docker images with grepping for image name" 
     echo "docker images | grep \"DEX-9645\|DEX-7712\|DEX-7051\" | awk '{print \$3}' | xargs docker rmi"
     echo "docker images | grep 1.19.0-dev | awk '{print \$3}' | xargs docker rmi"
     echo "docker images | grep \"DEX-\" | grep -v \"DEX-7325\" | awk '{print \$3}' | xargs docker rmi -f"
 
-    echo "WARNING / TO REMOVE ALL DEX IMAGES"
+    echo; echo "Delete Docker images by grepping for multiple CDE releases:"
+    echo "docker images | grep \"1.21\|1.22.0\|1.20.3\"| awk '{print \$3}' | xargs docker rmi -f"
+
+    echo; echo "REMOVE ALL DEX IMAGES (BE CAREFUL!):"
     echo "docker images | grep \"dex\" | awk '{print \$3}' | xargs docker rmi -f"
 
-    echo "WARNING / TO REMOVE ALL THUNDERHEAD IMAGES"
+    echo; echo "REMOVE ALL THUNDERHEAD IMAGES (BE CAREFUL!):"
     echo "docker images | grep \"thunderhead\" | awk '{print \$3}' | xargs docker rmi -f"
 
     # https://forums.docker.com/t/simple-script-needed-to-delete-all-docker-images-over-4-weeks-old/28558/6    
-    echo "REMOVE IMAGES OLDER THAN DATE (3 weeks)"
+    echo; echo "REMOVE IMAGES OLDER THAN DATE (3 weeks):"
     echo "docker image prune --all --filter \"until=504h\""
     echo "docker rmi \$(docker images --filter \"dangling=true\" -q --no-trunc)"
 
-    echo "More time based commands: https://dirask.com/posts/Docker-remove-images-older-than-some-specific-period-of-time-DnzWbD"
+    echo; echo "More time based commands: "
+    echo "https://dirask.com/posts/Docker-remove-images-older-than-some-specific-period-of-time-DnzWbD"
 }
