@@ -5,7 +5,7 @@ then
     return 1
 fi
 
-alias docker-rm-net="docker network rm $(docker network ls | awk '/ / { print $1 }')"
+alias docker-rm-net="docker network rm \$(docker network ls | awk '/ / { print $1 }')"
 alias docker-rmfv-all="docker-operation-except $DIR/.docker-op-exceptions rm -fv"
 alias docker-rmf-all="docker-operation-except $DIR/.docker-op-exceptions rm -f"
 alias docker-stop-all="docker-operation-except $DIR/.docker-op-exceptions stop"
