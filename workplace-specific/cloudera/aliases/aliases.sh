@@ -100,10 +100,12 @@ alias python-precommit-all="pre-commit run --all-files"
 alias dex-test-with-clean="goto-dex;make clean-mocks && make gen-mocks && make test"
 alias dex-test="goto-dex;make test"
 alias dex-update-dev-env="goto-dex;make update-dev-env"
-alias dex-docker-cleanup="docker rmi $(docker images | grep \"1\.18\.0\" | tr -s ' ' | cut -d ' ' -f 3) -f"
+alias dex-docker-cleanup="docker rmi \$(docker images | grep \"1\.18\.0\" | tr -s ' ' | cut -d ' ' -f 3) -f"
 alias goto-dex-7712-clitesting="cd $CLOUDERA_TASKS_CDE_DIR/dev-work-from-20221129/cli-testing"
 alias dex-print-tasks-dir="echo $CLOUDERA_TASKS_CDE_DIR"
-alias when-am-i-on-call="source ~/development/cloudera/pagerduty-helper/venv/bin/activate;~/development/cloudera/pagerduty-helper/when_am_i_on_call.py --user snemeth"
+alias pagerduty-when-am-i-on-call="source ~/development/cloudera/pagerduty-helper/venv/bin/activate;~/development/cloudera/pagerduty-helper/when_am_i_on_call.py --user snemeth"
+alias pagerduty-when-am-i-on-call="source ~/development/cloudera/pagerduty-helper/venv/bin/activate;~/development/cloudera/pagerduty-helper/when_am_i_on_call.py --user snemeth"
+
 
 
 ### DEX, Beni
