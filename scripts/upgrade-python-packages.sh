@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
+
+# TODO create new function like: myrepos-upgrade-googleapiwrapper-in-yarndevtools
+# TODO create new function like: _show-changes-googleapiwrapper
+# TODO create new function like: bump-googleapiwrapper-version
+# TODO Check all usages of new_googleapiwrapper_version and introduce new variable for cdsw-job-launcher
+# TODO check all usages of UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER and introduce new variable for cdsw-job-launcher
+# TODO Handle new project in get-project-dir
+# TODO Eliminate project specific functions like ...
+
+
 YARN_DEV_TOOLS_DIR="$HOME/development/my-repos/yarn-dev-tools"
 PYTHON_COMMONS_DIR="$HOME/development/my-repos/python-commons"
 GOOGLE_API_WRAPPER_DIR="$HOME/development/my-repos/google-api-wrapper/"
@@ -284,7 +294,7 @@ function _update-package-versions-in-project {
 
   echo "UPDATING PACKAGE VERSIONS FOR PROJECT: $project_name"
   
-  if [[ $UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER -eq 0 ]] && [[ $UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER -eq 0 ]]; then
+  if [[ $UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER -eq 0 ]] && [[ $UPGRADE_PYTHON_PACKAGE_PYTHONCOMMONS -eq 0 ]]; then
     echo "No package will be updated, invalid config!"
     return 1
   fi
@@ -292,13 +302,13 @@ function _update-package-versions-in-project {
   local commit_msg="update version of packages: "
   if [[ $UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER -eq 1 ]]; then
     echo "Increasing package version for dependency: $PROJ_NAME_GOOGLE_API_WRAPPER"
-    sed -i '' -e "s/^google-api-wrapper2 = \"[0-9].*/google-api-wrapper2 = \"$new_googleapiwrapper_version\"/" pyproject.toml
+    sed -i '' -e "s/^google-api-wrapper2 = \".*[0-9].*/google-api-wrapper2 = \"$new_googleapiwrapper_version\"/" pyproject.toml
     commit_msg+="google-api-wrapper2"
   fi
 
   if [[ $UPGRADE_PYTHON_PACKAGE_PYTHONCOMMONS -eq 1 ]]; then
     echo "Increasing package version for dependency: $PROJ_NAME_PYTHON_COMMONS"
-    sed -i '' -e "s/^python-common-lib = \"[0-9].*/python-common-lib = \"$new_pythoncommons_version\"/" pyproject.toml
+    sed -i '' -e "s/^python-common-lib = \".*[0-9].*/python-common-lib = \"$new_pythoncommons_version\"/" pyproject.toml
     commit_msg+=", python-common-lib"
   fi
 
@@ -464,6 +474,7 @@ function myrepos-upgrade-pythoncommons-in-backup-manager {
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
 
+  set -x
   if ! _show-changes-pythoncommons; then
     return 1
   fi
@@ -504,6 +515,10 @@ function myrepos-upgrade-pythoncommons-in-dexter {
   UPGRADE_PYTHON_PACKAGES_GIT_PUSH=1
   UPGRADE_PYTHON_PACKAGES_DEPENDENCY_BRANCH="master"
 
+  if ! check-git-changes $DEXTER_DIR master; then
+    return 1
+  fi
+
   if ! _show-changes-pythoncommons; then
     return 1
   fi
@@ -511,34 +526,27 @@ function myrepos-upgrade-pythoncommons-in-dexter {
     return 1
   fi
 
-  if [[ "$?" -ne 0 ]]; then
-    echo "Uncommitted changes detected, see messages above"
-    return 1
-  fi
-
-  bump-pythoncommons-version
-  if [[ "$?" -ne 0 ]]; then
+  if ! bump-pythoncommons-version; then
     return 1
   fi
   new_pythoncommons_version=$(cd $PYTHON_COMMONS_DIR && echo $(poetry version --short))
 
-  bump-googleapiwrapper-version
-  if [[ "$?" -ne 0 ]]; then
+  if ! bump-googleapiwrapper-version; then
     return 1
   fi
   new_googleapiwrapper_version=$(cd $GOOGLE_API_WRAPPER_DIR && echo $(poetry version --short))
+
 
   SKIP_POETRY_PUBLISH=1
   #remove-links-with-target "/tmp/.*" "$HOME/development/my-repos/project-data/input-data/dexter.*"
 
   UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER=1
   UPGRADE_PYTHON_PACKAGE_PYTHONCOMMONS=1
-  update-package-versions-in-dexter
-  unset-all-package-upgrade-vars
-
-  if [[ "$?" -ne 0 ]]; then
+  if ! update-package-versions-in-dexter; then
     return 1
   fi
+  
+  unset-all-package-upgrade-vars
 }
 
 
@@ -565,7 +573,7 @@ function myrepos-release-yarndevtools {
 
 function _myrepos-upgrade-dependencies-manual {
   # bump-pythoncommons-version
-  bump-googleapiwrapper-version
+  # bump-googleapiwrapper-version
 
   new_pythoncommons_version=$(cd $PYTHON_COMMONS_DIR && echo $(poetry version --short))
   new_googleapiwrapper_version=$(cd $GOOGLE_API_WRAPPER_DIR && echo $(poetry version --short))
@@ -574,7 +582,9 @@ function _myrepos-upgrade-dependencies-manual {
   echo "new_googleapiwrapper_version=$new_googleapiwrapper_version"
 
   UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER=1
-  UPGRADE_PYTHON_PACKAGE_PYTHONCOMMONS=0
+  UPGRADE_PYTHON_PACKAGE_PYTHONCOMMONS=1
  
-  _update-package-versions-in-project "calendar-utils" /Users/snemeth/development/my-repos/calendar-utils
+  # _update-package-versions-in-project "calendar-utils" /Users/snemeth/development/my-repos/calendar-utils
+  _update-package-versions-in-project $PROJ_NAME_DEXTER $DEXTER_DIR
 }
+
