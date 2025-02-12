@@ -246,6 +246,7 @@ function _gh-list-branches {
     # https://stackoverflow.com/questions/226976/how-can-i-know-if-a-branch-has-been-already-merged-into-master
     local_branches=$(git branch -l | grep -Ev '(main|master)')
 
+    # Ignore PRs merged from main or master branches
     # Example output: 
     # ➜ gh pr list --state closed | awk -F '\t' '{print $1, $3}' 
     # 17 DEX-15961
@@ -254,9 +255,6 @@ function _gh-list-branches {
     # 10 irashid:triage_jira_pivot
     # 9 snemeth:DEX-15259-3
     # 8 snemeth:DEX-15259-2
-
-    # Ignore PRs merged from main or master branches
-
     IFS=' ' mapfile -t arr < <(gh pr list --state merged | awk -F '\t' '{print $1, $3}' | grep -Ev '(main|master)')
     echo "All array elements: ${arr[@]}"
 
@@ -296,7 +294,7 @@ function _gh-list-branches {
             continue
         fi
         # Diff of merge commit of PR
-        diff_merge_commit="/tmp/gh-list-branches/$branch_pr_diff.diff"
+        diff_merge_commit="/tmp/gh-list-branches/${branch}_pr_diff.diff"
         diff_branch="/tmp/gh-list-branches/$branch.diff"
 
         git diff $pr_c_hash^! > $diff_merge_commit
@@ -329,7 +327,7 @@ function _gh-list-branches {
             echo "Branch can be safely deleted: $branch"
         fi
     done
-    echo "Generated files: "
+    echo "Generated files in directory: /tmp/gh-list-branches"
     ls -la "/tmp/gh-list-branches"
 }
 
