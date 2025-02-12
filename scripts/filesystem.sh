@@ -9,12 +9,17 @@ function mount-iso {
     ls -l
 }
 
-function extractall {
+function extract-all {
     ls *.zip|awk -F'.zip' '{print "unzip "$0" -d "$1}' | sh
 }
 
-function extractall2 {
+function extract-all2 {
     for x in *.zip ; do unzip -d all -o -u $x ; done
+}
+
+function extract-all-same-dir {
+    # https://unix.stackexchange.com/a/631313
+    for f in *.zip; do unzip "$f" -d "${f%.zip}"; done
 }
 
 function extract-all-multipart {
