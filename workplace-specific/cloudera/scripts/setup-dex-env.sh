@@ -729,6 +729,7 @@ function _dex-create-private-stack {
   MOONLANDER_SKIP_BUILD=1
   # MOONLANDER_CP_SH_ARGS="$moonlander_workspace --ttl 168"
   MOONLANDER_CP_SH_ARGS="$moonlander_workspace --skip-build --ttl 168"
+  # MOONLANDER_CP_SH_ARGS="$moonlander_workspace --ttl 168"
 
   # stdout/stderr redirection: https://stackoverflow.com/questions/692000/how-do-i-write-standard-error-to-a-file-while-using-tee-with-a-pipe
 
@@ -741,7 +742,6 @@ function _dex-create-private-stack {
       # mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
       mow-priv ./dev-tools/moonlander-cp.sh install $(echo $MOONLANDER_CP_SH_ARGS) 2>&1 | tee "$logfilename"
   fi
-  #set +x
 
   # mow-priv k9s --> Validate if snemeth pods are running (by name)
   # 3. Create service with curl: https://github.infra.cloudera.com/CDH/dex/wiki/Upgrade-Testing
