@@ -489,7 +489,8 @@ function copy_files_from_linuxenv_repo_to_home {
 
 function setup-pythonpath {
   echo "Setting up PYTHONPATH"
-  ASDF_PYTHON_LIBS=$(asdf where python)/lib/python3.8/site-packages
+  asdf_python=$(asdf where python)
+  ASDF_PYTHON_LIBS=$(find $asdf_python -type d -name "site-packages")
   STANDARD_PYTHON_LIBS="$HOME/Library/Python/3.8/lib/python/site-packages/"
   export PYTHONPATH="$STANDARD_PYTHON_LIBS:$ASDF_PYTHON_LIBS:${HOME_LINUXENV_DIR}/scripts/python/:$PYTHONPATH"
 }
