@@ -609,7 +609,7 @@ function dex-create-private-stack-mowpriv-remote-repobranch {
   # scp $PATCH_FILE $SSH_CMD:/home/systest/dex-patch.patch
 
   echo "Fetching DEX"
-  ssh $SSH_CMD "cd /home/systest/cloudera/dex; git reset HEAD --hard;git fetch --all;git checkout $GIT_REMOTE/$BRANCH;"
+  ssh $SSH_CMD "cd /home/systest/cloudera/dex; git reset HEAD --hard;git fetch --all;git checkout -B $BRANCH $GIT_REMOTE/$BRANCH;"
 
   if [ "$?" -ne 0 ]; then
     echo "SSH command was not successful!"
@@ -639,7 +639,9 @@ function _dex-create-private-stack-mowpriv-remote-push-image {
   # CMD="gimme-aws-creds;export MOW_AUTH_TOOL=none;USER=snemeth mow-priv ./dev-tools/moonlander-cp.sh install $moonlander_workspace --ttl 168 2>&1"
   
   # COMMAND: moonlander-cp.sh push-image
-  CMD="gimme-aws-creds;export MOW_AUTH_TOOL=none;USER=snemeth mow-priv ./dev-tools/moonlander-cp.sh push-image 2>&1"
+  # DOCKER_BUILD_WITH_NO_CACHE="true"
+  DOCKER_BUILD_WITH_NO_CACHE=""
+  CMD="gimme-aws-creds;export MOW_AUTH_TOOL=none;USER=snemeth;DOCKER_BUILD_WITH_NO_CACHE=$DOCKER_BUILD_WITH_NO_CACHE mow-priv ./dev-tools/moonlander-cp.sh push-image 2>&1"
 
 
   # In case of SSH git clone issues, check: https://cloudera.atlassian.net/wiki/spaces/ENG/pages/78906426/Set+Up+Your+SSH+Key#Generating-the-SSH-key
