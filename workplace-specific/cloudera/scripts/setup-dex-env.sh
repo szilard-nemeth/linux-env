@@ -535,7 +535,10 @@ function dex-create-service-in-stack {
 }
 
 function dex-initial-setup-dex-dev-docker {
-  if [[ $# -ne 1 ]]; then
+  # TODO Move this to: https://github.infra.cloudera.com/CDH/dex-utils/tree/master/dex-dev-docker
+  set -x
+  # https://github.infra.cloudera.com/CDH/dex-utils/tree/master/dex-dev-docker
+  if [[ $# -ne 2 ]]; then
     echo "Usage: dex-setup-dex-dev-docker <server> <okta username>"
     return 1
   fi
@@ -545,15 +548,19 @@ function dex-initial-setup-dex-dev-docker {
   SSH_CMD="systest@$SERVER"
 
   ### INIT: git, docker
-  ssh $SSH_CMD "/bin/bash -c \"$(curl -fsSL https://github.infra.cloudera.com/raw/CDH/dex/develop/dev-tools/bootstrap-buildbox.sh)\""
+  ssh $SSH_CMD "/bin/bash -c \"set -x;$(curl -fsSL https://github.infra.cloudera.com/raw/CDH/dex/develop/dev-tools/bootstrap-buildbox.sh)\""
 
 
   ### INIT: dex-dev-docker
-  # https://github.infra.cloudera.com/CDH/dex-utils/tree/master/dex-dev-docker
+  # Repo: https://github.infra.cloudera.com/CDH/dex-utils/tree/master/dex-dev-docker
   ssh $SSH_CMD 'mkdir -p ~/.gnupg'
   scp -r ~/.gnupg/mow-priv $SSH_CMD:.gnupg/mow-priv
-  ssh $SSH_CMD "cd;git clone https://github.infra.cloudera.com/CDH/dex-utils.git"
-  ssh $SSH_CMD "cd;./dex-utils/dex-dev-docker/init.sh all $USERNAME"
+
+  # TODO remove command 'git checkout improvements' when PR is merged to main
+  ssh $SSH_CMD "cd;git clone https://github.infra.cloudera.com/snemeth/dex-utils.git; cd dex-utils;git checkout improvements; git pull"
+  ssh $SSH_CMD "cd;whoami;./dex-utils/dex-dev-docker/init.sh all $USERNAME"
+
+  set +x
 }
 
 
