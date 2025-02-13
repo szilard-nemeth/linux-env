@@ -1,5 +1,5 @@
 awscli 2.7.0
-golang 1.22.2
+golang 1.23.0
 python 3.9.13
 make 4.3
 maven 3.8.2
