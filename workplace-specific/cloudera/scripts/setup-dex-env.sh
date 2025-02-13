@@ -1105,7 +1105,6 @@ function dex-save-logs-cp-mowpriv-custom-ns {
 
 
 function _dex-save-logs {
-  set -x
   local mode=$1
   local namespace=$2
   local target_dir=$3
@@ -1133,7 +1132,10 @@ function _dex-save-logs {
   echo "To copy the files, execute these: "
   for pod in ${found_pods}; do
   #while IFS= read -r pod; do
-    echo "find $target_dir/ -type f -iregex \".*pod-log-$pod.*\" -exec cp {} \$RES_DIR \;"
+    CMD="find $target_dir/ -type f -iregex \".*pod-log-$pod.*\" -exec cp {} \$RES_DIR \;"
+    echo "$CMD"
+    RES_DIR=$(pwd)
+    eval $CMD
   done
   #done <<< $found_pods
 
@@ -1141,11 +1143,9 @@ function _dex-save-logs {
   echo "Listing result files..."
   #while IFS= read -r pod; do
   for pod in ${found_pods}; do
-    ls -latr $target_dir/pod-log-$pod-*
+    ls -latr $target_dir/pod-log-$pod*
   #done <<< $found_pods
   done
-    
-  set +x
 }
 
 
