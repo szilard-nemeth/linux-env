@@ -695,11 +695,34 @@ function dex-create-private-stack-mowdev {
 }
 
 function _dex-create-private-stack {
+  local mow_env=""
+  local MOONLANDER_SKIP_BUILD=0
+
+  # Parse arguments
+  for arg in "$@"; do
+    case "$arg" in
+      --skip-build)
+        MOONLANDER_SKIP_BUILD=1
+        ;;
+      mow-dev|mow-priv)
+        mow_env="$arg"
+        ;;
+      *)
+        echo "Unknown argument: $arg"
+        ;;
+    esac
+  done
+
+  if [[ -z "$mow_env" ]]; then
+    echo "❌ Error: You must provide an environment (mow-dev or mow-priv)"
+    return 1
+  fi
+
   #set -x
   local mow_env="$1"
   echo "Moonlander..."
   echo "git pull / running make..."
-  cd $CSI_HOME/moonlander && git pull && make;
+  cd "$CSI_HOME/moonlander" && git pull && make;
 
 
   if [[ -z $moonlander_workspace ]]
@@ -713,9 +736,10 @@ function _dex-create-private-stack {
   # 1. make protos api-docs gen-mocks
 
   # 2. moonlander install
-  DATE_OF_START=`date +%F-%H%M%S`
-  logfilename="$HOME/.dex/logs/dexprivatestack_env-$mow_env""_""$DATE_OF_START.log"
-  mkdir -p $HOME/.dex/logs/; touch $logfilename
+  local DATE_OF_START
+  DATE_OF_START=$(date +%F-%H%M%S)
+  local logfilename="$HOME/.dex/logs/dexprivatestack_env-${mow_env}_${DATE_OF_START}.log"
+  mkdir -p "$HOME/.dex/logs"; touch "$logfilename"
   echo "****Logs are stored to file: $logfilename"
 
 
@@ -724,23 +748,22 @@ function _dex-create-private-stack {
   # export EXTRA_DOCKER_ARGS="--progress=plain"; echo "Exported EXTRA_DOCKER_ARGS=$EXTRA_DOCKER_ARGS"
   # export DOCKER_BUILD_WITH_NO_CACHE="true"; echo "Exported DOCKER_BUILD_WITH_NO_CACHE=$DOCKER_BUILD_WITH_NO_CACHE"
   # export ENABLE_MULTI_ARCH_BUILD="false"; echo "Exported ENABLE_MULTI_ARCH_BUILD=$ENABLE_MULTI_ARCH_BUILD"
-  # TODO Specify skip build option?
-  # https://stackoverflow.com/questions/40771781/how-to-append-a-string-in-bash-only-when-the-variable-is-defined-and-not-null
-  MOONLANDER_SKIP_BUILD=1
-  # MOONLANDER_CP_SH_ARGS="$moonlander_workspace --ttl 168"
-  MOONLANDER_CP_SH_ARGS="$moonlander_workspace --skip-build --ttl 168"
-  # MOONLANDER_CP_SH_ARGS="$moonlander_workspace --ttl 168"
+
 
   # stdout/stderr redirection: https://stackoverflow.com/questions/692000/how-do-i-write-standard-error-to-a-file-while-using-tee-with-a-pipe
-
   # TODO: piping to tee is not line buffered!
   #  Consider replacing it with 'script': https://unix.stackexchange.com/a/61833/189441
-  if [[ "$mow_env" == "mow-dev" ]]; then
-      # mow-dev ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
-      mow-dev ./dev-tools/moonlander-cp.sh install $(echo $MOONLANDER_CP_SH_ARGS) 2>&1 | tee "$logfilename"
-  elif [[ "$mow_env" == "mow-priv" ]]; then
-      # mow-priv ./dev-tools/moonlander-cp.sh install ${USER} --ttl 168 --skip-build | tee "$logfilename"
-      mow-priv ./dev-tools/moonlander-cp.sh install $(echo $MOONLANDER_CP_SH_ARGS) 2>&1 | tee "$logfilename"
+
+  # Build Moonlander args dynamically based on skip-build flag
+  local MOONLANDER_CP_SH_ARGS="$moonlander_workspace"
+  if [[ "$MOONLANDER_SKIP_BUILD" -eq 1 ]]; then
+    MOONLANDER_CP_SH_ARGS="$MOONLANDER_CP_SH_ARGS --skip-build"
+  fi
+  MOONLANDER_CP_SH_ARGS="$MOONLANDER_CP_SH_ARGS --ttl 168"
+
+  if [[ "$mow_env" == "mow-dev" || "$mow_env" == "mow-priv" ]]; then
+    set -x
+    $mow_env ./dev-tools/moonlander-cp.sh install $(echo $MOONLANDER_CP_SH_ARGS) 2>&1 | tee "$logfilename"
   fi
 
   # mow-priv k9s --> Validate if snemeth pods are running (by name)
