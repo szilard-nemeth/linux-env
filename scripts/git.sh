@@ -97,10 +97,11 @@ function gh-checkout-pr {
         return 1
     fi
 
+    # https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally
     PR_ID="$1"
     BRANCHNAME="pr-review-$PR_ID"
     git fetch origin pull/$PR_ID/head:$BRANCHNAME
-    git co $BRANCHNAME
+    git checkout $BRANCHNAME
 }
 
 function gh-backport-cde-pr {
