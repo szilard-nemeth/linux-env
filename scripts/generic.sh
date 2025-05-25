@@ -13,17 +13,20 @@ function debug-command {
 }
 
 start_trace_logging() {
+    # USAGE EXAMPLE: 
+    # local logfile=$(start_trace_logging)
+    # echo "Tracing to file: $logfile"
+    # trace_to_file $logfile echo "test1"
+    # trace_to_file $logfile echo "test2"
+    
     local caller="${FUNCNAME[1]:-main}"
     local timestamp="$(date +%Y%m%d_%H%M%S%N)"
     local logfile="/tmp/trace_${caller}_${timestamp}.log"
-    echo "Logging trace to $logfile"
+    echo "$logfile"
 }
 
 get_latest_trace_log() {
-    # Should be used like: 
-    # local logfile=$(start_trace_logging)
-    # echo "Tracing to file: $logfile"
-    # OR
+    # USAGE EXAMPLE: 
     # echo "Latest trace log:"
     # local latest_log=$(get_latest_trace_log)
     # echo "$latest_log"
@@ -44,13 +47,18 @@ get_latest_trace_log() {
 
 trace_to_file() {
     if (( $# < 2 )); then
-        echo "Usage: trace_to_file logfile command [args...]"
-        echo "Usage: trace_to_file mytrace.log bash -c '
-            echo "Running multiple commands"
-            ls -l /nonexistent
-        '"  
+        echo "Usage: trace_to_file logfile command [args...]" >&2
         return 1
     fi
+
+    # Naive approach, prints:
+    # +trace_to_file:19> echo faf
+    # +trace_to_file:20> set +x
+    # {
+    #     set -x
+    #     "$@"
+    #     set +x
+    # } 2>&3
 
     local logfile=$1
     shift
@@ -60,22 +68,21 @@ trace_to_file() {
         cmd_str+=" $(printf '%q' "$arg")"
     done
 
-    # Naive approach, prints:
-    #   +trace_to_file:19> echo faf
-    #   +trace_to_file:20> set +x
-    #   {
-    #       set -x
-    #       "$@"
-    #       set +x
-    #   } 2>&3
-
+    #1. Saving original stderr (FD 2) to another descriptor (say, FD 4).
+    #2. Creating a new FD (e.g., FD 3) for tracing.
+    #3. Redirecting only xtrace to FD 3.
+    #4. Letting FD 2 (normal stderr) continue to the shell.
+    exec 3>>"$logfile" 4>&2
     {
         PS4=$'%D{%Y-%m-%d %H:%M:%S} + '
         setopt prompt_subst
         set -x
         eval "$cmd_str"
         set +x
-    } 2>>"$logfile"    # Redirect only stderr (trace output) and append 
+    } 2>&3  # Only trace output goes here
+
+    # Restore stderr
+    exec 3>&- 4>&-
 }
 
 
