@@ -111,59 +111,73 @@ function gh-backport-cde-pr {
         return 1
     fi
 
-    set -x
     PR_ID=$1
     TARGET_R_BRANCH="$2"
-    SOURCE_BRANCH=${3:-origin/$TARGET_R_BRANCH}  # Default to TARGET_R_BRANCH if not provided
+    SOURCE_BRANCH=${3:-origin/$TARGET_R_BRANCH} # Default to TARGET_R_BRANCH if not provided
     TARGET_L_BRANCH="pr-backport-$PR_ID-$TARGET_R_BRANCH"
     FORK_REMOTE=fork
     FORK_REPO_NAME=snemeth
+    STATE_FILE="~/.gh-backport-state"
 
     #TODO Validate if target branch exists
-    # TODO error if gh does not exist
+    #TODO error if gh does not exist
 
+    set -e  # Exit on unhandled error
 
-    git fetch origin
-    git fetch fork
-    COMMIT_HASH=$(gh pr view $PR_ID --json mergeCommit | jq '.mergeCommit.oid' | tr -d "\"")
-    PR_TITLE=$(gh pr view $PR_ID --json title  | jq '.title' | tr -d "\"")
+    STEP=1
+    if [[ -f "$STATE_FILE" ]]; then
+        STEP=$(cat "$STATE_FILE")
+    fi
 
-    if git cat-file -t $COMMIT_HASH 2> /dev/null 
-    then 
+    if [[ "$STEP" -le 1 ]]; then
+        git fetch origin
+        git fetch fork
+
+        if ! command -v gh &> /dev/null; then
+            echo "'gh' CLI not found. Please install GitHub CLI."
+            return 1
+        fi
+
+        COMMIT_HASH=$(gh pr view $PR_ID --json mergeCommit | jq -r '.mergeCommit.oid')
+        PR_TITLE=$(gh pr view $PR_ID --json title | jq -r '.title')
+
+        if ! git cat-file -t "$COMMIT_HASH" &> /dev/null; then
+            echo "Commit with hash $COMMIT_HASH not found"
+            return 1
+        fi
+
         echo "Found commit: $COMMIT_HASH"
-        git --no-pager log  --format=%B -n 1 $COMMIT_HASH
-    else 
-        echo "Commit with hash $COMMIT_HASH not found"
-        return 1
+        git --no-pager log --format=%B -n 1 $COMMIT_HASH
+
+        git checkout -b $TARGET_L_BRANCH $SOURCE_BRANCH || git checkout $TARGET_L_BRANCH
+        git branch --unset-upstream || true
+
+        if ! git cherry-pick -x "$COMMIT_HASH"; then
+            echo "Cherry-pick failed. Resolve conflicts and commit the changes, then re-run this function."
+            echo 1 > "$STATE_FILE"
+            return 1
+        fi
+
+        echo 2 > "$STATE_FILE"
     fi
 
-    git checkout -b $TARGET_L_BRANCH $SOURCE_BRANCH
-    git branch --unset-upstream # Untrack remote branch
-    
-    git cherry-pick -x $COMMIT_HASH
+    if [[ "$STEP" -le 2 ]]; then
+        echo "Pushing to remote..."
+        if ! git push $FORK_REMOTE -u $TARGET_L_BRANCH; then
+            echo "Error while pushing commit"
+            git checkout origin/develop && git branch -D $TARGET_L_BRANCH
+            return 1
+        fi
 
-    if [[ "$?" -ne 0 ]]; then
-        echo "Failed to cherry-pick commit: $COMMIT_HASH"
-        return 2
+        echo 3 > "$STATE_FILE"
     fi
-    
 
-    echo "Pushing (dry-run)"
-    git push --dry-run $FORK_REMOTE -u $TARGET_L_BRANCH
-
-    set -x
-    if ! git push $FORK_REMOTE -u $TARGET_L_BRANCH; then
-        echo "Error while pushing commit"
-        # TODO Reset to original branch
-        git checkout origin/develop && git branch -D $TARGET_L_BRANCH
-        return 1
+    if [[ "$STEP" -le 3 ]]; then
+        echo "Creating draft PR..."
+        gh pr create --draft --title "$PR_TITLE" --body "Backport of #$PR_ID" --base "$TARGET_R_BRANCH" --head "$FORK_REPO_NAME:$TARGET_L_BRANCH"
+        echo "NOTE: Remember to un-draft your PR"
+        rm -f "$STATE_FILE"
     fi
-    set +x
-
-
-    echo "Git push successful, Creating backport PR..."
-    gh pr create --draft --title $PR_TITLE --body "Backport of #$PR_ID" --base $TARGET_R_BRANCH --head $FORK_REPO_NAME:$TARGET_L_BRANCH 
-    echo "NOTE: Remember to un-draft your PR"
 }
 
 function gh-create-pr {
