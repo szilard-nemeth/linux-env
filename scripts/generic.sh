@@ -19,43 +19,33 @@ function trace_to_file {
             echo "Running multiple commands"
             ls -l /nonexistent
         '"  
-    return 1
+        return 1
     fi
 
     local logfile=$1
     shift
 
-
-    # Open FD 3 for writing to the logfile
-    exec 3>"$logfile"
-
-    # Naive approach, prints: 
-    # +trace_to_file:19> echo faf
-    # +trace_to_file:20> set +x
-    # {
-    #     set -x
-    #     "$@"
-    #     set +x
-    # } 2>&3
-
-
-    # Quote and join arguments safely
     local cmd_str=""
     for arg in "$@"; do
         cmd_str+=" $(printf '%q' "$arg")"
     done
 
-    # Set PS4 to include a timestamp
-    local ps4='+$(date "+%Y-%m-%d %H:%M:%S") '
+    # Naive approach, prints:
+    #   +trace_to_file:19> echo faf
+    #   +trace_to_file:20> set +x
+    #   {
+    #       set -x
+    #       "$@"
+    #       set +x
+    #   } 2>&3
+
     {
-        PS4="$ps4"
+        PS4=$'%D{%Y-%m-%d %H:%M:%S} + '
+        setopt prompt_subst
         set -x
         eval "$cmd_str"
         set +x
-    } 2>&3
-
-    # Close FD 3
-    exec 3>&-
+    } 2>>"$logfile"    # Redirect only stderr (trace output) and append
 }
 
 
