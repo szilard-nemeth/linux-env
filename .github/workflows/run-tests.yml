@@ -1,0 +1,25 @@
+name: Run Test Scripts
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set execute permissions on test scripts
+        run: |
+          find tests -type f \( -name "*.sh" -o -name "*.zsh" \) -exec chmod +x {} \;
+
+      - name: Run all test scripts in tests/
+        run: |
+          set -e  # fail on any command error
+          for script in $(find tests -type f \( -name "*.sh" -o -name "*.zsh" \)); do
+            echo "Running $script..."
+            "$script"
+          done
