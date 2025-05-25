@@ -197,7 +197,7 @@ function gh-create-pr {
     if ! git push -u $FORK_REMOTE -u $TARGET_L_BRANCH; then
         echo "Error while pushing commit"
         # TODO Reset to original branch
-        git checkout origin/develop && git branch -D $TARGET_L_BRANCH
+        # git checkout origin/develop && git branch -D $TARGET_L_BRANCH
         return 2
     fi
 
@@ -234,7 +234,7 @@ function gh-create-pr {
     
     # From same repo it works!
     # https://graphite.dev/guides/create-pr-from-gh-command-line
-    gh pr create --draft --title DEX-15745 --body-file $pr_template_file_path  --base develop --head $TARGET_R_BRANCH
+    gh pr create --draft --title $TARGET_L_BRANCH --body-file $pr_template_file_path  --base develop --head $TARGET_R_BRANCH
     set +x
 }
 
