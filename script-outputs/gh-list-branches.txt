@@ -1,0 +1,102 @@
+snemeth@22355 [21:47:30] <130> •100% --( ~/development/cloudera/hackathon2022/dexter ) @master [$!]
+➜ gh-list-branches
+All array elements: 17 DEX-15961 16 DEX-15259-ci-fixes 14 DEX-15259-gh-actions-fixes 13 DEX-15802 12 snemeth:DEX-15416 10 irashid:triage_jira_pivot 9 snemeth:DEX-15259-3 8 snemeth:DEX-15259-2 7 DEX-15259 6 DEX-15233 5 irashid:show_failed_tests 4 irashid:handle_aborted 3 irashid:readme-updates 2 DEX-13827
+
+
+Processing PR #17: DEX-15961. Fix test-reporter workflow (Author: snemeth), branch: DEX-15961, commit hash: 18a5a9b
+Commits for branch: DEX-15961
+Last commit: ab8528c
+First commit: 2d4bf28
+Branch can be safely deleted: DEX-15961
+
+
+Processing PR #16: DEX-15259. CI build fixes (Author: snemeth), branch: DEX-15259-ci-fixes, commit hash: 1e99951
+Commits for branch: DEX-15259-ci-fixes
+Last commit: 649abf8
+First commit: 5763bc2
+Diff files are different: diff /tmp/gh-list-branches/.diff /tmp/gh-list-branches/DEX-15259-ci-fixes.diff
+
+
+Processing PR #14: DEX-15259. CI fixes (Author: snemeth), branch: DEX-15259-gh-actions-fixes, commit hash: ae985ee
+2b9641f
+Multiple commits found
+ae985ee Revert "DEX-15259. CI fixes (#14)"
+2b9641f DEX-15259. CI fixes (#14)
+
+
+Processing PR #13: DEX-15802. DEXter: Improve command that prints Spark to Python, Java, Scala version mappings (Author: snemeth), branch: DEX-15802, commit hash: e9d5847
+Commits for branch: DEX-15802
+Last commit: 8eb579d
+First commit: 0b95b11
+Diff files are different: diff /tmp/gh-list-branches/.diff /tmp/gh-list-branches/DEX-15802.diff
+
+
+Processing PR #12: DEX-15416. Create command to print Spark to Python version mappings (Author: snemeth), branch: DEX-15416, commit hash: 70709b6
+Commits for branch: DEX-15416
+Last commit: 334833c
+First commit: 5e40a91
+Diff files are different: diff /tmp/gh-list-branches/.diff /tmp/gh-list-branches/DEX-15416.diff
+
+
+Processing PR #10: DEX-15962. Provide a way to see which jiras failures are triaged against (Author: irashid), branch: triage_jira_pivot, commit hash: e2be92e
+Branch does not exist: triage_jira_pivot, skipping
+
+
+Processing PR #9: DEX-15259. Fix label strings of \runs-on\ of jobs (Author: snemeth), branch: DEX-15259-3, commit hash: 116eeea
+Commits for branch: DEX-15259-3
+Last commit: 43d2c54
+First commit: 43d2c54
+Branch can be safely deleted: DEX-15259-3
+
+
+Processing PR #8: DEX-15259. Specify single label for \runs-on\ to activate releng runners (Author: snemeth), branch: DEX-15259-2, commit hash: 6055641
+Commits for branch: DEX-15259-2
+Last commit: 21858cd
+First commit: 21858cd
+Branch can be safely deleted: DEX-15259-2
+
+
+Processing PR #7: DEX-15259. Specify labels for RELENG runners (Author: snemeth), branch: DEX-15259, commit hash: 6e60440
+Commits for branch: DEX-15259
+Last commit: 965e3e2
+First commit: 965e3e2
+Branch can be safely deleted: DEX-15259
+
+
+Processing PR #6: DEX-15233. Document how to run unit tests and fix some test issues (Author: snemeth), branch: DEX-15233, commit hash: 4b0d2ef
+Commits for branch: DEX-15233
+Last commit: d7928dd
+First commit: 3310427
+Diff files are different: diff /tmp/gh-list-branches/.diff /tmp/gh-list-branches/DEX-15233.diff
+
+
+Processing PR #5: DEX-15963. Show failed tests (Author: irashid), branch: show_failed_tests, commit hash: 6d1e76d
+Branch does not exist: show_failed_tests, skipping
+
+
+Processing PR #4: add handling for Aborted state (Author: irashid), branch: handle_aborted, commit hash: bcbd1f4
+Branch does not exist: handle_aborted, skipping
+
+
+Processing PR #3: Assorted updates for getting started with a fresh checkout (Author: irashid), branch: readme-updates, commit hash: f49e4f2
+Branch does not exist: readme-updates, skipping
+
+
+Processing PR #2: DEX-13827. Create Jira hierarchy for a new HOTFIX (Author: snemeth), branch: DEX-13827, commit hash: 6c4693c
+Branch does not exist: DEX-13827, skipping
+Generated files:
+total 664
+drwxr-xr-x   11 snemeth  wheel     352 Feb  8 21:49 .
+drwxrwxrwt  291 root     wheel    9312 Feb  8 21:49 ..
+-rw-r--r--    1 snemeth  wheel    2193 Feb  8 21:49 .diff
+-rw-r--r--    1 snemeth  wheel    2193 Feb  8 21:49 DEX-15233.diff
+-rw-r--r--    1 snemeth  wheel    1205 Feb  8 21:49 DEX-15259-2.diff
+-rw-r--r--    1 snemeth  wheel     762 Feb  8 21:49 DEX-15259-3.diff
+-rw-r--r--    1 snemeth  wheel   43517 Feb  8 21:49 DEX-15259-ci-fixes.diff
+-rw-r--r--    1 snemeth  wheel    1183 Feb  8 21:49 DEX-15259.diff
+-rw-r--r--    1 snemeth  wheel  133026 Feb  8 21:49 DEX-15416.diff
+-rw-r--r--    1 snemeth  wheel  133551 Feb  8 21:49 DEX-15802.diff
+-rw-r--r--    1 snemeth  wheel    1183 Feb  8 21:49 DEX-15961.diff
+
+snemeth@22355 [21:49:56] •100% --( ~/development/cloudera/hackathon2022/dexter ) @master [$!] took 25.7s
+➜
