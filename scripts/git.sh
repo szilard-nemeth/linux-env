@@ -104,14 +104,16 @@ function gh-checkout-pr {
 }
 
 function gh-backport-cde-pr {
-    if [[ "$#" -ne 2 ]]; then
-        echo "Usage: $0 <PR ID> <branch to backport>"
-        echo "Usage example: $0 5669 DEX-1.20.1"
+    if [[ "$#" -lt 2 || "$#" -gt 3 ]]; then
+        echo "Usage: $0 <PR ID> <branch to backport> [<source branch>]"
+        echo "Usage example: $0 5669 DEX-1.20.1 develop"
         return 1
     fi
 
+    set -x
     PR_ID=$1
     TARGET_R_BRANCH="$2"
+    SOURCE_BRANCH=${3:-origin/$TARGET_R_BRANCH}  # Default to TARGET_R_BRANCH if not provided
     TARGET_L_BRANCH="pr-backport-$PR_ID-$TARGET_R_BRANCH"
     FORK_REMOTE=fork
     FORK_REPO_NAME=snemeth
@@ -120,7 +122,8 @@ function gh-backport-cde-pr {
     # TODO error if gh does not exist
 
 
-    git fetch --all
+    git fetch origin
+    git fetch fork
     COMMIT_HASH=$(gh pr view $PR_ID --json mergeCommit | jq '.mergeCommit.oid' | tr -d "\"")
     PR_TITLE=$(gh pr view $PR_ID --json title  | jq '.title' | tr -d "\"")
 
@@ -133,7 +136,7 @@ function gh-backport-cde-pr {
         return 1
     fi
 
-    git co -b $TARGET_L_BRANCH remotes/origin/$TARGET_R_BRANCH 
+    git checkout -b $TARGET_L_BRANCH $SOURCE_BRANCH
     git branch --unset-upstream # Untrack remote branch
     
     git cherry-pick -x $COMMIT_HASH
@@ -152,7 +155,7 @@ function gh-backport-cde-pr {
         echo "Error while pushing commit"
         # TODO Reset to original branch
         git checkout origin/develop && git branch -D $TARGET_L_BRANCH
-        return -1
+        return 1
     fi
     set +x
 
