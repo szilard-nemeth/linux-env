@@ -39,28 +39,37 @@ def main():
             if detected_match:
                 # Store the line and the timestamp
                 last_detected = line
+                last_request_id = _extract_request_id(detected_match)
                 last_detected_idx = i
                 last_detected_time = parse_timestamp(line)
                 continue  # Move to the next line
             
             requesting_match = re.search(requesting_pattern, line)
             if requesting_match and last_detected:
-                # Extract the timestamp of the "Requesting GET from Airflow API" line
-                requesting_time = parse_timestamp(line)
-                
-                # Compute the time difference in seconds
-                time_diff = (requesting_time - last_detected_time).total_seconds()
-                idx_diff = i - last_detected_idx
-                
-                # Write the results to the output file
-                output_file.write(f"{last_detected.strip()}\n{line.strip()}\nTime Difference: {int(time_diff)} seconds; Lines between: {idx_diff - 1}\n\n")
-                
-                # Reset the last_detected to None after pairing
-                last_detected = None
-                last_detected_idx = 0
-                last_detected_time = None
+                other_request_id = _extract_request_id(requesting_match)
+                if last_request_id == other_request_id:
+                    # Extract the timestamp of the "Requesting GET from Airflow API" line
+                    requesting_time = parse_timestamp(line)
+
+                    # Compute the time difference in seconds
+                    time_diff = (requesting_time - last_detected_time).total_seconds()
+                    idx_diff = i - last_detected_idx
+
+                    # Write the results to the output file
+                    output_file.write(f"{last_detected.strip()}\n{line.strip()}\nTime Difference: {int(time_diff)} seconds; Lines between: {idx_diff - 1}\n\n")
+
+                    # Reset the last_detected to None after pairing
+                    last_detected = None
+                    last_request_id = None
+                    last_detected_idx = 0
+                    last_detected_time = None
 
     print(f"Time differences have been written to {args.outputfile}")
+
+
+def _extract_request_id(detected_match):
+    return detected_match.groups(0)[0].split(" ")[1]
+
 
 if __name__ == "__main__":
     main()
