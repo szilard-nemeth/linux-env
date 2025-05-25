@@ -12,14 +12,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
+
       - name: Set execute permissions on test scripts
         run: |
           find tests -type f \( -name "*.sh" -o -name "*.zsh" \) -exec chmod +x {} \;
 
       - name: Run all test scripts in tests/
+        shell: bash
         run: |
           set -e  # fail on any command error
-          for script in $(find tests -type f \( -name "*.sh" -o -name "*.zsh" \)); do
+          find tests -type f \( -name "*.sh" -o -name "*.zsh" \) -print0 | while IFS= read -r -d '' script; do
             echo "Running $script..."
             "$script"
           done
