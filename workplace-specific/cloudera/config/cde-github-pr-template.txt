@@ -1,0 +1,65 @@
+### What is this PR for?
+
+Replace this text with a description of your pull request.
+
+### Reviewers Guide(optional)
+
+Any additional note to the reviewers that can be useful while reviewing the PR.
+
+### Checklist
+
+- [ ] I have opened a JIRA for this change: https://jira.cloudera.com/browse/DEX-<num>
+
+
+- [ ] I have added automated **tests** for this change. 
+  - If this change does not include tests, please describe why.
+
+
+- [ ] I have run `make -j -l 10 build` and  `make test` successfully on my local machine.
+
+
+- [ ] My change does NOT require manual testing.
+  * If manual testing is required, please describe on what platform testing was completed and a series of steps so that others may replicate.
+
+
+- [ ] My change is compatible with **all supported platforms** (AWS, Azure, OpenShift, ECS).
+
+
+- [ ] My change is **backward compatible** and will not negatively impact existing services, virtual clusters, and runtime entities.
+
+
+- [ ] My change does not impact **upgrades**. 
+  * If Helm overrides are changed, [versions parameters](https://github.infra.cloudera.com/CDH/dex/blob/develop/pkg/control-plane/service/helm_overrider.go#L26) should be used.
+
+
+- [ ] My change does not include **secrets**, nor changes functionality in a way that might reveal secrets via logging or API responses.
+
+
+- [ ] My change does not alter the **authentication or authorization** architecture in a way that might require an additional pen-test.
+
+
+- [ ] My change does NOT alter the **build dependencies** (including `go.mod`, `go.sum`, `pom.xml`, `deps.env`, `requirements.txt`, and `package.json`).
+  - If your change modifies dependencies, please describe why this is needed.
+  - We should only change dependencies early in a release cycle (preferably right after a release).
+  - New dependencies should not use this [list of problematic licenses](https://cloudera.atlassian.net/wiki/spaces/ENG/pages/1768063150/List+of+problematic+licenses+for+CDE).
+  - For `go.mod` changes, any replace mod declaration that pins a module version should have an end of line comment linking to a description as to why pinning is required.
+
+  
+- [ ] My change does not require additional **backup support**.
+  * If your change saves new information to a top-level Job or Resource structure, updates are required [to support backup and restore](https://github.infra.cloudera.com/CDH/dex/blob/develop/pkg/runtime/service/v1archive.md#supporting-backup-and-restore-of-new-features-in-jobs).
+  * If your change may impact backup and restore, please describe.
+  
+- [ ] My change does not impact the **CLI**.
+  * Adding new functionality or backward-incompatible changes to the API might require CLI changes.
+  * Jobs API changes affect CDECLI, and control plane API changes affect CDPCLI.
+  
+- [ ] My change does not fix **build stability** issues
+  * If it does, then please inform the current release captain and backport it to n-1 release branch (even if its a hotfix branch) and PvC branch
+  * It is release captain's responsibility to ensure that these fixes should go into previous release branches so that hotfixes can have more velocity
+
+- [ ] My changes do not make any changes to existing CDE APIs or add new APIs.
+  * If there are any api changes. Run make clients and include the changes in your PR.
+
+- [ ] My change does not require workload-side access to any **public internet endpoints** in PuC.
+  * If it does, then updates are required to the [AWS outbound network access destinations](https://docs.cloudera.com/cdp-public-cloud/cloud/requirements-aws/topics/mc-outbound_access_requirements.html) and [Amazon AWS prerequisites for Cloudera Data Engineering](https://docs.cloudera.com/data-engineering/cloud/prereqs/topics/cde-aws-prereqs.html) docs for AWS and to the [Azure outbound network access destinations](https://docs.cloudera.com/cdp-public-cloud/cloud/requirements-azure/topics/mc-outbound_access_requirements.html) and [Microsoft Azure prerequisites for Cloudera Data Engineering](https://docs.cloudera.com/data-engineering/cloud/prereqs/topics/cde-azure-prereqs.html) docs for Azure.
+  * It may also be required to mention the new endpoint in the Release Notes or send a TSB to notify customers who have limited outbound network access that they should whitelist the new endpoint.
