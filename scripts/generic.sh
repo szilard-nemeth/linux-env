@@ -41,3 +41,7 @@ function grep-text-regrep {
     # Truncate long matching lines: https://stackoverflow.com/a/63165087
     echo $results | xargs grep -oE ".{0,10}$1.{0,10}"
 }
+
+function grep-text-files {
+    grep -inr --include \*.md --include \*.txt $1 $2
+}
