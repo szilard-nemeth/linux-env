@@ -23,13 +23,26 @@ def load_json(filename):
 
 def make_key(entry):
     spark_base_version = ".".join(entry['attr']['sparkVersion'].split('.')[:3])
+    dl_version = entry['attr'].get('datalakeVersion', '')
+
     return (
         entry['attr'].get('cdeVersion', ''),
-        entry['attr'].get('datalakeVersion', ''),
+        normalize_dl_version(dl_version),
         spark_base_version,
         entry['attr'].get('osName', ''),
         entry['gpuSupport']
     )
+
+def normalize_dl_version(dl_version):
+    parts = dl_version.split(".")
+
+    new_dl_version = dl_version
+    if len(parts) == 4:
+        new_dl_version = ".".join(parts[:-1])
+        _print(f"Stripping DL version. Original: {dl_version}, New: {new_dl_version}", debug=True)
+    elif len(parts) != 3:
+        raise ValueError(f"Invalid DL version: {dl_version}")
+    return new_dl_version
 
 def map_by_key(json_array):
     result_map = {make_key(entry): entry for entry in json_array}
@@ -110,11 +123,11 @@ def check_args():
     return file1, file2
 
 def _print(msg, debug=False):
-    print(msg)
-
+    # Only log message to file if Debug=True
     if debug:
         logging.getLogger().debug(msg)
     else:
+        print(msg)
         logging.getLogger().info(msg)
 
 if __name__ == "__main__":
