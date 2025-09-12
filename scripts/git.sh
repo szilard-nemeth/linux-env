@@ -119,10 +119,13 @@ function gh-backport-cde-pr {
     FORK_REPO_NAME=snemeth
     STATE_FILE="~/.gh-backport-state"
 
+    orig_branch=$(git rev-parse --abbrev-ref HEAD)
+
     #TODO Validate if target branch exists
     #TODO error if gh does not exist
 
-    set -e  # Exit on unhandled error
+    # set -e  # Exit on unhandled error
+    set -x
 
     STEP=1
     if [[ -f "$STATE_FILE" ]]; then
@@ -149,7 +152,7 @@ function gh-backport-cde-pr {
         echo "Found commit: $COMMIT_HASH"
         git --no-pager log --format=%B -n 1 $COMMIT_HASH
 
-        git checkout -b $TARGET_L_BRANCH $SOURCE_BRANCH || git checkout $TARGET_L_BRANCH
+        git checkout -b $TARGET_L_BRANCH $SOURCE_BRANCH || { echo "git checkout failed, restoring branch"; git checkout $orig_branch; return 1 }
         git branch --unset-upstream || true
 
         if ! git cherry-pick -x "$COMMIT_HASH"; then
