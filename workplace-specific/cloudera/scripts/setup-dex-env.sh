@@ -701,6 +701,8 @@ function _dex-create-private-stack {
   # Parse arguments
   for arg in "$@"; do
     case "$arg" in
+      # --tag)
+      #   WORKLOAD_IMAGE_TAG=$arg
       --skip-build)
         MOONLANDER_SKIP_BUILD=1
         ;;
@@ -760,6 +762,11 @@ function _dex-create-private-stack {
     MOONLANDER_CP_SH_ARGS="$MOONLANDER_CP_SH_ARGS --skip-build"
   fi
   MOONLANDER_CP_SH_ARGS="$MOONLANDER_CP_SH_ARGS --ttl 168"
+
+  # Use this for custom workload image tag
+  # MOONLANDER_CP_SH_ARGS="$MOONLANDER_CP_SH_ARGS --tag 1.23.1-h2-b3"
+  MOONLANDER_CP_SH_ARGS="$MOONLANDER_CP_SH_ARGS"
+  
 
   if [[ "$mow_env" == "mow-dev" || "$mow_env" == "mow-priv" ]]; then
     set -x
@@ -1104,6 +1111,11 @@ function dex-save-logs-cp-private-stack {
 }
 
 function dex-save-logs-cp-private-stack-custom {
+  if [ "$#" -ne 1 ]; then
+    echo "Expected one argument: namespace name"
+    return 1
+  fi
+
   set -x
   NAMESPACE_PRIVATE_STACK_OLD=$NAMESPACE_PRIVATE_STACK
   NAMESPACE_PRIVATE_STACK="$1"
