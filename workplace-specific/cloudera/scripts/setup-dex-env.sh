@@ -1586,7 +1586,57 @@ function dex-save-logs-and-config-cp-mowpriv {
   done
 }
 
+function cde-start-work-on-task {
+  if [ -z "$1" ]; then
+    echo "Usage: start-work-cde <branch-name>"
+    return 1
+  fi
 
+  local branch_name="$1"
+  local dex_repo="$HOME/development/cloudera/cde/dex"
+  local cde_tasks_dir="/Users/snemeth/development/my-repos/knowledge-base-private/cloudera/tasks/cde"
+  local note_folder="$cde_tasks_dir/$branch_name"
+  local note_file="$note_folder/investigation.md"
+
+  original_dir=$(pwd)
+
+  # Step 1: Checkout and update develop
+  echo "Updating develop branch in $dex_repo..."
+  cd "$dex_repo" || { echo "Failed to cd into $dex_repo"; cd $original_dir; return 1; }
+  git fetch origin || { echo "Failed to fetch origin"; cd $original_dir; return 1; }
+
+  # Step 2: Create and checkout the new branch
+  git checkout -b "$branch_name" origin/develop || { echo "Failed to create branch $branch_name"; cd $original_dir; return 1; }
+  git branch --unset-upstream
+  echo "Created and switched to branch $branch_name."
+
+  # Step 3: Create notes folder if needed
+  if [ ! -d "$note_folder" ]; then
+    echo "Creating notes folder at $note_folder..."
+    mkdir -p "$note_folder"
+  fi
+
+  # Step 4: Create investigation.md if missing, and open it
+  if [ ! -f "$note_file" ]; then
+    echo "Creating investigation.md..."
+    touch "$note_file"
+  fi
+
+  echo "Opening directory with Sublime Text..."
+  subl "$note_folder"
+
+  cd $original_dir
+}
+
+function dex-install-python-package {
+  package="$1"
+  # install package steps:
+  cd /Users/snemeth/development/cloudera/cde/dex
+  which python
+  python -m pip --version
+  python -m pip install $package
+  popd
+}
 
 
 ###################################################################### DEX RUNTIME ######################################################################
