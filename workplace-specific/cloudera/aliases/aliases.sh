@@ -104,7 +104,7 @@ alias dex-docker-cleanup="docker rmi \$(docker images | grep \"1\.18\.0\" | tr -
 alias goto-dex-7712-clitesting="cd $CLOUDERA_TASKS_CDE_DIR/dev-work-from-20221129/cli-testing"
 alias dex-print-tasks-dir="echo $CLOUDERA_TASKS_CDE_DIR"
 alias pagerduty-when-am-i-on-call="source ~/development/cloudera/pagerduty-helper/venv/bin/activate;~/development/cloudera/pagerduty-helper/when_am_i_on_call.py --user snemeth"
-alias pagerduty-when-am-i-on-call="source ~/development/cloudera/pagerduty-helper/venv/bin/activate;~/development/cloudera/pagerduty-helper/when_am_i_on_call.py --user snemeth"
+alias pagerduty-when-am-i-on-call-custom="source ~/development/cloudera/pagerduty-helper/venv/bin/activate;~/development/cloudera/pagerduty-helper/when_am_i_on_call.py -s 2023-01-01 --user snemeth"
 
 
 
