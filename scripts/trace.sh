@@ -78,3 +78,11 @@ trace_to_file() {
     # Restore stderr
     exec 3>&- 4>&-
 }
+
+###########
+function demo_trace_to_file {
+    local logfile=$(start_trace_logging)
+    echo "Tracing to file: $logfile"
+    trace_to_file "$logfile" echo "faf"
+    trace_to_file "$logfile" echo "faf2"
+}
