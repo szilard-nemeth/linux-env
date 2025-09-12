@@ -26,6 +26,8 @@
     remove-commit = "reset --hard HEAD~1"
     cpx = cherry-pick -x
     rbc = rebase --continue
+    restore-deleted = !git restore $(git ls-files -d)
+    restore-modified = !git restore $(git ls-files -m)
 
 [credential]
     helper = cache --timeout=43200
