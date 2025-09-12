@@ -852,11 +852,24 @@ function _get-pods {
   set -x
   echo "Getting $mode pods in namespace $namespace..."
   found_pods=()
+  # echo "***printing pods: "
+  # kubectl -n $namespace get pods -l app.kubernetes.io/name=dex-cp
+  # TODO make this and other occurrences of 'read -r' more portable
+    # while IFS= read -r pod; do
+    #       found_pods+=("$pod")
+    #   done < <(kubectl -n $namespace get pods -l app.kubernetes.io/name=dex-cp -o json | jq -r '.items[].metadata.name' | sort | uniq)
+
   IFS=$'\n' read -r -d '' -A found_pods < <( kubectl -n $namespace get pods -l app.kubernetes.io/name=dex-cp -o json | jq -r '.items[].metadata.name' | sort | uniq && printf '\0' )
-  # for pod in ${found_pods}; do
-  #   echo "Found pod on $mode: $pod"
-  # done
+
+  # echo "*** found pods: #${found_pods[@]}#"
+  if [[ ${#found_pods[@]} -eq 0 ]]; then
+    echo "Error: No pods found for 'dex-cp' in namespace '$namespace'" >&2
+    set +x
+    return 1
+  fi
+
   echo "Found pods on $mode: ${found_pods[*]}"
+  return 0
   set +x
 }
 
@@ -1098,6 +1111,12 @@ function dex-save-logs-cp-private-stack-custom {
   local target_dir="/tmp/dexlogs-privatestack-ns-$namespace/"
 
   get-pods-private-stack
+  if [[ ${#found_pods[@]} -eq 0 ]]; then
+    echo "Error: No pods found for 'dex-cp' in namespace '$namespace'" >&2
+    set +x
+    return 1
+  fi
+
   _dex-save-logs "private-stack" $namespace $target_dir
 
   # restore
@@ -1122,6 +1141,12 @@ function dex-save-logs-cp-mowpriv-custom-ns {
   local target_dir="/tmp/dexlogs-mowpriv-$namespace/"
 
   _get-pods $namespace "mow-priv"
+
+  if [ "$?" -ne 0 ]; then
+    echo "Failed to get pods in namespace: $namespace"
+    return 1
+  fi
+
   _dex-save-logs "mow-priv" $namespace $target_dir
 }
 
