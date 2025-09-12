@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DEX_HOME="/Users/snemeth/development/cloudera/cde/dex"
+
 #GOTO aliases
 alias goto-cldr="cd $CLOUDERA_DEV_ROOT"
 alias goto-cldr-hadoop="cd $CLOUDERA_HADOOP_ROOT"
@@ -117,6 +119,9 @@ alias dex-runtime-k9s="dexw -e dev -cid cluster-sn6sdnlq --auth cst -v -- k9s"
 alias dexter-clean-repo-branches="cd /Users/snemeth/dexter/dex && git checkout upgradeDexVersion && git reset develop --hard && git checkout dexDepsRelease && git reset develop --hard"
 
 
+## Runtime catalog
+alias cde-rtcatalog-compare="$CLOUDERA_DIR/scripts/cde/runtime-catalog/compare_catalog.py"
+
 function backup-currdir {
   local backup_path="$HOME/googledrive/backup/codebackup/"
   tar czf "$backup_path/$(basename $(pwd))-$(eval date-formatted).gz" ./
@@ -127,3 +132,35 @@ function backup-currdir {
 function goto-cde-task {
   cd $CLOUDERA_TASKS_CDE_DIR/$1
 }
+
+my_error_handler() {
+  echo "An error occurred!"
+  # Add any specific error handling logic here, like logging, cleanup, etc.
+  # exit 1 # Optional: exit with an error status
+}
+
+cde-rtcatalog-compare-current-with-develop() {
+  compare_catalog_py="$CLOUDERA_DIR/scripts/cde/runtime-catalog/compare_catalog.py"
+  log_file="/tmp/compare-catalog-out.txt"
+
+  # 1. Save old catalog
+  echo $DEX_HOME 
+  cd "$DEX_HOME"
+  git fetch origin || {
+    echo "Git fetch failed, exiting."
+    return 1
+  }
+  git show origin/develop:pkg/control-plane/service/catalog-entries.json > /tmp/catalog-entries-develop.json
+  cd -
+
+  old_catalog="/tmp/catalog-entries-develop.json"
+  new_catalog="/Users/snemeth/development/cloudera/cde/dex/pkg/control-plane/service/catalog-entries.json"
+
+  
+  echo "Comparing catalogs..."
+  echo "Old: $old_catalog"
+  echo "New: $new_catalog"
+  echo "Catalog stdtout is logged to: $log_file"
+  "$compare_catalog_py" "$old_catalog" "$new_catalog" > $log_file
+}
+
