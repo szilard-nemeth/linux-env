@@ -252,7 +252,7 @@ function gh-create-pr {
     
     # From same repo it works!
     # https://graphite.dev/guides/create-pr-from-gh-command-line
-    gh pr create --draft --title $TARGET_L_BRANCH --body-file $pr_template_file_path  --base develop --head $TARGET_R_BRANCH
+    gh pr create --draft --title $PR_TITLE --body-file $pr_template_file_path  --base develop --head $TARGET_R_BRANCH
     set +x
 }
 
