@@ -39,3 +39,7 @@ function grep-text-regrep {
 function grep-text-files {
     grep -inr --include \*.md --include \*.txt $1 $2
 }
+
+function grep-shell-scripts {
+    grep -inr --include \*sh --include \*.zsh $1
+}
