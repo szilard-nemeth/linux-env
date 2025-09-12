@@ -80,10 +80,14 @@ function dex-export-protoc25 {
 
 #Go setup
 function dex-export-gopath {
-	export GOPATH=$(go env GOPATH) # /Users/snemeth/.asdf/installs/golang/1.20.7/go
+  cd $DEX_DEV_ROOT
+	
+  export GOPATH=$(go env GOPATH) # /Users/snemeth/.asdf/installs/golang/1.20.7/go
 	export GOBIN=$GOPATH/bin
 	export PATH=$PATH:$GOPATH/bin
 	export GOOS=darwin
+
+  cd -
 }
 
 
