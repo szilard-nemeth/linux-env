@@ -58,7 +58,7 @@ complete -C '/usr/local/bin/aws_completer' aws
 export CSI_HOME="$HOME/development/cloudera/cde/cloud-services-infra/"
 export DEX_DEV_TOOLS="$DEX_DEV_ROOT/dev-tools"
 log_search="$DEX_DEV_ROOT../log-search/venv/bin"
-export PATH=$PATH:$CSI_HOME/bin:$CSI_HOME/moonlander:$DEX_DEV_TOOLS:$DEX_DEV_ROOT/build:$log_search/:${KREW_ROOT:-$HOME/.krew}/bin
+export PATH=$PATH:$CSI_HOME/bin:$CSI_HOME/moonlander:$DEX_DEV_TOOLS:$DEX_DEV_ROOT/build:$log_search/:${KREW_ROOT:-$HOME/.krew}/bin:$HOME/.istioctl/bin
 
 
 # Moonlander / Private stacks: https://github.infra.cloudera.com/CDH/dex/wiki/Private-Stacks-Moonlander
