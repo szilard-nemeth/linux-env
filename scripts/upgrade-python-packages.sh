@@ -588,3 +588,48 @@ function _myrepos-upgrade-dependencies-manual {
   _update-package-versions-in-project $PROJ_NAME_DEXTER $DEXTER_DIR
 }
 
+
+function upgrade-cdsw-launcher {
+  # TODO improve
+  cd /Users/snemeth/development/my-repos/cdsw-job-launcher
+
+  git diff --exit-code pyproject.toml > /dev/null
+  res1=$(echo "$?")
+
+  git diff --exit-code poetry.lock > /dev/null
+  res2=$(echo "$?")
+
+  if [[ "$res1" -ne "0" || "$res2" -ne "0"  ]]; then
+    echo "Changes detected in poetry files."
+    echo "Changes in pyproject.toml ? --> $res1"
+    echo "Changes in poetry.lock ? --> $res2"
+    return 2
+  fi
+
+  # if [[ ! -z $(git status -s) ]]; then
+  #   echo "There are changed files in $(pwd). Please remove changes and re-run this script"
+  #   return 2
+  # fi
+
+  poetry version patch
+  git add pyproject.toml; git add poetry.lock;
+  git ci -m "bump version"
+  git push
+  poetry publish --build
+  new_version=$(poetry version --short)
+
+
+  cd /Users/snemeth/development/my-repos/yarn-dev-tools
+
+  set -x
+  # Hack for poetry to be able to see the new version
+  # pip install --target /tmp/ --force cdsw-job-launcher==$new_version
+
+  # Run it second time to make sure, as it's not enough to run it once :(
+  # pip install --target /tmp/ --force cdsw-job-launcher==$new_version
+
+  # poetry add cdsw-job-launcher=$new_version --no-cache
+  poetry add cdsw-job-launcher=$new_version --no-cache
+  set +x
+}
+
