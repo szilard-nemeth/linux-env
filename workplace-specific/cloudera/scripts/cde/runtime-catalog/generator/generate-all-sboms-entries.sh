@@ -43,7 +43,7 @@ function generate_sboms() {
   cd $DEX_HOME/build-tools/rtcatalog
   python3 get_release_sbom.py --release 1.25.0-b78 --image-filter spark --save-disk-space
   python3 get_release_sbom.py --release 1.25.0-b78 --image-filter livy --save-disk-space
-  python3 get_release_sbom.py --release 1.25.0-b78 --image-filter python-builder --save-disk-space
+  python3 get_release_sbom.py --release 1.25.0-b78 --image-filter runtime-python-builder --save-disk-space
 }
 
 
