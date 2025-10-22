@@ -8,7 +8,11 @@ from typing import Optional, Dict
 # Set to False to actually execute the file move operations
 DRY_RUN = True
 # The root destination directory on your local machine
-GOOGLE_DRIVE_ROOT = os.path.expanduser('~/googledrive/development/ENGESC-data')
+GOOGLE_DRIVE_ROOT = os.path.expanduser('~/googledrive/development/KB-private-offloaded')
+
+# NEW: The prefix to strip from the relative path before moving.
+# This ensures the files are nested correctly inside the GOOGLE_DRIVE_ROOT.
+PATH_PREFIX_TO_STRIP = 'cloudera/tasks/cde/'
 # -------------------------------
 
 
@@ -46,7 +50,11 @@ def parse_human_size(size_str: str) -> Optional[int]:
 def process_and_move(input_filepath: str, threshold_bytes: int):
     """
     Reads the file list, identifies files larger than the threshold, and moves them
-    to the Google Drive root, preserving the relative path.
+    to the Google Drive root, preserving the relative path after stripping the prefix.
+
+    Args:
+        input_filepath: Path to the file containing the size analysis output.
+        is_dry_run: Boolean flag indicating if this is a dry run (True) or a live move (False).
     """
     if DRY_RUN:
         print("!!! DRY RUN MODE ACTIVE !!!")
@@ -56,6 +64,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         print(f"Files > {threshold_bytes // 1024 // 1024}MB will be MOVED to {GOOGLE_DRIVE_ROOT}")
 
     print("-" * 60)
+    print(f"NOTE: Stripping prefix '{PATH_PREFIX_TO_STRIP}' from source paths.")
 
     try:
         with open(input_filepath, 'r') as f:
@@ -81,7 +90,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
             continue
 
         human_size = match.group(1).strip()
-        relative_source_filepath = match.group(3).strip()
+        repository_relative_filepath = match.group(3).strip()
 
         size_in_bytes = parse_human_size(human_size)
 
@@ -93,8 +102,17 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         # --- File is larger than 20MB, proceed with move logic ---
 
         # 1. Determine destination paths
-        source_path_abs = os.path.abspath(relative_source_filepath)
-        target_path_abs = os.path.join(GOOGLE_DRIVE_ROOT, relative_source_filepath)
+        source_path_abs = os.path.abspath(repository_relative_filepath)
+
+        # Strip the configured prefix from the relative path
+        if repository_relative_filepath.startswith(PATH_PREFIX_TO_STRIP):
+            # NEW LOGIC: Remove the common repository path prefix
+            new_relative_path = repository_relative_filepath[len(PATH_PREFIX_TO_STRIP):]
+        else:
+            new_relative_path = repository_relative_filepath
+
+        # Combine the clean relative path with the Google Drive root
+        target_path_abs = os.path.join(GOOGLE_DRIVE_ROOT, new_relative_path)
         target_dir_abs = os.path.dirname(target_path_abs)
 
         print(f"\n[MOVE Candidate: {human_size}]")
