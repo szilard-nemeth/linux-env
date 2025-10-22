@@ -77,7 +77,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
     files_moved = 0
     total_space_saved_bytes = 0
 
-    for line in lines:
+    for i, line in enumerate(lines):
         # Skip header/footer lines and lines that don't look like file entries
         if not line.startswith('#'):
             continue
@@ -115,7 +115,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         target_path_abs = os.path.join(GOOGLE_DRIVE_ROOT, new_relative_path)
         target_dir_abs = os.path.dirname(target_path_abs)
 
-        print(f"\n[MOVE Candidate: {human_size}]")
+        print(f"\n[MOVE Candidate #{i + 1}: {human_size}]")
         print(f"  SOURCE: {source_path_abs}")
         print(f"  TARGET: {target_path_abs}")
 
@@ -130,6 +130,8 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         else:
             print(f"  Dry Run: mkdir -p {target_dir_abs}")
 
+
+        total_space_saved_bytes += size_in_bytes
         # 3. Execute/Simulate file move
         if not DRY_RUN:
             try:
@@ -137,7 +139,6 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
                 shutil.move(source_path_abs, target_path_abs)
                 print(f"  SUCCESS: Moved file.")
                 files_moved += 1
-                total_space_saved_bytes += size_in_bytes
             except FileNotFoundError:
                 print(f"  ERROR: Source file not found at {source_path_abs}. Skipping.")
             except Exception as e:
@@ -150,12 +151,12 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
     print(f"Summary:")
     print(f"Files selected for move (> {threshold_bytes // 1024 // 1024}MB): {files_moved}")
 
-    # Only show space saved if it was a real run
+    total_space_saved_human = f"{total_space_saved_bytes / 1024**3:.2f} GB" if total_space_saved_bytes > 1024**3 else f"{total_space_saved_bytes / 1024**2:.2f} MB"
     if not DRY_RUN:
-        total_space_saved_human = f"{total_space_saved_bytes / 1024**3:.2f} GB" if total_space_saved_bytes > 1024**3 else f"{total_space_saved_bytes / 1024**2:.2f} MB"
         print(f"Estimated Space Saved: {total_space_saved_human}")
 
     if DRY_RUN:
+        print(f"Would save estimated space: {total_space_saved_human}")
         print("\nNote: Change DRY_RUN = False inside the script to execute the actual move.")
 
 
