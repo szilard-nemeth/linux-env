@@ -79,7 +79,7 @@ def analyze_sizes(data: str, top_n: int = 5) -> List[Dict]:
     return results[:top_n]
 
 if __name__ == "__main__":
-    N = 5 # Default to show top 5, user can change this line if they want a different N
+    N = 200 # Default to show top 5, user can change this line if they want a different N
 
     # 1. Check for the required file argument
     if len(sys.argv) != 2:
