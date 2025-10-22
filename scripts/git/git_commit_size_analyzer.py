@@ -1,15 +1,6 @@
 import re
+import sys
 from typing import List, Dict, Tuple, Optional
-
-# Sample output structure from the Bash script (size, filename)
-SAMPLE_DATA = """
- 6.3M  README.md
- 1.2K   src/utils.py
- 1.7G   large/data.bin
- 128B   .gitignore
- 5.1K   build/log.txt
- 22.5M  assets/model.zip
-"""
 
 def parse_human_size(size_str: str) -> Optional[int]:
     """
@@ -88,27 +79,35 @@ def analyze_sizes(data: str, top_n: int = 5) -> List[Dict]:
     return results[:top_n]
 
 if __name__ == "__main__":
-    N = 3
-    print(f"--- Top {N} Largest Files in Commit ---")
+    N = 5 # Default to show top 5, user can change this line if they want a different N
 
-    # In a real scenario, you would pipe the output of the bash script to this script,
-    # or read from stdin (e.g., if you executed the bash script from Python).
-    # For demonstration, we use the SAMPLE_DATA.
-    
-    # Example of how you could read from a file or stdin in a real application:
-    # import sys
-    # try:
-    #     raw_data = sys.stdin.read()
-    # except:
-    #     raw_data = SAMPLE_DATA
-    
-    # Using the sample data for demonstration:
-    top_results = analyze_sizes(SAMPLE_DATA, top_n=N)
+    # 1. Check for the required file argument
+    if len(sys.argv) != 2:
+        print(f"Usage: python {sys.argv[0]} <path_to_size_file>")
+        sys.exit(1)
+
+    input_filepath = sys.argv[1]
+
+    # 2. Read the data from the specified file
+    try:
+        with open(input_filepath, 'r') as f:
+            raw_data = f.read()
+    except FileNotFoundError:
+        print(f"Error: The file '{input_filepath}' was not found.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"An error occurred while reading the file: {e}")
+        sys.exit(1)
+
+    print(f"--- Analyzing Commit Size Data from '{input_filepath}' (Top {N}) ---")
+
+    # 3. Analyze and get results
+    top_results = analyze_sizes(raw_data, top_n=N)
 
     if top_results:
         # Determine the maximum width for the size column for clean alignment
         max_size_len = max(len(r['human_size']) for r in top_results)
-        
+
         # Output the results
         for i, item in enumerate(top_results):
             # Print rank, human-readable size (left-padded for alignment), and filename
@@ -116,8 +115,6 @@ if __name__ == "__main__":
             print(f"#{i+1}: {size_padded} -> {item['filename']}")
     else:
         print("No valid file size data found to process.")
-        
-    print("-" * (30 + max_size_len))
 
-    # Example of how to use this script by piping data from the shell script (if allowed):
-    # $ ./git-commit-size.sh <hash> | python git_commit_size_analyzer.py
+    print("-" * 50)
+    print("Run Example: python commit_size_analyzer.py my_commit_data.txt")

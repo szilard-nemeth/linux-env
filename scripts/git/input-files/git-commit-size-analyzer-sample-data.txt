@@ -1,0 +1,6 @@
+6.3M  README.md
+1.2K   src/utils.py
+1.7G   large/data.bin
+128B   .gitignore
+5.1K   build/log.txt
+22.5M  assets/model.zip
