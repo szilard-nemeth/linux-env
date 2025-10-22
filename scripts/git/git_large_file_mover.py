@@ -7,10 +7,8 @@ from typing import Optional, Dict
 # --- Configuration Constants ---
 # Set to False to actually execute the file move operations
 DRY_RUN = True
-# Threshold for moving files (20 Megabytes in bytes)
-THRESHOLD_BYTES = 20 * 1024 * 1024
 # The root destination directory on your local machine
-GOOGLE_DRIVE_ROOT = os.path.expanduser('~/googledrive')
+GOOGLE_DRIVE_ROOT = os.path.expanduser('~/googledrive/development/ENGESC-data')
 # -------------------------------
 
 
@@ -45,7 +43,7 @@ def parse_human_size(size_str: str) -> Optional[int]:
     return int(value * multiplier)
 
 
-def process_and_move(input_filepath: str):
+def process_and_move(input_filepath: str, threshold_bytes: int):
     """
     Reads the file list, identifies files larger than the threshold, and moves them
     to the Google Drive root, preserving the relative path.
@@ -55,7 +53,7 @@ def process_and_move(input_filepath: str):
         print("No files will be moved. Commands are printed below.")
     else:
         print("!!! REAL MOVE MODE ACTIVE !!!")
-        print(f"Files > {THRESHOLD_BYTES // 1024 // 1024}MB will be MOVED to {GOOGLE_DRIVE_ROOT}")
+        print(f"Files > {threshold_bytes // 1024 // 1024}MB will be MOVED to {GOOGLE_DRIVE_ROOT}")
 
     print("-" * 60)
 
@@ -87,7 +85,7 @@ def process_and_move(input_filepath: str):
 
         size_in_bytes = parse_human_size(human_size)
 
-        if size_in_bytes is None or size_in_bytes < THRESHOLD_BYTES:
+        if size_in_bytes is None or size_in_bytes < threshold_bytes:
             # Since the input is sorted, we can often stop early when we hit the threshold
             # but we'll process all lines to be safe.
             continue
@@ -132,7 +130,7 @@ def process_and_move(input_filepath: str):
 
     print("-" * 60)
     print(f"Summary:")
-    print(f"Files selected for move (> {THRESHOLD_BYTES // 1024 // 1024}MB): {files_moved}")
+    print(f"Files selected for move (> {threshold_bytes // 1024 // 1024}MB): {files_moved}")
 
     # Only show space saved if it was a real run
     if not DRY_RUN:
@@ -144,11 +142,15 @@ def process_and_move(input_filepath: str):
 
 
 if __name__ == "__main__":
-    # Ensure the script is called with exactly one argument (the path to the output file)
-    if len(sys.argv) != 2:
-        print(f"Usage: python {sys.argv[0]} <path_to_commit_size_output_file>")
-        print(f"Example: python {sys.argv[0]} /Users/snemeth/Downloads/git-details-kb-private-hash-60f41a56.txt")
+    # Ensure the script is called with expected number of arguments
+    if len(sys.argv) != 3:
+        print(f"Usage: python {sys.argv[0]} <path_to_commit_size_output_file> <threshold MB>")
+        print(f"Example: python {sys.argv[0]} /Users/snemeth/Downloads/git-details-kb-private-hash-60f41a56.txt 20")
         sys.exit(1)
 
     input_filepath = sys.argv[1]
-    process_and_move(input_filepath)
+    threshold_mb = int(sys.argv[2])
+    # Threshold for moving files (20 Megabytes in bytes)
+    threshold_bytes = threshold_mb * 1024 * 1024
+
+    process_and_move(input_filepath, threshold_bytes)
