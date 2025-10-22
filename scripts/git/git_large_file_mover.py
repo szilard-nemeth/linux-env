@@ -89,7 +89,8 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
     total_space_saved_bytes = 0
     total_space_reclaimed_non_matching_extension = 0
 
-    for i, line in enumerate(lines):
+    current_candidate_no = 1
+    for line in lines:
         # Skip header/footer lines and lines that don't look like file entries
         if not line.startswith('#'):
             continue
@@ -146,7 +147,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         target_dir_abs = os.path.dirname(target_path_abs)
         placeholder_path = source_path_abs + ".MOVED.txt" # Define placeholder path
 
-        print(f"\n[MOVE Candidate #{i + 1}: {human_size}]")
+        print(f"\n[MOVE Candidate #{current_candidate_no}: {human_size}]")
         print(f"  SOURCE: {source_path_abs}")
         print(f"  TARGET: {target_path_abs}")
 
@@ -194,6 +195,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
             print(f"  Dry Run: mv {source_path_abs} {target_path_abs}")
             print(f"  Dry Run: Creating placeholder file: {placeholder_path}")
             files_moved += 1 # Count for summary, even if dry run
+        current_candidate_no += 1
 
     print("-" * 60)
     print(f"Summary:")
