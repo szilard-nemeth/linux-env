@@ -11,12 +11,18 @@ DRY_RUN = True
 # The root destination directory on your local machine
 GOOGLE_DRIVE_ROOT = os.path.expanduser('~/googledrive/development/KB-private-offloaded')
 
-# NEW: The prefix to strip from the relative path before moving.
+# The prefix to strip from the relative path before moving.
 # This ensures the files are nested correctly inside the GOOGLE_DRIVE_ROOT.
 PATH_PREFIX_TO_STRIP = 'cloudera/tasks/cde/'
 KB_PRIVATE_ROOT = "/Users/snemeth/development/my-repos/knowledge-base-private"
+
+# NEW CONFIGURATION: Extensions that are allowed to be moved
+# All extensions should be lowercase for case-insensitive matching.
+ALLOWED_EXTENSIONS = ['.tar.gz', '.gz', '.zip', '.gzip']
 # -------------------------------
 
+def convert_to_human_space(total_space_saved_bytes: int):
+    return f"{total_space_saved_bytes / 1024**3:.2f} GB" if total_space_saved_bytes > 1024**3 else f"{total_space_saved_bytes / 1024**2:.2f} MB"
 
 def parse_human_size(size_str: str) -> Optional[int]:
     """
@@ -57,7 +63,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
 
     Args:
         input_filepath: Path to the file containing the size analysis output.
-        is_dry_run: Boolean flag indicating if this is a dry run (True) or a live move (False).
+        threshold_bytes: The minimum file size in bytes required for a move.
     """
     if DRY_RUN:
         print("!!! DRY RUN MODE ACTIVE !!!")
@@ -68,6 +74,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
 
     print("-" * 60)
     print(f"NOTE: Stripping prefix '{PATH_PREFIX_TO_STRIP}' from source paths.")
+    print(f"NOTE: Only processing files with extensions: {', '.join(ALLOWED_EXTENSIONS)}")
 
     try:
         with open(input_filepath, 'r') as f:
@@ -78,7 +85,9 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
 
     lines = raw_data.strip().split('\n')
     files_moved = 0
+    files_skipped_by_extension = 0
     total_space_saved_bytes = 0
+    total_space_reclaimed_non_matching_extension = 0
 
     for i, line in enumerate(lines):
         # Skip header/footer lines and lines that don't look like file entries
@@ -98,22 +107,36 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         size_in_bytes = parse_human_size(human_size)
 
         if size_in_bytes is None or size_in_bytes < threshold_bytes:
-            # Since the input is sorted, we can often stop early when we hit the threshold
-            # but we'll process all lines to be safe.
+            # Since the input is sorted, we can usually stop early, but checking all lines is safer.
             continue
 
-        # --- File is larger than 20MB, proceed with move logic ---
+        # --- File is larger than threshold, proceed with move logic ---
+
+        # 0. NEW CHECK: Filter by allowed extension
+        is_allowed = False
+        for ext in ALLOWED_EXTENSIONS:
+            if repository_relative_filepath.lower().endswith(ext):
+                is_allowed = True
+                break
+
+        if not is_allowed:
+            files_skipped_by_extension += 1
+            total_space_reclaimed_non_matching_extension += size_in_bytes
+            # print(f"[SKIP Candidate #{i + 1}: {human_size}] Extension filter: {repository_relative_filepath}")
+            continue
 
         # 1. Determine destination paths
         source_path_abs = os.path.join(KB_PRIVATE_ROOT, repository_relative_filepath)
 
         # Sanity check
         if not os.path.isfile(source_path_abs):
-            print("ERROR: File does not exist: " + source_path_abs)
+            # We don't increment files_moved here, as it was never successfully moved
+            print(f"ERROR: File does not exist at source: {source_path_abs}")
+            continue
 
         # Strip the configured prefix from the relative path
         if repository_relative_filepath.startswith(PATH_PREFIX_TO_STRIP):
-            # NEW LOGIC: Remove the common repository path prefix
+            # Remove the common repository path prefix
             new_relative_path = repository_relative_filepath[len(PATH_PREFIX_TO_STRIP):]
         else:
             new_relative_path = repository_relative_filepath
@@ -169,19 +192,23 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         else:
             # Dry Run Output
             print(f"  Dry Run: mv {source_path_abs} {target_path_abs}")
-            print(f"  Dry Run: Creating placeholder file: {os.path.basename(placeholder_path)}")
+            print(f"  Dry Run: Creating placeholder file: {placeholder_path}")
             files_moved += 1 # Count for summary, even if dry run
 
     print("-" * 60)
     print(f"Summary:")
-    print(f"Files selected for move (> {threshold_bytes // 1024 // 1024}MB): {files_moved}")
+    print(f"Files meeting size and extension criteria: {files_moved}")
+    if files_skipped_by_extension > 0:
+        print(f"Files skipped due to extension filter: {files_skipped_by_extension}")
 
-    total_space_saved_human = f"{total_space_saved_bytes / 1024**3:.2f} GB" if total_space_saved_bytes > 1024**3 else f"{total_space_saved_bytes / 1024**2:.2f} MB"
+    total_space_saved_human = convert_to_human_space(total_space_saved_bytes)
     if not DRY_RUN:
         print(f"Estimated Space Saved: {total_space_saved_human}")
+        print(f"Would save estimated space for non-matching extensions: {convert_to_human_space(total_space_reclaimed_non_matching_extension)}")
 
     if DRY_RUN:
         print(f"Would save estimated space: {total_space_saved_human}")
+        print(f"Would save estimated space for non-matching extensions: {convert_to_human_space(total_space_reclaimed_non_matching_extension)}")
         print("\nNote: Change DRY_RUN = False inside the script to execute the actual move.")
 
 
@@ -193,7 +220,13 @@ if __name__ == "__main__":
         sys.exit(1)
 
     input_filepath = sys.argv[1]
-    threshold_mb = int(sys.argv[2])
+
+    try:
+        threshold_mb = int(sys.argv[2])
+    except ValueError:
+        print(f"Error: Threshold MB must be an integer, got '{sys.argv[2]}'")
+        sys.exit(1)
+
     # Threshold for moving files (20 Megabytes in bytes)
     threshold_bytes = threshold_mb * 1024 * 1024
 
