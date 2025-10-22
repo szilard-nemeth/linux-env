@@ -2,6 +2,7 @@ import re
 import sys
 import os
 import shutil
+import datetime
 from typing import Optional, Dict
 
 # --- Configuration Constants ---
@@ -52,6 +53,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
     """
     Reads the file list, identifies files larger than the threshold, and moves them
     to the Google Drive root, preserving the relative path after stripping the prefix.
+    It also creates a placeholder file in the original location upon a successful move.
 
     Args:
         input_filepath: Path to the file containing the size analysis output.
@@ -119,6 +121,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         # Combine the clean relative path with the Google Drive root
         target_path_abs = os.path.join(GOOGLE_DRIVE_ROOT, new_relative_path)
         target_dir_abs = os.path.dirname(target_path_abs)
+        placeholder_path = source_path_abs + ".MOVED.txt" # Define placeholder path
 
         print(f"\n[MOVE Candidate #{i + 1}: {human_size}]")
         print(f"  SOURCE: {source_path_abs}")
@@ -143,13 +146,30 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
                 # Use shutil.move for a robust atomic move operation
                 shutil.move(source_path_abs, target_path_abs)
                 print(f"  SUCCESS: Moved file.")
+
+                # --- NEW LOGIC: Create Placeholder File ---
+                placeholder_content = (
+                    "--- FILE MOVED ---\n"
+                    f"Original file was moved by large_file_mover.py script on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.\n"
+                    f"New location: {target_path_abs}\n"
+                    "--------------------\n"
+                )
+
+                with open(placeholder_path, 'w') as ph_file:
+                    ph_file.write(placeholder_content)
+
+                print(f"  SUCCESS: Created placeholder at {os.path.basename(placeholder_path)}")
+                # --- END NEW LOGIC ---
+
                 files_moved += 1
             except FileNotFoundError:
                 print(f"  ERROR: Source file not found at {source_path_abs}. Skipping.")
             except Exception as e:
                 print(f"  ERROR moving file: {e}")
         else:
+            # Dry Run Output
             print(f"  Dry Run: mv {source_path_abs} {target_path_abs}")
+            print(f"  Dry Run: Creating placeholder file: {os.path.basename(placeholder_path)}")
             files_moved += 1 # Count for summary, even if dry run
 
     print("-" * 60)
