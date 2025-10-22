@@ -13,6 +13,7 @@ GOOGLE_DRIVE_ROOT = os.path.expanduser('~/googledrive/development/KB-private-off
 # NEW: The prefix to strip from the relative path before moving.
 # This ensures the files are nested correctly inside the GOOGLE_DRIVE_ROOT.
 PATH_PREFIX_TO_STRIP = 'cloudera/tasks/cde/'
+KB_PRIVATE_ROOT = "/Users/snemeth/development/my-repos/knowledge-base-private"
 # -------------------------------
 
 
@@ -102,7 +103,11 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         # --- File is larger than 20MB, proceed with move logic ---
 
         # 1. Determine destination paths
-        source_path_abs = os.path.abspath(repository_relative_filepath)
+        source_path_abs = os.path.join(KB_PRIVATE_ROOT, repository_relative_filepath)
+
+        # Sanity check
+        if not os.path.isfile(source_path_abs):
+            print("ERROR: File does not exist: " + source_path_abs)
 
         # Strip the configured prefix from the relative path
         if repository_relative_filepath.startswith(PATH_PREFIX_TO_STRIP):
