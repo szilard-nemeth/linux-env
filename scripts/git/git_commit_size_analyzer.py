@@ -36,13 +36,12 @@ def parse_human_size(size_str: str) -> Optional[int]:
 
     return int(value * multiplier)
 
-def analyze_sizes(data: str, top_n: int = 5) -> List[Dict]:
+def analyze_sizes(data: str) -> List[Dict]:
     """
     Processes the raw file size data, sorts it, and returns the top N largest files.
 
     Args:
         data: A string containing lines of size and filename, separated by whitespace.
-        top_n: The number of largest files to return.
 
     Returns:
         A sorted list of file dictionaries.
@@ -76,14 +75,35 @@ def analyze_sizes(data: str, top_n: int = 5) -> List[Dict]:
     # Sort the results by 'size_bytes' in descending order
     results.sort(key=lambda x: x['size_bytes'], reverse=True)
 
-    return results[:top_n]
+    return results
+
+def write_to_temp_file(results):
+    import tempfile
+
+    max_size_len = max(len(r['human_size']) for r in results)
+
+    # Create a named temporary file in text mode ('w+t')
+    # 'delete=False' prevents immediate deletion when the file is closed,
+    # allowing you to access it by its name after closing.
+    with tempfile.NamedTemporaryFile(mode='w+t', delete=False, prefix="git-commit-analyzer-all-sorted-") as temp_file:
+        for i, item in enumerate(results):
+            # Print rank, human-readable size (left-padded for alignment), and filename
+            size_padded = item['human_size'].rjust(max_size_len)
+            temp_file.write(f"#{i+1}: {size_padded} -> {item['filename']}\n")
+
+        # Get the name of the temporary file
+        temp_file_name = temp_file.name
+
+    return temp_file_name
 
 if __name__ == "__main__":
-    N = 200 # Default to show top 5, user can change this line if they want a different N
+    top_n = 200 # Default to show top 200, user can change this line if they want a different N
 
     # 1. Check for the required file argument
     if len(sys.argv) != 2:
         print(f"Usage: python {sys.argv[0]} <path_to_size_file>")
+        # print("-" * 50)
+        # print("Run Example: python commit_size_analyzer.py my_commit_data.txt")
         sys.exit(1)
 
     input_filepath = sys.argv[1]
@@ -99,10 +119,13 @@ if __name__ == "__main__":
         print(f"An error occurred while reading the file: {e}")
         sys.exit(1)
 
-    print(f"--- Analyzing Commit Size Data from '{input_filepath}' (Top {N}) ---")
+    print(f"--- Analyzing Commit Size Data from '{input_filepath}' (Top {top_n}) ---")
 
     # 3. Analyze and get results
-    top_results = analyze_sizes(raw_data, top_n=N)
+    results = analyze_sizes(raw_data)
+    temp_file_name = write_to_temp_file(results)
+
+    top_results = results[:top_n]
 
     if top_results:
         # Determine the maximum width for the size column for clean alignment
@@ -116,5 +139,4 @@ if __name__ == "__main__":
     else:
         print("No valid file size data found to process.")
 
-    print("-" * 50)
-    print("Run Example: python commit_size_analyzer.py my_commit_data.txt")
+    print(f"Temporary file with all results ordered created at: {temp_file_name}")
