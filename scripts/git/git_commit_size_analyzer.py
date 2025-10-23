@@ -5,6 +5,10 @@ from typing import List, Dict, Tuple, Optional
 def convert_bytes_to_human_readable(bytes: int):
     return f"{bytes / 1024 ** 3:.2f} GB" if bytes > 1024 ** 3 else f"{bytes / 1024 ** 2:.2f} MB"
 
+def sum_bytes_of_items(items):
+    sum_bytes = reduce(lambda x, y: x + y, map(lambda x: x['size_bytes'], items))
+    return sum_bytes
+
 
 def parse_human_size(size_str: str) -> Optional[int]:
     """
@@ -102,6 +106,9 @@ def write_to_temp_file(results):
 
 if __name__ == "__main__":
     top_n = 200 # Default to show top 200, user can change this line if they want a different N
+    chunk_size = 20
+    chunks = [2, 4, 6, 8, 10] + [i * chunk_size for i in range(int(top_n / chunk_size))] + [top_n]
+    chunks.remove(0)
 
     # 1. Check for the required file argument
     if len(sys.argv) != 2:
@@ -146,7 +153,15 @@ if __name__ == "__main__":
     print("-" * 50)
     print(f"Temporary file with all results ordered created at: {temp_file_name}")
 
-    # Print sum
+    # Print sums
     from functools import reduce
-    sum_bytes = reduce(lambda x, y: x + y, map(lambda x: x['size_bytes'], results))
+    sum_bytes = sum_bytes_of_items(results)
     print(f"Sum size of all files: {convert_bytes_to_human_readable(sum_bytes)}")
+
+    sum_chunks = []
+    for c in chunks:
+        sum_chunks.append(sum_bytes_of_items(results[:c]))
+
+    for idx, sc in enumerate(sum_chunks):
+        print(f"Sum of first {chunks[idx]} items: {convert_bytes_to_human_readable(sc)}")
+    print(f"Sum of the rest of items: {convert_bytes_to_human_readable(sum_bytes_of_items(results[top_n:]))}")
