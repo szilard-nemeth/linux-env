@@ -2,6 +2,10 @@ import re
 import sys
 from typing import List, Dict, Tuple, Optional
 
+def convert_bytes_to_human_readable(bytes: int):
+    return f"{bytes / 1024 ** 3:.2f} GB" if bytes > 1024 ** 3 else f"{bytes / 1024 ** 2:.2f} MB"
+
+
 def parse_human_size(size_str: str) -> Optional[int]:
     """
     Converts a human-readable size string (e.g., '1.7G', '5.1K', '128B') to bytes.
@@ -139,4 +143,10 @@ if __name__ == "__main__":
     else:
         print("No valid file size data found to process.")
 
+    print("-" * 50)
     print(f"Temporary file with all results ordered created at: {temp_file_name}")
+
+    # Print sum
+    from functools import reduce
+    sum_bytes = reduce(lambda x, y: x + y, map(lambda x: x['size_bytes'], results))
+    print(f"Sum size of all files: {convert_bytes_to_human_readable(sum_bytes)}")
