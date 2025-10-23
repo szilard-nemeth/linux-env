@@ -21,8 +21,8 @@ KB_PRIVATE_ROOT = "/Users/snemeth/development/my-repos/knowledge-base-private"
 ALLOWED_EXTENSIONS = ['.tar.gz', '.gz', '.zip', '.gzip']
 # -------------------------------
 
-def convert_to_human_space(total_space_saved_bytes: int):
-    return f"{total_space_saved_bytes / 1024**3:.2f} GB" if total_space_saved_bytes > 1024**3 else f"{total_space_saved_bytes / 1024**2:.2f} MB"
+def convert_bytes_to_human_readable(bytes: int):
+    return f"{bytes / 1024 ** 3:.2f} GB" if bytes > 1024 ** 3 else f"{bytes / 1024 ** 2:.2f} MB"
 
 def parse_human_size(size_str: str) -> Optional[int]:
     """
@@ -203,14 +203,14 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
     if files_skipped_by_extension > 0:
         print(f"Files skipped due to extension filter: {files_skipped_by_extension}")
 
-    total_space_saved_human = convert_to_human_space(total_space_saved_bytes)
+    total_space_saved_human = convert_bytes_to_human_readable(total_space_saved_bytes)
     if not DRY_RUN:
         print(f"Estimated Space Saved: {total_space_saved_human}")
-        print(f"Would save estimated space for non-matching extensions: {convert_to_human_space(total_space_reclaimed_non_matching_extension)}")
+        print(f"Would save estimated space for non-matching extensions: {convert_bytes_to_human_readable(total_space_reclaimed_non_matching_extension)}")
 
     if DRY_RUN:
         print(f"Would save estimated space: {total_space_saved_human}")
-        print(f"Would save estimated space for non-matching extensions: {convert_to_human_space(total_space_reclaimed_non_matching_extension)}")
+        print(f"Would save estimated space for non-matching extensions: {convert_bytes_to_human_readable(total_space_reclaimed_non_matching_extension)}")
         print("\nNote: Change DRY_RUN = False inside the script to execute the actual move.")
 
 
