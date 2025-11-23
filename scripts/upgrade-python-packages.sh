@@ -171,16 +171,18 @@ function commit-version-bump {
     # Push tag
     tag_name="$new_version"
     git tag $tag_name -a -m "Release created by shell script: $new_version"
-    git push origin $tag_name --dry-run
+    git push --dry-run origin $tag_name 
 
     # Print info
     echo "========================[NOTICE]========================"
-    echo "Execute these to check commit and push (simply copy-paste this block)"
+    echo "# Execute these to check commit and push (simply copy-paste this block)"
     echo "cd `pwd`"
     echo "git --no-pager show -1"
     echo "git tag -l | grep $tag_name"
-    echo "git push # push commit"
-    echo "git push origin $tag_name # push tag"
+    echo "# To push git commit:"
+    echo "git push"
+    echo "# To push git tag:"
+    echo "git push origin $tag_name"
     echo "========================[NOTICE]========================"
   else
     echo "Skipping git push"
