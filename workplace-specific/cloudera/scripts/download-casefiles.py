@@ -71,13 +71,19 @@ def download_files(ssh_client, filenames, case_number):
         remote_path = os.path.join(remote_dir, filename)
         local_path = os.path.join(local_dir, filename)
 
+        def progress_callback(bytes_so_far, bytes_total):
+            """Callback function to show download progress."""
+            percent = (bytes_so_far / bytes_total) * 100
+            sys.stdout.write(f"\r  Downloading '{filename}': {percent:.2f}%")
+            sys.stdout.flush()
+
         try:
-            sftp.get(remote_path, local_path)
-            print(f"✅ Downloaded '{filename}' to '{local_path}'")
+            sftp.get(remote_path, local_path, callback=progress_callback)
+            print(f"\r✅ Downloaded '{filename}' to '{local_path}'   ")
         except FileNotFoundError:
-            print(f"❌ Warning: Remote file '{filename}' not found.")
+            print(f"\r❌ Warning: Remote file '{filename}' not found.   ")
         except Exception as e:
-            print(f"❌ Error downloading '{filename}': {e}")
+            print(f"\r❌ Error downloading '{filename}': {e}   ")
 
     sftp.close()
 
@@ -136,8 +142,8 @@ if __name__ == '__main__':
         files_to_download = get_files_to_download()
         if files_to_download:
             cwd = os.getcwd()
-            # print("Target directory: " + cwd)
-            download_files(client, files_to_download, case_number)
+            print("Target directory: " + cwd)
+            # download_files(client, files_to_download, case_number)
         else:
             print("No valid files selected for download. Exiting.")
 

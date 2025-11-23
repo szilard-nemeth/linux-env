@@ -154,3 +154,10 @@ function grep-in-all-diag-bundles {
 		echo;echo
   done
 }
+
+
+function casefiles-download {
+  cd ~/development/my-repos/linux-env
+  venv=$(poetry env list --full-path | grep "3\.9" | cut -d ' ' -f1)
+  $venv/bin/python $(which ./workplace-specific/cloudera/scripts/download-casefiles.py)
+}
