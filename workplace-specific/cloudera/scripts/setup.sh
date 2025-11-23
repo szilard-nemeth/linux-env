@@ -7,6 +7,7 @@ HADOOP_MVN_DIR="$HOME/development/apache/hadoop-maven/"
 HADOOP_DEV_DIR="$HOME/development/apache/hadoop/"
 export CDE_DEV_ROOT="$HOME/development/cloudera/cde/"
 export DEX_DEV_ROOT="$CDE_DEV_ROOT/dex/"
+export DEX_RTCATALOG_FILE="$DEX_DEV_ROOT/pkg/control-plane/service/catalog-entries.json"
 
 CLOUDERA_DIR="$HOME_LINUXENV_DIR/workplace-specific/cloudera/"
 export CLOUDERA_DIR
