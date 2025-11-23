@@ -58,7 +58,7 @@ complete -C '/usr/local/bin/aws_completer' aws
 export CSI_HOME="$HOME/development/cloudera/cde/cloud-services-infra/"
 export DEX_DEV_TOOLS="$DEX_DEV_ROOT/dev-tools"
 log_search="$DEX_DEV_ROOT../log-search/venv/bin"
-export PATH=$PATH:$CSI_HOME/bin:$CSI_HOME/moonlander:$DEX_DEV_TOOLS:$DEX_DEV_ROOT/build:$log_search/:${KREW_ROOT:-$HOME/.krew}/bin:$HOME/.istioctl/bin
+add_to_path_directly "$CSI_HOME/bin:$CSI_HOME/moonlander:$DEX_DEV_TOOLS:$DEX_DEV_ROOT/build:$log_search/:${KREW_ROOT:-$HOME/.krew}/bin:$HOME/.istioctl/bin"
 
 
 # Moonlander / Private stacks: https://github.infra.cloudera.com/CDH/dex/wiki/Private-Stacks-Moonlander
@@ -73,7 +73,7 @@ function print-dex-functions {
 #################################### DEX functions ####################################
 function dex-export-protoc25 {
   asdf uninstall protoc && asdf uninstall maven && cp /usr/local/bin/protoc_old /usr/local/bin/protoc
-  # export PATH=<path-to-protobuf2.5>/protobuf-2.5.0/install/bin:$PATH
+  # add_to_path_directly "<path-to-protobuf2.5>/protobuf-2.5.0/install/bin"
 }
 
 
@@ -84,7 +84,7 @@ function dex-export-gopath {
 	
   export GOPATH=$(go env GOPATH) # $HOME/.asdf/installs/golang/1.20.7/go
 	export GOBIN=$GOPATH/bin
-	export PATH=$PATH:$GOPATH/bin
+	add_to_path_directly "$GOPATH/bin"
 	export GOOS=darwin
 
   cd -

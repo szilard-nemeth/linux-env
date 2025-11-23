@@ -5,7 +5,7 @@ echo "Loading setup-vars.sh..."
 #Setup npm
 export NODE_PATH='/usr/local/lib/node_modules'
 NPM_PACKAGES="${HOME}/.npm-packages"
-PATH="$NPM_PACKAGES/bin:$PATH"
+add_to_path_directly "$NPM_PACKAGES/bin"
 # Unset manpath so we can inherit from /etc/manpath via the `manpath` command
 unset MANPATH # delete if you already modified MANPATH elsewhere in your config
 export MANPATH="$NPM_PACKAGES/share/man:$(manpath)"
@@ -13,8 +13,8 @@ export MANPATH="$NPM_PACKAGES/share/man:$(manpath)"
 #===================================
 
 #Setup Ruby
-PATH="$HOME/.rbenv/shims:$PATH"
-PATH=$(find $(gem environment gempath | tr ':' '\n') -type d -name bin | tr '\n' ':'):$PATH 
+add_to_path_directly "$HOME/.rbenv/shims:$PATH"
+add_to_path_directly $(find $(gem environment gempath | tr ':' '\n') -type d -name bin | tr '\n' ':')
 #===================================
 
 export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=1024m"

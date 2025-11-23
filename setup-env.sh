@@ -369,7 +369,7 @@ function initial_setup_macos {
     else
         echo "ruby rbenv is already at proper version: $RBENV_VERSION"
     fi
-    export PATH="$HOME/.rbenv/shims:$PATH"
+    add_to_path_directly "$HOME/.rbenv/shims:$PATH"
     echo "Ruby version: $(ruby -v)"
     
     #Colorls 
