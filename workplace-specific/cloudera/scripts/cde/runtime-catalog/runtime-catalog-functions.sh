@@ -129,9 +129,7 @@ function dex-rtcatalog-filter-by-datalake-repo() {
     return 1
   fi
   _dex-rtcatalog-filter-by-datalake-repo  
-} 
-
----
+}
 
 ## Querying images for CDE and Datalake versions
 # Description: Filters for entries with a specific 'cdeVersion' and a partial match on 'datalakeVersion'.
