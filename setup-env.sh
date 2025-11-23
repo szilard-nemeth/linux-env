@@ -42,17 +42,21 @@ function initial_setup {
     HOME_LINUXENV_DIR="$HOME/.linuxenv/"
     WORKPLACE_SPECIFIC_DIR="$HOME_LINUXENV_DIR/workplace-specific/"
     INFO_PREFIX="--->"
-    
-    #Invoke common functions
+
+    # Detect platform
     platform=$(determine_platform)
     echo "Platform is: $platform"
-    
-    #Initial setup platforms: Only macOS is implemented
     if [[ ${platform} == 'macOS' ]] && ! grep -q "complete" "$ENV_SETUP_STATUS"; then
+        # Initial setup platforms: Only macOS is implemented
         initial_setup_macos
     fi
 
+    # Detect machine type
     detect_machine_type
+    if [[ $? -ne 0 ]]; then
+        echo "Exiting setup-env.sh due to machine type error."
+        return 1
+    fi
 }
 
 function copy_files {
@@ -412,14 +416,16 @@ function detect_machine_type {
     # --------------------------------------------------------------------
     # Mandatory machine type detection
     # --------------------------------------------------------------------
+
     MACHINE_TYPE_FILE="$HOME/.machine-type"
 
     if [ ! -f "$MACHINE_TYPE_FILE" ]; then
       echo "❌ ERROR: Machine type file not found: $MACHINE_TYPE_FILE"
-      echo "Create it with one of the allowed values:"
-      echo "  cloudera-mac"
-      echo "  personal-mac"
-      exit 1
+      echo "Create it with one of the allowed values using one of these commands:"
+      echo "  echo 'cloudera-mac' > $MACHINE_TYPE_FILE    # if this is a Cloudera Mac"
+      echo "  echo 'personal-mac' > $MACHINE_TYPE_FILE    # if this is your personal Mac"
+      echo "Then rerun this script."
+      return 1
     fi
 
     MACHINE_TYPE=$(cat "$MACHINE_TYPE_FILE" | tr -d '[:space:]')
@@ -429,13 +435,12 @@ function detect_machine_type {
       *)
         echo "❌ ERROR: Invalid machine type: '$MACHINE_TYPE'"
         echo "Allowed values: cloudera-mac, personal-mac"
-        exit 1
+        return 1
         ;;
     esac
 
     export MACHINE_TYPE
     echo "🔧 MACHINE_TYPE detected: $MACHINE_TYPE"
-
 }
 
 function remove-stale-scripts {
@@ -549,7 +554,10 @@ function linuxenv-initial-setup-mark-incomplete {
 
 
 #####################################
-initial_setup
+initial_setup || {
+    echo "❌ ERROR: initial_setup failed. Aborting script execution."
+    return 1
+}
 setup-pythonpath
 remove-stale-scripts
 
