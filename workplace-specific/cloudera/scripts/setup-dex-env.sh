@@ -130,7 +130,7 @@ function dex-default-env {
 
 function dex-export-common {
   export JIRA_NUM=$(git rev-parse --abbrev-ref HEAD)
-  export VERSION=1.19.0-dev
+  export VERSION=$(grep "BUILD_RELEASE?=.*" ./re_vars* -R | cut -d '=' -f2 | sort | uniq)
   export INSTANCE_NAME=snemeth-test
   export REGISTRY_NAMESPACE=${USER}
   export DOCKER_NAMESPACE_ROOT="$DOCKER_ROOT_CLOUDERA/$REGISTRY_NAMESPACE"
