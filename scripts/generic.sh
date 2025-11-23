@@ -43,3 +43,13 @@ function grep-text-files {
 function grep-shell-scripts {
     grep -inr --include \*sh --include \*.zsh $1
 }
+
+function grep-text-md-files {
+    grep -inr --include \*txt --include \*.md $1
+}
+
+function grep-text-md-files-filenames {
+    set -x
+    grep -linr --include \*txt --include \*.md "$1" | sort | uniq
+}
+
