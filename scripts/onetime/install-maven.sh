@@ -8,6 +8,6 @@ mkdir /tmp/mvn-install && cd /tmp/mvn-install
 wget http://www.eu.apache.org/dist/maven/maven-3/$VERSION/binaries/apache-maven-$VERSION-bin.tar.gz
 tar xzf apache-maven-$VERSION-bin.tar.gz
 sudo mkdir /usr/local/maven
-sudo chown snemeth /usr/local/maven
+sudo chown $USER /usr/local/maven
 mv apache-maven-$VERSION/ /usr/local/maven/
 ln -s /usr/local/maven/apache-maven-$VERSION/bin/mvn /usr/local/bin/mvn

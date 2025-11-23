@@ -63,7 +63,7 @@ function timezones {
 function reviewsync {
     python $HOME/development/my-repos/hadoop-reviewsync/reviewsync/reviewsync.py \
     --gsheet \
-    --gsheet-client-secret "/Users/snemeth/.secret/client_secret_hadoopreviewsync.json" \
+    --gsheet-client-secret "$HOME/.secret/client_secret_hadoopreviewsync.json" \
     --gsheet-spreadsheet "YARN/MR Reviews" \
     --gsheet-worksheet "Incoming" \
     --gsheet-jira-column "JIRA" \

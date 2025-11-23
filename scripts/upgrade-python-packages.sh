@@ -586,14 +586,14 @@ function _myrepos-upgrade-dependencies-manual {
   UPGRADE_PYTHON_PACKAGE_GOOGLEAPIWRAPPER=1
   UPGRADE_PYTHON_PACKAGE_PYTHONCOMMONS=1
  
-  # _update-package-versions-in-project "calendar-utils" /Users/snemeth/development/my-repos/calendar-utils
+  # _update-package-versions-in-project "calendar-utils" $HOME/development/my-repos/calendar-utils
   _update-package-versions-in-project $PROJ_NAME_DEXTER $DEXTER_DIR
 }
 
 
 function upgrade-cdsw-launcher {
   # TODO improve
-  cd /Users/snemeth/development/my-repos/cdsw-job-launcher
+  cd $HOME/development/my-repos/cdsw-job-launcher
 
   git diff --exit-code pyproject.toml > /dev/null
   res1=$(echo "$?")
@@ -621,7 +621,7 @@ function upgrade-cdsw-launcher {
   new_version=$(poetry version --short)
 
 
-  cd /Users/snemeth/development/my-repos/yarn-dev-tools
+  cd $HOME/development/my-repos/yarn-dev-tools
 
   set -x
   # Hack for poetry to be able to see the new version

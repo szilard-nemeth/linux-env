@@ -39,7 +39,7 @@ function myrepos-install {
   #Author: Szilard Nemeth
   #Author-email: szilard.nemeth88@gmail.com
   #License: Copyright (c) 2020, Szilard Nemeth
-  #Location: /Users/snemeth/development/my-repos/linux-env/venv/lib/python3.8/site-packages
+  #Location: $HOME/development/my-repos/linux-env/venv/lib/python3.8/site-packages
 
   package_to_install="$1"
   say="$2"
@@ -64,7 +64,7 @@ function myrepos-install {
 function myrepos-list-pythoncommons {
   #Could be an alias but would not work from another script that sources this
   #Example error message:
-  # /Users/snemeth/.linuxenv/scripts/myrepos-helpers.sh: line 18: myrepos-list-pythoncommons: command not found
+  # $HOME/.linuxenv/scripts/myrepos-helpers.sh: line 18: myrepos-list-pythoncommons: command not found
   find $MY_REPOS_DIR -type d -name venv -print0 | xargs -0 -I % find % -type d \( -iname "pythoncommons" -o -iname "python_commons*" \) | sort
 }
 
@@ -130,7 +130,7 @@ function myrepos-install-googleapiwrapper-dev {
   # poetry update --only localdev -vvv --no-cache | subl
   # poetry update google-api-wrapper2 --only localdev -vvv --no-cache 
   venv=$(poetry env list --full-path | cut -d ' ' -f1)
-  # cp -R ~/development/my-repos/google-api-wrapper/googleapiwrapper/  /Users/snemeth/Library/Caches/pypoetry/virtualenvs/email-sorter-sOW-XU4m-py3.8/lib/python3.8/site-packages/googleapiwrapper
+  # cp -R ~/development/my-repos/google-api-wrapper/googleapiwrapper/  $HOME/Library/Caches/pypoetry/virtualenvs/email-sorter-sOW-XU4m-py3.8/lib/python3.8/site-packages/googleapiwrapper
   cp -R ~/development/my-repos/google-api-wrapper/googleapiwrapper/ $venv/lib/python3.8/site-packages/googleapiwrapper
   cp -R ~/development/my-repos/python-commons/pythoncommons/ $venv/lib/python3.8/site-packages/pythoncommons
 }
@@ -224,7 +224,7 @@ function myrepos-grep-all {
   # This did not work with files containing spaces:
   #https://serverfault.com/questions/268368/how-can-proj-handle-spaces-in-file-names-when-using-xargs-on-find-results
 
-  #TODO Binary file /Users/snemeth/development/my-repos/resume/fonts/FontAwesome.ttf matches
+  #TODO Binary file $HOME/development/my-repos/resume/fonts/FontAwesome.ttf matches
   # TODO Add option to filter only test files with myrepos_filtered_find.py:
   #  https://stackoverflow.com/questions/898669/how-can-proj-detect-if-a-file-is-binary-non-text-in-python
   #  https://unix.stackexchange.com/questions/46276/finding-all-non-binary-files
@@ -250,7 +250,7 @@ function myrepos-grep-C5 {
 }
 
 function yarndevtools-run-tests {
-  cd /Users/snemeth/development/my-repos/yarn-dev-tools/; \
+  cd $HOME/development/my-repos/yarn-dev-tools/; \
   MAIL_ACC_PASSWORD=fake MAIL_ACC_USER=jenkinstestreporter@gmail.com \
   poetry run python -m pytest -k 'CdswConfigReaderTest' \
   --html=report.html \
@@ -263,21 +263,21 @@ function yarndevtools-run-tests {
 }
 
 function myprojects-email-sorter-nsziszy {
-  cd /Users/snemeth/development/my-repos/email-sorter/
+  cd $HOME/development/my-repos/email-sorter/
   source "$( poetry env list --full-path | grep Activated | cut -d' ' -f1 )/bin/activate"
-  (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 /Users/snemeth/development/my-repos/email-sorter/emailsorter/cli.py -d --account-email nsziszy@gmail.com discover-inbox)
+  (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 $HOME/development/my-repos/email-sorter/emailsorter/cli.py -d --account-email nsziszy@gmail.com discover-inbox)
 }
 
 function myprojects-email-sorter-snemeth {
-  cd /Users/snemeth/development/my-repos/email-sorter/
+  cd $HOME/development/my-repos/email-sorter/
   source "$( poetry env list --full-path | grep Activated | cut -d' ' -f1 )/bin/activate"
-  (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 /Users/snemeth/development/my-repos/email-sorter/emailsorter/cli.py -d --account-email snemeth@cloudera.com discover-inbox)
+  (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 $HOME/development/my-repos/email-sorter/emailsorter/cli.py -d --account-email snemeth@cloudera.com discover-inbox)
 }
 
 function myprojects-backup-trello {
-  cd /Users/snemeth/development/my-repos/backup-manager
+  cd $HOME/development/my-repos/backup-manager
   source "$( poetry env list --full-path | grep Activated | cut -d' ' -f1 )/bin/activate"
-  (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 /Users/snemeth/development/my-repos/backup-manager/modules/trello-backup/trello-backup.py)
+  (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 $HOME/development/my-repos/backup-manager/modules/trello-backup/trello-backup.py)
 }
 
 function myscript-print-jetbrains-run-configs-all {

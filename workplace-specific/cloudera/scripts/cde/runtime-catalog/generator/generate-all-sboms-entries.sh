@@ -3,7 +3,7 @@
 ## INTENDED TO BE EXECUTED ON LOCAL MACHINE AS SBOMS ARE IN PLACE
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-DEX_HOME="/Users/snemeth/development/cloudera/cde/dex"
+DEX_HOME="$HOME/development/cloudera/cde/dex"
 
 
 function validate_input() {
@@ -18,7 +18,7 @@ function validate_input() {
 
 
 function setup_workdir() {
-  TASKDIR="/Users/snemeth/development/my-repos/knowledge-base-private/cloudera/tasks/cde/$DEX_TASK_ID/testing-results-local/"
+  TASKDIR="$HOME/development/my-repos/knowledge-base-private/cloudera/tasks/cde/$DEX_TASK_ID/testing-results-local/"
   . "$SCRIPT_DIR/common.sh"
   WORKDIR=$(determine_latest_workdir)
   echo "Work dir is: $WORKDIR"
@@ -77,7 +77,7 @@ function compare_catalogs() {
   set -x
   old_catalog="/tmp/catalog-entries-develop.json"
   new_catalog="$WORKDIR/enriched-catalog-entries/catalog-entries.json"
-  python3 /Users/snemeth/development/my-repos/linux-env/workplace-specific/cloudera/scripts/cde/runtime-catalog/compare_catalog.py "$old_catalog" "$new_catalog" > "$WORKDIR/compare_catalog_output.txt"
+  python3 $HOME/development/my-repos/linux-env/workplace-specific/cloudera/scripts/cde/runtime-catalog/compare_catalog.py "$old_catalog" "$new_catalog" > "$WORKDIR/compare_catalog_output.txt"
   cp "$old_catalog" "$WORKDIR/"
   cp "$new_catalog" "$WORKDIR/"
   set +x

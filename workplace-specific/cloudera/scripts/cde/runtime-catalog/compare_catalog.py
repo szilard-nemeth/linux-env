@@ -131,8 +131,8 @@ def _print(msg, debug=False):
         logging.getLogger().info(msg)
 
 if __name__ == "__main__":
-    # old_data = load_json('/Users/snemeth/Downloads/catalog-entries.json') # File1
-    # new_data = load_json('/Users/snemeth/Downloads/catalog-entries-dale.json') # File2
+    # old_data = load_json(os.path.expanduser('~/Downloads/catalog-entries.json')) # File1
+    # new_data = load_json(os.path.expanduser('~/Downloads/catalog-entries-dale.json')) # File2
     configure_logging(debug=DEBUG_ENABLED)
 
 

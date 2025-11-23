@@ -104,6 +104,7 @@ function gh-checkout-pr {
     git checkout $BRANCHNAME
 }
 
+# TODO Move to separate Cloudera-specific git.sh script
 function gh-backport-cde-pr {
     if [[ "$#" -lt 2 || "$#" -gt 3 ]]; then
         echo "Usage: $0 <PR ID> <branch to backport> [<source branch>]"

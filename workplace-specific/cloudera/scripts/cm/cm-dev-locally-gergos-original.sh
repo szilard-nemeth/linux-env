@@ -13,7 +13,7 @@
 #tar -xf cm-lib.tar.gz -C hacklib
 #cd hacklib && mv ./opt/cloudera/cm/lib/* . && cd -
 
-# /Users/snemeth/.m2/repository//com/cloudera/cmon/firehose/6.x.0/firehose-6.x.0.jar
+# $HOME/.m2/repository//com/cloudera/cmon/firehose/6.x.0/firehose-6.x.0.jar
 
 #Should be executed from CM root dir
 

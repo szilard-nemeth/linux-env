@@ -14,7 +14,7 @@ GOOGLE_DRIVE_ROOT = os.path.expanduser('~/googledrive/development/KB-private-off
 # The prefix to strip from the relative path before moving.
 # This ensures the files are nested correctly inside the GOOGLE_DRIVE_ROOT.
 PATH_PREFIX_TO_STRIP = 'cloudera/tasks/cde/'
-KB_PRIVATE_ROOT = "/Users/snemeth/development/my-repos/knowledge-base-private"
+KB_PRIVATE_ROOT = os.path.expanduser("~/development/my-repos/knowledge-base-private")
 
 # NEW CONFIGURATION: Extensions that are allowed to be moved
 # All extensions should be lowercase for case-insensitive matching.
@@ -218,7 +218,7 @@ if __name__ == "__main__":
     # Ensure the script is called with expected number of arguments
     if len(sys.argv) != 3:
         print(f"Usage: python {sys.argv[0]} <path_to_commit_size_output_file> <threshold MB>")
-        print(f"Example: python {sys.argv[0]} /Users/snemeth/Downloads/git-details-kb-private-hash-60f41a56.txt 20")
+        print(f"Example: python {sys.argv[0]} {os.path.expanduser('~/Downloads/git-details-kb-private-hash-60f41a56.txt')} 20")
         sys.exit(1)
 
     input_filepath = sys.argv[1]

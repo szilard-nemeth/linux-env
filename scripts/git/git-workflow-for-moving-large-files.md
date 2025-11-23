@@ -8,12 +8,12 @@
 COMMIT=6619c839
 
 # Scripts
-GIT_SCRIPT_COMMIT_SIZE_SH="/Users/snemeth/development/my-repos/linux-env/scripts/git/git-commit-size-detailed.sh"
-GIT_SCRIPT_COMMIT_SIZE_ANALYZER="/Users/snemeth/development/my-repos/linux-env/scripts/git/git_commit_size_analyzer.py"
-GIT_SCRIPT_LARGE_FILE_MOVER="/Users/snemeth/development/my-repos/linux-env/scripts/git/git_large_file_mover.py"
+GIT_SCRIPT_COMMIT_SIZE_SH="$HOME/development/my-repos/linux-env/scripts/git/git-commit-size-detailed.sh"
+GIT_SCRIPT_COMMIT_SIZE_ANALYZER="$HOME/development/my-repos/linux-env/scripts/git/git_commit_size_analyzer.py"
+GIT_SCRIPT_LARGE_FILE_MOVER="$HOME/development/my-repos/linux-env/scripts/git/git_large_file_mover.py"
 
 # Output files
-BASEDIR="/Users/snemeth/Downloads/git-cleanup-kb-private-20251022/part2/"
+BASEDIR="$HOME/Downloads/git-cleanup-kb-private-20251022/part2/"
 GIT_DETAILS_OUT="$BASEDIR/git-details-kb-private-hash-$COMMIT.txt"
 GIT_SIZE_ANALYZER_OUT="$BASEDIR/git-commit-size-analyzer-out-$COMMIT.txt"
 GIT_LARGE_FILE_MOVER_OUT="$BASEDIR/git-large-file-mover-out-$COMMIT.txt"

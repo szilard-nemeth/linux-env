@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DEX_HOME="/Users/snemeth/development/cloudera/cde/dex"
+DEX_HOME="$HOME/development/cloudera/cde/dex"
 
 #GOTO aliases
 alias goto-cldr="cd $CLOUDERA_DEV_ROOT"
@@ -116,7 +116,7 @@ alias dex-runtime-k9s="dexw -e dev -cid cluster-sn6sdnlq --auth cst -v -- k9s"
 
 
 ### DEXter
-alias dexter-clean-repo-branches="cd /Users/snemeth/dexter/dex && git checkout upgradeDexVersion && git reset develop --hard && git checkout dexDepsRelease && git reset develop --hard"
+alias dexter-clean-repo-branches="cd $HOME/dexter/dex && git checkout upgradeDexVersion && git reset develop --hard && git checkout dexDepsRelease && git reset develop --hard"
 
 
 ## Runtime catalog
@@ -154,7 +154,7 @@ cde-rtcatalog-compare-current-with-develop() {
   cd -
 
   old_catalog="/tmp/catalog-entries-develop.json"
-  new_catalog="/Users/snemeth/development/cloudera/cde/dex/pkg/control-plane/service/catalog-entries.json"
+  new_catalog="$HOME/development/cloudera/cde/dex/pkg/control-plane/service/catalog-entries.json"
 
   
   echo "Comparing catalogs..."

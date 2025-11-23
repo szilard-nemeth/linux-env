@@ -18,7 +18,7 @@ catalog_id="$1"
 iteration="$2"
 echo "catalog id: $catalog_id"
 ### Set up variables
-TASKDIR=/Users/snemeth/development/my-repos/knowledge-base-private/cloudera/tasks/cde/DEX-17194/testing-results-local/
+TASKDIR=$HOME/development/my-repos/knowledge-base-private/cloudera/tasks/cde/DEX-17194/testing-results-local/
 WORKDIR="$TASKDIR/testing-$(date +%Y%m%d)_$iteration/"
 echo "Working directory: $WORKDIR"
 

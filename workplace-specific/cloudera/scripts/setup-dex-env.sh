@@ -2,7 +2,7 @@
 
 echo "Setting up DEX env..."
 
-source /Users/snemeth/development/cloudera/hackathon2022/dexter/dexter-setup.sh
+source $HOME/development/cloudera/hackathon2022/dexter/dexter-setup.sh
 
 ############## VARS ##############
 DOCKER_ROOT_CLOUDERA="docker-registry.infra.cloudera.com"
@@ -82,7 +82,7 @@ function dex-export-protoc25 {
 function dex-export-gopath {
   cd $DEX_DEV_ROOT
 	
-  export GOPATH=$(go env GOPATH) # /Users/snemeth/.asdf/installs/golang/1.20.7/go
+  export GOPATH=$(go env GOPATH) # $HOME/.asdf/installs/golang/1.20.7/go
 	export GOBIN=$GOPATH/bin
 	export PATH=$PATH:$GOPATH/bin
 	export GOOS=darwin
@@ -1449,7 +1449,7 @@ function dex-analyse-gbn-tests {
 
 
   # Example invocation
-  # dex-analyse-gbn-tests /Users/snemeth/Downloads/cde-flaky-tests-and-failed-builds
+  # dex-analyse-gbn-tests $HOME/Downloads/cde-flaky-tests-and-failed-builds
 
   # START LINE
   # 2024-05-08 22:04:14 - INFO-root::util|431:: go test -count=1 -timeout 15m -race  ./cmd/... ./lib/... ./pkg/...[0m
@@ -1598,7 +1598,7 @@ function cde-start-work-on-task {
 
   local branch_name="$1"
   local dex_repo="$HOME/development/cloudera/cde/dex"
-  local cde_tasks_dir="/Users/snemeth/development/my-repos/knowledge-base-private/cloudera/tasks/cde"
+  local cde_tasks_dir="$HOME/development/my-repos/knowledge-base-private/cloudera/tasks/cde"
   local note_folder="$cde_tasks_dir/$branch_name"
   local note_file="$note_folder/investigation.md"
 
@@ -1635,7 +1635,7 @@ function cde-start-work-on-task {
 function dex-install-python-package {
   package="$1"
   # install package steps:
-  cd /Users/snemeth/development/cloudera/cde/dex
+  cd $HOME/development/cloudera/cde/dex
   which python
   python -m pip --version
   python -m pip install $package
