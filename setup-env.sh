@@ -51,6 +51,8 @@ function initial_setup {
     if [[ ${platform} == 'macOS' ]] && ! grep -q "complete" "$ENV_SETUP_STATUS"; then
         initial_setup_macos
     fi
+
+    detect_machine_type
 }
 
 function copy_files {
@@ -406,6 +408,36 @@ function determine_platform {
     echo ${platform}
 }
 
+function detect_machine_type {
+    # --------------------------------------------------------------------
+    # Mandatory machine type detection
+    # --------------------------------------------------------------------
+    MACHINE_TYPE_FILE="$HOME/.machine-type"
+
+    if [ ! -f "$MACHINE_TYPE_FILE" ]; then
+      echo "❌ ERROR: Machine type file not found: $MACHINE_TYPE_FILE"
+      echo "Create it with one of the allowed values:"
+      echo "  cloudera-mac"
+      echo "  personal-mac"
+      exit 1
+    fi
+
+    MACHINE_TYPE=$(cat "$MACHINE_TYPE_FILE" | tr -d '[:space:]')
+
+    case "$MACHINE_TYPE" in
+      cloudera-mac|personal-mac) ;;
+      *)
+        echo "❌ ERROR: Invalid machine type: '$MACHINE_TYPE'"
+        echo "Allowed values: cloudera-mac, personal-mac"
+        exit 1
+        ;;
+    esac
+
+    export MACHINE_TYPE
+    echo "🔧 MACHINE_TYPE detected: $MACHINE_TYPE"
+
+}
+
 function remove-stale-scripts {
   local scripts_rm_dir="$HOME_LINUXENV_DIR/scripts/"
   local scripts_backup_dir="$HOME/_stale_linuxenv_scripts/"
@@ -464,9 +496,14 @@ function copy_files_from_linuxenv_repo_to_home {
     # Old definition
     # COPY_LIST+=("$DIR/workplace-specific/. $WORKPLACE_SPECIFIC_DIR")
 
-    COPY_LIST+=("$DIR/workplace-specific/cloudera/aliases/. $WORKPLACE_SPECIFIC_DIR/cloudera/aliases")
-    COPY_LIST+=("$DIR/workplace-specific/cloudera/config/. $WORKPLACE_SPECIFIC_DIR/cloudera/config")
-    COPY_LIST+=("$DIR/workplace-specific/cloudera/scripts/. $WORKPLACE_SPECIFIC_DIR/cloudera/scripts")
+    # Workplace-specific: Cloudera
+    if [[ "$MACHINE_TYPE" == "cloudera-mac" ]]; then
+      COPY_LIST+=("$DIR/workplace-specific/cloudera/aliases/. $WORKPLACE_SPECIFIC_DIR/cloudera/aliases")
+      COPY_LIST+=("$DIR/workplace-specific/cloudera/config/. $WORKPLACE_SPECIFIC_DIR/cloudera/config")
+      COPY_LIST+=("$DIR/workplace-specific/cloudera/scripts/. $WORKPLACE_SPECIFIC_DIR/cloudera/scripts")
+    else
+      printf_debug "$INFO_PREFIX Skipping Cloudera-specific copy (MACHINE_TYPE=$MACHINE_TYPE)"
+    fi
     COPY_LIST+=("$DIR/.npmrc $HOME/.npmrc")
     
     #Kitty conf + theme
@@ -488,13 +525,22 @@ function copy_files_from_linuxenv_repo_to_home {
 }
 
 function setup-pythonpath {
-  cd $HOME/development/cloudera/cde/dex
-  echo "Setting up PYTHONPATH from dir: $(pwd)"
-  asdf_python=$(asdf where python)
-  ASDF_PYTHON_LIBS=$(find $asdf_python -type d -name "site-packages")
-  STANDARD_PYTHON_LIBS="$HOME/Library/Python/3.8/lib/python/site-packages/"
-  export PYTHONPATH="$STANDARD_PYTHON_LIBS:$ASDF_PYTHON_LIBS:${HOME_LINUXENV_DIR}/scripts/python/:$PYTHONPATH"
-  popd
+  if [[ "$MACHINE_TYPE" != "cloudera-mac" ]]; then
+    echo "Skipping setup-pythonpath (MACHINE_TYPE=$MACHINE_TYPE)"
+    return 0
+  fi
+
+  if [[ -d "$HOME/development/cloudera/cde/dex" ]]; then
+    pushd "$HOME/development/cloudera/cde/dex" > /dev/null || return 1
+    echo "Setting up PYTHONPATH from dir: $(pwd)"
+    asdf_python=$(asdf where python)
+    ASDF_PYTHON_LIBS=$(find $asdf_python -type d -name "site-packages")
+    STANDARD_PYTHON_LIBS="$HOME/Library/Python/3.8/lib/python/site-packages/"
+    export PYTHONPATH="$STANDARD_PYTHON_LIBS:$ASDF_PYTHON_LIBS:${HOME_LINUXENV_DIR}/scripts/python/:$PYTHONPATH"
+    popd > /dev/null || true
+  else
+    echo "Warning: expected Cloudera project dir not found: $HOME/development/cloudera/cde/dex"
+  fi
 }
 
 function linuxenv-initial-setup-mark-incomplete {
