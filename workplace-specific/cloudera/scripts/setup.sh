@@ -17,9 +17,8 @@ CLOUDERA_TASKS_CDE_DIR="$CLOUDERA_TASKS_DIR/cde"
 export CLOUDERA_TASKS_DIR
 export CLOUDERA_TASKS_CDE_DIR
 #===============================================
-
 #add_to_path_directly "/usr/local/opt/protobuf@2.5/bin"
-add_to_path_directly "$HOME/.local/bin"
+
 
 #CM build specific settings
 export MAVEN_OPTS='-Xmx5000m'

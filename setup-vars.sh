@@ -15,6 +15,9 @@ export MANPATH="$NPM_PACKAGES/share/man:$(manpath)"
 #Setup Ruby
 add_to_path_directly "$HOME/.rbenv/shims:$PATH"
 add_to_path_directly $(find $(gem environment gempath | tr ':' '\n') -type d -name bin | tr '\n' ':')
+
+# Add common bins to path
+add_to_path_directly "$HOME/.local/bin"
 #===================================
 
 export MAVEN_OPTS="-Xmx1024m -XX:MaxPermSize=1024m"
