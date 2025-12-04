@@ -59,25 +59,35 @@ function docker-cleanup-guidance {
     echo "docker system prune --force"
     echo "docker system df"
 
-    echo; echo "Delete first 80 images: "
-    echo "docker images | awk '{print $3}' | tail -n 80 | xargs docker rmi"
+    echo; echo "DELETE FIRST 80 IMAGES (based on last 80 in default list):"
+    # Using 'docker images -q' is more reliable for getting IDs
+    echo "docker images -q | tail -n 80 | xargs docker rmi -f"
 
-    echo; echo "Delete Docker images with grepping for image name" 
-    echo "docker images | grep \"DEX-9645\|DEX-7712\|DEX-7051\" | awk '{print \$3}' | xargs docker rmi"
-    echo "docker images | grep 1.19.0-dev | awk '{print \$3}' | xargs docker rmi"
+    echo; echo "DELETE DOCKER IMAGES BY NAME OR TAG (using --filter):"
+    # The new, robust way to filter by name/reference is using --filter.
+    # 'reference' filters by repository AND tag.
+    echo "# Delete images matching multiple specific names/tags (DEX-9645, DEX-7712, DEX-7051)"
+    echo "docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -E 'DEX-9645|DEX-7712|DEX-7051' | xargs -r docker rmi -f"
+
+    echo "# Delete images with the tag '1.19.0-dev'"
+    echo "docker image prune --all --force --filter 'reference=*:1.19.0-dev'"
+
+    echo "# Delete images matching 'DEX-' in name, but excluding 'DEX-7325' (less robust, but common)"
     echo "docker images | grep \"DEX-\" | grep -v \"DEX-7325\" | awk '{print \$3}' | xargs docker rmi -f"
+    
+    echo; echo "DELETE DOCKER IMAGES BY GREPPING FOR MULTIPLE CDE RELEASES (using -q and grep):"
+    # Filtering the -q output is still better than column indexing
+    echo "docker images | grep -E '1.21|1.22.0|1.20.3' | awk '{print \$3}' | xargs docker rmi -f"
 
-    echo; echo "Delete Docker images by grepping for multiple CDE releases:"
-    echo "docker images | grep \"1.21\|1.22.0\|1.20.3\"| awk '{print \$3}' | xargs docker rmi -f"
+    echo; echo "REMOVE ALL IMAGES CONTAINING 'dex' (BE CAREFUL!):"
+    # Use -q and filter 'reference'
+    echo "docker image prune --all --force --filter 'reference=*dex*'"
 
-    echo; echo "REMOVE ALL DEX IMAGES (BE CAREFUL!):"
-    echo "docker images | grep \"dex\" | awk '{print \$3}' | xargs docker rmi -f"
+    echo; echo "REMOVE ALL IMAGES CONTAINING 'thunderhead' (BE CAREFUL!):"
+    # Use -q and filter 'reference'
+    echo "docker image prune --all --force --filter 'reference=*thunderhead*'"
 
-    echo; echo "REMOVE ALL THUNDERHEAD IMAGES (BE CAREFUL!):"
-    echo "docker images | grep \"thunderhead\" | awk '{print \$3}' | xargs docker rmi -f"
-
-    # https://forums.docker.com/t/simple-script-needed-to-delete-all-docker-images-over-4-weeks-old/28558/6    
-    echo; echo "REMOVE IMAGES OLDER THAN DATE (3 weeks):"
+    echo; echo "REMOVE IMAGES OLDER THAN DATE (3 weeks / 504 hours):"
     echo "docker image prune --all --filter \"until=504h\""
     echo "docker rmi \$(docker images --filter \"dangling=true\" -q --no-trunc)"
 
