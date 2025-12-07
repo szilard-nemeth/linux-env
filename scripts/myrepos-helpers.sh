@@ -274,10 +274,11 @@ function myprojects-email-sorter-snemeth {
   (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 $HOME/development/my-repos/email-sorter/emailsorter/cli.py -d --account-email snemeth@cloudera.com discover-inbox)
 }
 
-function myprojects-backup-trello {
-  cd $HOME/development/my-repos/backup-manager
+# TODO Duplicate functionality in project-setups.sh
+function myprojects-trello-backup {
+  cd $HOME/development/my-repos/trello-backup
   source "$( poetry env list --full-path | grep Activated | cut -d' ' -f1 )/bin/activate"
-  (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 $HOME/development/my-repos/backup-manager/modules/trello-backup/trello-backup.py)
+  (export PYTHONCOMMONS_PROJECTUTILS_PROJECT_DETERMINATION_STRATEGY=common_file && python3 $HOME/development/my-repos/trello-backup/trello_backup/cli/cli.py)
 }
 
 function myscript-print-jetbrains-run-configs-all {
