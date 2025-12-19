@@ -26,4 +26,7 @@ pipenv 2022.9.8
 
 dive 0.10.0
 
-yq 4.35.1
+# yq 4.35.1
+# Moonlander requires and old yq version (v3)
+yq 3.3.0
+helm 3.17.4
