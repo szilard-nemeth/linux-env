@@ -5,11 +5,6 @@ import os
 import argparse
 import sys
 
-
-# TODO Migrate sync-kb-private-repo.sh
-# TODO Migrate sync-linux-env-repo.sh
-# TODO Migrate sync-yarn-dev-tools-repo.sh
-
 def run_command(command, cwd=None):
     """Utility to run shell commands and handle errors."""
     try:
@@ -42,6 +37,20 @@ def sync_repository(source_url, mirror_url, source_branch, target_branch, force_
         # 2. Checkout Branch
         print(f"--> Checking out branch: {source_branch}")
         run_command(["git", "checkout", source_branch], cwd=repo_path)
+
+        if args.filter_dir:
+            # Configure user if filter/commit logic is needed
+            run_command(["git", "config", "user.name", "Szilard Nemeth"], cwd=repo_path)
+            run_command(["git", "config", "user.email", "szilard.nemeth88@gmail.com"], cwd=repo_path)
+
+            print(f"--> Filtering history to subdirectory: {args.filter_dir}...")
+            # Using filter-branch as per your original logic
+            filter_cmd = [
+                "git", "filter-branch", "--force",
+                "--subdirectory-filter", args.filter_dir,
+                "--", "--all"
+            ]
+            run_command(filter_cmd, cwd=repo_path)
 
         # 3. Add Mirror Remote
         print(f"--> Adding mirror remote: {mirror_url}")
@@ -76,6 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("--mirror", help="Mirror Repo URL", required=True)
     parser.add_argument("--source-branch", help="Source branch to sync", required=True)
     parser.add_argument("--target-branch", help="Target branch on mirror", required=True)
+    parser.add_argument("--filter-dir", help="Subdirectory to isolate (optional)")
     parser.add_argument("--force", action="store_true", help="Skip cleanup confirmation", required=True)
 
     args = parser.parse_args()
