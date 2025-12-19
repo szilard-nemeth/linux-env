@@ -12,3 +12,4 @@ alias docker-stop-all="docker-operation-except $DIR/.docker-op-exceptions stop"
 alias docker-rmfv-all="docker rm -fv \$(docker ps -q)"
 alias docker-rmf-dangling="docker images -f \"dangling=true\" -q | xargs docker rmi -f"
 alias docker-list-dangling="docker images -f \"dangling=true\" -q"
+alias dim='docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedAt}}\t{{.Size}}"'

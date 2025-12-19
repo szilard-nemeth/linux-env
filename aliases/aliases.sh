@@ -112,3 +112,6 @@ alias history="history 1 -1"
 alias mgitst="mgitstatus --depth=10 -e"
 alias mgitst-myrepos="cd ~/development/my-repos/;mgitst"
 alias mgitst-cloudera="cd ~/development/cloudera/;mgitst"
+
+# replace BSD sed with GNU sed
+alias sed=gsed

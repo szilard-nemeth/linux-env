@@ -32,6 +32,7 @@ alias git-rebase-trunk="git co trunk && echo 'Pulling origin/trunk...' && git pu
 #alias j8='export JAVA_HOME=/Library/Java//JavaVirtualMachines/jdk1.8.0_151.jdk/Contents/Home'
 alias java8="sdk use java 8.0.232-trava"
 alias java11="sdk use java 11.0.2-open"
+alias java17="sdk use java 17.0.14-tem"
 
 alias git-push-to-cdpdmaster="git push cauldron HEAD:refs/for/cdpd-master%r=gandras,r=bteke,r=tdomok"
 alias git-push-to-cdh71maint="git push cauldron HEAD:refs/for/CDH-7.1-maint%r=gandras,r=bteke,r=tdomok"
