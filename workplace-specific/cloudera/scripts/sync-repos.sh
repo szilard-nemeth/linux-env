@@ -50,3 +50,12 @@ function sync-kb-private-repo-filter-dir {
         --filter-dir "cloudera" \
         --force
 }
+
+function sync-spark-experiments-repo {
+    python3 "$HOME_LINUXENV_DIR"/scripts/git/git_repo_mirror.py \
+        --source "git@github.com:szilard-nemeth/spark-experiments.git" \
+        --mirror "git@github.infra.cloudera.com:snemeth/spark-experiments.git" \
+        --source-branch "${1:-"master"}" \
+        --target-branch "${2:-"master"}" \
+        --force
+}
