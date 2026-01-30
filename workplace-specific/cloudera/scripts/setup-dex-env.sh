@@ -690,12 +690,12 @@ function dex-create-private-stack-mowpriv {
     (snemeth3) moonlander_workspace="$mws"  ;;
     (snemeth4) moonlander_workspace="$mws"  ;;
   esac
-  _dex-create-private-stack "mow-priv"
+  _dex-create-private-stack "mow-priv" $@
 }
 
 function dex-create-private-stack-mowdev {
   moonlander_workspace=""
-  _dex-create-private-stack "mow-dev"
+  _dex-create-private-stack "mow-dev" $@
 }
 
 function _dex-create-private-stack {
@@ -760,6 +760,7 @@ function _dex-create-private-stack {
   # TODO: piping to tee is not line buffered!
   #  Consider replacing it with 'script': https://unix.stackexchange.com/a/61833/189441
 
+  set -x
   # Build Moonlander args dynamically based on skip-build flag
   local MOONLANDER_CP_SH_ARGS="$moonlander_workspace"
   if [[ "$MOONLANDER_SKIP_BUILD" -eq 1 ]]; then
@@ -774,6 +775,7 @@ function _dex-create-private-stack {
 
   if [[ "$mow_env" == "mow-dev" || "$mow_env" == "mow-priv" ]]; then
     set -x
+    # echo "Current directory before calling Moonlander:$(pwd)"
     $mow_env ./dev-tools/moonlander-cp.sh install $(echo $MOONLANDER_CP_SH_ARGS) 2>&1 | tee "$logfilename"
   fi
 
