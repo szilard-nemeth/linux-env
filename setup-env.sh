@@ -473,7 +473,30 @@ function setup-vars-aliases {
     add_to_path ".add-to-path" "$WORKPLACE_SPECIFIC_DIR"
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/python
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/git
-    add_to_path_directly $HOME/jetbrains-scripts/
+    setup-jetbrains-links
+}
+
+function setup-jetbrains-links {
+  JETBRAINS_SCRIPTS="$HOME/Library/Application Support/JetBrains/Toolbox/scripts"
+  TARGET_DIR="$HOME/jetbrains-scripts"
+
+  if [ -d "$JETBRAINS_SCRIPTS" ]; then
+      mkdir -p "$TARGET_DIR"
+
+      for src in "$JETBRAINS_SCRIPTS"/*; do
+          name=$(basename "$src")
+          dst="$TARGET_DIR/$name"
+
+          # Create link only if it does NOT already exist
+          if [ ! -e "$dst" ]; then
+              ln -s "$src" "$dst"
+              printf "Created symlink: %s -> %s\n" "$dst" "$src"
+#          else
+              # printf "Skipping existing: %s\n" "$dst"
+          fi
+      done
+      add_to_path_directly $HOME/jetbrains-scripts/
+  fi
 }
 
 

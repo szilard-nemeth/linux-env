@@ -37,3 +37,9 @@ then
 fi
 
 add_to_path_directly $HOME/.cargo/bin
+
+JETBRAINS_SCRIPTS="$HOME/Library/Application\ Support/JetBrains/Toolbox/scripts"
+
+if [ -d "$JETBRAINS_SCRIPTS" ]; then
+    add_to_path_directly "$JETBRAINS_SCRIPTS"
+fi
