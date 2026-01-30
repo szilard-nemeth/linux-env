@@ -1,11 +1,11 @@
 awscli 2.7.0
-golang 1.23.0
+golang 1.24.11
 python 3.9.13
 make 4.3
 maven 3.8.2
 protoc 3.17.3
 yarn 1.22.11
-nodejs 16.13.0
+nodejs 22.22.0
 
 
 awscli 2.2.39
