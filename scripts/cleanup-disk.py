@@ -5,7 +5,7 @@ import tempfile
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 
 import humanfriendly
 
@@ -43,6 +43,7 @@ class CleanupDetails:
     dir: Path
     before_size: Optional[int] = None
     after_size: Optional[int] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -65,57 +66,69 @@ class AggregateCleanupDetails:
 
 class CleanupDetailsTracker:
     def __init__(self):
-        self._details: Dict[str, CleanupDetails] = {}
-        self._aggregate_details: Dict[str, AggregateCleanupDetails] = {}
+        self._named_cleanup: Dict[str, CleanupDetails] = {}
+        self._unnamed_cleanup: List[CleanupDetails] = []
+        self._aggregate_cleanup: Dict[str, AggregateCleanupDetails] = {}
 
     def register_directory(self, key: str, dir: Path):
-        self._details[key] = CleanupDetails(dir, FileUtils.get_dir_size(dir), None)
+        self._named_cleanup[key] = CleanupDetails(dir, FileUtils.get_dir_size(dir), None)
 
     def register_dir_aggregate(self, new_key: str, *keys):
         not_found = set()
         for key in keys:
-            if key not in self._details:
+            if key not in self._named_cleanup:
                 not_found.add(key)
 
         if not_found:
-            raise ValueError(f"Cannot find keys '{not_found}'. Registered keys are: {self._details.keys()}")
+            raise ValueError(f"Cannot find keys '{not_found}'. Registered keys are: {self._named_cleanup.keys()}")
 
-        if new_key in self._details:
+        if new_key in self._named_cleanup:
             raise ValueError(f"Attempted to override already existing key: {new_key}")
 
-        self._aggregate_details[new_key] = AggregateCleanupDetails(
-            keys=keys, components=[self._details[k] for k in keys]
+        self._aggregate_cleanup[new_key] = AggregateCleanupDetails(
+            keys=keys, components=[self._named_cleanup[k] for k in keys]
         )
 
+    def register_reclaimable_directory(self, dir: Path, metadata: Dict[str, Any]) -> CleanupDetails:
+        details = CleanupDetails(dir, FileUtils.get_dir_size(dir), None, metadata=metadata)
+        self._unnamed_cleanup.append(details)
+        return details
+
+    def get_unnamed_cleanup(self):
+        return self._unnamed_cleanup
+
     def calculate_after_sizes(self, *keys):
-        simple_keys = [k for k in keys if k in self._details]
-        aggregate_keys = [k for k in keys if k in self._aggregate_details]
+        simple_keys = [k for k in keys if k in self._named_cleanup]
+        aggregate_keys = [k for k in keys if k in self._aggregate_cleanup]
 
         for k in simple_keys:
-            self._details[k].after_size = FileUtils.get_dir_size(self._details[k].dir)
+            self._named_cleanup[k].after_size = FileUtils.get_dir_size(self._named_cleanup[k].dir)
         for k in aggregate_keys:
-            self._aggregate_details[k].recalculate()
+            self._aggregate_cleanup[k].recalculate()
 
     def get_before_size(self, key: str):
-        if key in self._details:
-            return self._details[key].before_size
-        if key in self._aggregate_details:
-            return self._aggregate_details[key].sum_before_size
+        if key in self._named_cleanup:
+            return self._named_cleanup[key].before_size
+        if key in self._aggregate_cleanup:
+            return self._aggregate_cleanup[key].sum_before_size
         raise ValueError("Key not found: " + key)
 
     def get_after_size(self, key: str):
-        if key in self._details:
-            return self._details[key].after_size
-        if key in self._aggregate_details:
-            return self._aggregate_details[key].sum_after_size
+        if key in self._named_cleanup:
+            return self._named_cleanup[key].after_size
+        if key in self._aggregate_cleanup:
+            return self._aggregate_cleanup[key].sum_after_size
         raise ValueError("Key not found: " + key)
 
-    def get_size_diff(self, key: str):
-        if key in self._details:
-            return self._details[key].before_size - self._details[key].after_size
-        if key in self._aggregate_details:
-            return self._aggregate_details[key].sum_before_size - self._aggregate_details[key].sum_after_size
+    def get_space_reclaimed_for_named_cleanup(self, key: str):
+        if key in self._named_cleanup:
+            return self._named_cleanup[key].before_size - self._named_cleanup[key].after_size
+        if key in self._aggregate_cleanup:
+            return self._aggregate_cleanup[key].sum_before_size - self._aggregate_cleanup[key].sum_after_size
         raise ValueError("Key not found: " + key)
+
+    def get_space_reclaimed_for_unnamed_cleanup(self):
+        return sum(item.before_size for item in self._unnamed_cleanup)
 
 
 @dataclass
@@ -258,8 +271,6 @@ class AsdfGolangCleanup(CleanupTool):
     def __init__(self, keep_versions: List[str]):
         super().__init__()
         self.keep_versions = keep_versions
-        self.to_remove = []
-        self.reclaimed = 0
         self.tracker = CleanupDetailsTracker()
 
     def prepare(self):
@@ -269,12 +280,10 @@ class AsdfGolangCleanup(CleanupTool):
             print(f"asdf golang root does not exist at: {ASDF_GOLANG_ROOT}")
             return
 
-        self.before_size_asdf_golang_root = FileUtils.get_dir_size(ASDF_GOLANG_ROOT)
         for item in ASDF_GOLANG_ROOT.iterdir():
             if item.is_dir() and item.name not in self.keep_versions:
-                size = FileUtils.get_dir_size(item)
-                self.to_remove.append({"path": item, "version": item.name, "size": size})
-                print(f"Found old version: {item.name} ({format_du_style(size)})")
+                details = self.tracker.register_reclaimable_directory(item, {"version": item.name})
+                print(f"Found old version: {item.name} ({format_du_style(details.before_size)})")
 
         go_cache = subprocess.check_output(["go", "env", "GOCACHE"]).decode().strip()
         go_mod_cache = subprocess.check_output(["go", "env", "GOMODCACHE"]).decode().strip()
@@ -284,9 +293,10 @@ class AsdfGolangCleanup(CleanupTool):
         self.tracker.register_dir_aggregate("total", "go_cache", "go_mod_cache", "asdf_golang_root")
 
     def execute(self):
-        for item in self.to_remove:
-            print(f"Uninstalling golang {item['version']}...")
-            subprocess.run(["asdf", "uninstall", "golang", item["version"]])
+        for details in self.tracker.get_unnamed_cleanup():
+            version = details.metadata["version"]
+            print(f"Uninstalling golang {version}...")
+            subprocess.run(["asdf", "uninstall", "golang", version])
 
         # TODO store previous size + new size after deletion and print diff
         print("Cleaning Go modcache...")
@@ -296,23 +306,30 @@ class AsdfGolangCleanup(CleanupTool):
         self.tracker.calculate_after_sizes("total", "go_caches", "go_cache", "go_mod_cache", "asdf_golang_root")
 
         logs = []
-        for key, description in [("go_caches", "go cache and modcache"), ("asdf_golang_root", "ASDF golang root")]:
+        for key, description in [
+            ("go_caches", "go cache and modcache"),
+            ("asdf_golang_root", "ASDF golang root"),
+            ("total", "ASDF Golang cleanup total"),
+        ]:
             logs.append(
                 f"{description} / Sum size before cleanup: {format_du_style(self.tracker.get_before_size(key))}"
             )
             logs.append(f"{description} / Sum size after cleanup: {format_du_style(self.tracker.get_after_size(key))}")
-            logs.append(f"{description} / Space reclaimed: {format_du_style(self.tracker.get_size_diff(key))}")
+            logs.append(
+                f"{description} / Space reclaimed: {format_du_style(self.tracker.get_space_reclaimed_for_named_cleanup(key))}"
+            )
             logs.append("-" * 30)
 
-        self.reclaimed = sum(item["size"] for item in self.to_remove)
-        logs.append(f"Space reclaimed for known removed items: {format_du_style(self.reclaimed)}")
-        self.cleanup_result = CleanupResult(self.reclaimed, -1, True, logs)
+        logs.append(
+            f"Space reclaimed for explicitly removed items: {format_du_style(self.tracker.get_space_reclaimed_for_unnamed_cleanup())}"
+        )
+        total_reclaimed = self.tracker.get_space_reclaimed_for_named_cleanup("total")
+        self.cleanup_result = CleanupResult(total_reclaimed, -1, True, logs)
         return self.cleanup_result
 
     def print_summary(self):
         for log in self.cleanup_result.logs:
             print(log)
-        print(f"ASDF Golang cleanup: Total reclaimed {format_du_style(self.reclaimed)}")
 
 
 class DockerCleanup(CleanupTool):
