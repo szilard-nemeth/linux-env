@@ -11,9 +11,9 @@ import humanfriendly
 
 DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
+# TODO Extract commandrunner
 # TODO Prepare commands, before execute prompt user for all tools or for each tool one by one
 # TODO Use ~/.snemeth-dev-projects/disk-cleanup/logs for logging dir
-# TODO Extract commandrunner
 # TODO Each command should log stdout + stderr to a file: subprocess.run
 # TODO Add JetBrains tool cleanup
 
@@ -72,10 +72,10 @@ class CleanupDetailsTracker:
         self._unnamed_cleanup: List[CleanupDetails] = []
         self._aggregate_cleanup: Dict[str, AggregateCleanupDetails] = {}
 
-    def register_directory(self, key: str, dir: Path):
+    def register_named_dir(self, key: str, dir: Path):
         self._named_cleanup[key] = CleanupDetails(dir, FileUtils.get_dir_size(dir), None)
 
-    def register_dir_aggregate(self, new_key: str, *keys):
+    def register_named_dir_aggregate(self, new_key: str, *keys):
         not_found = set()
         for key in keys:
             if key not in self._named_cleanup:
@@ -88,17 +88,18 @@ class CleanupDetailsTracker:
             raise ValueError(f"Attempted to override already existing key: {new_key}")
 
         self._aggregate_cleanup[new_key] = AggregateCleanupDetails(
-            keys=keys, components=[self._named_cleanup[k] for k in keys]
+            keys=list(keys), components=[self._named_cleanup[k] for k in keys]
         )
 
     def register_default_aggregates(self):
         keys = set(self._named_cleanup)
 
         self._aggregate_cleanup[CleanupDetailsTracker.TOTAL_KEY] = AggregateCleanupDetails(
-            keys=keys, components=[self._named_cleanup[k] for k in keys]
+            keys=list(keys), components=[self._named_cleanup[k] for k in keys]
         )
 
-    def register_reclaimable_directory(self, dir: Path, metadata: Dict[str, Any]) -> CleanupDetails:
+    def register_unnamed_dir(self, dir: Path, metadata: Dict[str, Any] = None) -> CleanupDetails:
+        # TODO Consider adding new CleanupDetails to "total" aggregate?
         details = CleanupDetails(dir, FileUtils.get_dir_size(dir), None, metadata=metadata)
         self._unnamed_cleanup.append(details)
         return details
@@ -115,6 +116,9 @@ class CleanupDetailsTracker:
             self._named_cleanup[k].after_size = FileUtils.get_dir_size(self._named_cleanup[k].dir)
         for k in aggregate_keys:
             self._aggregate_cleanup[k].recalculate()
+
+        for details in self._unnamed_cleanup:
+            details.after_size = FileUtils.get_dir_size(details.dir)
 
     def get_before_size(self, key: str):
         if key in self._named_cleanup:
@@ -241,7 +245,7 @@ class MavenCleanup(CleanupTool):
             print(f"Target: {t['path']}")
             print(f"  {format_du_style(t['before'])} -> {status} (Saved {format_du_style(reclaimed)})")
 
-        return CleanupResult(bytes_reclaimed=self.total_reclaimed_bytes, files_removed=-1, success=True)
+        return CleanupResult(bytes_reclaimed=self.total_reclaimed_bytes, files_removed=-1, success=True, logs=[])
 
     def print_summary(self):
         print("\n--- Maven cleanup summary ---")
@@ -284,7 +288,7 @@ class AsdfGolangCleanup(CleanupTool):
         self.tracker = CleanupDetailsTracker()
 
     def prepare(self):
-        self.tracker.register_directory("asdf_golang_root", ASDF_GOLANG_ROOT)
+        self.tracker.register_named_dir("asdf_golang_root", ASDF_GOLANG_ROOT)
         print("--- Scanning ASDF Golang versions ---")
         if not ASDF_GOLANG_ROOT.exists():
             print(f"asdf golang root does not exist at: {ASDF_GOLANG_ROOT}")
@@ -292,15 +296,15 @@ class AsdfGolangCleanup(CleanupTool):
 
         for item in ASDF_GOLANG_ROOT.iterdir():
             if item.is_dir() and item.name not in self.keep_versions:
-                details = self.tracker.register_reclaimable_directory(item, {"version": item.name})
+                details = self.tracker.register_unnamed_dir(item, {"version": item.name})
                 print(f"Found old version: {item.name} ({format_du_style(details.before_size)})")
 
         go_cache = subprocess.check_output(["go", "env", "GOCACHE"]).decode().strip()
         go_mod_cache = subprocess.check_output(["go", "env", "GOMODCACHE"]).decode().strip()
-        self.tracker.register_directory("go_cache", Path(go_cache))
-        self.tracker.register_directory("go_mod_cache", Path(go_mod_cache))
+        self.tracker.register_named_dir("go_cache", Path(go_cache))
+        self.tracker.register_named_dir("go_mod_cache", Path(go_mod_cache))
         self.tracker.register_default_aggregates()
-        self.tracker.register_dir_aggregate("go_caches", "go_cache", "go_mod_cache")
+        self.tracker.register_named_dir_aggregate("go_caches", "go_cache", "go_mod_cache")
 
     def execute(self):
         for details in self.tracker.get_unnamed_cleanup():
@@ -351,7 +355,7 @@ class DockerCleanup(CleanupTool):
         subprocess.run(["docker", "system", "prune", "-a", "--volumes", "-f"])
 
     def verify(self) -> CleanupResult:
-        return CleanupResult(0, -1, True)  # Docker doesn't easily return bytes saved via CLI
+        return CleanupResult(0, -1, True, [])  # Docker doesn't easily return bytes saved via CLI
 
     def print_summary(self):
         print("Docker: System pruned (All unused images/volumes removed)")
@@ -365,30 +369,33 @@ class DiscoveryCleanup(CleanupTool):
         self.name = name
         self.root_path = Path(root_path)
         self.patterns = patterns
-        self.found_dirs = []
-        self.reclaimed = 0
+        self.tracker = CleanupDetailsTracker()
 
     def prepare(self):
         print(f"--- Scanning for {self.name} ---")
         for pattern in self.patterns:
             for p in self.root_path.rglob(pattern):
                 if p.is_dir():
-                    size = FileUtils.get_dir_size(p)
-                    self.found_dirs.append((p, size))
-                    print(f"Found {p} ({format_du_style(size)})")
+                    details = self.tracker.register_unnamed_dir(p)
+                    print(f"Found {p} ({format_du_style(details.before_size)})")
 
     def execute(self):
-        for path, size in self.found_dirs:
+        for details in self.tracker.get_unnamed_cleanup():
+            path = details.dir
             print(f"Removing {path}...")
-            if path.is_dir():
-                shutil.rmtree(path, ignore_errors=True)
-            self.reclaimed += size
+            if details.dir.is_dir():
+                shutil.rmtree(details.dir, ignore_errors=True)
+
+        self.tracker.calculate_after_sizes()
 
     def verify(self) -> CleanupResult:
-        return CleanupResult(self.reclaimed, -1, True)
+        reclaimed = self.tracker.get_space_reclaimed_for_unnamed_cleanup()
+        logs = [f"{self.name}: Reclaimed {format_du_style(reclaimed)}"]
+        return CleanupResult(reclaimed, -1, True, logs)
 
     def print_summary(self):
-        print(f"{self.name}: Reclaimed {format_du_style(self.reclaimed)}")
+        for log in self.cleanup_result.logs:
+            print(log)
 
 
 class PoetryCacheCleanup(CleanupTool):
@@ -419,7 +426,7 @@ class PoetryCacheCleanup(CleanupTool):
     def verify(self) -> CleanupResult:
         self._cache_dir_size_after = FileUtils.get_dir_size(self._poetry_cache_dir)
         self.total_reclaimed_bytes = self._cache_dir_size_before - self._cache_dir_size_after
-        return CleanupResult(self.total_reclaimed_bytes, -1, True)
+        return CleanupResult(self.total_reclaimed_bytes, -1, True, [])
 
     def print_summary(self):
         print(f"{self.name}: Reclaimed {format_du_style(self.total_reclaimed_bytes)}")
@@ -448,7 +455,7 @@ def main():
         # MavenCleanup(), # (From your original code)
         AsdfGolangCleanup(keep_versions=["1.24.11"]),
         # DockerCleanup(),
-        # DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
+        DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
         # DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
         # DiscoveryCleanup("Pip Cache", "~/Library/Caches/pip", ["*"]),
         # PoetryCacheCleanup()
