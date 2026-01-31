@@ -6,10 +6,27 @@ from pathlib import Path
 DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 
 def get_mvn_target_dirs():
-    """Runs the du command and returns a list of (size_str, path)."""
-    cmd = f"du -sh {str(DEVELOPMENT_ROOT)}/*/target 2>/dev/null | grep -E '^([0-9.]+G|[1-9][0-9]{{2}}M)'"
-    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, text=True)
-    return [line.strip().split('\t') for line in process.stdout]
+    """Finds all 'target' dirs using Path.glob and runs du on them."""
+    # Recursive glob to find all 'target' directories
+    target_paths = list(DEVELOPMENT_ROOT.rglob("target"))
+
+    if not target_paths:
+        return []
+
+    # Convert PosixPaths to strings for the command
+    path_strings = [str(p) for p in target_paths]
+
+    # We use a smaller grep here because we already narrowed it down to 'target' dirs
+    # We still use shell=True to allow the pipe to grep
+    cmd = f"du -sh {' '.join(path_strings)} 2>/dev/null | grep -E '^([0-9.]+G|[1-9][0-9]{{2}}M)'"
+
+    process = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+    results = []
+    for line in process.stdout.strip().split('\n'):
+        if '\t' in line:
+            results.append(line.split('\t'))
+    return results
 
 def parse_to_bytes(size_str):
     """Converts du human-readable strings to bytes for math."""
