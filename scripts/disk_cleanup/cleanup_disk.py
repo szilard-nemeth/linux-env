@@ -12,11 +12,11 @@ import humanfriendly
 
 DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
-# TODO Extract commandrunner
+# TODO Extract Commandrunner
 # TODO Prepare commands, before execute prompt user for all tools or for each tool one by one
-# TODO Use ~/.snemeth-dev-projects/disk_cleanup/logs for logging dir
+# TODO Use ~/.snemeth-dev-projects/disk_cleanup/logs for logging dir, search for: "log_path" in code
 # TODO Each command should log stdout + stderr to a file: subprocess.run
-# TODO Add JetBrains tool cleanup
+# TODO Add JetBrains tool cleanup?
 
 
 class FileUtils:
@@ -139,9 +139,11 @@ class CleanupDetailsTracker:
 
     def get_space_reclaimed_for_named_cleanup(self, key: str):
         if key in self._named_cleanup:
-            return self._named_cleanup[key].before_size - self._named_cleanup[key].after_size
+            details = self._named_cleanup[key]
+            return details.before_size - self._named_cleanup[key].after_size
         if key in self._aggregate_cleanup:
-            return self._aggregate_cleanup[key].sum_before_size - self._aggregate_cleanup[key].sum_after_size
+            details = self._aggregate_cleanup[key]
+            return details.sum_before_size - self._aggregate_cleanup[key].sum_after_size
         raise ValueError("Key not found: " + key)
 
     def get_space_reclaimed_for_unnamed_cleanup(self):
@@ -407,9 +409,9 @@ class DiscoveryCleanup(CleanupTool):
             if details.dir.is_dir():
                 shutil.rmtree(details.dir, ignore_errors=True)
 
+    def verify(self) -> CleanupResult:
         self.tracker.calculate_after_sizes()
 
-    def verify(self) -> CleanupResult:
         reclaimed = self.tracker.get_space_reclaimed_for_unnamed_cleanup()
         logs = [f"{self.name}: Reclaimed {format_du_style(reclaimed)}"]
 
