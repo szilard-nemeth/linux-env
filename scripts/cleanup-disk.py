@@ -3,37 +3,54 @@ import os
 import re
 from pathlib import Path
 
+import humanfriendly
+
 DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 
-def get_mvn_target_dirs():
-    """Finds all 'target' dirs using Path.glob and runs du on them."""
-    # Recursive glob to find all 'target' directories
-    target_paths = list(DEVELOPMENT_ROOT.rglob("target"))
+def get_dir_size(path):
+    """Calculates total size of a directory in bytes natively."""
+    total = 0
+    try:
+        # scan_dir is much faster than os.listdir or rglob for size calculation
+        with os.scandir(path) as it:
+            for entry in it:
+                if entry.is_file():
+                    total += entry.stat().st_size
+                elif entry.is_dir():
+                    total += get_dir_size(entry.path)
+    except (PermissionError, OSError):
+        pass # Handle those 700 permission dirs gracefully
+    return total
 
-    if not target_paths:
-        return []
-
-    # Convert PosixPaths to strings for the command
-    path_strings = [str(p) for p in target_paths]
-
-    # We use a smaller grep here because we already narrowed it down to 'target' dirs
-    # We still use shell=True to allow the pipe to grep
-    cmd = f"du -sh {' '.join(path_strings)} 2>/dev/null | grep -E '^([0-9.]+G|[1-9][0-9]{{2}}M)'"
-
-    process = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-
+def get_mvn_target_dirs(size_limit="100M"):
+    # humanfriendly.parse_size() handles M, G, GiB, etc. automatically
+    byte_limit = humanfriendly.parse_size(size_limit)
     results = []
-    for line in process.stdout.strip().split('\n'):
-        if '\t' in line:
-            results.append(line.split('\t'))
+
+    for p in DEVELOPMENT_ROOT.rglob("target"):
+        if p.is_dir():
+            size_in_bytes = get_dir_size(p)
+            if size_in_bytes >= byte_limit:
+                # format_size() turns it back into '1.2 GB'
+                results.append([format_du_style(size_in_bytes), str(p)])
+
     return results
 
+def format_du_style(size_in_bytes):
+    """Formats bytes to 1.2G, 400M, etc. using humanfriendly 10.0"""
+    # Use binary=True to get 1024-base (MiB/GiB)
+    readable = humanfriendly.format_size(size_in_bytes, binary=True)
+
+    # Logic to match 'du -sh' output style:
+    # 1. Remove the 'iB' (making GiB -> G, MiB -> M)
+    # 2. Remove the space
+    return readable.replace('iB', '').replace(' ', '')
+
 def parse_to_bytes(size_str):
-    """Converts du human-readable strings to bytes for math."""
-    num = float(re.sub(r'[MG]', '', size_str))
-    if 'G' in size_str: return num * 1024**3
-    if 'M' in size_str: return num * 1024**2
-    return num
+    """Converts du human-readable strings to bytes using humanfriendly."""
+    # binary=True ensures 'M' is treated as 1024^2 (MiB) and 'G' as 1024^3 (GiB)
+    # This matches the 'du -sh' behavior on macOS/Linux.
+    return humanfriendly.parse_size(size_str, binary=True)
 
 def get_project_root(path):
     """
