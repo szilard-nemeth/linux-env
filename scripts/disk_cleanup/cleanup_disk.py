@@ -13,7 +13,7 @@ DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
 # TODO Extract commandrunner
 # TODO Prepare commands, before execute prompt user for all tools or for each tool one by one
-# TODO Use ~/.snemeth-dev-projects/disk-cleanup/logs for logging dir
+# TODO Use ~/.snemeth-dev-projects/disk_cleanup/logs for logging dir
 # TODO Each command should log stdout + stderr to a file: subprocess.run
 # TODO Add JetBrains tool cleanup
 
@@ -391,7 +391,9 @@ class DiscoveryCleanup(CleanupTool):
     def verify(self) -> CleanupResult:
         reclaimed = self.tracker.get_space_reclaimed_for_unnamed_cleanup()
         logs = [f"{self.name}: Reclaimed {format_du_style(reclaimed)}"]
-        return CleanupResult(reclaimed, -1, True, logs)
+
+        self.cleanup_result = CleanupResult(reclaimed, -1, True, logs)
+        return self.cleanup_result
 
     def print_summary(self):
         for log in self.cleanup_result.logs:
