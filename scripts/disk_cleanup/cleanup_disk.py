@@ -105,9 +105,6 @@ class CleanupDetailsTracker:
         self._unnamed_cleanup.append(details)
         return details
 
-    def get_unnamed_cleanup(self):
-        return self._unnamed_cleanup
-
     def calculate_after_sizes(self, *keys):
         self.register_default_aggregates()
 
@@ -312,7 +309,7 @@ class AsdfGolangCleanup(CleanupTool):
         self.tracker.register_named_dir_aggregate("go_caches", "go_cache", "go_mod_cache")
 
     def execute(self):
-        for details in self.tracker.get_unnamed_cleanup():
+        for details in self.tracker._unnamed_cleanup:
             version = details.metadata["version"]
             print(f"Uninstalling golang {version}...")
             subprocess.run(["asdf", "uninstall", "golang", version])
@@ -403,7 +400,7 @@ class DiscoveryCleanup(CleanupTool):
                         print(f"Found {p} ({format_du_style(details.before_size)})")
 
     def execute(self):
-        for details in self.tracker.get_unnamed_cleanup():
+        for details in self.tracker._unnamed_cleanup:
             path = details.dir
             print(f"Removing {path}...")
             if details.dir.is_dir():
