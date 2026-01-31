@@ -2,6 +2,7 @@ import shutil
 import subprocess
 import os
 import tempfile
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -364,20 +365,38 @@ class DockerCleanup(CleanupTool):
 class DiscoveryCleanup(CleanupTool):
     """Generic tool to find and delete specific directory patterns."""
 
-    def __init__(self, name, root_path, patterns: List[str]):
+    def __init__(self, name, root_path, patterns: List[str], age_days: int = 30):
         super().__init__()
         self.name = name
         self.root_path = Path(root_path)
         self.patterns = patterns
+        self.age_days = age_days
         self.tracker = CleanupDetailsTracker()
 
     def prepare(self):
-        print(f"--- Scanning for {self.name} ---")
+        if self.age_days != -1:
+            print(f"--- Scanning for {self.name} (Older than {self.age_days} days) ---")
+        now = time.time()
+        # Convert days to seconds: days * hours * minutes * seconds
+        threshold_seconds = self.age_days * 24 * 60 * 60
+
         for pattern in self.patterns:
             for p in self.root_path.rglob(pattern):
                 if p.is_dir():
-                    details = self.tracker.register_unnamed_dir(p)
-                    print(f"Found {p} ({format_du_style(details.before_size)})")
+                    if self.age_days != -1:
+                        # Check the last modified time of the directory itself
+                        mtime = p.stat().st_mtime
+                        if (now - mtime) > threshold_seconds:
+                            details = self.tracker.register_unnamed_dir(p)
+                            last_touched = time.strftime("%Y-%m-%d", time.localtime(mtime))
+                            print(
+                                f"Found stale dir: {p} (Last mod: {last_touched}, Size: {format_du_style(details.before_size)})"
+                            )
+                        else:
+                            print(f"Skipping active dir: {p} (Recently modified)")
+                    else:
+                        details = self.tracker.register_unnamed_dir(p)
+                        print(f"Found {p} ({format_du_style(details.before_size)})")
 
     def execute(self):
         for details in self.tracker.get_unnamed_cleanup():
