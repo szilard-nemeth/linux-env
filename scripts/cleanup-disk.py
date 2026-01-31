@@ -5,7 +5,7 @@ import tempfile
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Optional
 
 import humanfriendly
 
@@ -15,7 +15,6 @@ ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
 # TODO Use ~/.snemeth-dev-projects/disk-cleanup/logs for logging dir
 # TODO Extract commandrunner
 # TODO Each command should log stdout + stderr to a file: subprocess.run
-# TODO Extract dir size diff calculator
 # TODO Add JetBrains tool cleanup
 
 
@@ -39,14 +38,99 @@ class FileUtils:
 
 
 @dataclass
+class CleanupDetails:
+    # TODO Similar to CleanupResult, refactor
+    dir: Path
+    before_size: Optional[int] = None
+    after_size: Optional[int] = None
+
+
+@dataclass
+class AggregateCleanupDetails:
+    keys: List[str]
+    components: List[CleanupDetails]
+    sum_before_size: Optional[int] = None
+    sum_after_size: Optional[int] = None
+
+    def __post_init__(self):
+        self.recalculate()
+
+    def recalculate(self):
+        self.sum_before_size = 0
+        self.sum_after_size = 0
+        for detail in self.components:
+            self.sum_before_size += detail.before_size
+            self.sum_after_size += detail.after_size if detail.after_size else 0
+
+
+class CleanupDetailsTracker:
+    def __init__(self):
+        self._details: Dict[str, CleanupDetails] = {}
+        self._aggregate_details: Dict[str, AggregateCleanupDetails] = {}
+
+    def register_directory(self, key: str, dir: Path):
+        self._details[key] = CleanupDetails(dir, FileUtils.get_dir_size(dir), None)
+
+    def register_dir_aggregate(self, new_key: str, *keys):
+        not_found = set()
+        for key in keys:
+            if key not in self._details:
+                not_found.add(key)
+
+        if not_found:
+            raise ValueError(f"Cannot find keys '{not_found}'. Registered keys are: {self._details.keys()}")
+
+        if new_key in self._details:
+            raise ValueError(f"Attempted to override already existing key: {new_key}")
+
+        self._aggregate_details[new_key] = AggregateCleanupDetails(
+            keys=keys, components=[self._details[k] for k in keys]
+        )
+
+    def calculate_after_sizes(self, *keys):
+        simple_keys = [k for k in keys if k in self._details]
+        aggregate_keys = [k for k in keys if k in self._aggregate_details]
+
+        for k in simple_keys:
+            self._details[k].after_size = FileUtils.get_dir_size(self._details[k].dir)
+        for k in aggregate_keys:
+            self._aggregate_details[k].recalculate()
+
+    def get_before_size(self, key: str):
+        if key in self._details:
+            return self._details[key].before_size
+        if key in self._aggregate_details:
+            return self._aggregate_details[key].sum_before_size
+        raise ValueError("Key not found: " + key)
+
+    def get_after_size(self, key: str):
+        if key in self._details:
+            return self._details[key].after_size
+        if key in self._aggregate_details:
+            return self._aggregate_details[key].sum_after_size
+        raise ValueError("Key not found: " + key)
+
+    def get_size_diff(self, key: str):
+        if key in self._details:
+            return self._details[key].before_size - self._details[key].after_size
+        if key in self._aggregate_details:
+            return self._aggregate_details[key].sum_before_size - self._aggregate_details[key].sum_after_size
+        raise ValueError("Key not found: " + key)
+
+
+@dataclass
 class CleanupResult:
     bytes_reclaimed: int
     # TODO remove this
     files_removed: int
     success: bool
+    logs: List[str]
 
 
 class CleanupTool(ABC):
+    def __init__(self):
+        self.cleanup_result = None
+
     @abstractmethod
     def prepare(self):
         pass
@@ -67,6 +151,7 @@ class CleanupTool(ABC):
 
 class MavenCleanup(CleanupTool):
     def __init__(self):
+        super().__init__()
         self.targets = []
         self.root_to_targets = {}
         self.total_reclaimed_bytes = 0
@@ -171,11 +256,14 @@ class MavenCleanup(CleanupTool):
 
 class AsdfGolangCleanup(CleanupTool):
     def __init__(self, keep_versions: List[str]):
+        super().__init__()
         self.keep_versions = keep_versions
         self.to_remove = []
         self.reclaimed = 0
+        self.tracker = CleanupDetailsTracker()
 
     def prepare(self):
+        self.tracker.register_directory("asdf_golang_root", ASDF_GOLANG_ROOT)
         print("--- Scanning ASDF Golang versions ---")
         if not ASDF_GOLANG_ROOT.exists():
             print(f"asdf golang root does not exist at: {ASDF_GOLANG_ROOT}")
@@ -188,9 +276,12 @@ class AsdfGolangCleanup(CleanupTool):
                 self.to_remove.append({"path": item, "version": item.name, "size": size})
                 print(f"Found old version: {item.name} ({format_du_style(size)})")
 
-        self.go_cache = subprocess.check_output(["go", "env", "GOCACHE"]).decode().strip()
-        self.go_mod_cache = subprocess.check_output(["go", "env", "GOMODCACHE"]).decode().strip()
-        self.before_size_caches = FileUtils.get_dir_size(self.go_cache) + FileUtils.get_dir_size(self.go_mod_cache)
+        go_cache = subprocess.check_output(["go", "env", "GOCACHE"]).decode().strip()
+        go_mod_cache = subprocess.check_output(["go", "env", "GOMODCACHE"]).decode().strip()
+        self.tracker.register_directory("go_cache", Path(go_cache))
+        self.tracker.register_directory("go_mod_cache", Path(go_mod_cache))
+        self.tracker.register_dir_aggregate("go_caches", "go_cache", "go_mod_cache")
+        self.tracker.register_dir_aggregate("total", "go_cache", "go_mod_cache", "asdf_golang_root")
 
     def execute(self):
         for item in self.to_remove:
@@ -202,26 +293,26 @@ class AsdfGolangCleanup(CleanupTool):
         subprocess.run(["go", "clean", "-modcache", "-cache"])
 
     def verify(self) -> CleanupResult:
-        self.after_size_caches = FileUtils.get_dir_size(self.go_cache) + FileUtils.get_dir_size(self.go_mod_cache)
-        self.after_size_asdf_golang_root = FileUtils.get_dir_size(ASDF_GOLANG_ROOT)
+        self.tracker.calculate_after_sizes("total", "go_caches", "go_cache", "go_mod_cache", "asdf_golang_root")
 
-        print(f"go cache and modcache sum size before cleaning: {format_du_style(self.before_size_caches)}")
-        print(f"go cache and modcache sum size after cleaning: {format_du_style(self.after_size_caches)}")
-        print(
-            f"Space reclaimed for go cache and modcache: {format_du_style(self.before_size_caches - self.after_size_caches)}"
-        )
-        print(f"ASDF golang root size before cleaning: {format_du_style(self.before_size_asdf_golang_root)}")
-        print(f"ASDF golang root size after cleaning: {format_du_style(self.after_size_asdf_golang_root)}")
-        print(
-            f"Space reclaimed for ASDF golang root: {format_du_style(self.before_size_asdf_golang_root - self.after_size_asdf_golang_root)}"
-        )
+        logs = []
+        for key, description in [("go_caches", "go cache and modcache"), ("asdf_golang_root", "ASDF golang root")]:
+            logs.append(
+                f"{description} / Sum size before cleanup: {format_du_style(self.tracker.get_before_size(key))}"
+            )
+            logs.append(f"{description} / Sum size after cleanup: {format_du_style(self.tracker.get_after_size(key))}")
+            logs.append(f"{description} / Space reclaimed: {format_du_style(self.tracker.get_size_diff(key))}")
+            logs.append("-" * 30)
 
         self.reclaimed = sum(item["size"] for item in self.to_remove)
-        print(f"Space reclaimed for known removed items:      {format_du_style(self.reclaimed)}")
-        return CleanupResult(self.reclaimed, -1, True)
+        logs.append(f"Space reclaimed for known removed items: {format_du_style(self.reclaimed)}")
+        self.cleanup_result = CleanupResult(self.reclaimed, -1, True, logs)
+        return self.cleanup_result
 
     def print_summary(self):
-        print(f"ASDF Golang: Reclaimed {format_du_style(self.reclaimed)}")
+        for log in self.cleanup_result.logs:
+            print(log)
+        print(f"ASDF Golang cleanup: Total reclaimed {format_du_style(self.reclaimed)}")
 
 
 class DockerCleanup(CleanupTool):
@@ -243,6 +334,7 @@ class DiscoveryCleanup(CleanupTool):
     """Generic tool to find and delete specific directory patterns."""
 
     def __init__(self, name, root_path, patterns: List[str]):
+        super().__init__()
         self.name = name
         self.root_path = Path(root_path)
         self.patterns = patterns
@@ -274,6 +366,7 @@ class DiscoveryCleanup(CleanupTool):
 
 class PoetryCacheCleanup(CleanupTool):
     def __init__(self):
+        super().__init__()
         self.name = "Poetry cache cleanup"
         self.log_path = Path(tempfile.gettempdir()) / "poetry_cache_clean.log"
         self._cache_dir_size_after = -1
@@ -326,7 +419,7 @@ def parse_to_bytes(size_str):
 def main():
     tools: List[CleanupTool] = [
         # MavenCleanup(), # (From your original code)
-        # AsdfGolangCleanup(keep_versions=["1.24.11"]),
+        AsdfGolangCleanup(keep_versions=["1.24.11"]),
         # DockerCleanup(),
         # DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
         # DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
