@@ -180,11 +180,17 @@ class AsdfGolangCleanup(CleanupTool):
         if not ASDF_GOLANG_ROOT.exists():
             print(f"asdf golang root does not exist at: {ASDF_GOLANG_ROOT}")
             return
+
+        self.before_size_asdf_golang_root = FileUtils.get_dir_size(ASDF_GOLANG_ROOT)
         for item in ASDF_GOLANG_ROOT.iterdir():
             if item.is_dir() and item.name not in self.keep_versions:
                 size = FileUtils.get_dir_size(item)
                 self.to_remove.append({"path": item, "version": item.name, "size": size})
                 print(f"Found old version: {item.name} ({format_du_style(size)})")
+
+        self.go_cache = subprocess.check_output(["go", "env", "GOCACHE"]).decode().strip()
+        self.go_mod_cache = subprocess.check_output(["go", "env", "GOMODCACHE"]).decode().strip()
+        self.before_size_caches = FileUtils.get_dir_size(self.go_cache) + FileUtils.get_dir_size(self.go_mod_cache)
 
     def execute(self):
         for item in self.to_remove:
@@ -196,7 +202,22 @@ class AsdfGolangCleanup(CleanupTool):
         subprocess.run(["go", "clean", "-modcache", "-cache"])
 
     def verify(self) -> CleanupResult:
+        self.after_size_caches = FileUtils.get_dir_size(self.go_cache) + FileUtils.get_dir_size(self.go_mod_cache)
+        self.after_size_asdf_golang_root = FileUtils.get_dir_size(ASDF_GOLANG_ROOT)
+
+        print(f"go cache and modcache sum size before cleaning: {format_du_style(self.before_size_caches)}")
+        print(f"go cache and modcache sum size after cleaning: {format_du_style(self.after_size_caches)}")
+        print(
+            f"Space reclaimed for go cache and modcache: {format_du_style(self.before_size_caches - self.after_size_caches)}"
+        )
+        print(f"ASDF golang root size before cleaning: {format_du_style(self.before_size_asdf_golang_root)}")
+        print(f"ASDF golang root size after cleaning: {format_du_style(self.after_size_asdf_golang_root)}")
+        print(
+            f"Space reclaimed for ASDF golang root: {format_du_style(self.before_size_asdf_golang_root - self.after_size_asdf_golang_root)}"
+        )
+
         self.reclaimed = sum(item["size"] for item in self.to_remove)
+        print(f"Space reclaimed for known removed items:      {format_du_style(self.reclaimed)}")
         return CleanupResult(self.reclaimed, -1, True)
 
     def print_summary(self):
