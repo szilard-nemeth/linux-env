@@ -2,6 +2,7 @@ import subprocess
 import os
 import tempfile
 from abc import ABC, abstractmethod
+from ast import List
 from dataclasses import dataclass
 from pathlib import Path
 import humanfriendly
@@ -175,11 +176,12 @@ def parse_to_bytes(size_str):
 
 
 def main():
-    mvn_cleanup = MavenCleanup()
-    mvn_cleanup.prepare()
-    mvn_cleanup.execute()
-    mvn_cleanup.verify()
-    mvn_cleanup.print_summary()
+    tools: List[CleanupTool] = [MavenCleanup()]
+    for tool in tools:
+        tool.prepare()
+        tool.execute()
+        tool.verify()
+        tool.print_summary()
 
 
 if __name__ == "__main__":
