@@ -88,10 +88,18 @@ def main():
     # Create a temporary log file
     log_path = Path(tempfile.gettempdir()) / "maven_clean.log"
     print(f"\n--- 2. Executing maven clean (Logging to: {log_path}) ---")
+
+    executed_commands = []
     with open(log_path, "w") as log_file:
         for root in sorted(root_to_targets.keys()):
             print(f"Cleaning Project: {root}")
-            cmd = ["mvn", "clean", "-f", os.path.join(root, "pom.xml")]
+            pom_path = os.path.join(root, "pom.xml")
+            if not os.path.exists(pom_path):
+                print(f"Skipping: {root} (pom.xml missing)")
+                continue
+
+            print("Executing maven command")
+            cmd = ["mvn", "clean", "-f", pom_path]
 
             # Write start marker to log
             log_file.write(f"\n{'='*20}\nCLEANING: {root}\n{'='*20}\n")
@@ -99,6 +107,7 @@ def main():
 
             # Execute Maven
             result = subprocess.run(cmd, stdout=log_file, stderr=log_file)
+            executed_commands.append(" ".join(cmd))
             if result.returncode == 0:
                 print("✅ Done.")
             else:
