@@ -92,8 +92,9 @@ class MavenCleanup(CleanupTool):
                     print(f"Skipping: {root} (pom.xml missing)")
                     continue
 
-                print("Executing maven command")
                 cmd = ["mvn", "clean", "-f", pom_path]
+                full_cmd = " ".join(cmd)
+                print("Executing command: " + full_cmd)
 
                 # Write start marker to log
                 log_file.write(f"\n{'='*20}\nCLEANING: {root}\n{'='*20}\n")
@@ -101,7 +102,7 @@ class MavenCleanup(CleanupTool):
 
                 # Execute Maven
                 result = subprocess.run(cmd, stdout=log_file, stderr=log_file)
-                executed_commands.append(" ".join(cmd))
+                executed_commands.append(full_cmd)
                 if result.returncode == 0:
                     print("✅ Done.")
                 else:
