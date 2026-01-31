@@ -109,6 +109,8 @@ class CleanupDetailsTracker:
         return self._unnamed_cleanup
 
     def calculate_after_sizes(self, *keys):
+        self.register_default_aggregates()
+
         keys = [CleanupDetailsTracker.TOTAL_KEY] + list(keys)
         simple_keys = [k for k in keys if k in self._named_cleanup]
         aggregate_keys = [k for k in keys if k in self._aggregate_cleanup]
