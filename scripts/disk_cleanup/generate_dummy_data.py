@@ -6,7 +6,16 @@ from pathlib import Path
 from typing import Any, Union
 
 
-def create_real_test_env():
+def create_real_test_env(venv=True, terraform=True):
+    results = {}
+    if venv:
+        results["venv_basedir"] = _create_venvs()
+    if terraform:
+        results["terraform_basedir"] = _create_terraform_test_setup()
+    return results
+
+
+def _create_venvs() -> Path:
     # Create a persistent temp directory
     temp_path = tempfile.mkdtemp(prefix="venv_real_test_")
     base_dir = Path(temp_path)
@@ -101,6 +110,42 @@ def _create_venv_debugger_compatible(packages: Union[list[str], list[Any]], venv
 
     if packages:
         subprocess.check_call([str(pip_exe), "install"] + packages, stdout=subprocess.DEVNULL, env=minimal_env)
+
+
+def _create_terraform_test_setup():
+    temp_path = tempfile.mkdtemp(prefix="tf_cleanup_test_")
+    base_dir = Path(temp_path)
+
+    # Structure: Project Folder -> Hidden Dir -> Dummy Files (with simulated sizes)
+    tf_projects = {
+        "infra_production": {
+            ".terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/darwin_arm64/terraform-provider-aws_v5.0.0_x5": 250,  # MB
+            ".terraform/modules/vpc/main.tf": 0.01,
+            "main.tf": 0.01,
+            ".terraform.lock.hcl": 0.01,
+        },
+        "dev_sandbox": {
+            ".terraform/providers/registry.terraform.io/hashicorp/random/3.5.1/darwin_arm64/terraform-provider-random_v3.5.1_x5": 20,  # MB
+            "main.tf": 0.01,
+        },
+        "archive_project_2024": {
+            ".terraform/providers/registry.terraform.io/hashicorp/google/4.0.0/darwin_arm64/terraform-provider-google_v4.0.0_x5": 180,  # MB
+            "main.tf": 0.01,
+        },
+    }
+
+    for project, files in tf_projects.items():
+        for file_path, size_mb in files.items():
+            full_path = base_dir / project / file_path
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Create a "heavy" file to test disk space reporting
+            with open(full_path, "wb") as f:
+                f.seek(int(size_mb * 1024 * 1024) - 1)
+                f.write(b"\0")
+
+    print(f"🏗️ Terraform sandbox created at: {base_dir}")
+    return base_dir
 
 
 if __name__ == "__main__":
