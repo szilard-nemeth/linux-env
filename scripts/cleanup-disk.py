@@ -1,13 +1,22 @@
+import shutil
 import subprocess
 import os
 import tempfile
 from abc import ABC, abstractmethod
-from ast import List
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List
+
 import humanfriendly
 
 DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
+ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
+# TODO Prepare commands, before execute prompt user for all tools or for each tool one by one
+# TODO Use ~/.snemeth-dev-projects/disk-cleanup/logs for logging dir
+# TODO Extract commandrunner
+# TODO Each command should log stdout + stderr to a file: subprocess.run
+# TODO Extract dir size diff calculator
+# TODO Add JetBrains tool cleanup
 
 
 class FileUtils:
@@ -32,6 +41,7 @@ class FileUtils:
 @dataclass
 class CleanupResult:
     bytes_reclaimed: int
+    # TODO remove this
     files_removed: int
     success: bool
 
@@ -49,6 +59,7 @@ class CleanupTool(ABC):
     def verify(self) -> CleanupResult:
         pass
 
+    # TODO This should be get_summary and print logic should be decoupled
     @abstractmethod
     def print_summary(self):
         pass
@@ -131,6 +142,7 @@ class MavenCleanup(CleanupTool):
         print(f"Log file available at: {self.log_path}")
 
     @staticmethod
+    # TODO Limit is hardcoded
     def _get_mvn_target_dirs(size_limit="100M"):
         byte_limit = humanfriendly.parse_size(size_limit)
         found = []
@@ -157,6 +169,121 @@ class MavenCleanup(CleanupTool):
         return project_root
 
 
+class AsdfGolangCleanup(CleanupTool):
+    def __init__(self, keep_versions: List[str]):
+        self.keep_versions = keep_versions
+        self.to_remove = []
+        self.reclaimed = 0
+
+    def prepare(self):
+        print("--- Scanning ASDF Golang versions ---")
+        if not ASDF_GOLANG_ROOT.exists():
+            print(f"asdf golang root does not exist at: {ASDF_GOLANG_ROOT}")
+            return
+        for item in ASDF_GOLANG_ROOT.iterdir():
+            if item.is_dir() and item.name not in self.keep_versions:
+                size = FileUtils.get_dir_size(item)
+                self.to_remove.append({"path": item, "version": item.name, "size": size})
+                print(f"Found old version: {item.name} ({format_du_style(size)})")
+
+    def execute(self):
+        for item in self.to_remove:
+            print(f"Uninstalling golang {item['version']}...")
+            subprocess.run(["asdf", "uninstall", "golang", item["version"]])
+
+        # TODO store previous size + new size after deletion and print diff
+        print("Cleaning Go modcache...")
+        subprocess.run(["go", "clean", "-modcache", "-cache"])
+
+    def verify(self) -> CleanupResult:
+        self.reclaimed = sum(item["size"] for item in self.to_remove)
+        return CleanupResult(self.reclaimed, -1, True)
+
+    def print_summary(self):
+        print(f"ASDF Golang: Reclaimed {format_du_style(self.reclaimed)}")
+
+
+class DockerCleanup(CleanupTool):
+    def prepare(self):
+        print("--- Preparing Docker Prune ---")
+
+    def execute(self):
+        # -f forces without prompt
+        subprocess.run(["docker", "system", "prune", "-a", "--volumes", "-f"])
+
+    def verify(self) -> CleanupResult:
+        return CleanupResult(0, -1, True)  # Docker doesn't easily return bytes saved via CLI
+
+    def print_summary(self):
+        print("Docker: System pruned (All unused images/volumes removed)")
+
+
+class DiscoveryCleanup(CleanupTool):
+    """Generic tool to find and delete specific directory patterns."""
+
+    def __init__(self, name, root_path, patterns: List[str]):
+        self.name = name
+        self.root_path = Path(root_path)
+        self.patterns = patterns
+        self.found_dirs = []
+        self.reclaimed = 0
+
+    def prepare(self):
+        print(f"--- Scanning for {self.name} ---")
+        for pattern in self.patterns:
+            for p in self.root_path.rglob(pattern):
+                if p.is_dir():
+                    size = FileUtils.get_dir_size(p)
+                    self.found_dirs.append((p, size))
+                    print(f"Found {p} ({format_du_style(size)})")
+
+    def execute(self):
+        for path, size in self.found_dirs:
+            print(f"Removing {path}...")
+            if path.is_dir():
+                shutil.rmtree(path, ignore_errors=True)
+            self.reclaimed += size
+
+    def verify(self) -> CleanupResult:
+        return CleanupResult(self.reclaimed, -1, True)
+
+    def print_summary(self):
+        print(f"{self.name}: Reclaimed {format_du_style(self.reclaimed)}")
+
+
+class PoetryCacheCleanup(CleanupTool):
+    def __init__(self):
+        self.name = "Poetry cache cleanup"
+        self.log_path = Path(tempfile.gettempdir()) / "poetry_cache_clean.log"
+        self._cache_dir_size_after = -1
+        self._cache_dir_size_before = -1
+        self._poetry_cache_dir = None
+        self.total_reclaimed_bytes = -1
+
+    def prepare(self):
+        cmd = ["poetry", "config", "cache-dir"]
+        full_cmd = " ".join(cmd)
+        print("Executing command: " + full_cmd)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        self._poetry_cache_dir = result.stdout.rstrip()
+
+    def execute(self):
+        self._cache_dir_size_before = FileUtils.get_dir_size(self._poetry_cache_dir)
+
+        cmd = ["poetry", "cache", "clear", ".", "--all"]
+        full_cmd = " ".join(cmd)
+        print("Executing command: " + full_cmd)
+        _ = subprocess.run(cmd, check=True, capture_output=True, text=True)
+
+    def verify(self) -> CleanupResult:
+        self._cache_dir_size_after = FileUtils.get_dir_size(self._poetry_cache_dir)
+        self.total_reclaimed_bytes = self._cache_dir_size_before - self._cache_dir_size_after
+        return CleanupResult(self.total_reclaimed_bytes, -1, True)
+
+    def print_summary(self):
+        print(f"{self.name}: Reclaimed {format_du_style(self.total_reclaimed_bytes)}")
+
+
 def format_du_style(size_in_bytes):
     """Formats bytes to 1.2G, 400M, etc. using humanfriendly 10.0"""
     # Use binary=True to get 1024-base (MiB/GiB)
@@ -176,12 +303,21 @@ def parse_to_bytes(size_str):
 
 
 def main():
-    tools: List[CleanupTool] = [MavenCleanup()]
+    tools: List[CleanupTool] = [
+        # MavenCleanup(), # (From your original code)
+        # AsdfGolangCleanup(keep_versions=["1.24.11"]),
+        # DockerCleanup(),
+        # DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
+        # DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
+        # DiscoveryCleanup("Pip Cache", "~/Library/Caches/pip", ["*"]),
+        # PoetryCacheCleanup()
+    ]
     for tool in tools:
         tool.prepare()
         tool.execute()
-        tool.verify()
+        _ = tool.verify()
         tool.print_summary()
+        print("-" * 30)
 
 
 if __name__ == "__main__":
