@@ -143,8 +143,13 @@ class CleanupDetailsTracker:
             return details.sum_before_size - self._aggregate_cleanup[key].sum_after_size
         raise ValueError("Key not found: " + key)
 
-    def get_space_reclaimed_for_unnamed_cleanup(self):
-        return sum(item.before_size for item in self._unnamed_cleanup)
+    def get_space_reclaimed_total(self):
+        details = self._aggregate_cleanup[CleanupDetailsTracker.TOTAL_KEY]
+        return details.sum_before_size - details.sum_after_size
+
+    def get_space_reclaimed_for_unnamed_cleanup(self) -> int:
+        sizes = [item.before_size if item.before_size else 0 for item in self._unnamed_cleanup]
+        return sum(item for item in sizes)
 
 
 @dataclass
@@ -305,7 +310,6 @@ class AsdfGolangCleanup(CleanupTool):
         go_mod_cache = subprocess.check_output(["go", "env", "GOMODCACHE"]).decode().strip()
         self.tracker.register_named_dir("go_cache", Path(go_cache))
         self.tracker.register_named_dir("go_mod_cache", Path(go_mod_cache))
-        self.tracker.register_default_aggregates()
         self.tracker.register_named_dir_aggregate("go_caches", "go_cache", "go_mod_cache")
 
     def execute(self):
