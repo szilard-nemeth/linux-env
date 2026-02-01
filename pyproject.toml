@@ -30,11 +30,12 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.9"
-python-common-lib = "1.0.11"
-google-api-wrapper2 = "1.0.12"
-yarn-dev-tools = "1.1.1"
+# python-common-lib = "1.0.11"
+# google-api-wrapper2 = "1.0.12"
+# yarn-dev-tools = "1.1.1"
 lxml = "^5.2.2"
 paramiko = "^4.0.0"
+humanfriendly = "^10.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -48,6 +49,7 @@ autopep8 = "*"
 [tool.poetry.group.localdev.dependencies]
 python-common-lib = { path = "../python-commons/", develop = false }
 google-api-wrapper2 = { path = "../google-api-wrapper", develop = false }
+yarn-dev-tools = { path = "../yarn-dev-tools", develop = false }
 
 
 [build-system]
