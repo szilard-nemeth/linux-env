@@ -187,8 +187,6 @@ class CleanupDetailsTracker:
 @dataclass
 class CleanupResult:
     bytes_reclaimed: int
-    # TODO remove this
-    files_removed: int
     success: bool
     logs: List[str]
 
@@ -294,7 +292,7 @@ class MavenCleanup(CleanupTool):
                 logger.info(f"  {format_du_style(target.before_size)} -> {status} (Saved {format_du_style(reclaimed)})")
 
         total_reclaimed_bytes = self.tracker.get_space_reclaimed_total()
-        return CleanupResult(bytes_reclaimed=total_reclaimed_bytes, files_removed=-1, success=True, logs=[])
+        return CleanupResult(bytes_reclaimed=total_reclaimed_bytes, success=True, logs=[])
 
     def print_summary(self):
         logger.info("\n--- Maven cleanup summary ---")
@@ -382,7 +380,7 @@ class AsdfGolangCleanup(CleanupTool):
             f"Space reclaimed for explicitly removed items: {format_du_style(self.tracker.get_space_reclaimed_for_unnamed_cleanup())}"
         )
         total_reclaimed = self.tracker.get_space_reclaimed_for_named_cleanup("total")
-        self.cleanup_result = CleanupResult(total_reclaimed, -1, True, logs)
+        self.cleanup_result = CleanupResult(total_reclaimed, True, logs)
         return self.cleanup_result
 
     def print_summary(self):
@@ -400,7 +398,7 @@ class DockerCleanup(CleanupTool):
         self.run_command(["docker", "system", "prune", "-a", "--volumes", "-f"])
 
     def verify(self) -> CleanupResult:
-        return CleanupResult(0, -1, True, [])  # Docker doesn't easily return bytes saved via CLI
+        return CleanupResult(0, True, [])  # Docker doesn't easily return bytes saved via CLI
 
     def print_summary(self):
         logger.info("Docker: System pruned (All unused images/volumes removed)")
@@ -457,7 +455,7 @@ class DiscoveryCleanup(CleanupTool):
         reclaimed = self.tracker.get_space_reclaimed_for_unnamed_cleanup()
         logs = [f"{self.name}: Reclaimed {format_du_style(reclaimed)}"]
 
-        self.cleanup_result = CleanupResult(reclaimed, -1, True, logs)
+        self.cleanup_result = CleanupResult(reclaimed, True, logs)
         return self.cleanup_result
 
     def print_summary(self):
@@ -482,7 +480,7 @@ class PoetryCacheCleanup(CleanupTool):
     def verify(self) -> CleanupResult:
         self.tracker.calculate_after_sizes()
         total_reclaimed_bytes = self.tracker.get_space_reclaimed_total()
-        self.cleanup_result = CleanupResult(total_reclaimed_bytes, -1, True, [])
+        self.cleanup_result = CleanupResult(total_reclaimed_bytes, True, [])
         return self.cleanup_result
 
     def print_summary(self):
