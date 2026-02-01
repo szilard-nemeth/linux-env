@@ -189,11 +189,11 @@ class MavenCleanup(CleanupTool):
         self.log_path = Path(tempfile.gettempdir()) / "maven_clean.log"
 
     def prepare(self):
-        print("--- 1. Scanning for heavy mvn target directories ---")
+        print("--- Scanning for heavy Maven target directories ---")
         self.targets = self._get_mvn_target_dirs("100M")
 
         if not self.targets:
-            print("No heavy targets found.")
+            print("No heavy Maven target dirs found.")
             return
 
         # Map target paths to their project roots to avoid redundant 'mvn clean' calls
@@ -205,12 +205,12 @@ class MavenCleanup(CleanupTool):
 
     def execute(self):
         # Create a temporary log file
-        print(f"\n--- 2. Executing maven clean (Logging to: {self.log_path}) ---")
+        print(f"\n--- Executing Maven clean commands (Logging to: {self.log_path}) ---")
 
         executed_commands = []
         with open(self.log_path, "w") as log_file:
             for root in sorted(self.root_to_targets.keys()):
-                print(f"Cleaning Project: {root}")
+                print(f"Cleaning project: {root}")
                 pom_path = os.path.join(root, "pom.xml")
                 if not os.path.exists(pom_path):
                     print(f"Skipping: {root} (pom.xml missing)")
@@ -236,14 +236,14 @@ class MavenCleanup(CleanupTool):
         print("\n--- 3. Verifying reclaimed space ---")
         self.total_reclaimed_bytes = 0
 
-        for t in self.targets:
-            after_size = FileUtils.get_dir_size(t["path"])  # Will be 0 if folder was deleted
-            reclaimed = t["before"] - after_size
+        for target in self.targets:
+            after_size = FileUtils.get_dir_size(target["path"])  # Will be 0 if folder was deleted
+            reclaimed = target["before"] - after_size
             self.total_reclaimed_bytes += reclaimed
 
-            status = "DELETED" if not os.path.exists(t["path"]) else f"REDUCED TO {format_du_style(after_size)}"
-            print(f"Target: {t['path']}")
-            print(f"  {format_du_style(t['before'])} -> {status} (Saved {format_du_style(reclaimed)})")
+            status = "DELETED" if not os.path.exists(target["path"]) else f"REDUCED TO {format_du_style(after_size)}"
+            print(f"Target: {target['path']}")
+            print(f"  {format_du_style(target['before'])} -> {status} (Saved {format_du_style(reclaimed)})")
 
         return CleanupResult(bytes_reclaimed=self.total_reclaimed_bytes, files_removed=-1, success=True, logs=[])
 
