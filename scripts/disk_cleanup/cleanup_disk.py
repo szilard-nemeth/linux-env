@@ -4,6 +4,7 @@ import os
 import tempfile
 import time
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Dict, Optional, Any
@@ -12,7 +13,7 @@ import humanfriendly
 
 DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
-# TODO Extract Commandrunner
+# TODO Extract Commandrunner?
 # TODO Prepare commands, before execute prompt user for all tools or for each tool one by one
 # TODO Use ~/.snemeth-dev-projects/disk_cleanup/logs for logging dir, search for: "log_path" in code
 # TODO Each command should log stdout + stderr to a file: subprocess.run
@@ -196,15 +197,11 @@ class MavenCleanup(CleanupTool):
             return
 
         # Map target paths to their project roots to avoid redundant 'mvn clean' calls
-        root_to_targets = {}
-        for t in self.targets:
-            root = str(self.get_project_root(t["path"]))
-            if root not in root_to_targets:
-                root_to_targets[root] = []
-            root_to_targets[root].append(t)
-            print(f"Found {format_du_style(t['before'])}: {t['path']}")
-
-        self.root_to_targets = root_to_targets
+        self.root_to_targets = defaultdict(list)
+        for target in self.targets:
+            root = str(self.get_project_root(target["path"]))
+            self.root_to_targets[root].append(target)
+            print(f"Found {format_du_style(target['before'])}: {target['path']}")
 
     def execute(self):
         # Create a temporary log file
@@ -314,13 +311,13 @@ class AsdfGolangCleanup(CleanupTool):
             print(f"Uninstalling golang {version}...")
             subprocess.run(["asdf", "uninstall", "golang", version])
 
-        # TODO store previous size + new size after deletion and print diff
         print("Cleaning Go modcache...")
         subprocess.run(["go", "clean", "-modcache", "-cache"])
 
     def verify(self) -> CleanupResult:
         self.tracker.calculate_after_sizes()
 
+        # TODO unified print logic for all tools?
         logs = []
         for key, description in [
             ("go_caches", "go cache and modcache"),
@@ -471,9 +468,9 @@ def parse_to_bytes(size_str):
 def main():
     tools: List[CleanupTool] = [
         # MavenCleanup(), # (From your original code)
-        AsdfGolangCleanup(keep_versions=["1.24.11"]),
+        # AsdfGolangCleanup(keep_versions=["1.24.11"]),
         # DockerCleanup(),
-        DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
+        # DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
         # DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
         # DiscoveryCleanup("Pip Cache", "~/Library/Caches/pip", ["*"]),
         # PoetryCacheCleanup()
