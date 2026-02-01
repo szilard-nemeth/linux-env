@@ -71,11 +71,24 @@ class CleanupDetailsTracker:
 
     def __init__(self):
         self._named_cleanup: Dict[str, CleanupDetails] = {}
-        self._unnamed_cleanup: List[CleanupDetails] = []
+        self.unnamed_cleanup: List[CleanupDetails] = []
         self._aggregate_cleanup: Dict[str, AggregateCleanupDetails] = {}
 
+    def _register_default_aggregates(self):
+        keys = set(self._named_cleanup)
+        named_comps = [self._named_cleanup[k] for k in keys]
+        self._aggregate_cleanup[CleanupDetailsTracker.TOTAL_KEY] = AggregateCleanupDetails(
+            keys=list(keys), components=named_comps + self.unnamed_cleanup
+        )
+
     def register_named_dir(self, key: str, dir: Path):
-        self._named_cleanup[key] = CleanupDetails(dir, FileUtils.get_dir_size(dir), None)
+        new_details = CleanupDetails(dir, FileUtils.get_dir_size(dir), None)
+        self._named_cleanup[key] = new_details
+
+        # If a new named dir added, add it to "total"
+        if CleanupDetailsTracker.TOTAL_KEY in self._aggregate_cleanup:
+            self._aggregate_cleanup[CleanupDetailsTracker.TOTAL_KEY].keys.append(key)
+            self._aggregate_cleanup[CleanupDetailsTracker.TOTAL_KEY].components.append(new_details)
 
     def register_named_dir_aggregate(self, new_key: str, *keys):
         not_found = set()
@@ -93,17 +106,10 @@ class CleanupDetailsTracker:
             keys=list(keys), components=[self._named_cleanup[k] for k in keys]
         )
 
-    def _register_default_aggregates(self):
-        keys = set(self._named_cleanup)
-
-        self._aggregate_cleanup[CleanupDetailsTracker.TOTAL_KEY] = AggregateCleanupDetails(
-            keys=list(keys), components=[self._named_cleanup[k] for k in keys]
-        )
-
     def register_unnamed_dir(self, dir: Path, metadata: Dict[str, Any] = None) -> CleanupDetails:
         # TODO Consider adding new CleanupDetails to "total" aggregate?
         details = CleanupDetails(dir, FileUtils.get_dir_size(dir), None, metadata=metadata)
-        self._unnamed_cleanup.append(details)
+        self.unnamed_cleanup.append(details)
         return details
 
     def calculate_after_sizes(self):
@@ -111,11 +117,12 @@ class CleanupDetailsTracker:
 
         for k in self._named_cleanup.keys():
             self._named_cleanup[k].after_size = FileUtils.get_dir_size(self._named_cleanup[k].dir)
+
+        for details in self.unnamed_cleanup:
+            details.after_size = FileUtils.get_dir_size(details.dir)
+
         for k in self._aggregate_cleanup.keys():
             self._aggregate_cleanup[k].recalculate()
-
-        for details in self._unnamed_cleanup:
-            details.after_size = FileUtils.get_dir_size(details.dir)
 
     def get_before_size(self, key: str):
         if key in self._named_cleanup:
@@ -134,19 +141,19 @@ class CleanupDetailsTracker:
     def get_space_reclaimed_for_named_cleanup(self, key: str):
         if key in self._named_cleanup:
             details = self._named_cleanup[key]
-            return details.before_size - self._named_cleanup[key].after_size
+            return details.before_size - details.after_size
         if key in self._aggregate_cleanup:
             details = self._aggregate_cleanup[key]
-            return details.sum_before_size - self._aggregate_cleanup[key].sum_after_size
+            return details.sum_before_size - details.sum_after_size
         raise ValueError("Key not found: " + key)
+
+    def get_space_reclaimed_for_unnamed_cleanup(self) -> int:
+        sizes = [item.before_size if item.before_size else 0 for item in self.unnamed_cleanup]
+        return sum(item for item in sizes)
 
     def get_space_reclaimed_total(self):
         details = self._aggregate_cleanup[CleanupDetailsTracker.TOTAL_KEY]
         return details.sum_before_size - details.sum_after_size
-
-    def get_space_reclaimed_for_unnamed_cleanup(self) -> int:
-        sizes = [item.before_size if item.before_size else 0 for item in self._unnamed_cleanup]
-        return sum(item for item in sizes)
 
 
 @dataclass
@@ -183,40 +190,39 @@ class CleanupTool(ABC):
 class MavenCleanup(CleanupTool):
     def __init__(self):
         super().__init__()
-        self.targets = []
-        self.root_to_targets = {}
-        self.total_reclaimed_bytes = 0
+        self.root_to_targets: Dict[Path, List[Path]] = defaultdict(list)
         self.log_path = Path(tempfile.gettempdir()) / "maven_clean.log"
+        self.tracker = CleanupDetailsTracker()
 
     def prepare(self):
+        # TODO Limit is hardcoded
         print("--- Scanning for heavy Maven target directories ---")
-        self.targets = self._get_mvn_target_dirs("100M")
-
-        if not self.targets:
+        self._get_mvn_target_dirs("100M")
+        targets = self.tracker.unnamed_cleanup
+        if not targets:
             print("No heavy Maven target dirs found.")
             return
 
-        # Map target paths to their project roots to avoid redundant 'mvn clean' calls
-        self.root_to_targets = defaultdict(list)
-        for target in self.targets:
-            root = str(self.get_project_root(target["path"]))
-            self.root_to_targets[root].append(target)
-            print(f"Found {format_du_style(target['before'])}: {target['path']}")
+        # Map target paths to their project roots to avoid redundant 'mvn clean' calls (as they are expensive operations)
+        for target in targets:
+            root = self.get_project_root(target.dir)
+            self.root_to_targets[root].append(target.dir)
+            print(f"Found {format_du_style(target.before_size)}: {target.dir}")
 
     def execute(self):
-        # Create a temporary log file
         print(f"\n--- Executing Maven clean commands (Logging to: {self.log_path}) ---")
 
+        # TODO 'executed_commands' unused
         executed_commands = []
         with open(self.log_path, "w") as log_file:
             for root in sorted(self.root_to_targets.keys()):
                 print(f"Cleaning project: {root}")
-                pom_path = os.path.join(root, "pom.xml")
-                if not os.path.exists(pom_path):
+                pom_path = root / "pom.xml"
+                if not pom_path.exists():
                     print(f"Skipping: {root} (pom.xml missing)")
                     continue
 
-                cmd = ["mvn", "clean", "-f", pom_path]
+                cmd = ["mvn", "clean", "-f", str(pom_path)]
                 full_cmd = " ".join(cmd)
                 print("Executing command: " + full_cmd)
 
@@ -233,46 +239,47 @@ class MavenCleanup(CleanupTool):
                     print("❌ Failed (Check log).")
 
     def verify(self) -> CleanupResult:
-        print("\n--- 3. Verifying reclaimed space ---")
-        self.total_reclaimed_bytes = 0
+        print("\n--- Verifying reclaimed space ---")
+        self.tracker.calculate_after_sizes()
 
-        for target in self.targets:
-            after_size = FileUtils.get_dir_size(target["path"])  # Will be 0 if folder was deleted
-            reclaimed = target["before"] - after_size
-            self.total_reclaimed_bytes += reclaimed
+        targets = self.tracker.unnamed_cleanup
+        for target in targets:
+            reclaimed = target.before_size - target.after_size
 
-            status = "DELETED" if not os.path.exists(target["path"]) else f"REDUCED TO {format_du_style(after_size)}"
-            print(f"Target: {target['path']}")
-            print(f"  {format_du_style(target['before'])} -> {status} (Saved {format_du_style(reclaimed)})")
+            if target.dir.exists and reclaimed == 0:
+                print(f"Target: {target.dir}")
+                print("NO CHANGE IN SIZE")
+            else:
+                status = "DELETED" if not target.dir.exists() else f"REDUCED TO {format_du_style(target.after_size)}"
+                print(f"Target: {target.dir}")
+                print(f"  {format_du_style(target.before_size)} -> {status} (Saved {format_du_style(reclaimed)})")
 
-        return CleanupResult(bytes_reclaimed=self.total_reclaimed_bytes, files_removed=-1, success=True, logs=[])
+        total_reclaimed_bytes = self.tracker.get_space_reclaimed_total()
+        return CleanupResult(bytes_reclaimed=total_reclaimed_bytes, files_removed=-1, success=True, logs=[])
 
     def print_summary(self):
         print("\n--- Maven cleanup summary ---")
         print(f"Total Projects Cleaned: {len(self.root_to_targets)}")
-        print(f"Actual Space Reclaimed: {format_du_style(self.total_reclaimed_bytes)}")
+        print(f"Actual Space Reclaimed: {format_du_style(self.tracker.get_space_reclaimed_total())}")
         print(f"Log file available at: {self.log_path}")
 
-    @staticmethod
     # TODO Limit is hardcoded
-    def _get_mvn_target_dirs(size_limit="100M"):
+    def _get_mvn_target_dirs(self, size_limit="100M"):
         byte_limit = humanfriendly.parse_size(size_limit)
-        found = []
         # Using rglob to find all target folders
         for p in DEVELOPMENT_ROOT.rglob("target"):
             if p.is_dir():
                 size = FileUtils.get_dir_size(p)
                 if size >= byte_limit:
-                    found.append({"path": str(p), "before": size})
-        return found
+                    self.tracker.register_unnamed_dir(p)
 
     @staticmethod
-    def get_project_root(path):
+    def get_project_root(path: Path) -> Path:
         """
         Finds the directory containing the top-level pom.xml.
         Ascends from the /target folder until it finds a pom or hits the dev root.
         """
-        current = Path(path).parent
+        current = path.parent
         project_root = current
         while str(current) != str(DEVELOPMENT_ROOT) and str(current) != "/":
             if (current / "pom.xml").exists():
@@ -306,7 +313,7 @@ class AsdfGolangCleanup(CleanupTool):
         self.tracker.register_named_dir_aggregate("go_caches", "go_cache", "go_mod_cache")
 
     def execute(self):
-        for details in self.tracker._unnamed_cleanup:
+        for details in self.tracker.unnamed_cleanup:
             version = details.metadata["version"]
             print(f"Uninstalling golang {version}...")
             subprocess.run(["asdf", "uninstall", "golang", version])
@@ -397,7 +404,7 @@ class DiscoveryCleanup(CleanupTool):
                         print(f"Found {p} ({format_du_style(details.before_size)})")
 
     def execute(self):
-        for details in self.tracker._unnamed_cleanup:
+        for details in self.tracker.unnamed_cleanup:
             path = details.dir
             print(f"Removing {path}...")
             if details.dir.is_dir():
