@@ -425,33 +425,29 @@ class PoetryCacheCleanup(CleanupTool):
         super().__init__()
         self.name = "Poetry cache cleanup"
         self.log_path = Path(tempfile.gettempdir()) / "poetry_cache_clean.log"
-        self._cache_dir_size_after = -1
-        self._cache_dir_size_before = -1
-        self._poetry_cache_dir = None
-        self.total_reclaimed_bytes = -1
+        self.tracker = CleanupDetailsTracker()
 
     def prepare(self):
         cmd = ["poetry", "config", "cache-dir"]
         full_cmd = " ".join(cmd)
         print("Executing command: " + full_cmd)
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        self._poetry_cache_dir = result.stdout.rstrip()
+        self.tracker.register_named_dir("poetry_cache", Path(result.stdout.rstrip()))
 
     def execute(self):
-        self._cache_dir_size_before = FileUtils.get_dir_size(self._poetry_cache_dir)
-
         cmd = ["poetry", "cache", "clear", ".", "--all"]
         full_cmd = " ".join(cmd)
         print("Executing command: " + full_cmd)
         _ = subprocess.run(cmd, check=True, capture_output=True, text=True)
 
     def verify(self) -> CleanupResult:
-        self._cache_dir_size_after = FileUtils.get_dir_size(self._poetry_cache_dir)
-        self.total_reclaimed_bytes = self._cache_dir_size_before - self._cache_dir_size_after
-        return CleanupResult(self.total_reclaimed_bytes, -1, True, [])
+        self.tracker.calculate_after_sizes()
+        total_reclaimed_bytes = self.tracker.get_space_reclaimed_total()
+        self.cleanup_result = CleanupResult(total_reclaimed_bytes, -1, True, [])
+        return self.cleanup_result
 
     def print_summary(self):
-        print(f"{self.name}: Reclaimed {format_du_style(self.total_reclaimed_bytes)}")
+        print(f"{self.name}: Reclaimed {format_du_style(self.cleanup_result.bytes_reclaimed)}")
 
 
 def format_du_style(size_in_bytes):
