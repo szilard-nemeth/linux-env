@@ -230,6 +230,13 @@ class CleanupTool(ABC):
     def print_summary(self):
         pass
 
+    def execute_flow(self):
+        self.prepare()
+        self.execute()
+        _ = self.verify()
+        self.print_summary()
+        logger.info("-" * 30)
+
 
 class MavenCleanup(CleanupTool):
     def __init__(self, limit: str):
@@ -511,16 +518,12 @@ class ToolRunner:
 
         logger.info(f"Starting cleanup. Detailed logs: {LOG_FILE_PATH}")
         for tool in tools:
-            tool.prepare()
-            tool.execute()
-            _ = tool.verify()
-            tool.print_summary()
-            logger.info("-" * 30)
+            tool.execute_flow()
 
 
 def main():
     tools: List[CleanupTool] = [
-        # MavenCleanup(), # (From your original code)
+        MavenCleanup("100M"),
         # AsdfGolangCleanup(keep_versions=["1.24.11"]),
         # DockerCleanup(),
         # DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
