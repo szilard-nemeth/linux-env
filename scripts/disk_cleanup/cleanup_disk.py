@@ -15,7 +15,6 @@ import humanfriendly
 DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 TOOL_OUTPUT_BASEDIR = Path(os.path.expanduser("~/snemeth-dev-projects/cleanup_disk/"))
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
-# TODO Use ~/.snemeth-dev-projects/disk_cleanup/logs for logging dir, search for: "log_path" in code
 # TODO Prepare commands, before execute prompt user for all tools or for each tool one by one or use dry-run
 # TODO Add JetBrains tool cleanup?
 
@@ -234,16 +233,19 @@ class CleanupTool(ABC):
 
 
 class MavenCleanup(CleanupTool):
-    def __init__(self):
+    def __init__(self, limit: str):
+        """
+        :param limit: Human-readable limit for directory size, e.g. 100M
+        """
         super().__init__()
         self.root_to_targets: Dict[Path, List[Path]] = defaultdict(list)
         self.tracker = CleanupDetailsTracker()
+        self._limit_str: str = limit
+        self._limit_bytes: int = humanfriendly.parse_size(limit)
 
     def prepare(self):
-        # TODO Limit is hardcoded
-        logger.info("Scanning for Maven target directories > 100MB...")
-        _ = humanfriendly.parse_size("100M")
-        self._get_mvn_target_dirs("100M")
+        logger.info(f"Scanning for Maven target directories > {self._limit_str}...")
+        self._get_mvn_target_dirs(self._limit_bytes)
         targets = self.tracker.unnamed_cleanup
         if not targets:
             logger.info("No heavy Maven target dirs found.")
@@ -299,14 +301,12 @@ class MavenCleanup(CleanupTool):
         logger.info(f"Total Projects Cleaned: {len(self.root_to_targets)}")
         logger.info(f"Actual Space Reclaimed: {format_du_style(self.tracker.get_space_reclaimed_total())}")
 
-    # TODO Limit is hardcoded
-    def _get_mvn_target_dirs(self, size_limit="100M"):
-        byte_limit = humanfriendly.parse_size(size_limit)
+    def _get_mvn_target_dirs(self, limit_bytes: int):
         # Using rglob to find all target folders
         for p in DEVELOPMENT_ROOT.rglob("target"):
             if p.is_dir():
                 size = FileUtils.get_dir_size(p)
-                if size >= byte_limit:
+                if size >= limit_bytes:
                     self.tracker.register_unnamed_dir(p)
 
     @staticmethod
