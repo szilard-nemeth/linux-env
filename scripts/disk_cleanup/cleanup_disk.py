@@ -2,7 +2,6 @@ import logging
 import shutil
 import subprocess
 import os
-import tempfile
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -467,7 +466,6 @@ class PoetryCacheCleanup(CleanupTool):
     def __init__(self):
         super().__init__()
         self.name = "Poetry cache cleanup"
-        self.log_path = Path(tempfile.gettempdir()) / "poetry_cache_clean.log"
         self.tracker = CleanupDetailsTracker()
 
     def prepare(self):
