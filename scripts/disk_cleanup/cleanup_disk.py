@@ -300,7 +300,6 @@ class MavenCleanup(CleanupTool):
         logger.info("\n--- Maven cleanup summary ---")
         logger.info(f"Total Projects Cleaned: {len(self.root_to_targets)}")
         logger.info(f"Actual Space Reclaimed: {format_du_style(self.tracker.get_space_reclaimed_total())}")
-        logger.info(f"Log file available at: {self.log_path}")
 
     # TODO Limit is hardcoded
     def _get_mvn_target_dirs(self, size_limit="100M"):
