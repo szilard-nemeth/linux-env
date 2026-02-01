@@ -16,9 +16,7 @@ DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 TOOL_OUTPUT_BASEDIR = Path(os.path.expanduser("~/snemeth-dev-projects/cleanup_disk/"))
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
 # TODO Use ~/.snemeth-dev-projects/disk_cleanup/logs for logging dir, search for: "log_path" in code
-# TODO Extract Commandrunner?
 # TODO Prepare commands, before execute prompt user for all tools or for each tool one by one or use dry-run
-# TODO Each command should log stdout + stderr to a file: subprocess.run
 # TODO Add JetBrains tool cleanup?
 
 # Setup Global Logging Path
@@ -138,7 +136,6 @@ class CleanupDetailsTracker:
         )
 
     def register_unnamed_dir(self, dir: Path, metadata: Dict[str, Any] = None) -> CleanupDetails:
-        # TODO Consider adding new CleanupDetails to "total" aggregate?
         details = CleanupDetails(dir, FileUtils.get_dir_size(dir), None, metadata=metadata)
         self.unnamed_cleanup.append(details)
         return details
@@ -212,6 +209,13 @@ class CleanupTool(ABC):
                 logger.debug(f"[Subprocess] {line.strip()}")
         process.wait()
         return process.returncode, full_cmd
+
+    def run_command_check_output(self, cmd: List[str], cwd: Optional[Path] = None):
+        full_cmd = " ".join(cmd)
+        logger.debug(f"Executing: {full_cmd}")
+
+        output = subprocess.check_output(cmd, cwd=cwd)
+        return output.decode().strip(), full_cmd
 
     @abstractmethod
     def prepare(self):
@@ -341,8 +345,8 @@ class AsdfGolangCleanup(CleanupTool):
                 details = self.tracker.register_unnamed_dir(item, {"version": item.name})
                 logger.info(f"Found old version: {item.name} ({format_du_style(details.before_size)})")
 
-        go_cache = subprocess.check_output(["go", "env", "GOCACHE"]).decode().strip()
-        go_mod_cache = subprocess.check_output(["go", "env", "GOMODCACHE"]).decode().strip()
+        go_cache, _ = self.run_command_check_output(["go", "env", "GOCACHE"])
+        go_mod_cache, _ = self.run_command_check_output(["go", "env", "GOMODCACHE"])
         self.tracker.register_named_dir("go_cache", Path(go_cache))
         self.tracker.register_named_dir("go_mod_cache", Path(go_mod_cache))
         self.tracker.register_named_dir_aggregate("go_caches", "go_cache", "go_mod_cache")
@@ -470,11 +474,8 @@ class PoetryCacheCleanup(CleanupTool):
         self.tracker = CleanupDetailsTracker()
 
     def prepare(self):
-        cmd = ["poetry", "config", "cache-dir"]
-        full_cmd = " ".join(cmd)
-        logger.info("Executing command: " + full_cmd)
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        self.tracker.register_named_dir("poetry_cache", Path(result.stdout.rstrip()))
+        cache_dir, _ = self.run_command_check_output(["poetry", "config", "cache-dir"])
+        self.tracker.register_named_dir("poetry_cache", Path(cache_dir))
 
     def execute(self):
         _ = self.run_command(["poetry", "cache", "clear", ".", "--all"])
