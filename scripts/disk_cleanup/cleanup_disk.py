@@ -92,7 +92,7 @@ class CleanupDetailsTracker:
             keys=list(keys), components=[self._named_cleanup[k] for k in keys]
         )
 
-    def register_default_aggregates(self):
+    def _register_default_aggregates(self):
         keys = set(self._named_cleanup)
 
         self._aggregate_cleanup[CleanupDetailsTracker.TOTAL_KEY] = AggregateCleanupDetails(
@@ -105,16 +105,12 @@ class CleanupDetailsTracker:
         self._unnamed_cleanup.append(details)
         return details
 
-    def calculate_after_sizes(self, *keys):
-        self.register_default_aggregates()
+    def calculate_after_sizes(self):
+        self._register_default_aggregates()
 
-        keys = [CleanupDetailsTracker.TOTAL_KEY] + list(keys)
-        simple_keys = [k for k in keys if k in self._named_cleanup]
-        aggregate_keys = [k for k in keys if k in self._aggregate_cleanup]
-
-        for k in simple_keys:
+        for k in self._named_cleanup.keys():
             self._named_cleanup[k].after_size = FileUtils.get_dir_size(self._named_cleanup[k].dir)
-        for k in aggregate_keys:
+        for k in self._aggregate_cleanup.keys():
             self._aggregate_cleanup[k].recalculate()
 
         for details in self._unnamed_cleanup:
@@ -323,7 +319,7 @@ class AsdfGolangCleanup(CleanupTool):
         subprocess.run(["go", "clean", "-modcache", "-cache"])
 
     def verify(self) -> CleanupResult:
-        self.tracker.calculate_after_sizes("go_caches", "go_cache", "go_mod_cache", "asdf_golang_root")
+        self.tracker.calculate_after_sizes()
 
         logs = []
         for key, description in [
