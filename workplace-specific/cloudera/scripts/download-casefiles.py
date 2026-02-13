@@ -1,8 +1,9 @@
-import getpass
-
-import paramiko
-import os
 import sys
+from pathlib import Path
+
+import click
+import paramiko
+
 
 def get_ssh_client(hostname, username, password):
     """Establishes an SSH connection and returns the client object."""
@@ -11,142 +12,137 @@ def get_ssh_client(hostname, username, password):
 
     try:
         ssh_client.connect(hostname, username=username, password=password)
-        print(f"Successfully connected to {hostname}")
+        click.secho(f"✅ Successfully connected to {hostname}", fg="green")
         return ssh_client
-    except paramiko.AuthenticationException:
-        print("Authentication failed. Check your username and password or SSH key.")
-        return None
     except Exception as e:
-        print(f"An error occurred: {e}")
+        # except paramiko.AuthenticationException:
+        click.secho(f"❌ Connection error: {e}", fg="red")
         return None
 
+
 def list_remote_files(ssh_client, case_number):
-    """
-    Lists files in the specified remote directory and returns a dictionary
-    mapping a number to (file_type, filename).
-    """
+    """Lists files and returns a map of index -> (type, filename)."""
     remote_path = f"/case/{case_number}"
     command = f"ls -latr {remote_path}"
 
     stdin, stdout, stderr = ssh_client.exec_command(command)
-    output = stdout.read().decode('utf-8').strip().split('\n')
+    output = stdout.read().decode("utf-8").strip().split("\n")
 
     # Check for errors from the ls command
-    err_output = stderr.read().decode('utf-8')
+    err_output = stderr.read().decode("utf-8")
     if err_output:
-        print(f"Error listing files: {err_output}")
+        click.secho(f"Error listing files: {err_output}", fg="red")
         return {}
 
-    result = {}
+    file_map = {}
     idx = 0
-    print(f"Files in {remote_path}:")
-    for line in output[1:]:
+    click.echo(f"\nFiles in {remote_path}:")
+
+    # Skip the 'total' line usually present in ls -l
+    lines = output[1:] if output[0].startswith("total") else output
+
+    for line in lines:
         parts = line.split()
         if len(parts) > 8:
-            file_permissions = parts[0]
+            permissions = parts[0]
             filename = " ".join(parts[8:])
-            if filename not in ['.', '..']:
-                print(f"[{idx}] {line}")
-                if file_permissions.startswith('d'):
-                    result[idx] = ("dir", filename)
-                else:
-                    result[idx] = ("file", filename)
+            if filename not in [".", ".."]:
+                click.echo(f"[{idx}] {line}")
+                ftype = "dir" if permissions.startswith("d") else "file"
+                file_map[idx] = (ftype, filename)
                 idx += 1
+    return file_map
 
-    return result
 
-def download_files(ssh_client, filenames, case_number):
-    """Downloads the specified files using SFTP."""
+def parse_selection(user_input, file_map):
+    """Parses 'all', ranges '1-5', or '1,2,3' into filenames."""
+    selected_names = []
+    user_input = user_input.strip().lower()
+
+    if user_input == "all":
+        return [data[1] for data in file_map.values()]
+
+    try:
+        if "-" in user_input:
+            start, end = map(int, user_input.split("-"))
+            indices = range(min(start, end), max(start, end) + 1)
+        else:
+            indices = [int(i.strip()) for i in user_input.split(",")]
+
+        for i in indices:
+            if i in file_map:
+                selected_names.append(file_map[i][1])
+            else:
+                click.secho(f"⚠️  Warning: Index {i} is out of range.", fg="yellow")
+    except ValueError:
+        click.secho("❌ Invalid format. Use numbers, ranges (1-3), or 'all'.", fg="red")
+        return None
+
+    return selected_names
+
+
+def download_files(ssh_client, filenames, case_number, local_dir):
+    """Downloads files via SFTP."""
     transport = ssh_client.get_transport()
     sftp = paramiko.SFTPClient.from_transport(transport)
 
     remote_dir = f"/case/{case_number}"
-    local_dir = f"./case_{case_number}"
+    local_path_obj = Path(local_dir)
+    local_path_obj.mkdir(parents=True, exist_ok=True)
 
-    if not os.path.exists(local_dir):
-        os.makedirs(local_dir)
-
-    print("\nStarting download...")
     for filename in filenames:
-        remote_path = os.path.join(remote_dir, filename)
-        local_path = os.path.join(local_dir, filename)
+        remote_path = f"{remote_dir}/{filename}"
+        local_file_path = local_path_obj / filename
 
-        def progress_callback(bytes_so_far, bytes_total):
-            """Callback function to show download progress."""
-            percent = (bytes_so_far / bytes_total) * 100
-            sys.stdout.write(f"\r  Downloading '{filename}': {percent:.2f}%")
+        def progress(seen, total):
+            pct = (seen / total) * 100
+            sys.stdout.write(f"\r  Downloading '{filename}': {pct:.2f}%")
             sys.stdout.flush()
 
         try:
-            sftp.get(remote_path, local_path, callback=progress_callback)
-            print(f"\r✅ Downloaded '{filename}' to '{local_path}'   ")
-        except FileNotFoundError:
-            print(f"\r❌ Warning: Remote file '{filename}' not found.   ")
+            sftp.get(remote_path, str(local_file_path), callback=progress)
+            click.echo(f"\r✅ Downloaded: {filename}")
         except Exception as e:
-            print(f"\r❌ Error downloading '{filename}': {e}   ")
+            click.echo(f"\r❌ Error downloading {filename}: {e}")
 
     sftp.close()
 
-def get_files_to_download():
-    user_input = input("Your selection: ").strip().lower()
 
-    files_to_download = []
-    if user_input == 'all':
-        files_to_download = [f[1] for f in files.values()]
-    else:
-        try:
-            # Handle ranges (e.g., 1-5)
-            if '-' in user_input:
-                start, end = map(int, user_input.split('-'))
-                if start > end:
-                    start, end = end, start # Swap if order is incorrect
-                for i in range(start, end + 1):
-                    if i in files:
-                        files_to_download.append(files[i][1])
-            # Handle comma-separated list (e.g., 0,1,10)
-            else:
-                indices = [int(i.strip()) for i in user_input.split(',')]
-                for i in indices:
-                    if i in files:
-                        files_to_download.append(files[i][1])
-                    else:
-                        print(f"Warning: Selection {i} is out of range.")
+@click.command()
+@click.argument("case_number")
+@click.option("--target-dir", "-t", default=".", help="Local directory to save files.", type=click.Path())
+@click.option("--user", "-u", default="snemeth", help="SSH Username.")
+@click.option("--host", "-h", default="casefiles.sjc.cloudera.com", help="SSH Hostname.")
+def main(case_number, target_dir, user, host):
+    """CLI tool to download files from a remote case directory."""
 
-        except (ValueError, IndexError):
-            print("Invalid input format. Please try again.")
-            sys.exit(1)
-    return files_to_download
+    password = click.prompt(f"Enter SSH password for {user}", hide_input=True)
 
-
-if __name__ == '__main__':
-    hostname = "casefiles.sjc.cloudera.com"
-    username = "snemeth"
-    case_number = "1131111"
-
-    password = getpass.getpass('Enter your password: ')
-    client = get_ssh_client(hostname, username, password)
+    client = get_ssh_client(host, user, password)
     if not client:
         sys.exit(1)
 
     try:
-        files = list_remote_files(client, case_number)
+        file_map = list_remote_files(client, case_number)
+        if not file_map:
+            click.echo("No files found.")
+            return
 
-        if not files:
-            print("No files found or an error occurred. Exiting.")
-            sys.exit(0)
+        click.echo("\nEnter selection (e.g., '0,2', '1-5', or 'all'):")
+        user_selection = click.get_text_stream("stdin").readline()
 
-        # Get user input for download selection
-        print("\nEnter the numbers of the files to download, separated by commas (e.g., 0,2,5).")
-        print("You can also enter a range (e.g., 1-5) or 'all' to download everything.")
+        files_to_download = parse_selection(user_selection, file_map)
 
-        files_to_download = get_files_to_download()
         if files_to_download:
-            cwd = os.getcwd()
-            print("Target directory: " + cwd)
-            # download_files(client, files_to_download, case_number)
+            click.secho(f"📂 Target directory: {Path(target_dir).absolute()}", fg="cyan")
+            download_files(client, files_to_download, case_number, target_dir)
         else:
-            print("No valid files selected for download. Exiting.")
+            click.echo("No files selected. Goodbye!")
 
     finally:
         client.close()
-        print("SSH connection closed.")
+        click.echo("SSH connection closed.")
+
+
+if __name__ == "__main__":
+    main()
