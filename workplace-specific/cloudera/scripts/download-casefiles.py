@@ -1,4 +1,5 @@
 import sys
+import stat  # Added this import
 from pathlib import Path
 
 import click
@@ -18,6 +19,29 @@ def get_ssh_client(hostname, username, password):
         # except paramiko.AuthenticationException:
         click.secho(f"❌ Connection error: {e}", fg="red")
         return None
+
+
+def sftp_walk(sftp, remote_path, local_path):
+    """Recursively downloads a directory tree via SFTP."""
+    # Ensure local directory exists
+    Path(local_path).mkdir(parents=True, exist_ok=True)
+
+    for item in sftp.listdir_attr(remote_path):
+        r_path = f"{remote_path}/{item.filename}"
+        l_path = Path(local_path) / item.filename
+
+        # Check if it's a directory (using S_ISDIR on the mode attribute)
+        if stat.S_ISDIR(item.st_mode):
+            sftp_walk(sftp, r_path, l_path)
+        else:
+            # Download file with progress
+            def progress(seen, total):
+                pct = (seen / total) * 100
+                sys.stdout.write(f"\r  📥 '{item.filename}': {pct:.2f}%")
+                sys.stdout.flush()
+
+            sftp.get(r_path, str(l_path), callback=progress)
+            click.echo(f"\r  ✅ Saved: {item.filename}      ")
 
 
 def list_remote_files(ssh_client, case_number):
@@ -52,33 +76,6 @@ def list_remote_files(ssh_client, case_number):
                 file_map[idx] = (ftype, filename)
                 idx += 1
     return file_map
-
-
-def parse_selection(user_input, file_map):
-    """Parses 'all', ranges '1-5', or '1,2,3' into filenames."""
-    selected_names = []
-    user_input = user_input.strip().lower()
-
-    if user_input == "all":
-        return [data[1] for data in file_map.values()]
-
-    try:
-        if "-" in user_input:
-            start, end = map(int, user_input.split("-"))
-            indices = range(min(start, end), max(start, end) + 1)
-        else:
-            indices = [int(i.strip()) for i in user_input.split(",")]
-
-        for i in indices:
-            if i in file_map:
-                selected_names.append(file_map[i][1])
-            else:
-                click.secho(f"⚠️  Warning: Index {i} is out of range.", fg="yellow")
-    except ValueError:
-        click.secho("❌ Invalid format. Use numbers, ranges (1-3), or 'all'.", fg="red")
-        return None
-
-    return selected_names
 
 
 def download_files(ssh_client, filenames, case_number, local_dir):
@@ -128,17 +125,44 @@ def main(case_number, target_dir, user, host):
             click.echo("No files found.")
             return
 
+        # Display files
+        for i, (ftype, name) in file_map.items():
+            prefix = "[DIR] " if ftype == "dir" else "      "
+            click.echo(f"[{i}] {prefix}{name}")
+
         click.echo("\nEnter selection (e.g., '0,2', '1-5', or 'all'):")
-        user_selection = click.get_text_stream("stdin").readline()
+        user_selection = click.get_text_stream("stdin").readline().strip().lower()
 
-        files_to_download = parse_selection(user_selection, file_map)
-
-        if files_to_download:
-            click.secho(f"📂 Target directory: {Path(target_dir).absolute()}", fg="cyan")
-            download_files(client, files_to_download, case_number, target_dir)
+        # Determine which indices to download
+        selected_indices = []
+        if user_selection == "all":
+            selected_indices = list(file_map.keys())
+        elif "-" in user_selection:
+            start, end = map(int, user_selection.split("-"))
+            selected_indices = range(min(start, end), max(start, end) + 1)
         else:
-            click.echo("No files selected. Goodbye!")
+            selected_indices = [int(i.strip()) for i in user_selection.split(",") if i.strip()]
 
+        # Process downloads
+        sftp = client.open_sftp()
+        local_base = Path(target_dir).absolute()
+
+        for idx in selected_indices:
+            if idx not in file_map:
+                continue
+            ftype, name = file_map[idx]
+            remote_p = f"/case/{case_number}/{name}"
+            local_p = local_base / name
+
+            if ftype == "dir":
+                click.secho(f"\n📂 Recursively downloading directory: {name}", fg="cyan")
+                sftp_walk(sftp, remote_p, local_p)
+            else:
+                click.echo(f"📄 Downloading file: {name}")
+                sftp.get(remote_p, str(local_p))
+
+        sftp.close()
+        click.secho("\n✨ All downloads complete.", fg="green")
     finally:
         client.close()
         click.echo("SSH connection closed.")
