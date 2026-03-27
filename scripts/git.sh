@@ -91,18 +91,30 @@ function gh-diff-cde-backport {
 }
 
 function gh-checkout-pr {
-    if [[ "$#" -ne 1 ]]; then
-        echo "Usage: $0 <PR ID>"
+    # https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally
+    if [[ "$#" -lt 1 || "$#" -gt 2 ]]; then
+        echo "Usage: $0 <PR ID> [remote]"
         echo "Usage example: $0 12345"
+        echo "Usage example: $0 12345 upstream"
         return 1
     fi
 
-    # https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally
     PR_ID="$1"
+    # Defaults to 'origin' if the second argument is not provided
+    REMOTE="${2:-origin}"
     BRANCHNAME="pr-review-$PR_ID"
-    git fetch origin pull/$PR_ID/head:$BRANCHNAME
-    git checkout $BRANCHNAME
+
+    echo "Fetching PR #$PR_ID from remote '$REMOTE'..."
+    
+    git fetch "$REMOTE" pull/"$PR_ID"/head:"$BRANCHNAME"
+    if [ $? -eq 0 ]; then
+        git checkout "$BRANCHNAME"
+    else
+        echo "Error: Could not fetch PR #$PR_ID from $REMOTE."
+        return 1
+    fi
 }
+
 
 # TODO Move to separate Cloudera-specific git.sh script
 function gh-backport-cde-pr {
