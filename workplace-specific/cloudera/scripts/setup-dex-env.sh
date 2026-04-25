@@ -1594,7 +1594,7 @@ function dex-save-logs-and-config-cp-mowpriv {
 
 function cde-start-work-on-task {
   if [ -z "$1" ]; then
-    echo "Usage: start-work-cde <branch-name>"
+    echo "Usage: cde-start-work-on-task <branch-name>"
     return 1
   fi
 
@@ -1604,17 +1604,22 @@ function cde-start-work-on-task {
   local note_folder="$cde_tasks_dir/$branch_name"
   local note_file="$note_folder/investigation.md"
 
-  original_dir=$(pwd)
+  local original_dir=$(pwd)
 
-  # Step 1: Checkout and update develop
-  echo "Updating develop branch in $dex_repo..."
-  cd "$dex_repo" || { echo "Failed to cd into $dex_repo"; cd $original_dir; return 1; }
-  git fetch origin || { echo "Failed to fetch origin"; cd $original_dir; return 1; }
+  # Step 1: Fetch origin
+  echo "Fetching origin in $dex_repo..."
+  cd "$dex_repo" || { echo "Failed to cd into $dex_repo"; cd "$original_dir"; return 1; }
+  git fetch origin || { echo "Failed to fetch origin"; cd "$original_dir"; return 1; }
 
-  # Step 2: Create and checkout the new branch
-  git checkout -b "$branch_name" origin/develop || { echo "Failed to create branch $branch_name"; cd $original_dir; return 1; }
+  # Step 2: Check if branch exists and checkout/create
+  if git show-ref --verify --quiet "refs/heads/$branch_name"; then
+    echo "Branch '$branch_name' already exists locally. Switching to it..."
+    git checkout "$branch_name" || { echo "Failed to checkout branch $branch_name"; cd "$original_dir"; return 1; }
+  else
+    echo "Creating and switching to new branch '$branch_name'..."
+    git checkout -b "$branch_name" origin/develop || { echo "Failed to create branch $branch_name"; cd "$original_dir"; return 1; }
   git branch --unset-upstream
-  echo "Created and switched to branch $branch_name."
+  fi
 
   # Step 3: Create notes folder if needed
   if [ ! -d "$note_folder" ]; then
