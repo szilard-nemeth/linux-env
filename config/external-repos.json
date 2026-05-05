@@ -17,6 +17,7 @@
         "context": "docker",
         "image": "claude-strip-proxy",
         "container": "claude-strip-proxy",
+        "run_args": "-p 8083:80",
         "run_args_env": "CLAUDE_PROXY_RUN_ARGS"
       }
     }
