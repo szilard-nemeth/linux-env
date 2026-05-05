@@ -526,3 +526,33 @@ function git-find-removed-line-grep {
         git show $commit_hash > $diff_result_file
     done
 }
+
+function git-rebase-subl {
+    # -w or --wait: Forces Git to wait until you close the tab in Sublime before it continues the rebase process.
+    # -n or --new-window: (Optional) Opens the rebase instructions in a fresh Sublime window rather than a new tab in an existing one. 
+    GIT_EDITOR="subl -n -w" git rebase -i $1
+}
+
+
+function git-rebase-rename-commits {
+    local OLD=$1
+    local NEW=$2
+    local BASE_REF=$3
+    local REF=$4
+
+    if [[ -z "$OLD" || -z "$NEW" || -z "$BASE_REF" || -z "$REF" ]]; then
+        echo "Usage: git-rebase-rename-commits <old_text> <new_text> <base_ref> <ref>"
+        echo "Example: git-rebase-rename-commits DEX-19968 DEX-20207 origin/master my-feature-branch"
+        return 1
+    fi
+
+    echo "Replacing '$OLD' with '$NEW' in commit messages from $BASE_REF to $REF..."
+
+    # filter-repo uses a python-based callback for message filtering
+    # --refs limits the rewrite to your specific range
+    # --force is usually required if the repo isn't a fresh clone
+    git filter-repo \
+        --message-callback "return message.replace(b'$OLD', b'$NEW')" \
+        --refs "$BASE_REF..$REF" \
+        --force
+}
