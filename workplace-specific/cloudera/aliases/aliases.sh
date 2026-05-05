@@ -16,6 +16,8 @@ alias goto-cde-tasks="cd $HOME/development/my-repos/knowledge-base-private/cloud
 alias goto-eyarn="cd $EYARN_DIR"
 alias goto-bundlelogprocessor="cd $CLOUDERA_DEV_ROOT/YARN-tools/bundle-log-processor"
 alias goto-dex="cd $DEX_DEV_ROOT"
+alias goto-dex-review="cd $DEX_DEV_ROOT../dex-review"
+alias goto-dex-spark-performance="cd $DEX_DEV_ROOT../spark-scale-and-perf"
 alias goto-dexter="cd $HOME/development/cloudera/hackathon2022/dexter "
 alias goto-thunderhead="cd $DEX_DEV_ROOT../thunderhead"
 alias goto-csi="cd $DEX_DEV_ROOT../cloud-services-infra"
@@ -104,6 +106,7 @@ alias dex-test-with-clean="goto-dex;make clean-mocks && make gen-mocks && make t
 alias dex-test="goto-dex;make test"
 alias dex-update-dev-env="goto-dex;make update-dev-env"
 alias dex-docker-cleanup="docker rmi \$(docker images | grep \"1\.18\.0\" | tr -s ' ' | cut -d ' ' -f 3) -f"
+alias dex-current-version="goto-dex;jq -r '.hwx[\"stack-version\"]' re_configs/dex-base.json; popd"
 alias goto-dex-7712-clitesting="cd $CLOUDERA_TASKS_CDE_DIR/dev-work-from-20221129/cli-testing"
 alias dex-print-tasks-dir="echo $CLOUDERA_TASKS_CDE_DIR"
 alias pagerduty-when-am-i-on-call="source ~/development/cloudera/pagerduty-helper/venv/bin/activate;~/development/cloudera/pagerduty-helper/when_am_i_on_call.py --user snemeth"
@@ -130,8 +133,17 @@ function backup-currdir {
   ls -lat $backup_path | grep gz | head -n1
 }
 
+alias vpn-globalprotect-reset="launchctl unload /Library/LaunchAgents/com.paloaltonetworks.gp.pangp* && launchctl load /Library/LaunchAgents/com.paloaltonetworks.gp.pangp*"
+
 function goto-cde-task {
-  cd $CLOUDERA_TASKS_CDE_DIR/$1
+  local target_dir="$CLOUDERA_TASKS_CDE_DIR/$1"
+
+  if [ ! -d "$target_dir" ]; then
+    mkdir -p "$target_dir"
+    echo "Directory created: $target_dir"
+  fi
+
+  cd "$target_dir"
 }
 
 my_error_handler() {

@@ -76,6 +76,11 @@ function dex-export-protoc25 {
   # add_to_path_directly "<path-to-protobuf2.5>/protobuf-2.5.0/install/bin"
 }
 
+function dex-kubeconfig-pvc-sharedrkedev01 {
+  export KUBECONFIG=~/.cde/kubeconfig/kubeconfig_shared-rke-dev-01
+  echo "KUBECONFIG=$KUBECONFIG"
+}
+
 
 
 #Go setup
@@ -1636,7 +1641,7 @@ function cde-start-work-on-task {
   echo "Opening directory with Sublime Text..."
   subl "$note_folder"
 
-  cd $original_dir
+  cd "$original_dir" || return 1
 }
 
 function dex-install-python-package {
