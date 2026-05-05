@@ -1,0 +1,24 @@
+{
+  "ids": [
+    "claude_proxy"
+  ],
+  "repos": {
+    "claude_proxy": {
+      "url": "https://github.infra.cloudera.com/jonathan-hurley/dev-tools.git",
+      "ref": "992513dad64b238a4b2b5688afff34dd154620b3",
+      "dir": "$HOME/development/other-repos/jonathan-hurley/claude-proxy",
+      "sparse_paths": [
+        "docker/assets/bin/bedrock-strip-proxy.py",
+        "docker/dockerfile/claude-proxy-dockerfile"
+      ],
+      "setup": {
+        "type": "docker-ensure-running",
+        "dockerfile": "docker/dockerfile/claude-proxy-dockerfile",
+        "context": "docker",
+        "image": "claude-strip-proxy",
+        "container": "claude-strip-proxy",
+        "run_args_env": "CLAUDE_PROXY_RUN_ARGS"
+      }
+    }
+  }
+}

@@ -1,0 +1,255 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterable, List, Optional
+
+
+@dataclass(frozen=True)
+class RepoSetup:
+    setup_type: Optional[str]
+    command: Optional[str]
+    dockerfile: Optional[str]
+    docker_context: Optional[str]
+    image: Optional[str]
+    container: Optional[str]
+    run_args: Optional[str]
+    run_args_env: Optional[str]
+
+
+@dataclass(frozen=True)
+class RepoConfig:
+    repo_id: str
+    url: Optional[str]
+    repo_dir: Optional[str]
+    ref: Optional[str]
+    sparse_paths: List[str]
+    setup: RepoSetup
+
+
+def _run_command(cmd: List[str], cwd: Optional[str] = None, check: bool = True) -> subprocess.CompletedProcess:
+    print("Running:", shlex.join(cmd))
+    return subprocess.run(cmd, cwd=cwd, check=check)
+
+
+def _run_capture(cmd: List[str], cwd: Optional[str] = None) -> str:
+    result = subprocess.run(cmd, cwd=cwd, check=False, capture_output=True, text=True)
+    return result.stdout.strip()
+
+
+def _expand(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    return os.path.expandvars(os.path.expanduser(value))
+
+
+def _config_path() -> Path:
+    repo_root = Path(__file__).resolve().parents[1]
+    default_path = repo_root / "config" / "external-repos.json"
+    return Path(os.environ.get("EXTERNAL_REPOS_CONFIG", str(default_path)))
+
+
+def _load_config() -> dict:
+    config_path = _config_path()
+    if not config_path.exists():
+        raise FileNotFoundError(f"External repo config not found: {config_path}")
+    with config_path.open() as handle:
+        return json.load(handle)
+
+
+def _repo_ids(config: dict, requested: List[str]) -> List[str]:
+    if requested:
+        return requested
+    return config.get("ids") or list(config.get("repos", {}).keys())
+
+
+def _normalize_sparse_paths(value: Optional[Iterable[str] | str]) -> List[str]:
+    if not value:
+        return []
+    if isinstance(value, str):
+        return [part for part in value.split() if part]
+    return [str(part) for part in value]
+
+
+def _repo_setup(repo: dict) -> RepoSetup:
+    setup = repo.get("setup") or {}
+    return RepoSetup(
+        setup_type=setup.get("type"),
+        command=setup.get("command") or setup.get("cmd"),
+        dockerfile=setup.get("dockerfile"),
+        docker_context=setup.get("context") or setup.get("docker_context"),
+        image=setup.get("image"),
+        container=setup.get("container"),
+        run_args=setup.get("run_args"),
+        run_args_env=setup.get("run_args_env"),
+    )
+
+
+def _repo_config(repo_id: str, repo: dict) -> RepoConfig:
+    setup = _repo_setup(repo)
+    return RepoConfig(
+        repo_id=repo_id,
+        url=_expand(repo.get("url")),
+        repo_dir=_expand(repo.get("dir")),
+        ref=_expand(repo.get("ref")),
+        sparse_paths=_normalize_sparse_paths(repo.get("sparse_paths")),
+        setup=RepoSetup(
+            setup_type=setup.setup_type,
+            command=_expand(setup.command) if setup.command else None,
+            dockerfile=_expand(setup.dockerfile),
+            docker_context=_expand(setup.docker_context),
+            image=_expand(setup.image),
+            container=_expand(setup.container),
+            run_args=_expand(setup.run_args),
+            run_args_env=setup.run_args_env,
+        ),
+    )
+
+
+def _sync_repo(repo: RepoConfig) -> None:
+    if not repo.url or not repo.repo_dir:
+        print(f"External repo '{repo.repo_id}' missing url or dir; skipping")
+        return
+
+    repo_path = Path(repo.repo_dir)
+    if not (repo_path / ".git").exists():
+        repo_path.parent.mkdir(parents=True, exist_ok=True)
+        _run_command(["git", "clone", repo.url, repo.repo_dir])
+
+    if repo.sparse_paths:
+        _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "init", "--cone"])
+        try:
+            _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", *repo.sparse_paths])
+        except subprocess.CalledProcessError:
+            _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", "--no-cone", *repo.sparse_paths])
+
+    _run_command(["git", "-C", repo.repo_dir, "fetch", "--all", "--tags", "--prune"])
+
+    if repo.ref:
+        status = _run_capture(["git", "-C", repo.repo_dir, "status", "--porcelain"])
+        if status:
+            print(f"External repo '{repo.repo_id}' has local changes; skipping checkout")
+            return
+        _run_command(["git", "-C", repo.repo_dir, "checkout", "--detach", repo.ref])
+
+
+def _docker_ensure_running(repo: RepoConfig) -> None:
+    if shutil.which("docker") is None:
+        print(f"docker not available; skipping {repo.repo_id}")
+        return
+
+    setup = repo.setup
+    if not setup.dockerfile or not setup.docker_context or not setup.image or not setup.container:
+        print(f"Missing docker settings for external repo '{repo.repo_id}'; skipping")
+        return
+
+    run_args = setup.run_args
+    if setup.run_args_env:
+        run_args = os.environ.get(setup.run_args_env, run_args)
+
+    if (
+        subprocess.run(
+            ["docker", "image", "inspect", setup.image], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        ).returncode
+        != 0
+    ):
+        _run_command(
+            [
+                "docker",
+                "build",
+                "-f",
+                f"{repo.repo_dir}/{setup.dockerfile}",
+                "-t",
+                setup.image,
+                f"{repo.repo_dir}/{setup.docker_context}",
+            ]
+        )
+
+    running = _run_capture(["docker", "ps", "--format", "{{.Names}}"]).splitlines()
+    if setup.container in running:
+        return
+
+    stopped = _run_capture(["docker", "ps", "-a", "--format", "{{.Names}}"]).splitlines()
+    if setup.container in stopped:
+        _run_command(["docker", "start", setup.container])
+        return
+
+    run_cmd = ["docker", "run", "-d", "--name", setup.container]
+    if run_args:
+        run_cmd.extend(shlex.split(run_args))
+    run_cmd.append(setup.image)
+    _run_command(run_cmd)
+
+
+def _setup_repo(repo: RepoConfig) -> None:
+    setup = repo.setup
+    if not setup.setup_type and not setup.command:
+        return
+
+    if setup.setup_type == "docker-ensure-running":
+        _docker_ensure_running(repo)
+        return
+
+    if setup.command:
+        subprocess.run(setup.command, cwd=repo.repo_dir, shell=True, check=True)
+
+
+def _load_repos(config: dict, repo_ids: List[str]) -> List[RepoConfig]:
+    repos = config.get("repos", {})
+    result = []
+    for repo_id in repo_ids:
+        repo = repos.get(repo_id)
+        if not repo:
+            print(f"External repo '{repo_id}' not found in config; skipping")
+            continue
+        result.append(_repo_config(repo_id, repo))
+    return result
+
+
+def _sync(repos: List[RepoConfig]) -> None:
+    for repo in repos:
+        _sync_repo(repo)
+
+
+def _setup(repos: List[RepoConfig]) -> None:
+    for repo in repos:
+        _setup_repo(repo)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Manage external repos.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    for command in ("sync", "setup", "sync-and-setup"):
+        subparser = subparsers.add_parser(command)
+        subparser.add_argument("ids", nargs="*", help="Optional repo ids")
+
+    args = parser.parse_args()
+    config = _load_config()
+    repo_ids = _repo_ids(config, args.ids)
+    repos = _load_repos(config, repo_ids)
+
+    if args.command == "sync":
+        _sync(repos)
+    elif args.command == "setup":
+        _setup(repos)
+    elif args.command == "sync-and-setup":
+        _sync(repos)
+        _setup(repos)
+    else:
+        parser.error(f"Unknown command {args.command}")
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
