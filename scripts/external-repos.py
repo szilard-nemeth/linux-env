@@ -42,6 +42,7 @@ def _run_command(cmd: List[str], cwd: Optional[str] = None, check: bool = True) 
 
 
 def _run_capture(cmd: List[str], cwd: Optional[str] = None) -> str:
+    print("Running:", shlex.join(cmd))
     result = subprocess.run(cmd, cwd=cwd, check=False, capture_output=True, text=True)
     return result.stdout.strip()
 
@@ -78,6 +79,18 @@ def _normalize_sparse_paths(value: Optional[Iterable[str] | str]) -> List[str]:
     if isinstance(value, str):
         return [part for part in value.split() if part]
     return [str(part) for part in value]
+
+
+def _normalize_sparse_paths_for_no_cone(paths: List[str]) -> List[str]:
+    normalized = []
+    for path in paths:
+        if not path:
+            continue
+        if path.startswith("/"):
+            normalized.append(path)
+        else:
+            normalized.append(f"/{path}")
+    return normalized
 
 
 def _repo_setup(repo: dict) -> RepoSetup:
@@ -130,7 +143,8 @@ def _sync_repo(repo: RepoConfig) -> None:
         try:
             _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", *repo.sparse_paths])
         except subprocess.CalledProcessError:
-            _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", "--no-cone", *repo.sparse_paths])
+            no_cone_paths = _normalize_sparse_paths_for_no_cone(repo.sparse_paths)
+            _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", "--no-cone", *no_cone_paths])
 
     _run_command(["git", "-C", repo.repo_dir, "fetch", "--all", "--tags", "--prune"])
 
@@ -142,13 +156,23 @@ def _sync_repo(repo: RepoConfig) -> None:
         _run_command(["git", "-C", repo.repo_dir, "checkout", "--detach", repo.ref])
 
 
+def get_repo_config_prefix(repo: RepoConfig) -> str:
+    return f"External repo config: '{repo.repo_id}' //"
+
+
+def print_prefixed(repo: RepoConfig, s: str):
+    prefix = get_repo_config_prefix(repo)
+    print(f"{prefix}{s}")
+
+
 def _docker_ensure_running(repo: RepoConfig) -> None:
     if shutil.which("docker") is None:
         print(f"docker not available; skipping {repo.repo_id}")
         return
 
     setup = repo.setup
-    if not setup.dockerfile or not setup.docker_context or not setup.image or not setup.container:
+    container = setup.container
+    if not setup.dockerfile or not setup.docker_context or not setup.image or not container:
         print(f"Missing docker settings for external repo '{repo.repo_id}'; skipping")
         return
 
@@ -162,6 +186,7 @@ def _docker_ensure_running(repo: RepoConfig) -> None:
         ).returncode
         != 0
     ):
+        print_prefixed(repo, f"Docker image '{setup.image}' is not built! Building...")
         _run_command(
             [
                 "docker",
@@ -175,15 +200,16 @@ def _docker_ensure_running(repo: RepoConfig) -> None:
         )
 
     running = _run_capture(["docker", "ps", "--format", "{{.Names}}"]).splitlines()
-    if setup.container in running:
+    if container in running:
+        print_prefixed(repo, f"Docker container '{container}' is already running; skipping")
         return
 
     stopped = _run_capture(["docker", "ps", "-a", "--format", "{{.Names}}"]).splitlines()
-    if setup.container in stopped:
-        _run_command(["docker", "start", setup.container])
+    if container in stopped:
+        _run_command(["docker", "start", container])
         return
 
-    run_cmd = ["docker", "run", "-d", "--name", setup.container]
+    run_cmd = ["docker", "run", "-d", "--name", container]
     if run_args:
         run_cmd.extend(shlex.split(run_args))
     run_cmd.append(setup.image)
@@ -198,9 +224,11 @@ def _setup_repo(repo: RepoConfig) -> None:
     if setup.setup_type == "docker-ensure-running":
         _docker_ensure_running(repo)
         return
-
     if setup.command:
+        print(f"Warning! Unknown setup type '{setup.setup_type}'. Running setup command: {setup.command}")
         subprocess.run(setup.command, cwd=repo.repo_dir, shell=True, check=True)
+    else:
+        raise ValueError(f"Unknown setup type '{setup.setup_type}' and setup command is not set!")
 
 
 def _load_repos(config: dict, repo_ids: List[str]) -> List[RepoConfig]:
@@ -217,11 +245,13 @@ def _load_repos(config: dict, repo_ids: List[str]) -> List[RepoConfig]:
 
 def _sync(repos: List[RepoConfig]) -> None:
     for repo in repos:
+        print("Syncing repo: " + repo.repo_id)
         _sync_repo(repo)
 
 
 def _setup(repos: List[RepoConfig]) -> None:
     for repo in repos:
+        print("Setting up repo: " + repo.repo_id)
         _setup_repo(repo)
 
 
