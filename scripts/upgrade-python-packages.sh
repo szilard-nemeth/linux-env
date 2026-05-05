@@ -316,7 +316,7 @@ function _update-package-versions-in-project {
 
   
   echo "Showing git diff after dependency upgrades..."
-  git --no-pager diff
+  git --no-pager diff -- ':!poetry.lock'
   # TODO Check if two lines modified or user should manually confirm if git diff looks okay
  
 
