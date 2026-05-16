@@ -44,30 +44,24 @@ def main(directory, exclude):
 
     # Require source files to be committed in KB private repo first
     click.secho("Checking for uncommitted changes in the source repository...", fg="cyan")
-    # Add files in the source directory
-    subprocess.run(["git", "add", str(src)], cwd=kb_private_repo)
 
-    # Check if there are changes
-    diff_check = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=kb_private_repo)
+    # Check if there are any uncommitted changes in the source directory
+    status_check = subprocess.run(
+        ["git", "status", "--porcelain", str(src)], cwd=kb_private_repo, capture_output=True, text=True
+    )
 
-    if diff_check.returncode != 0:
-        # There are changes, need to commit them
-        diff_file_src = "/tmp/sync_investigation_diff_src.txt"
-        with open(diff_file_src, "w") as f:
-            subprocess.run(["git", "diff", "--cached", "--color=always"], cwd=kb_private_repo, stdout=f)
+    if status_check.stdout.strip():
+        click.secho(f"\nError: The source directory ({src}) has uncommitted changes.", fg="red", err=True)
+        click.secho("Please commit or stash your changes in the knowledge-base-private repository first.", fg="yellow")
 
-        click.secho(f"\nUncommitted changes found in source repo. Colored diff saved to {diff_file_src}", fg="yellow")
-        click.secho("To view it, run:", fg="cyan")
-        click.echo(f"  less -R {diff_file_src}")
+        # Show what files are changed
+        click.secho("\nChanged files:", fg="yellow")
+        for line in status_check.stdout.splitlines():
+            click.echo(f"  {line}")
 
-        if click.confirm("\nCommit these changes in KB private repo?"):
-            commit_msg_src = f"Update notes for {jira_id}"
-            subprocess.run(["git", "commit", "-m", commit_msg_src], cwd=kb_private_repo)
-        else:
-            click.secho("Error: Source files must be committed before copying.", fg="red", err=True)
-            raise click.Abort()
-    else:
-        click.secho("No uncommitted changes in source repo.", fg="green")
+        raise click.Abort()
+
+    click.secho("No uncommitted changes in source repo.", fg="green")
 
     # Get the latest commit hash from source repo
     source_hash_proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=kb_private_repo, capture_output=True, text=True)
