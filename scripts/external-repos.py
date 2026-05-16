@@ -36,9 +36,11 @@ class RepoConfig:
     setup: RepoSetup
 
 
-def _run_command(cmd: List[str], cwd: Optional[str] = None, check: bool = True) -> subprocess.CompletedProcess:
+def _run_command(
+    cmd: List[str], cwd: Optional[str] = None, check: bool = True, stdout=None, stderr=None
+) -> subprocess.CompletedProcess:
     print("Running:", shlex.join(cmd))
-    return subprocess.run(cmd, cwd=cwd, check=check)
+    return subprocess.run(cmd, cwd=cwd, check=check, stdout=stdout, stderr=stderr)
 
 
 def _run_capture(cmd: List[str], cwd: Optional[str] = None) -> str:
@@ -166,8 +168,16 @@ def print_prefixed(repo: RepoConfig, s: str):
 
 
 def _docker_ensure_running(repo: RepoConfig) -> None:
+    print("Ensuring Docker is running...")
     if shutil.which("docker") is None:
         print(f"docker not available; skipping {repo.repo_id}")
+        return
+
+    if (
+        _run_command(["docker", "info"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
+        != 0
+    ):
+        print(f"Docker daemon is not running; skipping {repo.repo_id}")
         return
 
     setup = repo.setup
@@ -181,8 +191,11 @@ def _docker_ensure_running(repo: RepoConfig) -> None:
         run_args = os.environ.get(setup.run_args_env, run_args)
 
     if (
-        subprocess.run(
-            ["docker", "image", "inspect", setup.image], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        _run_command(
+            ["docker", "image", "inspect", setup.image],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         ).returncode
         != 0
     ):
