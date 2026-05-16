@@ -2,8 +2,26 @@
 import os
 import shutil
 import subprocess
+from typing import Any
+
 import click
+import re
 from pathlib import Path
+
+
+def _find_jira_id_in_path(src: Path) -> Any:
+    jira_id = None
+    for part in reversed(src.parts):
+        if re.match(r"^[A-Za-z]+-\d+$", part):
+            jira_id = part
+            break
+
+    if not jira_id:
+        click.secho(
+            "Error: Could not find a Jira ID (format: LETTERS-NUMBERS) in the directory path.", fg="red", err=True
+        )
+        raise click.Abort()
+    return jira_id
 
 
 @click.command()
@@ -13,8 +31,12 @@ from pathlib import Path
 )
 def main(directory, exclude):
     src = Path(directory)
+
+    jira_id = _find_jira_id_in_path(src)
+
     dest_base = Path.home() / "development/cloudera/my-repos/task-notes"
-    dest = dest_base / src.name
+    # Create the destination inside a Jira ID directory so different tickets don't overwrite each other
+    dest = dest_base / jira_id / src.name
 
     dest.mkdir(parents=True, exist_ok=True)
     excludes = set(exclude)
@@ -52,7 +74,7 @@ def main(directory, exclude):
 
     # 3. Ask for confirmation and commit
     if click.confirm("\nCommit these changes?"):
-        commit_msg = f"Auto-sync {src.name} notes"
+        commit_msg = f"Auto-sync {jira_id} notes"
         subprocess.run(["git", "commit", "-m", commit_msg], cwd=dest_base)
 
         # 4. Print push commands
