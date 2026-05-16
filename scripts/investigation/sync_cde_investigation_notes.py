@@ -3,10 +3,19 @@ import os
 import shutil
 import subprocess
 from typing import Any
+import fnmatch
 
 import click
 import re
 from pathlib import Path
+
+
+def is_excluded(name: str, excludes: set) -> bool:
+    """Check if the given file or directory name matches any of the exclude patterns."""
+    for pattern in excludes:
+        if fnmatch.fnmatch(name, pattern):
+            return True
+    return False
 
 
 def _find_jira_id_in_path(src: Path) -> Any:
@@ -27,7 +36,9 @@ def _find_jira_id_in_path(src: Path) -> Any:
 @click.command()
 @click.argument("directory", type=click.Path(file_okay=False))
 @click.option(
-    "--exclude", multiple=True, help="Files/dirs to exclude (use multiple times, e.g., --exclude venv --exclude .git)"
+    "--exclude",
+    multiple=True,
+    help="Files/dirs to exclude (supports wildcards, e.g., --exclude venv --exclude 'cursor_*')",
 )
 def main(directory, exclude):
     cde_base_path = Path.home() / "development/my-repos/knowledge-base-private/cloudera/tasks/cde"
@@ -87,11 +98,11 @@ def main(directory, exclude):
     # TODO add warnings for excludes
     # 1. Copy files and warn on overwrite
     for root, dirs, files in os.walk(src):
-        # Modify dirs in-place to skip excluded directories
-        dirs[:] = [d for d in dirs if d not in excludes]
+        # Modify dirs in-place to skip excluded directories using glob matching
+        dirs[:] = [d for d in dirs if not is_excluded(d, excludes)]
 
         for f in files:
-            if f in excludes:
+            if is_excluded(f, excludes):
                 continue
 
             src_file = Path(root) / f
