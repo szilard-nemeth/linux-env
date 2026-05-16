@@ -41,8 +41,14 @@ def main(directory, exclude):
     # 2. Git operations
     subprocess.run(["git", "add", str(dest)], cwd=dest_base)
 
-    # Show colored diff of the staged changes
-    subprocess.run(["git", "diff", "--cached", "--color=always"], cwd=dest_base)
+    # Write colored diff of the staged changes to a file
+    diff_file = "/tmp/sync_investigation_diff.txt"
+    with open(diff_file, "w") as f:
+        subprocess.run(["git", "diff", "--cached", "--color=always"], cwd=dest_base, stdout=f)
+
+    click.secho(f"\nColored diff saved to {diff_file}", fg="cyan")
+    click.secho("To view it, run:", fg="cyan")
+    click.echo(f"  less -R {diff_file}")
 
     # 3. Ask for confirmation and commit
     if click.confirm("\nCommit these changes?"):
