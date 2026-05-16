@@ -57,7 +57,7 @@ function export-claude-settings {
     export ANTHROPIC_DEFAULT_HAIKU_MODEL="us.anthropic.claude-haiku-4-5-20251001-v1:0"
     export CLAUDE_CODE_SUBAGENT_MODEL="anthropic.claude-sonnet-4-6"
     local tmp_log=$(mktemp)
-    if python3 "$HOME_LINUXENV_DIR/scripts/external-repos.py" sync-and-setup "claude_proxy" > "$tmp_log" 2>&1; then
+    if python3 -u "$HOME_LINUXENV_DIR/scripts/external-repos.py" sync-and-setup "claude_proxy" > "$tmp_log" 2>&1; then
         print_debug "$(cat "$tmp_log")"
         rm -f "$tmp_log"
     else
