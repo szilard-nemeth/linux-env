@@ -25,15 +25,25 @@ def _find_jira_id_in_path(src: Path) -> Any:
 
 
 @click.command()
-@click.argument("directory", type=click.Path(exists=True, file_okay=False, resolve_path=True))
+@click.argument("directory", type=click.Path(file_okay=False))
 @click.option(
     "--exclude", multiple=True, help="Files/dirs to exclude (use multiple times, e.g., --exclude venv --exclude .git)"
 )
 def main(directory, exclude):
+    cde_base_path = Path.home() / "development/my-repos/knowledge-base-private/cloudera/tasks/cde"
+
+    # If the user passed a relative path, assume it's relative to the CDE base path
     src = Path(directory)
+    if not src.is_absolute():
+        src = cde_base_path / src
+
+    src = src.resolve()
+
+    if not src.exists():
+        click.secho(f"Error: Directory '{src}' does not exist.", fg="red", err=True)
+        raise click.Abort()
 
     # Validation 1: Base path hardcoded
-    cde_base_path = Path.home() / "development/my-repos/knowledge-base-private/cloudera/tasks/cde"
     if not str(src).startswith(str(cde_base_path)):
         click.secho(f"Error: Directory must be under {cde_base_path}", fg="red", err=True)
         raise click.Abort()
