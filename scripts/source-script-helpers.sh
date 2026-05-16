@@ -3,6 +3,6 @@ function sync-cde-investigation-notes {
 }
 
 function sync-cde-investigation-notes-examples {
-  echo "sync-cde-investigation-notes /Users/snemeth/development/my-repos/knowledge-base-private/cloudera/tasks/cde/ENGESC-33163/investigation/ --exclude .git --exclude __pycache__ --exclude tmp"
+  echo "sync_cde_investigation_notes.py ENGESC-33163/investigation/ --exclude .git --exclude __pycache__ --exclude tmp --exclude container-splits-stderr --exclude container-splits-stdout --exclude container-splits-stderr --exclude cursor_log_analysis* "
 }
 
