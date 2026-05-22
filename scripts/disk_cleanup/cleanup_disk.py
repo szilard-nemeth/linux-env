@@ -192,7 +192,7 @@ class CleanupResult:
 
 
 class CleanupTool(ABC):
-    def __init__(self, interactive: bool = False):
+    def __init__(self, interactive: bool = True):
         self.interactive = interactive
         self._execute_skipped = False
         self.cleanup_result = None
@@ -262,7 +262,7 @@ class CleanupTool(ABC):
 
 
 class MavenCleanup(CleanupTool):
-    def __init__(self, limit: str, interactive: bool = False):
+    def __init__(self, limit: str, interactive: bool = True):
         """
         :param limit: Human-readable limit for directory size, e.g. 100M
         """
@@ -361,7 +361,7 @@ class MavenCleanup(CleanupTool):
 
 
 class AsdfGolangCleanup(CleanupTool):
-    def __init__(self, keep_versions: List[str], interactive: bool = False):
+    def __init__(self, keep_versions: List[str], interactive: bool = True):
         super().__init__(interactive=interactive)
         self.keep_versions = keep_versions
         self.tracker = CleanupDetailsTracker()
@@ -492,7 +492,7 @@ class DockerCleanup(CleanupTool, _DockerPruneMixin):
     IMAGE_FORMAT = "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedAt}}\t{{.Size}}"
     DEFAULT_TIME_LIMIT = "1440h"  # ~60 days; Go duration (h=hours, not calendar months)
 
-    def __init__(self, time_limit: str = DEFAULT_TIME_LIMIT, interactive: bool = False):
+    def __init__(self, time_limit: str = DEFAULT_TIME_LIMIT, interactive: bool = True):
         super().__init__(interactive=interactive)
         self._init_docker_prune_state()
         self.time_limit = time_limit
@@ -594,7 +594,7 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
 
     SYSTEM_PRUNE_CMD = ["docker", "system", "prune", "-a", "--volumes", "-f"]
 
-    def __init__(self, interactive: bool = False):
+    def __init__(self, interactive: bool = True):
         super().__init__(interactive=interactive)
         self._init_docker_prune_state()
 
@@ -647,7 +647,7 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
 class DiscoveryCleanup(CleanupTool):
     """Generic tool to find and delete specific directory patterns."""
 
-    def __init__(self, name, root_path, patterns: List[str], age_days: int = 30, interactive: bool = False):
+    def __init__(self, name, root_path, patterns: List[str], age_days: int = 30, interactive: bool = True):
         super().__init__(interactive=interactive)
         self.name = name
         self.root_path = Path(root_path)
@@ -711,7 +711,7 @@ class DiscoveryCleanup(CleanupTool):
 
 
 class PoetryCacheCleanup(CleanupTool):
-    def __init__(self, interactive: bool = False):
+    def __init__(self, interactive: bool = True):
         super().__init__(interactive=interactive)
         self.name = "Poetry cache cleanup"
         self.tracker = CleanupDetailsTracker()
@@ -781,9 +781,9 @@ class ToolRunner:
     help="Run aggressive Docker system prune (all unused images, containers, networks, volumes)",
 )
 @click.option(
-    "--interactive",
+    "--force",
     is_flag=True,
-    help="Prompt for y/n confirmation before each tool runs deletion",
+    help="Run all tools without confirmation prompts (default: prompt before each deletion)",
 )
 @click.option(
     "--docker-time-limit",
@@ -791,10 +791,12 @@ class ToolRunner:
     show_default=True,
     help="Docker until= filter duration",
 )
-def main(docker_only: bool, docker_system_prune_only: bool, interactive: bool, docker_time_limit: str):
+def main(docker_only: bool, docker_system_prune_only: bool, force: bool, docker_time_limit: str):
     """Disk cleanup utilities."""
     if docker_only and docker_system_prune_only:
         raise click.UsageError("Use only one of --docker-only or --docker-system-prune-only")
+
+    interactive = not force
 
     if docker_only:
         tools: List[CleanupTool] = [

@@ -2,7 +2,7 @@ from scripts.disk_cleanup.cleanup_disk import CleanupResult, CleanupTool
 
 
 class _StubCleanup(CleanupTool):
-    def __init__(self, interactive: bool = False, pending: bool = True):
+    def __init__(self, interactive: bool = True, pending: bool = True):
         super().__init__(interactive=interactive)
         self.pending = pending
         self.prepare_called = False
@@ -87,7 +87,12 @@ def test_execute_flow_runs_execute_when_interactive_confirmed(monkeypatch):
     assert not tool._execute_skipped
 
 
-def test_execute_flow_no_prompt_when_not_interactive():
+def test_execute_flow_no_prompt_when_force_mode():
     tool = _StubCleanup(interactive=False, pending=True)
     tool.execute_flow()
     assert tool.execute_called
+
+
+def test_execute_flow_prompts_by_default():
+    tool = _StubCleanup(pending=True)
+    assert tool.interactive

@@ -19,7 +19,7 @@ function docker-cleanup-images {
 function docker-cleanup-auto {
   local script_dir
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  python3 "${script_dir}/disk_cleanup/cleanup_disk.py" --docker-only --interactive "$@"
+  python3 "${script_dir}/disk_cleanup/cleanup_disk.py" --docker-only "$@"
 }
 
 
