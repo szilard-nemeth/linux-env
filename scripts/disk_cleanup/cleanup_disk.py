@@ -192,10 +192,27 @@ class CleanupResult:
 
 
 class CleanupTool(ABC):
+    summary_name: str = ""
+
     def __init__(self, interactive: bool = True):
         self.interactive = interactive
         self._execute_skipped = False
-        self.cleanup_result = None
+        self.cleanup_result: Optional[CleanupResult] = None
+
+    def reclaimed_bytes(self) -> int:
+        if self.cleanup_result is None:
+            return 0
+        return self.cleanup_result.bytes_reclaimed
+
+    def _summary_label(self) -> str:
+        return self.summary_name or self.__class__.__name__
+
+    def print_summary(self) -> None:
+        label = self._summary_label()
+        if self._execute_skipped and self.reclaimed_bytes() == 0:
+            logger.info("%s: 0 disk space reclaimed (skipped or canceled)", label)
+        else:
+            logger.info("%s: %s disk space reclaimed", label, format_du_style(self.reclaimed_bytes()))
 
     def _has_pending_work(self) -> bool:
         """Return True if prepare found actionable cleanup work."""
@@ -243,11 +260,6 @@ class CleanupTool(ABC):
     def verify(self) -> CleanupResult:
         pass
 
-    # TODO This should be get_summary and print logic should be decoupled
-    @abstractmethod
-    def print_summary(self):
-        pass
-
     def execute_flow(self):
         self.prepare()
         if self.interactive and self._has_pending_work():
@@ -262,6 +274,8 @@ class CleanupTool(ABC):
 
 
 class MavenCleanup(CleanupTool):
+    summary_name = "Maven cleanup"
+
     def __init__(self, limit: str, interactive: bool = True):
         """
         :param limit: Human-readable limit for directory size, e.g. 100M
@@ -321,7 +335,7 @@ class MavenCleanup(CleanupTool):
         for target in targets:
             reclaimed = target.before_size - target.after_size
 
-            if target.dir.exists and reclaimed == 0:
+            if target.dir.exists() and reclaimed == 0:
                 logger.info(f"Target: {target.dir}")
                 logger.info("NO CHANGE IN SIZE")
             else:
@@ -330,12 +344,8 @@ class MavenCleanup(CleanupTool):
                 logger.info(f"  {format_du_style(target.before_size)} -> {status} (Saved {format_du_style(reclaimed)})")
 
         total_reclaimed_bytes = self.tracker.get_space_reclaimed_total()
-        return CleanupResult(bytes_reclaimed=total_reclaimed_bytes, success=True, logs=[])
-
-    def print_summary(self):
-        logger.info("\n--- Maven cleanup summary ---")
-        logger.info(f"Total Projects Cleaned: {len(self.root_to_targets)}")
-        logger.info(f"Actual Space Reclaimed: {format_du_style(self.tracker.get_space_reclaimed_total())}")
+        self.cleanup_result = CleanupResult(bytes_reclaimed=total_reclaimed_bytes, success=True, logs=[])
+        return self.cleanup_result
 
     def _get_mvn_target_dirs(self, limit_bytes: int):
         # Using rglob to find all target folders
@@ -361,6 +371,8 @@ class MavenCleanup(CleanupTool):
 
 
 class AsdfGolangCleanup(CleanupTool):
+    summary_name = "ASDF Golang cleanup"
+
     def __init__(self, keep_versions: List[str], interactive: bool = True):
         super().__init__(interactive=interactive)
         self.keep_versions = keep_versions
@@ -410,32 +422,30 @@ class AsdfGolangCleanup(CleanupTool):
     def verify(self) -> CleanupResult:
         self.tracker.calculate_after_sizes()
 
-        # TODO unified print logic for all tools?
-        logs = []
         for key, description in [
             ("go_caches", "go cache and modcache"),
             ("asdf_golang_root", "ASDF golang root"),
             (CleanupDetailsTracker.TOTAL_KEY, "ASDF Golang cleanup total"),
         ]:
-            logs.append(
-                f"{description} / Sum size before cleanup: {format_du_style(self.tracker.get_before_size(key))}"
+            logger.info(
+                "%s: before %s, after %s",
+                description,
+                format_du_style(self.tracker.get_before_size(key)),
+                format_du_style(self.tracker.get_after_size(key)),
             )
-            logs.append(f"{description} / Sum size after cleanup: {format_du_style(self.tracker.get_after_size(key))}")
-            logs.append(
-                f"{description} / Space reclaimed: {format_du_style(self.tracker.get_space_reclaimed_for_named_cleanup(key))}"
+            logger.info(
+                "%s: %s disk space reclaimed",
+                description,
+                format_du_style(self.tracker.get_space_reclaimed_for_named_cleanup(key)),
             )
-            logs.append("-" * 30)
 
-        logs.append(
-            f"Space reclaimed for explicitly removed items: {format_du_style(self.tracker.get_space_reclaimed_for_unnamed_cleanup())}"
+        logger.info(
+            "Removed Go versions: %s disk space reclaimed",
+            format_du_style(self.tracker.get_space_reclaimed_for_unnamed_cleanup()),
         )
-        total_reclaimed = self.tracker.get_space_reclaimed_for_named_cleanup("total")
-        self.cleanup_result = CleanupResult(total_reclaimed, True, logs)
+        total_reclaimed = self.tracker.get_space_reclaimed_for_named_cleanup(CleanupDetailsTracker.TOTAL_KEY)
+        self.cleanup_result = CleanupResult(total_reclaimed, True, [])
         return self.cleanup_result
-
-    def print_summary(self):
-        for log in self.cleanup_result.logs:
-            logger.info(log)
 
 
 class _DockerPruneMixin:
@@ -488,6 +498,8 @@ class _DockerPruneMixin:
 
 class DockerCleanup(CleanupTool, _DockerPruneMixin):
     """Remove unused dangling images, then unused images older than a time limit."""
+
+    summary_name = "Docker images cleanup"
 
     IMAGE_FORMAT = "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedAt}}\t{{.Size}}"
     DEFAULT_TIME_LIMIT = "1440h"  # ~60 days; Go duration (h=hours, not calendar months)
@@ -556,14 +568,11 @@ class DockerCleanup(CleanupTool, _DockerPruneMixin):
         self.cleanup_result = CleanupResult(self._bytes_reclaimed, success, [])
         return self.cleanup_result
 
-    def print_summary(self):
+    def print_summary(self) -> None:
         if not self._docker_available:
-            logger.info("Docker images: skipped (daemon unavailable)")
+            logger.info("%s: skipped (daemon unavailable)", self._summary_label())
             return
-        if self._execute_skipped and self._bytes_reclaimed == 0:
-            logger.info("Docker images: no images removed")
-            return
-        logger.info(f"Docker images: reclaimed {format_du_style(self._bytes_reclaimed)}")
+        super().print_summary()
 
     def _list_image_ids(self, filters: List[str]) -> List[str]:
         cmd = ["docker", "images", "-q"]
@@ -591,6 +600,8 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
     Aggressive Docker cleanup: all unused images (any age), stopped containers,
     unused networks, and unused volumes.
     """
+
+    summary_name = "Docker system prune"
 
     SYSTEM_PRUNE_CMD = ["docker", "system", "prune", "-a", "--volumes", "-f"]
 
@@ -634,14 +645,11 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
         self.cleanup_result = CleanupResult(self._bytes_reclaimed, success, [])
         return self.cleanup_result
 
-    def print_summary(self):
+    def print_summary(self) -> None:
         if not self._docker_available:
-            logger.info("Docker system: skipped (daemon unavailable)")
+            logger.info("%s: skipped (daemon unavailable)", self._summary_label())
             return
-        if self._execute_skipped and self._bytes_reclaimed == 0:
-            logger.info("Docker system: no resources removed")
-            return
-        logger.info(f"Docker system: reclaimed {format_du_style(self._bytes_reclaimed)}")
+        super().print_summary()
 
 
 class DiscoveryCleanup(CleanupTool):
@@ -650,6 +658,7 @@ class DiscoveryCleanup(CleanupTool):
     def __init__(self, name, root_path, patterns: List[str], age_days: int = 30, interactive: bool = True):
         super().__init__(interactive=interactive)
         self.name = name
+        self.summary_name = name
         self.root_path = Path(root_path)
         self.patterns = patterns
         self.age_days = age_days
@@ -698,22 +707,16 @@ class DiscoveryCleanup(CleanupTool):
 
     def verify(self) -> CleanupResult:
         self.tracker.calculate_after_sizes()
-
         reclaimed = self.tracker.get_space_reclaimed_for_unnamed_cleanup()
-        logs = [f"{self.name}: Reclaimed {format_du_style(reclaimed)}"]
-
-        self.cleanup_result = CleanupResult(reclaimed, True, logs)
+        self.cleanup_result = CleanupResult(reclaimed, True, [])
         return self.cleanup_result
-
-    def print_summary(self):
-        for log in self.cleanup_result.logs:
-            logger.info(log)
 
 
 class PoetryCacheCleanup(CleanupTool):
+    summary_name = "Poetry cache cleanup"
+
     def __init__(self, interactive: bool = True):
         super().__init__(interactive=interactive)
-        self.name = "Poetry cache cleanup"
         self.tracker = CleanupDetailsTracker()
 
     def _has_pending_work(self) -> bool:
@@ -736,9 +739,6 @@ class PoetryCacheCleanup(CleanupTool):
         self.cleanup_result = CleanupResult(total_reclaimed_bytes, True, [])
         return self.cleanup_result
 
-    def print_summary(self):
-        logger.info(f"{self.name}: Reclaimed {format_du_style(self.cleanup_result.bytes_reclaimed)}")
-
 
 def format_du_style(size_in_bytes):
     """Formats bytes to 1.2G, 400M, etc. using humanfriendly 10.0"""
@@ -758,6 +758,20 @@ def parse_to_bytes(size_str):
     return humanfriendly.parse_size(size_str, binary=True)
 
 
+def build_default_tools(interactive: bool, docker_time_limit: str) -> List[CleanupTool]:
+    pip_cache_root = Path(os.path.expanduser("~/Library/Caches/pip"))
+    return [
+        MavenCleanup("100M", interactive=interactive),
+        AsdfGolangCleanup(keep_versions=["1.24.11"], interactive=interactive),
+        DockerCleanup(time_limit=docker_time_limit, interactive=interactive),
+        DockerSystemPruneCleanup(interactive=interactive),
+        DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"], interactive=interactive),
+        DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"], interactive=interactive),
+        DiscoveryCleanup("Pip Cache", pip_cache_root, ["*"], interactive=interactive),
+        PoetryCacheCleanup(interactive=interactive),
+    ]
+
+
 class ToolRunner:
     @staticmethod
     def run_tools(tools: List[CleanupTool]):
@@ -765,8 +779,11 @@ class ToolRunner:
         TOOL_OUTPUT_BASEDIR.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Starting cleanup. Detailed logs: {LOG_FILE_PATH}")
+        total_reclaimed = 0
         for tool in tools:
             tool.execute_flow()
+            total_reclaimed += tool.reclaimed_bytes()
+        logger.info("All tools: %s disk space reclaimed", format_du_style(total_reclaimed))
 
 
 @click.command()
@@ -805,16 +822,7 @@ def main(docker_only: bool, docker_system_prune_only: bool, force: bool, docker_
     elif docker_system_prune_only:
         tools = [DockerSystemPruneCleanup(interactive=interactive)]
     else:
-        tools = [
-            MavenCleanup("100M", interactive=interactive),
-            # AsdfGolangCleanup(keep_versions=["1.24.11"], interactive=interactive),
-            # DockerCleanup(interactive=interactive),
-            # DockerSystemPruneCleanup(interactive=interactive),
-            # DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"], interactive=interactive),
-            # DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"], interactive=interactive),
-            # DiscoveryCleanup("Pip Cache", "~/Library/Caches/pip", ["*"], interactive=interactive),
-            # PoetryCacheCleanup(interactive=interactive),
-        ]
+        tools = build_default_tools(interactive, docker_time_limit)
     ToolRunner.run_tools(tools)
 
 
