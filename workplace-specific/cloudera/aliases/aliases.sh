@@ -23,6 +23,7 @@ alias goto-thunderhead="cd $DEX_DEV_ROOT../thunderhead"
 alias goto-csi="cd $DEX_DEV_ROOT../cloud-services-infra"
 alias goto-hades="cd $HOME/development/other-repos/gandras/hades/"
 alias goto-cldr-tasks="cd $CLOUDERA_TASKS_DIR"
+alias goto-claude-proj-chatgpt-gemini-backup="cd /Users/snemeth/development/my-repos/gemini-chatgpt-backup"
 
 
 #git / gerrit commands

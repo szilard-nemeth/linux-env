@@ -1616,6 +1616,7 @@ function cde-start-work-on-task {
   cd "$dex_repo" || { echo "Failed to cd into $dex_repo"; cd "$original_dir"; return 1; }
   git fetch origin || { echo "Failed to fetch origin"; cd "$original_dir"; return 1; }
 
+  # TODO Should ask question before creating branch (y/n)
   # Step 2: Check if branch exists and checkout/create
   if git show-ref --verify --quiet "refs/heads/$branch_name"; then
     echo "Branch '$branch_name' already exists locally. Switching to it..."
@@ -1626,6 +1627,7 @@ function cde-start-work-on-task {
   git branch --unset-upstream
   fi
 
+  # TODO Should ask question before creating directory + markdown file (y/n)
   # Step 3: Create notes folder if needed
   if [ ! -d "$note_folder" ]; then
     echo "Creating notes folder at $note_folder..."
@@ -1638,6 +1640,7 @@ function cde-start-work-on-task {
     touch "$note_file"
   fi
 
+  # TODO Should ask question before opening dir in Sublime (y/n)
   echo "Opening directory with Sublime Text..."
   subl "$note_folder"
 
