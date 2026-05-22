@@ -1,4 +1,4 @@
-import argparse
+import click
 import logging
 import re
 import shutil
@@ -727,39 +727,39 @@ class ToolRunner:
             tool.execute_flow()
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Disk cleanup utilities")
-    parser.add_argument(
-        "--docker-only",
-        action="store_true",
-        help="Run Docker image cleanup only (dangling + age-based prune)",
-    )
-    parser.add_argument(
-        "--docker-system-prune-only",
-        action="store_true",
-        help="Run aggressive Docker system prune (all unused images, containers, networks, volumes)",
-    )
-    parser.add_argument(
-        "--interactive",
-        action="store_true",
-        help="Prompt for confirmation before Docker deletion",
-    )
-    parser.add_argument(
-        "--docker-time-limit",
-        default=DockerCleanup.DEFAULT_TIME_LIMIT,
-        help=f"Docker until= filter duration (default: {DockerCleanup.DEFAULT_TIME_LIMIT})",
-    )
-    args = parser.parse_args()
+@click.command()
+@click.option(
+    "--docker-only",
+    is_flag=True,
+    help="Run Docker image cleanup only (dangling + age-based prune)",
+)
+@click.option(
+    "--docker-system-prune-only",
+    is_flag=True,
+    help="Run aggressive Docker system prune (all unused images, containers, networks, volumes)",
+)
+@click.option(
+    "--interactive",
+    is_flag=True,
+    help="Prompt for confirmation before Docker deletion",
+)
+@click.option(
+    "--docker-time-limit",
+    default=DockerCleanup.DEFAULT_TIME_LIMIT,
+    show_default=True,
+    help="Docker until= filter duration",
+)
+def main(docker_only: bool, docker_system_prune_only: bool, interactive: bool, docker_time_limit: str):
+    """Disk cleanup utilities."""
+    if docker_only and docker_system_prune_only:
+        raise click.UsageError("Use only one of --docker-only or --docker-system-prune-only")
 
-    if args.docker_only and args.docker_system_prune_only:
-        parser.error("Use only one of --docker-only or --docker-system-prune-only")
-
-    if args.docker_only:
+    if docker_only:
         tools: List[CleanupTool] = [
-            DockerCleanup(time_limit=args.docker_time_limit, interactive=args.interactive),
+            DockerCleanup(time_limit=docker_time_limit, interactive=interactive),
         ]
-    elif args.docker_system_prune_only:
-        tools = [DockerSystemPruneCleanup(interactive=args.interactive)]
+    elif docker_system_prune_only:
+        tools = [DockerSystemPruneCleanup(interactive=interactive)]
     else:
         tools = [
             MavenCleanup("100M"),
