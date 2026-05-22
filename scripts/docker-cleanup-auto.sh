@@ -2,8 +2,8 @@
 
 function docker-cleanup-auto {
   # --- Configuration ---
-  # Set the time limit for images to keep. '2m' means 2 months.
-  TIME_LIMIT="2m"
+  # Keep images newer than ~2 months (Go duration: h = hours, not calendar months).
+  TIME_LIMIT="1440h"
   FILTER_ARG="until=$TIME_LIMIT"
 
   echo "--- 🧹 Starting Docker Image Cleanup ---"
