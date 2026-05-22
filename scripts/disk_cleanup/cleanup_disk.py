@@ -192,8 +192,24 @@ class CleanupResult:
 
 
 class CleanupTool(ABC):
-    def __init__(self):
+    def __init__(self, interactive: bool = False):
+        self.interactive = interactive
+        self._execute_skipped = False
         self.cleanup_result = None
+
+    def _has_pending_work(self) -> bool:
+        """Return True if prepare found actionable cleanup work."""
+        return False
+
+    def _confirmation_prompt(self) -> str:
+        return "Proceed with cleanup as described above? (y/n): "
+
+    def _confirm_execution(self, prompt: str) -> bool:
+        try:
+            answer = input(prompt)
+        except EOFError:
+            return False
+        return answer.strip().lower() in ("y", "yes")
 
     def run_command(self, cmd: List[str], cwd: Optional[Path] = None):
         """Runs a command and pipes output directly to the logger."""
@@ -234,22 +250,34 @@ class CleanupTool(ABC):
 
     def execute_flow(self):
         self.prepare()
-        self.execute()
+        if self.interactive and self._has_pending_work():
+            if not self._confirm_execution(self._confirmation_prompt()):
+                logger.info("Operation canceled by user.")
+                self._execute_skipped = True
+        if not self._execute_skipped:
+            self.execute()
         _ = self.verify()
         self.print_summary()
         logger.info("-" * 30)
 
 
 class MavenCleanup(CleanupTool):
-    def __init__(self, limit: str):
+    def __init__(self, limit: str, interactive: bool = False):
         """
         :param limit: Human-readable limit for directory size, e.g. 100M
         """
-        super().__init__()
+        super().__init__(interactive=interactive)
         self.root_to_targets: Dict[Path, List[Path]] = defaultdict(list)
         self.tracker = CleanupDetailsTracker()
         self._limit_str: str = limit
         self._limit_bytes: int = humanfriendly.parse_size(limit)
+
+    def _has_pending_work(self) -> bool:
+        return bool(self.root_to_targets)
+
+    def _confirmation_prompt(self) -> str:
+        count = len(self.root_to_targets)
+        return f"Proceed with Maven clean on {count} project(s)? (y/n): "
 
     def prepare(self):
         logger.info(f"Scanning for Maven target directories > {self._limit_str}...")
@@ -333,10 +361,24 @@ class MavenCleanup(CleanupTool):
 
 
 class AsdfGolangCleanup(CleanupTool):
-    def __init__(self, keep_versions: List[str]):
-        super().__init__()
+    def __init__(self, keep_versions: List[str], interactive: bool = False):
+        super().__init__(interactive=interactive)
         self.keep_versions = keep_versions
         self.tracker = CleanupDetailsTracker()
+
+    def _has_pending_work(self) -> bool:
+        if self.tracker.unnamed_cleanup:
+            return True
+        try:
+            return self.tracker.get_before_size("go_caches") > 0
+        except ValueError:
+            return False
+
+    def _confirmation_prompt(self) -> str:
+        versions = [d.metadata["version"] for d in self.tracker.unnamed_cleanup]
+        if versions:
+            return f"Proceed with uninstalling Go {', '.join(versions)} and cleaning caches? (y/n): "
+        return "Proceed with Go cache cleanup? (y/n): "
 
     def prepare(self):
         logger.info("Scanning ASDF Golang versions...")
@@ -397,19 +439,15 @@ class AsdfGolangCleanup(CleanupTool):
 
 
 class _DockerPruneMixin:
-    """Shared Docker daemon checks, confirmation, and prune output parsing."""
+    """Shared Docker daemon checks and prune output parsing."""
 
-    interactive: bool
     _docker_available: bool
     _bytes_reclaimed: int
-    _execute_skipped: bool
     _prune_failed: bool
 
-    def _init_docker_prune_state(self, interactive: bool = False) -> None:
-        self.interactive = interactive
+    def _init_docker_prune_state(self) -> None:
         self._docker_available = True
         self._bytes_reclaimed = 0
-        self._execute_skipped = False
         self._prune_failed = False
 
     def _check_docker(self) -> bool:
@@ -420,13 +458,6 @@ class _DockerPruneMixin:
             logger.error("Docker is not available: %s", exc)
             self._docker_available = False
             return False
-
-    def _confirm_deletion(self, prompt: str = "Proceed with deletion as described above? (y/n): ") -> bool:
-        try:
-            answer = input(prompt)
-        except EOFError:
-            return False
-        return answer.strip().lower() in ("y", "yes")
 
     def _run_prune(self, cmd: List[str]) -> int:
         full_cmd = " ".join(cmd)
@@ -462,13 +493,16 @@ class DockerCleanup(CleanupTool, _DockerPruneMixin):
     DEFAULT_TIME_LIMIT = "1440h"  # ~60 days; Go duration (h=hours, not calendar months)
 
     def __init__(self, time_limit: str = DEFAULT_TIME_LIMIT, interactive: bool = False):
-        super().__init__()
-        self._init_docker_prune_state(interactive)
+        super().__init__(interactive=interactive)
+        self._init_docker_prune_state()
         self.time_limit = time_limit
         self.until_filter = f"until={time_limit}"
         self._dangling_ids: List[str] = []
         self._old_ids: List[str] = []
         self._has_work = False
+
+    def _has_pending_work(self) -> bool:
+        return self._docker_available and self._has_work
 
     def prepare(self):
         logger.info("--- Docker image cleanup ---")
@@ -506,11 +540,6 @@ class DockerCleanup(CleanupTool, _DockerPruneMixin):
 
         if not self._has_work:
             logger.info("Skipping Docker deletion (nothing to clean up).")
-            self._execute_skipped = True
-            return
-
-        if self.interactive and not self._confirm_deletion():
-            logger.info("Operation canceled by user. No images were removed.")
             self._execute_skipped = True
             return
 
@@ -566,8 +595,14 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
     SYSTEM_PRUNE_CMD = ["docker", "system", "prune", "-a", "--volumes", "-f"]
 
     def __init__(self, interactive: bool = False):
-        super().__init__()
-        self._init_docker_prune_state(interactive)
+        super().__init__(interactive=interactive)
+        self._init_docker_prune_state()
+
+    def _has_pending_work(self) -> bool:
+        return self._docker_available
+
+    def _confirmation_prompt(self) -> str:
+        return "Proceed with 'docker system prune -a --volumes -f'? (y/n): "
 
     def prepare(self):
         logger.info("--- Docker system prune (aggressive) ---")
@@ -588,13 +623,6 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
     def execute(self):
         if not self._docker_available:
             logger.info("Skipping Docker system prune (daemon unavailable).")
-            self._execute_skipped = True
-            return
-
-        if self.interactive and not self._confirm_deletion(
-            "Proceed with 'docker system prune -a --volumes -f'? (y/n): "
-        ):
-            logger.info("Operation canceled by user. No Docker resources were removed.")
             self._execute_skipped = True
             return
 
@@ -619,13 +647,20 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
 class DiscoveryCleanup(CleanupTool):
     """Generic tool to find and delete specific directory patterns."""
 
-    def __init__(self, name, root_path, patterns: List[str], age_days: int = 30):
-        super().__init__()
+    def __init__(self, name, root_path, patterns: List[str], age_days: int = 30, interactive: bool = False):
+        super().__init__(interactive=interactive)
         self.name = name
         self.root_path = Path(root_path)
         self.patterns = patterns
         self.age_days = age_days
         self.tracker = CleanupDetailsTracker()
+
+    def _has_pending_work(self) -> bool:
+        return bool(self.tracker.unnamed_cleanup)
+
+    def _confirmation_prompt(self) -> str:
+        count = len(self.tracker.unnamed_cleanup)
+        return f"Proceed with removing {count} {self.name} director(ies)? (y/n): "
 
     def prepare(self):
         if self.age_days != -1:
@@ -676,10 +711,17 @@ class DiscoveryCleanup(CleanupTool):
 
 
 class PoetryCacheCleanup(CleanupTool):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, interactive: bool = False):
+        super().__init__(interactive=interactive)
         self.name = "Poetry cache cleanup"
         self.tracker = CleanupDetailsTracker()
+
+    def _has_pending_work(self) -> bool:
+        details = self.tracker._named_cleanup.get("poetry_cache")
+        return details is not None and details.before_size > 0
+
+    def _confirmation_prompt(self) -> str:
+        return "Proceed with clearing the Poetry cache? (y/n): "
 
     def prepare(self):
         cache_dir, _ = self.run_command_check_output(["poetry", "config", "cache-dir"])
@@ -741,7 +783,7 @@ class ToolRunner:
 @click.option(
     "--interactive",
     is_flag=True,
-    help="Prompt for confirmation before Docker deletion",
+    help="Prompt for y/n confirmation before each tool runs deletion",
 )
 @click.option(
     "--docker-time-limit",
@@ -762,14 +804,14 @@ def main(docker_only: bool, docker_system_prune_only: bool, interactive: bool, d
         tools = [DockerSystemPruneCleanup(interactive=interactive)]
     else:
         tools = [
-            MavenCleanup("100M"),
-            # AsdfGolangCleanup(keep_versions=["1.24.11"]),
-            # DockerCleanup(),
-            # DockerSystemPruneCleanup(),
-            # DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
-            # DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
-            # DiscoveryCleanup("Pip Cache", "~/Library/Caches/pip", ["*"]),
-            # PoetryCacheCleanup()
+            MavenCleanup("100M", interactive=interactive),
+            # AsdfGolangCleanup(keep_versions=["1.24.11"], interactive=interactive),
+            # DockerCleanup(interactive=interactive),
+            # DockerSystemPruneCleanup(interactive=interactive),
+            # DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"], interactive=interactive),
+            # DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"], interactive=interactive),
+            # DiscoveryCleanup("Pip Cache", "~/Library/Caches/pip", ["*"], interactive=interactive),
+            # PoetryCacheCleanup(interactive=interactive),
         ]
     ToolRunner.run_tools(tools)
 
