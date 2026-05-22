@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Optional, Any, TextIO
+from typing import List, Dict, Optional, Any, Set, TextIO
 
 import humanfriendly
 
@@ -175,9 +175,11 @@ class CleanupDetailsTracker:
             return details.sum_before_size - details.sum_after_size
         raise ValueError("Key not found: " + key)
 
+    def sum_unnamed_before_bytes(self) -> int:
+        return sum((item.before_size or 0) for item in self.unnamed_cleanup)
+
     def get_space_reclaimed_for_unnamed_cleanup(self) -> int:
-        sizes = [item.before_size if item.before_size else 0 for item in self.unnamed_cleanup]
-        return sum(item for item in sizes)
+        return self.sum_unnamed_before_bytes()
 
     def get_space_reclaimed_total(self):
         details = self._aggregate_cleanup[CleanupDetailsTracker.TOTAL_KEY]
@@ -218,8 +220,31 @@ class CleanupTool(ABC):
         """Return True if prepare found actionable cleanup work."""
         return False
 
+    def estimated_reclaim_bytes(self) -> Optional[int]:
+        """Upper-bound reclaimable bytes from prepare(); None if unknown."""
+        return None
+
+    def _reclaim_estimate_suffix(self) -> str:
+        estimate = self.estimated_reclaim_bytes()
+        if estimate is None or estimate <= 0:
+            return ""
+        return f" (~{format_du_style(estimate)} reclaimable)"
+
+    def _log_reclaim_estimate_before_confirm(self) -> None:
+        estimate = self.estimated_reclaim_bytes()
+        if estimate is None:
+            return
+        logger.info(
+            "%s: ~%s disk space reclaimable (estimate; actual may differ)",
+            self._summary_label(),
+            format_du_style(estimate),
+        )
+
+    def _confirmation_prompt_with_estimate(self, action: str) -> str:
+        return f"{action}{self._reclaim_estimate_suffix()}? (y/n): "
+
     def _confirmation_prompt(self) -> str:
-        return "Proceed with cleanup as described above? (y/n): "
+        return self._confirmation_prompt_with_estimate("Proceed with cleanup as described above")
 
     def _confirm_execution(self, prompt: str) -> bool:
         try:
@@ -263,6 +288,7 @@ class CleanupTool(ABC):
     def execute_flow(self):
         self.prepare()
         if self.interactive and self._has_pending_work():
+            self._log_reclaim_estimate_before_confirm()
             if not self._confirm_execution(self._confirmation_prompt()):
                 logger.info("Operation canceled by user.")
                 self._execute_skipped = True
@@ -289,9 +315,12 @@ class MavenCleanup(CleanupTool):
     def _has_pending_work(self) -> bool:
         return bool(self.root_to_targets)
 
+    def estimated_reclaim_bytes(self) -> Optional[int]:
+        return self.tracker.sum_unnamed_before_bytes()
+
     def _confirmation_prompt(self) -> str:
         count = len(self.root_to_targets)
-        return f"Proceed with Maven clean on {count} project(s)? (y/n): "
+        return self._confirmation_prompt_with_estimate(f"Proceed with Maven clean on {count} project(s)")
 
     def prepare(self):
         logger.info(f"Scanning for Maven target directories > {self._limit_str}...")
@@ -386,11 +415,21 @@ class AsdfGolangCleanup(CleanupTool):
         except ValueError:
             return False
 
+    def estimated_reclaim_bytes(self) -> Optional[int]:
+        total = self.tracker.sum_unnamed_before_bytes()
+        try:
+            total += self.tracker.get_before_size("go_caches")
+        except ValueError:
+            pass
+        return total
+
     def _confirmation_prompt(self) -> str:
         versions = [d.metadata["version"] for d in self.tracker.unnamed_cleanup]
         if versions:
-            return f"Proceed with uninstalling Go {', '.join(versions)} and cleaning caches? (y/n): "
-        return "Proceed with Go cache cleanup? (y/n): "
+            action = f"Proceed with uninstalling Go {', '.join(versions)} and cleaning caches"
+        else:
+            action = "Proceed with Go cache cleanup"
+        return self._confirmation_prompt_with_estimate(action)
 
     def prepare(self):
         logger.info("Scanning ASDF Golang versions...")
@@ -454,11 +493,63 @@ class _DockerPruneMixin:
     _docker_available: bool
     _bytes_reclaimed: int
     _prune_failed: bool
+    _estimated_reclaim_bytes: int
 
     def _init_docker_prune_state(self) -> None:
         self._docker_available = True
         self._bytes_reclaimed = 0
         self._prune_failed = False
+        self._estimated_reclaim_bytes = 0
+
+    def estimated_reclaim_bytes(self) -> Optional[int]:
+        if not self._docker_available:
+            return None
+        return self._estimated_reclaim_bytes
+
+    @staticmethod
+    def _parse_docker_size(size_str: str) -> int:
+        return humanfriendly.parse_size(size_str.strip())
+
+    def _sum_filtered_image_sizes(self, filter_sets: List[List[str]]) -> int:
+        seen_ids: Set[str] = set()
+        total = 0
+        for filters in filter_sets:
+            cmd = ["docker", "images", "--format", "{{.ID}}\t{{.Size}}"]
+            for image_filter in filters:
+                cmd.extend(["--filter", image_filter])
+            try:
+                output, _ = self.run_command_check_output(cmd)
+            except subprocess.CalledProcessError:
+                continue
+            for line in output.splitlines():
+                if "\t" not in line:
+                    continue
+                image_id, size_str = line.split("\t", 1)
+                image_id = image_id.strip()
+                if not image_id or image_id in seen_ids:
+                    continue
+                seen_ids.add(image_id)
+                try:
+                    total += self._parse_docker_size(size_str)
+                except (ValueError, TypeError):
+                    logger.debug("Could not parse Docker image size: %s", size_str)
+        return total
+
+    @staticmethod
+    def _parse_system_df_reclaimable(output: str) -> int:
+        total = 0
+        for line in output.splitlines():
+            line = line.strip()
+            if not line or line.upper().startswith("TYPE"):
+                continue
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            try:
+                total += humanfriendly.parse_size(parts[-1])
+            except (ValueError, TypeError):
+                logger.debug("Could not parse docker system df reclaimable: %s", line)
+        return total
 
     def _check_docker(self) -> bool:
         try:
@@ -543,6 +634,11 @@ class DockerCleanup(CleanupTool, _DockerPruneMixin):
         self._has_work = bool(self._dangling_ids or self._old_ids)
         if not self._has_work:
             logger.info("Nothing to clean up.")
+        else:
+            self._estimated_reclaim_bytes = self._sum_filtered_image_sizes([["dangling=true"], [self.until_filter]])
+
+    def _confirmation_prompt(self) -> str:
+        return self._confirmation_prompt_with_estimate("Proceed with Docker image deletion as described above")
 
     def execute(self):
         if not self._docker_available:
@@ -613,7 +709,7 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
         return self._docker_available
 
     def _confirmation_prompt(self) -> str:
-        return "Proceed with 'docker system prune -a --volumes -f'? (y/n): "
+        return self._confirmation_prompt_with_estimate("Proceed with 'docker system prune -a --volumes -f'")
 
     def prepare(self):
         logger.info("--- Docker system prune (aggressive) ---")
@@ -628,8 +724,10 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
             output, _ = self.run_command_check_output(["docker", "system", "df"])
             for line in output.splitlines():
                 logger.info(line)
+            self._estimated_reclaim_bytes = self._parse_system_df_reclaimable(output)
         except subprocess.CalledProcessError as exc:
             logger.warning("Could not read docker system df: %s", exc)
+            self._estimated_reclaim_bytes = 0
 
     def execute(self):
         if not self._docker_available:
@@ -667,9 +765,12 @@ class DiscoveryCleanup(CleanupTool):
     def _has_pending_work(self) -> bool:
         return bool(self.tracker.unnamed_cleanup)
 
+    def estimated_reclaim_bytes(self) -> Optional[int]:
+        return self.tracker.sum_unnamed_before_bytes()
+
     def _confirmation_prompt(self) -> str:
         count = len(self.tracker.unnamed_cleanup)
-        return f"Proceed with removing {count} {self.name} director(ies)? (y/n): "
+        return self._confirmation_prompt_with_estimate(f"Proceed with removing {count} {self.name} director(ies)")
 
     def prepare(self):
         if self.age_days != -1:
@@ -723,8 +824,14 @@ class PoetryCacheCleanup(CleanupTool):
         details = self.tracker._named_cleanup.get("poetry_cache")
         return details is not None and details.before_size > 0
 
+    def estimated_reclaim_bytes(self) -> Optional[int]:
+        details = self.tracker._named_cleanup.get("poetry_cache")
+        if details is None:
+            return 0
+        return details.before_size or 0
+
     def _confirmation_prompt(self) -> str:
-        return "Proceed with clearing the Poetry cache? (y/n): "
+        return self._confirmation_prompt_with_estimate("Proceed with clearing the Poetry cache")
 
     def prepare(self):
         cache_dir, _ = self.run_command_check_output(["poetry", "config", "cache-dir"])

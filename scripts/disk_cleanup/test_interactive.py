@@ -1,4 +1,4 @@
-from scripts.disk_cleanup.cleanup_disk import CleanupResult, CleanupTool
+from scripts.disk_cleanup.cleanup_disk import CleanupResult, CleanupTool, _DockerPruneMixin
 
 
 class _StubCleanup(CleanupTool):
@@ -96,3 +96,35 @@ def test_execute_flow_no_prompt_when_force_mode():
 def test_execute_flow_prompts_by_default():
     tool = _StubCleanup(pending=True)
     assert tool.interactive
+
+
+class _StubWithEstimate(_StubCleanup):
+    def estimated_reclaim_bytes(self):
+        return 1024 * 1024
+
+
+def test_execute_flow_logs_estimate_before_confirm(monkeypatch, caplog):
+    import logging
+
+    caplog.set_level(logging.INFO)
+    tool = _StubWithEstimate(interactive=True, pending=True)
+    prompts = []
+
+    def fake_input(prompt):
+        prompts.append(prompt)
+        return "n"
+
+    monkeypatch.setattr("builtins.input", fake_input)
+    tool.execute_flow()
+    assert any("disk space reclaimable (estimate" in r.message for r in caplog.records)
+    assert "reclaimable" in prompts[0]
+    assert "~1" in prompts[0]
+
+
+def test_parse_system_df_reclaimable():
+    output = """
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          10        5         1.2GB     800MB
+Containers      2         1         100MB     50MB
+"""
+    assert _DockerPruneMixin._parse_system_df_reclaimable(output) > 0
