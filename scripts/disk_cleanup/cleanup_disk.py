@@ -1,4 +1,6 @@
+import argparse
 import logging
+import re
 import shutil
 import subprocess
 import os
@@ -394,20 +396,224 @@ class AsdfGolangCleanup(CleanupTool):
             logger.info(log)
 
 
-class DockerCleanup(CleanupTool):
+class _DockerPruneMixin:
+    """Shared Docker daemon checks, confirmation, and prune output parsing."""
+
+    interactive: bool
+    _docker_available: bool
+    _bytes_reclaimed: int
+    _execute_skipped: bool
+    _prune_failed: bool
+
+    def _init_docker_prune_state(self, interactive: bool = False) -> None:
+        self.interactive = interactive
+        self._docker_available = True
+        self._bytes_reclaimed = 0
+        self._execute_skipped = False
+        self._prune_failed = False
+
+    def _check_docker(self) -> bool:
+        try:
+            self.run_command_check_output(["docker", "info", "--format", "{{.ServerVersion}}"])
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            logger.error("Docker is not available: %s", exc)
+            self._docker_available = False
+            return False
+
+    def _confirm_deletion(self, prompt: str = "Proceed with deletion as described above? (y/n): ") -> bool:
+        try:
+            answer = input(prompt)
+        except EOFError:
+            return False
+        return answer.strip().lower() in ("y", "yes")
+
+    def _run_prune(self, cmd: List[str]) -> int:
+        full_cmd = " ".join(cmd)
+        logger.debug("Executing: %s", full_cmd)
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True)
+        except subprocess.CalledProcessError as exc:
+            logger.error("Docker prune failed (%s): %s", exc.returncode, full_cmd)
+            self._prune_failed = True
+            if exc.output:
+                for line in exc.output.splitlines():
+                    logger.debug("[Subprocess] %s", line)
+            return 0
+
+        for line in output.splitlines():
+            logger.debug("[Subprocess] %s", line)
+        return self._parse_total_reclaimed(output)
+
+    @staticmethod
+    def _parse_total_reclaimed(output: str) -> int:
+        reclaimed = 0
+        for line in output.splitlines():
+            match = re.search(r"Total reclaimed space:\s*(.+)$", line)
+            if match:
+                reclaimed += humanfriendly.parse_size(match.group(1).strip())
+        return reclaimed
+
+
+class DockerCleanup(CleanupTool, _DockerPruneMixin):
+    """Remove unused dangling images, then unused images older than a time limit."""
+
+    IMAGE_FORMAT = "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedAt}}\t{{.Size}}"
+    DEFAULT_TIME_LIMIT = "1440h"  # ~60 days; Go duration (h=hours, not calendar months)
+
+    def __init__(self, time_limit: str = DEFAULT_TIME_LIMIT, interactive: bool = False):
+        super().__init__()
+        self._init_docker_prune_state(interactive)
+        self.time_limit = time_limit
+        self.until_filter = f"until={time_limit}"
+        self._dangling_ids: List[str] = []
+        self._old_ids: List[str] = []
+        self._has_work = False
+
     def prepare(self):
-        pass
+        logger.info("--- Docker image cleanup ---")
+        logger.info("Policy:")
+        logger.info("  1. Remove all unused dangling images (any age)")
+        logger.info(f"  2. Remove unused images older than {self.time_limit} (tagged and untagged)")
+
+        if not self._check_docker():
+            return
+
+        self._dangling_ids = self._list_image_ids(["dangling=true"])
+        logger.info("--- DRY RUN (step 1): unused dangling images ---")
+        if not self._dangling_ids:
+            logger.info("(none)")
+        else:
+            self._log_images_table(["dangling=true"])
+
+        self._old_ids = self._list_image_ids([self.until_filter])
+        logger.info(f"--- DRY RUN (step 2): images older than {self.time_limit} ---")
+        logger.info("(Unused only at deletion; images referenced by containers are kept.)")
+        if not self._old_ids:
+            logger.info("(none matching age filter)")
+        else:
+            self._log_images_table([self.until_filter])
+
+        self._has_work = bool(self._dangling_ids or self._old_ids)
+        if not self._has_work:
+            logger.info("Nothing to clean up.")
 
     def execute(self):
-        logger.info("Docker system prune...")
-        # -f forces without prompt
-        self.run_command(["docker", "system", "prune", "-a", "--volumes", "-f"])
+        if not self._docker_available:
+            logger.info("Skipping Docker deletion (daemon unavailable).")
+            self._execute_skipped = True
+            return
+
+        if not self._has_work:
+            logger.info("Skipping Docker deletion (nothing to clean up).")
+            self._execute_skipped = True
+            return
+
+        if self.interactive and not self._confirm_deletion():
+            logger.info("Operation canceled by user. No images were removed.")
+            self._execute_skipped = True
+            return
+
+        logger.info("--- DELETING (step 1): unused dangling images ---")
+        self._bytes_reclaimed += self._run_prune(["docker", "image", "prune", "--force", "--verbose"])
+
+        logger.info(f"--- DELETING (step 2): unused images older than {self.time_limit} ---")
+        self._bytes_reclaimed += self._run_prune(
+            ["docker", "image", "prune", "--all", "--force", "--filter", self.until_filter, "--verbose"]
+        )
 
     def verify(self) -> CleanupResult:
-        return CleanupResult(0, True, [])  # Docker doesn't easily return bytes saved via CLI
+        success = self._docker_available and not self._prune_failed
+        self.cleanup_result = CleanupResult(self._bytes_reclaimed, success, [])
+        return self.cleanup_result
 
     def print_summary(self):
-        logger.info("Docker: System pruned (All unused images/volumes removed)")
+        if not self._docker_available:
+            logger.info("Docker images: skipped (daemon unavailable)")
+            return
+        if self._execute_skipped and self._bytes_reclaimed == 0:
+            logger.info("Docker images: no images removed")
+            return
+        logger.info(f"Docker images: reclaimed {format_du_style(self._bytes_reclaimed)}")
+
+    def _list_image_ids(self, filters: List[str]) -> List[str]:
+        cmd = ["docker", "images", "-q"]
+        for image_filter in filters:
+            cmd.extend(["--filter", image_filter])
+        try:
+            output, _ = self.run_command_check_output(cmd)
+        except subprocess.CalledProcessError as exc:
+            logger.error("Failed to list Docker images: %s", exc)
+            self._docker_available = False
+            return []
+        return [line for line in output.splitlines() if line.strip()]
+
+    def _log_images_table(self, filters: List[str]) -> None:
+        cmd = ["docker", "images", "--format", self.IMAGE_FORMAT]
+        for image_filter in filters:
+            cmd.extend(["--filter", image_filter])
+        output, _ = self.run_command_check_output(cmd)
+        for line in output.splitlines():
+            logger.info(line)
+
+
+class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
+    """
+    Aggressive Docker cleanup: all unused images (any age), stopped containers,
+    unused networks, and unused volumes.
+    """
+
+    SYSTEM_PRUNE_CMD = ["docker", "system", "prune", "-a", "--volumes", "-f"]
+
+    def __init__(self, interactive: bool = False):
+        super().__init__()
+        self._init_docker_prune_state(interactive)
+
+    def prepare(self):
+        logger.info("--- Docker system prune (aggressive) ---")
+        logger.info("Policy: remove ALL unused images (any age), stopped containers, networks, and volumes")
+        logger.warning("Unused volumes may contain database or app data. Review before confirming.")
+
+        if not self._check_docker():
+            return
+
+        logger.info("--- DRY RUN: current Docker disk usage ---")
+        try:
+            output, _ = self.run_command_check_output(["docker", "system", "df"])
+            for line in output.splitlines():
+                logger.info(line)
+        except subprocess.CalledProcessError as exc:
+            logger.warning("Could not read docker system df: %s", exc)
+
+    def execute(self):
+        if not self._docker_available:
+            logger.info("Skipping Docker system prune (daemon unavailable).")
+            self._execute_skipped = True
+            return
+
+        if self.interactive and not self._confirm_deletion(
+            "Proceed with 'docker system prune -a --volumes -f'? (y/n): "
+        ):
+            logger.info("Operation canceled by user. No Docker resources were removed.")
+            self._execute_skipped = True
+            return
+
+        logger.info("--- DELETING: docker system prune -a --volumes ---")
+        self._bytes_reclaimed = self._run_prune(self.SYSTEM_PRUNE_CMD)
+
+    def verify(self) -> CleanupResult:
+        success = self._docker_available and not self._prune_failed
+        self.cleanup_result = CleanupResult(self._bytes_reclaimed, success, [])
+        return self.cleanup_result
+
+    def print_summary(self):
+        if not self._docker_available:
+            logger.info("Docker system: skipped (daemon unavailable)")
+            return
+        if self._execute_skipped and self._bytes_reclaimed == 0:
+            logger.info("Docker system: no resources removed")
+            return
+        logger.info(f"Docker system: reclaimed {format_du_style(self._bytes_reclaimed)}")
 
 
 class DiscoveryCleanup(CleanupTool):
@@ -522,15 +728,49 @@ class ToolRunner:
 
 
 def main():
-    tools: List[CleanupTool] = [
-        MavenCleanup("100M"),
-        # AsdfGolangCleanup(keep_versions=["1.24.11"]),
-        # DockerCleanup(),
-        # DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
-        # DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
-        # DiscoveryCleanup("Pip Cache", "~/Library/Caches/pip", ["*"]),
-        # PoetryCacheCleanup()
-    ]
+    parser = argparse.ArgumentParser(description="Disk cleanup utilities")
+    parser.add_argument(
+        "--docker-only",
+        action="store_true",
+        help="Run Docker image cleanup only (dangling + age-based prune)",
+    )
+    parser.add_argument(
+        "--docker-system-prune-only",
+        action="store_true",
+        help="Run aggressive Docker system prune (all unused images, containers, networks, volumes)",
+    )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Prompt for confirmation before Docker deletion",
+    )
+    parser.add_argument(
+        "--docker-time-limit",
+        default=DockerCleanup.DEFAULT_TIME_LIMIT,
+        help=f"Docker until= filter duration (default: {DockerCleanup.DEFAULT_TIME_LIMIT})",
+    )
+    args = parser.parse_args()
+
+    if args.docker_only and args.docker_system_prune_only:
+        parser.error("Use only one of --docker-only or --docker-system-prune-only")
+
+    if args.docker_only:
+        tools: List[CleanupTool] = [
+            DockerCleanup(time_limit=args.docker_time_limit, interactive=args.interactive),
+        ]
+    elif args.docker_system_prune_only:
+        tools = [DockerSystemPruneCleanup(interactive=args.interactive)]
+    else:
+        tools = [
+            MavenCleanup("100M"),
+            # AsdfGolangCleanup(keep_versions=["1.24.11"]),
+            # DockerCleanup(),
+            # DockerSystemPruneCleanup(),
+            # DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
+            # DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
+            # DiscoveryCleanup("Pip Cache", "~/Library/Caches/pip", ["*"]),
+            # PoetryCacheCleanup()
+        ]
     ToolRunner.run_tools(tools)
 
 
