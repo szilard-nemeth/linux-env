@@ -10,12 +10,20 @@ function docker-execbash {
     docker exec -it ${containerid} bash
 }
 
-function cleanup_docker_images {
+function docker-cleanup-images {
   #docker rm --force $(docker ps --all --quiet) # remove all docker processes
   docker rmi $(docker images --filter dangling=true --quiet) # clean dangling docker images
 }
 
-function cleanup_docker_volumes {
+# Delegates to Python implementation in scripts/disk_cleanup/cleanup_disk.py
+function docker-cleanup-auto {
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  python3 "${script_dir}/disk_cleanup/cleanup_disk.py" --docker-only --interactive "$@"
+}
+
+
+function docker-cleanup-volumes {
   docker volume ls -qf dangling=true | xargs -r docker volume rm
 }
 
