@@ -218,6 +218,8 @@ class CleanupTool(ABC):
         self.interactive = interactive
         self._execute_skipped = False
         self.cleanup_result: Optional[CleanupResult] = None
+        self._commands_succeeded = 0
+        self._commands_failed = 0
 
     def reclaimed_bytes(self) -> int:
         if self.cleanup_result is None:
@@ -271,6 +273,26 @@ class CleanupTool(ABC):
             return False
         return answer.strip().lower() in ("y", "yes")
 
+    def _reset_command_outcomes(self) -> None:
+        self._commands_succeeded = 0
+        self._commands_failed = 0
+
+    def _record_command_outcome(self, returncode: int) -> None:
+        if returncode == 0:
+            self._commands_succeeded += 1
+        else:
+            self._commands_failed += 1
+
+    def _log_command_outcomes(self) -> None:
+        if not self._commands_succeeded and not self._commands_failed:
+            return
+        logger.info(
+            "%s commands finished: %d succeeded, %d failed",
+            self._summary_label(),
+            self._commands_succeeded,
+            self._commands_failed,
+        )
+
     def run_command(self, cmd: List[str], cwd: Optional[Path] = None):
         """Runs a command and pipes output directly to the logger."""
         full_cmd = " ".join(cmd)
@@ -282,6 +304,7 @@ class CleanupTool(ABC):
             for line in process.stdout:
                 logger.debug(f"[Subprocess] {line.strip()}")
         process.wait()
+        self._record_command_outcome(process.returncode)
         return process.returncode, full_cmd
 
     def run_command_check_output(self, cmd: List[str], cwd: Optional[Path] = None):
@@ -327,7 +350,9 @@ class CleanupTool(ABC):
                 logger.info("Operation canceled by user.")
                 self._execute_skipped = True
         if not self._execute_skipped:
+            self._reset_command_outcomes()
             self.execute()
+            self._log_command_outcomes()
         _ = self.verify()
         self.print_summary()
         logger.info("-" * 30)
@@ -371,8 +396,6 @@ class MavenCleanup(CleanupTool):
             logger.info("Found %s: %s", format_du_style(target.before_size), target.dir)
 
     def execute(self):
-        # TODO 'executed_commands' unused
-        executed_commands = []
         for root in sorted(self.root_to_targets.keys()):
             logger.info(f"Maven clean: {root}")
             pom_path = root / "pom.xml"
@@ -381,10 +404,7 @@ class MavenCleanup(CleanupTool):
                 continue
 
             logger.info(f"\n{'='*20}\nCLEANING: {root}\n{'='*20}\n")
-            # Execute Maven
-            returncode, full_cmd = self.run_command(["mvn", "clean", "-f", str(pom_path)])
-
-            executed_commands.append(full_cmd)
+            returncode, _ = self.run_command(["mvn", "clean", "-f", str(pom_path)])
             if returncode == 0:
                 logger.info("✅ Done.")
             else:
