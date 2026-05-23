@@ -5,13 +5,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# Import from script path (scripts/git is not a package)
 import sys
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from git_large_file_mover import (  # noqa: E402
+from git_move_large_files import (  # noqa: E402
     CandidateValidationCode,
     FileMoveCandidate,
     FilePathValidator,

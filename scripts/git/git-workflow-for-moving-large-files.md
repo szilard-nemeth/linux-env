@@ -43,6 +43,6 @@ Output files land in `~/Downloads/git-large-files-<commit>/` by default. Overrid
 
 1. `git-commit-size-detailed.sh` — list changed files and sizes for a commit
 2. `git_commit_size_analyzer.py` — sort by size; writes full sorted list via `--all-sorted-out`
-3. `git_large_file_mover.py` — move files above threshold; `--execute` to run for real
+3. `GitLargeFileMover` (in the same file) — move files above threshold; `--execute` to run for real
 
-Each tool can still be run standalone if needed.
+The analyzer and shell size script can still be run standalone if needed.
