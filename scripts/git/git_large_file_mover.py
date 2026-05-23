@@ -7,6 +7,7 @@ import shutil
 from dataclasses import dataclass
 from typing import List, Optional
 
+from pip._internal.resolution.resolvelib.base import Candidate
 
 # --- Default configuration ---
 GOOGLE_DRIVE_ROOT = os.path.expanduser("~/googledrive/development/KB-private-offloaded")
@@ -265,15 +266,8 @@ class GitLargeFileMover:
             print(f"  TARGET: {c.paths.target_path_abs}")
 
             # Execute/Simulate directory creation
-            if not self.dry_run:
-                try:
-                    os.makedirs(c.paths.target_dir_abs, exist_ok=True)
-                    print(f"  Created directory: {c.paths.target_dir_abs}")
-                except Exception as e:
-                    print(f"  ERROR creating directory: {e}")
-                    continue
-            else:
-                print(f"  Dry Run: mkdir -p {c.paths.target_dir_abs}")
+            if not self._make_dir_for_candidate(c):
+                continue
 
             stats.add_saved_space(c.size_in_bytes)
 
@@ -305,6 +299,19 @@ class GitLargeFileMover:
                 stats.record_file_moved(file_path)
             current_candidate_no += 1
         stats.print(self.dry_run)
+
+    def _make_dir_for_candidate(self, c: FileMoveCandidate):
+        if not self.dry_run:
+            try:
+                os.makedirs(c.paths.target_dir_abs, exist_ok=True)
+                print(f"  Created directory: {c.paths.target_dir_abs}")
+            except Exception as e:
+                print(f"  ERROR creating directory: {e}")
+                return False
+            return True
+        else:
+            print(f"  Dry Run: mkdir -p {c.paths.target_dir_abs}")
+            return True
 
 
 if __name__ == "__main__":
