@@ -41,7 +41,7 @@ git-move-large-files \
 
 (`git-move-large-files` is defined in `scripts/git.sh`.)
 
-Output files land in `~/Downloads/git-large-files-<label>/` by default (`working-tree` or commit hash). Override with `--out-dir`.
+Output files land in `~/git-large-files-<label>/` by default (`working-tree` or commit hash). Override with `--out-dir`.
 
 ## Examples
 

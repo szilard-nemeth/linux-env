@@ -694,8 +694,7 @@ class WorkflowConfig:
     def resolved_out_dir(self) -> Path:
         if self.out_dir:
             return self.out_dir.expanduser().resolve()
-        # TODO Use hom dir instead of ~/Downloads
-        return Path.home() / "Downloads" / f"git-large-files-{self.run_label}"
+        return Path.home() / f"git-large-files-{self.run_label}"
 
 
 @dataclass
@@ -748,7 +747,7 @@ class WorkflowOutputPaths:
 @click.option(
     "--out-dir",
     type=click.Path(file_okay=False, path_type=Path),
-    help="Directory for intermediate output files (default: ~/Downloads/git-large-files-<label>)",
+    help="Directory for intermediate output files (default: ~/git-large-files-<label>)",
 )
 @click.option(
     "--threshold-mb",
