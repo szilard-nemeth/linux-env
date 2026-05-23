@@ -245,7 +245,7 @@ class GitLargeFileMover:
             # from now on, line is file_path
             file_path = line
 
-            validator = FilePathValidator(stats, self.repo_root, self.allowed_extensions, self.threshold_bytes)
+            validator = FilePathValidator(self.repo_root, self.allowed_extensions, self.threshold_bytes)
             result = validator.validate_candidate(file_path, stats)
             if result.code in (
                 CandidateValidationCode.FILE_SIZE_BELOW_THRESHOLD,
