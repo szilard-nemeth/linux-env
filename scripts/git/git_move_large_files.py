@@ -319,105 +319,107 @@ class GitLargeFileMover:
             stats.record_file_moved(c.file_path)
 
 
-def verify_commit(repo: Path, commit: str) -> None:
-    result = subprocess.run(
-        ["git", "-C", str(repo), "rev-parse", "--verify", f"{commit}^{{commit}}"],
-        capture_output=True,
-    )
-    if result.returncode != 0:
-        raise click.ClickException(f"commit '{commit}' not found in repository '{repo}'.")
+class GitLargeFileWorkflow:
+    @staticmethod
+    def verify_commit(repo: Path, commit: str) -> None:
+        result = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "--verify", f"{commit}^{{commit}}"],
+            capture_output=True,
+        )
+        if result.returncode != 0:
+            raise click.ClickException(f"commit '{commit}' not found in repository '{repo}'.")
 
+    @staticmethod
+    def run_commit_size_detailed(repo: Path, commit: str, output_path: Path) -> None:
+        script = SCRIPT_DIR / "git-commit-size-detailed.sh"
+        with output_path.open("w") as out:
+            subprocess.run(
+                [str(script), commit],
+                cwd=repo,
+                stdout=out,
+                check=True,
+            )
 
-def run_commit_size_detailed(repo: Path, commit: str, output_path: Path) -> None:
-    script = SCRIPT_DIR / "git-commit-size-detailed.sh"
-    with output_path.open("w") as out:
-        subprocess.run(
-            [str(script), commit],
+    @staticmethod
+    def run_analyzer(details_path: Path, analyzer_out: Path, all_sorted_out: Path) -> None:
+        with analyzer_out.open("w") as out:
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_DIR / "git_commit_size_analyzer.py"),
+                    str(details_path),
+                    "--all-sorted-out",
+                    str(all_sorted_out),
+                ],
+                stdout=out,
+                check=True,
+            )
+
+    @staticmethod
+    def run_mover(
+        all_sorted_out: Path,
+        mover_out: Path,
+        *,
+        threshold_mb: int,
+        repo: Path,
+        execute: bool,
+        drive_root: Optional[str],
+        path_prefix: Optional[str],
+    ) -> None:
+        mover = GitLargeFileMover(
+            str(all_sorted_out),
+            threshold_mb * 1024 * 1024,
+            dry_run=not execute,
+            repo_root=str(repo),
+            google_drive_root=os.path.expanduser(drive_root) if drive_root else GOOGLE_DRIVE_ROOT,
+            path_prefix_to_strip=path_prefix if path_prefix else PATH_PREFIX_TO_STRIP,
+        )
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            mover.process_and_move()
+        mover_out.write_text(buffer.getvalue())
+
+    @staticmethod
+    def stage_changes(repo: Path, stage_summary_out: Path, moved_contents_out: Path) -> None:
+        deleted = subprocess.check_output(
+            ["git", "ls-files", "--deleted"],
             cwd=repo,
-            stdout=out,
-            check=True,
-        )
+            text=True,
+        ).strip()
+        if deleted:
+            subprocess.run(
+                ["git", "rm", *deleted.splitlines()],
+                cwd=repo,
+                check=True,
+            )
 
+        for path in repo.rglob("*MOVED*"):
+            if "REMOVED" in path.name:
+                continue
+            rel = path.relative_to(repo)
+            subprocess.run(["git", "add", str(rel)], cwd=repo, check=True)
 
-def run_analyzer(details_path: Path, analyzer_out: Path, all_sorted_out: Path) -> None:
-    with analyzer_out.open("w") as out:
-        subprocess.run(
-            [
-                sys.executable,
-                str(SCRIPT_DIR / "git_commit_size_analyzer.py"),
-                str(details_path),
-                "--all-sorted-out",
-                str(all_sorted_out),
-            ],
-            stdout=out,
-            check=True,
-        )
-
-
-def run_mover(
-    all_sorted_out: Path,
-    mover_out: Path,
-    *,
-    threshold_mb: int,
-    repo: Path,
-    execute: bool,
-    drive_root: Optional[str],
-    path_prefix: Optional[str],
-) -> None:
-    mover = GitLargeFileMover(
-        str(all_sorted_out),
-        threshold_mb * 1024 * 1024,
-        dry_run=not execute,
-        repo_root=str(repo),
-        google_drive_root=os.path.expanduser(drive_root) if drive_root else GOOGLE_DRIVE_ROOT,
-        path_prefix_to_strip=path_prefix if path_prefix else PATH_PREFIX_TO_STRIP,
-    )
-    buffer = io.StringIO()
-    with redirect_stdout(buffer):
-        mover.process_and_move()
-    mover_out.write_text(buffer.getvalue())
-
-
-def stage_changes(repo: Path, stage_summary_out: Path, moved_contents_out: Path) -> None:
-    deleted = subprocess.check_output(
-        ["git", "ls-files", "--deleted"],
-        cwd=repo,
-        text=True,
-    ).strip()
-    if deleted:
-        subprocess.run(
-            ["git", "rm", *deleted.splitlines()],
+        status = subprocess.check_output(
+            ["git", "status", "--short"],
             cwd=repo,
-            check=True,
+            text=True,
         )
+        summary_lines = [line for line in status.splitlines() if re.search(r"deleted|^\?\?|^A ", line)]
+        stage_summary_out.write_text("\n".join(summary_lines) + ("\n" if summary_lines else ""))
 
-    for path in repo.rglob("*MOVED*"):
-        if "REMOVED" in path.name:
-            continue
-        rel = path.relative_to(repo)
-        subprocess.run(["git", "add", str(rel)], cwd=repo, check=True)
+        cached = subprocess.check_output(
+            ["git", "diff", "--name-only", "--cached"],
+            cwd=repo,
+            text=True,
+        ).splitlines()
+        moved_names = [name for name in cached if "MOVED" in name]
 
-    status = subprocess.check_output(
-        ["git", "status", "--short"],
-        cwd=repo,
-        text=True,
-    )
-    summary_lines = [line for line in status.splitlines() if re.search(r"deleted|^\?\?|^A ", line)]
-    stage_summary_out.write_text("\n".join(summary_lines) + ("\n" if summary_lines else ""))
-
-    cached = subprocess.check_output(
-        ["git", "diff", "--name-only", "--cached"],
-        cwd=repo,
-        text=True,
-    ).splitlines()
-    moved_names = [name for name in cached if "MOVED" in name]
-
-    parts: List[str] = []
-    for filename in moved_names:
-        parts.append(f"Processing file: {filename}")
-        parts.append((repo / filename).read_text())
-        parts.append("")
-    moved_contents_out.write_text("\n".join(parts))
+        parts: List[str] = []
+        for filename in moved_names:
+            parts.append(f"Processing file: {filename}")
+            parts.append((repo / filename).read_text())
+            parts.append("")
+        moved_contents_out.write_text("\n".join(parts))
 
 
 @click.command(
@@ -480,7 +482,8 @@ def main(
         resolved_out_dir = Path.home() / "Downloads" / f"git-large-files-{commit}"
     resolved_out_dir.mkdir(parents=True, exist_ok=True)
 
-    verify_commit(repo, commit)
+    _ = GitLargeFileWorkflow()
+    GitLargeFileWorkflow.verify_commit(repo, commit)
 
     details_out = resolved_out_dir / f"git-details-hash-{commit}.txt"
     analyzer_out = resolved_out_dir / f"git-commit-size-analyzer-out-{commit}.txt"
@@ -497,16 +500,16 @@ def main(
     print("")
 
     print("Step 1/3: Collecting file sizes from commit...")
-    run_commit_size_detailed(repo, commit, details_out)
+    GitLargeFileWorkflow.run_commit_size_detailed(repo, commit, details_out)
     print(f"  Wrote {details_out}")
 
     print("Step 2/3: Sorting files by size...")
-    run_analyzer(details_out, analyzer_out, all_sorted_out)
+    GitLargeFileWorkflow.run_analyzer(analyzer_out, all_sorted_out)
     print(f"  Wrote {analyzer_out}")
     print(f"  Wrote {all_sorted_out}")
 
     print("Step 3/3: Processing large files...")
-    run_mover(
+    GitLargeFileWorkflow.run_mover(
         all_sorted_out,
         mover_out,
         threshold_mb=threshold_mb,
@@ -520,7 +523,7 @@ def main(
     if stage:
         print("")
         print("Staging git changes...")
-        stage_changes(repo, stage_summary_out, moved_contents_out)
+        GitLargeFileWorkflow.stage_changes(repo, stage_summary_out, moved_contents_out)
         print(f"  Wrote {stage_summary_out}")
         print(f"  Wrote {moved_contents_out}")
         print("")
