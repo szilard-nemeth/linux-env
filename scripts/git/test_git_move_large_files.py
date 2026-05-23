@@ -15,7 +15,9 @@ from git_move_large_files import (  # noqa: E402
     FileMoveCandidate,
     FilePathValidator,
     FileStats,
+    GitCommitSizeAnalyzer,
     GitLargeFileMover,
+    GitLargeFileWorkflow,
     PATH_PREFIX_TO_STRIP,
 )
 
@@ -73,6 +75,19 @@ class TestGitLargeFileMover(unittest.TestCase):
                 mover.process_and_move()
             finally:
                 os.unlink(listing_path)
+
+    def test_analyzer_sorts_and_writes_sorted_file(self):
+        sample = SCRIPT_DIR / "input-files" / "git-commit-size-analyzer-sample-data.txt"
+        with tempfile.TemporaryDirectory() as tmp:
+            analyzer_out = Path(tmp) / "analyzer-out.txt"
+            sorted_out = Path(tmp) / "sorted.txt"
+            GitLargeFileWorkflow.run_analyzer(sample, analyzer_out, sorted_out, top_n=3)
+
+            sorted_lines = sorted_out.read_text().splitlines()
+            self.assertEqual(len(sorted_lines), 6)
+            self.assertIn("large/data.bin", sorted_lines[0])
+            self.assertIn("assets/model.zip", sorted_lines[1])
+            self.assertIn("Analyzing Commit Size Data", analyzer_out.read_text())
 
 
 if __name__ == "__main__":

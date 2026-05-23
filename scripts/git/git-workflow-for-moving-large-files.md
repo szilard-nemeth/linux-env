@@ -116,7 +116,7 @@ python3 scripts/git/git_move_large_files.py \
 `git_move_large_files.py` orchestrates:
 
 1. `git-commit-size-detailed.sh` — list changed files and sizes for a commit
-2. `git_commit_size_analyzer.py` — sort by size; writes full sorted list via `--all-sorted-out`
+2. `GitCommitSizeAnalyzer` (in the same file) — sort by size; writes full sorted list
 3. `GitLargeFileMover` (in the same file) — move files above threshold; `--execute` to run for real
 
-The analyzer and shell size script can still be run standalone if needed.
+The shell size script can still be run standalone if needed.
