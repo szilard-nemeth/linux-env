@@ -698,6 +698,16 @@ class WorkflowConfig:
             return self.out_dir.expanduser().resolve()
         return Path.home() / f"git-large-files-{self.run_label}"
 
+    def resolved_offload_root(self) -> str:
+        if self.offload_root:
+            return os.path.expanduser(self.offload_root)
+        return DEFAULT_OFFLOAD_ROOT
+
+    def resolved_path_prefix(self) -> str:
+        if self.path_prefix:
+            return self.path_prefix
+        return PATH_PREFIX_TO_STRIP
+
 
 @dataclass
 class WorkflowOutputPaths:

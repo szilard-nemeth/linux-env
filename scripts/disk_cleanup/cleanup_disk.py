@@ -16,10 +16,8 @@ from typing import List, Dict, Optional, Any, Set, TextIO
 import humanfriendly
 
 from scripts.git.git_move_large_files import (
-    DEFAULT_OFFLOAD_ROOT,
     GitLargeFileWorkflow,
     KB_PRIVATE_ROOT,
-    PATH_PREFIX_TO_STRIP,
     WorkflowConfig,
     WorkflowOutputPaths,
 )
@@ -930,9 +928,10 @@ class KbPrivateGitOffloadCleanup(CleanupTool):
         return self._estimated_reclaim_bytes
 
     def _confirmation_prompt(self) -> str:
+        config = self._workflow_config(execute=False)
         return self._confirmation_prompt_with_estimate(
             "Proceed with offloading large files from knowledge-base-private "
-            f"(moved to {DEFAULT_OFFLOAD_ROOT}; git changes are not staged automatically)"
+            f"(moved to {config.resolved_offload_root()}; git changes are not staged automatically)"
         )
 
     def _log_captured_output(self, text: str) -> None:
@@ -981,16 +980,17 @@ class KbPrivateGitOffloadCleanup(CleanupTool):
         return stats
 
     def prepare(self):
-        # TODO Paths should be read from actual config - self._workflow_config
+        config = self._workflow_config(execute=False)
         logger.info("--- KB private git large-file offload ---")
-        logger.info("Repository: %s", self.repo)
-        logger.info("Offload root: %s", DEFAULT_OFFLOAD_ROOT)
-        logger.info("Path prefix stripped: %s", PATH_PREFIX_TO_STRIP)
-        logger.info("Threshold: %dMB (archives only)", KB_PRIVATE_GIT_OFFLOAD_THRESHOLD_MB)
+        logger.info("Repository: %s", config.resolved_repo())
+        logger.info("Output directory: %s", config.resolved_out_dir())
+        logger.info("Offload root: %s", config.resolved_offload_root())
+        logger.info("Path prefix stripped: %s", config.resolved_path_prefix())
+        logger.info("Threshold: %dMB (archives only)", config.threshold_mb)
         logger.info("Mode: dry-run preview (no files moved until confirmed)")
 
-        if not self.repo.is_dir():
-            logger.error("Repository not found: %s", self.repo)
+        if not config.resolved_repo().is_dir():
+            logger.error("Repository not found: %s", config.resolved_repo())
             self._workflow_failed = True
             return
 
