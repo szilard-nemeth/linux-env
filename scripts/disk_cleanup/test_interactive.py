@@ -117,7 +117,7 @@ def test_run_tools_dry_run_prepares_only(monkeypatch, caplog):
     assert tool.prepare_called
     assert not tool.execute_called
     assert not tool.verify_called
-    assert "DRY RUN MODE" in caplog.text
+    assert "DRY RUN mode" in caplog.text
     assert "Dry run complete" in caplog.text
 
 
@@ -131,8 +131,23 @@ def test_run_tools_prints_plan_table(monkeypatch, caplog):
     tool = _StubWithEstimate(pending=True)
     monkeypatch.setattr("builtins.input", lambda _prompt: "n")
     _run_tools([tool], monkeypatch, confirm=True)
-    assert "Cleanup plan" in caplog.text
-    assert "TOTAL" in caplog.text
+    assert "TOTAL:" in caplog.text
+    assert "reclaimable" in caplog.text
+
+
+def test_build_cleanup_plan_table_renders_rows():
+    from scripts.disk_cleanup.cleanup_disk import _build_cleanup_plan_table, console
+
+    tool = _StubWithEstimate(pending=True)
+    table = _build_cleanup_plan_table([tool])
+
+    with console.capture() as capture:
+        console.print(table)
+
+    rendered = capture.get()
+    assert "Cleanup plan" in rendered
+    assert "TOTAL" in rendered
+    assert "1.00M" in rendered or "1M" in rendered
 
 
 def test_run_tools_logs_command_outcomes(monkeypatch, caplog):

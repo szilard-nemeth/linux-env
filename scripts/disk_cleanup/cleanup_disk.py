@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any, Set, TextIO
 
 import humanfriendly
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 from scripts.git.git_move_large_files import (
     GitLargeFileWorkflow,
@@ -37,6 +40,7 @@ LOG_FILE_PATH = TOOL_OUTPUT_BASEDIR / f"cleanup_{TIMESTAMP}.log"
 # Initialize Logger
 logger = logging.getLogger("DiskCleanup")
 logger.setLevel(logging.DEBUG)
+console = Console()
 
 
 def setup_logging():
@@ -971,6 +975,8 @@ class KbPrivateGitOffloadCleanup(CleanupTool):
 
 def format_du_style(size_in_bytes):
     """Formats bytes to 1.2G, 400M, etc. using humanfriendly 10.0"""
+    if size_in_bytes <= 0:
+        return "0"
     # Use binary=True to get 1024-base (MiB/GiB)
     readable = humanfriendly.format_size(size_in_bytes, binary=True)
 
@@ -1054,6 +1060,36 @@ def _format_reclaimable_estimate(tool: CleanupTool) -> str:
     return format_du_style(estimate)
 
 
+def _reclaimable_cell(tool: CleanupTool) -> str:
+    reclaimable = _format_reclaimable_estimate(tool)
+    if reclaimable == "unknown":
+        return "[dim]unknown[/dim]"
+    if reclaimable == "0":
+        return "[dim]0[/dim]"
+    return f"[green]{reclaimable}[/green]"
+
+
+def _build_cleanup_plan_table(tools: List[CleanupTool]) -> Table:
+    table = Table(title="Cleanup plan", show_header=True, header_style="bold")
+    table.add_column("Tool", style="cyan", no_wrap=True)
+    table.add_column("Reclaimable", justify="right")
+
+    for tool in tools:
+        table.add_row(tool._summary_label(), _reclaimable_cell(tool))
+
+    table.add_section()
+    table.add_row(
+        "[bold]TOTAL[/bold]", f"[bold green]{format_du_style(ToolRunner._sum_estimated_reclaim(tools))}[/bold green]"
+    )
+    return table
+
+
+def _log_cleanup_plan_table(tools: List[CleanupTool]) -> None:
+    for tool in tools:
+        logger.info("%s: %s reclaimable", tool._summary_label(), _format_reclaimable_estimate(tool))
+    logger.info("TOTAL: %s reclaimable", format_du_style(ToolRunner._sum_estimated_reclaim(tools)))
+
+
 class ToolRunner:
     @staticmethod
     def _tools_with_work(tools: List[CleanupTool]) -> List[CleanupTool]:
@@ -1075,18 +1111,33 @@ class ToolRunner:
         if not tools:
             return
 
-        rows = [(tool._summary_label(), _format_reclaimable_estimate(tool)) for tool in tools]
-        max_label = max(len(label) for label, _ in rows)
-        reclaim_header = "Reclaimable"
+        console.print()
+        console.print(_build_cleanup_plan_table(tools))
+        console.print()
+        _log_cleanup_plan_table(tools)
 
-        logger.info("")
-        logger.info("--- Cleanup plan ---")
-        logger.info(f"{'Tool':<{max_label}}  {reclaim_header}")
-        logger.info(f"{'-' * max_label}  {'-' * len(reclaim_header)}")
-        for label, reclaimable in rows:
-            logger.info(f"{label:<{max_label}}  {reclaimable}")
-        logger.info(f"{'TOTAL':<{max_label}}  {format_du_style(ToolRunner._sum_estimated_reclaim(tools))}")
-        logger.info("")
+    @staticmethod
+    def _print_results_table(tools: List[CleanupTool]) -> None:
+        table = Table(title="Cleanup results", show_header=True, header_style="bold")
+        table.add_column("Tool", style="cyan", no_wrap=True)
+        table.add_column("Reclaimed", justify="right")
+
+        total_reclaimed = 0
+        for tool in tools:
+            reclaimed = tool.reclaimed_bytes()
+            total_reclaimed += reclaimed
+            if reclaimed <= 0:
+                reclaimed_cell = "[dim]0[/dim]"
+            else:
+                reclaimed_cell = f"[green]{format_du_style(reclaimed)}[/green]"
+            table.add_row(tool._summary_label(), reclaimed_cell)
+
+        table.add_section()
+        table.add_row("[bold]TOTAL[/bold]", f"[bold green]{format_du_style(total_reclaimed)}[/bold green]")
+        console.print()
+        console.print(table)
+        console.print()
+        logger.info("All tools: %s disk space reclaimed", format_du_style(total_reclaimed))
 
     @staticmethod
     def run_tools(tools: List[CleanupTool], *, dry_run: bool = False, confirm: bool = True):
@@ -1096,8 +1147,8 @@ class ToolRunner:
         logger.info(f"Starting cleanup. Detailed logs: {LOG_FILE_PATH}")
 
         if dry_run:
-            logger.info("!!! DRY RUN MODE !!!")
-            logger.info("No changes will be made.")
+            console.print(Panel("DRY RUN — no changes will be made", style="bold yellow", expand=False))
+            logger.info("DRY RUN mode — no changes will be made")
 
         for tool in tools:
             logger.info("=" * 30)
@@ -1107,10 +1158,14 @@ class ToolRunner:
         tools_with_work = ToolRunner._tools_with_work(tools)
 
         if dry_run:
+            console.print(
+                "[dim]Dry run complete. Review the plan above, then re-run without --dry-run to execute.[/dim]"
+            )
             logger.info("Dry run complete. Review the plan above, then re-run without --dry-run to execute.")
             return
 
         if not tools_with_work:
+            console.print("[yellow]Nothing to clean up.[/yellow]")
             logger.info("Nothing to clean up.")
             return
 
@@ -1124,10 +1179,10 @@ class ToolRunner:
             else:
                 prompt = "Proceed with all cleanup actions above? (y/n): "
             if not confirm_cleanup(prompt):
+                console.print("[yellow]Operation canceled by user.[/yellow]")
                 logger.info("Operation canceled by user.")
                 return
 
-        total_reclaimed = 0
         for tool in tools:
             if tool._has_pending_work():
                 tool._reset_command_outcomes()
@@ -1136,9 +1191,8 @@ class ToolRunner:
             tool.verify()
             tool.print_summary()
             logger.info("-" * 30)
-            total_reclaimed += tool.reclaimed_bytes()
 
-        logger.info("All tools: %s disk space reclaimed", format_du_style(total_reclaimed))
+        ToolRunner._print_results_table(tools)
 
 
 @click.command()
