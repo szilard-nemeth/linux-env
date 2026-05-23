@@ -47,6 +47,9 @@ pre-commit = "*"
 black = "*"
 autopep8 = "*"
 
+[tool.poetry.group.localdev]
+optional = true
+
 [tool.poetry.group.localdev.dependencies]
 python-common-lib = { path = "../python-commons/", develop = false }
 google-api-wrapper2 = { path = "../google-api-wrapper", develop = false }
