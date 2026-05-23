@@ -1118,6 +1118,8 @@ def main(
     docker_time_limit: str,
     kb_private_git_offload: bool,
 ):
+    # TODO --skip-defaults should skip the defaults, otherwise they always run
+    # TODO --include-<toolname> -> toolname can be docker-cleanup, docker-system-prune or kb-private-offload
     """Disk cleanup utilities."""
     exclusive_modes = [docker_only, docker_system_prune_only, kb_private_git_offload]
     if sum(exclusive_modes) > 1:

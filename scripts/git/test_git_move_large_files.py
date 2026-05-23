@@ -10,6 +10,9 @@ from pathlib import Path
 
 import sys
 
+import click
+import pytest
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
@@ -154,6 +157,23 @@ class TestGitLargeFileMover(unittest.TestCase):
             self.assertEqual(len(lines), 2)
             self.assertTrue(any("big.bin" in line for line in lines))
             self.assertTrue(any("small.txt" in line for line in lines))
+
+
+def test_main_rejects_execute_and_dry_run_together():
+    from git_move_large_files import main
+
+    with pytest.raises(click.UsageError):
+        main(
+            [
+                "--commit",
+                "abc123",
+                "--repo",
+                str(Path.home()),
+                "--execute",
+                "--dry-run",
+            ],
+            standalone_mode=False,
+        )
 
 
 def test_expanded_directory_path_expands_tilde_before_exists_check(tmp_path, monkeypatch):

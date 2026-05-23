@@ -826,11 +826,14 @@ class ExpandedDirectoryPath(click.Path):
     help="Minimum file size in MB to move",
 )
 @click.option(
-    "--execute/--dry-run",
-    "execute",
-    default=False,
-    show_default=True,
-    help="Actually move files to offloaded storage, or preview moves (default)",
+    "--execute",
+    is_flag=True,
+    help="Move files to offloaded storage (default: dry-run preview only)",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Preview moves without changing files (default when neither flag is given)",
 )
 @click.option(
     "--stage",
@@ -855,12 +858,16 @@ def main(
     out_dir: Optional[Path],
     threshold_mb: int,
     execute: bool,
+    dry_run: bool,
     stage: bool,
     offload_root: Optional[str],
     path_prefix: Optional[str],
     verbose: bool,
 ) -> None:
     """Analyze large files in a repo, optionally offload them, and optionally stage git changes."""
+    if execute and dry_run:
+        raise click.UsageError("Use only one of --execute or --dry-run")
+
     GitLargeFileWorkflow.run(
         WorkflowConfig(
             commit=commit,
