@@ -1,13 +1,20 @@
+import argparse
+import os
 import re
 import sys
-from typing import List, Dict, Tuple, Optional
+import tempfile
+from functools import reduce
+from typing import List, Dict, Optional
+
 
 def convert_bytes_to_human_readable(bytes: int):
-    return f"{bytes / 1024 ** 3:.2f} GB" if bytes > 1024 ** 3 else f"{bytes / 1024 ** 2:.2f} MB"
+    return f"{bytes / 1024 ** 3:.2f} GB" if bytes > 1024**3 else f"{bytes / 1024 ** 2:.2f} MB"
+
 
 def sum_bytes_of_items(items):
-    sum_bytes = reduce(lambda x, y: x + y, map(lambda x: x['size_bytes'], items))
-    return sum_bytes
+    if not items:
+        return 0
+    return reduce(lambda x, y: x + y, map(lambda x: x["size_bytes"], items))
 
 
 def parse_human_size(size_str: str) -> Optional[int]:
@@ -32,17 +39,18 @@ def parse_human_size(size_str: str) -> Optional[int]:
     unit = match.group(3)
 
     units_map = {
-        None: 1,      # Bytes
-        'K': 1024,    # Kibibytes
-        'M': 1024**2, # Mebibytes
-        'G': 1024**3, # Gibibytes
-        'T': 1024**4, # Tebibytes
-        'P': 1024**5, # Pebibytes
+        None: 1,  # Bytes
+        "K": 1024,  # Kibibytes
+        "M": 1024**2,  # Mebibytes
+        "G": 1024**3,  # Gibibytes
+        "T": 1024**4,  # Tebibytes
+        "P": 1024**5,  # Pebibytes
     }
 
     multiplier = units_map.get(unit, 1)
 
     return int(value * multiplier)
+
 
 def analyze_sizes(data: str) -> List[Dict]:
     """
@@ -55,7 +63,7 @@ def analyze_sizes(data: str) -> List[Dict]:
         A sorted list of file dictionaries.
     """
     results = []
-    lines = data.strip().split('\n')
+    lines = data.strip().split("\n")
 
     for line in lines:
         try:
@@ -69,11 +77,9 @@ def analyze_sizes(data: str) -> List[Dict]:
             size_in_bytes = parse_human_size(human_size)
 
             if size_in_bytes is not None:
-                results.append({
-                    'human_size': human_size.strip(),
-                    'size_bytes': size_in_bytes,
-                    'filename': filename.strip()
-                })
+                results.append(
+                    {"human_size": human_size.strip(), "size_bytes": size_in_bytes, "filename": filename.strip()}
+                )
 
         except Exception as e:
             # Print any parsing errors but continue processing the rest of the data
@@ -81,47 +87,61 @@ def analyze_sizes(data: str) -> List[Dict]:
             continue
 
     # Sort the results by 'size_bytes' in descending order
-    results.sort(key=lambda x: x['size_bytes'], reverse=True)
+    results.sort(key=lambda x: x["size_bytes"], reverse=True)
 
     return results
 
-def write_to_temp_file(results):
-    import tempfile
 
-    max_size_len = max(len(r['human_size']) for r in results)
+def write_sorted_file(results: List[Dict], output_path: str) -> str:
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
-    # Create a named temporary file in text mode ('w+t')
-    # 'delete=False' prevents immediate deletion when the file is closed,
-    # allowing you to access it by its name after closing.
-    with tempfile.NamedTemporaryFile(mode='w+t', delete=False, prefix="git-commit-analyzer-all-sorted-") as temp_file:
-        for i, item in enumerate(results):
-            # Print rank, human-readable size (left-padded for alignment), and filename
-            size_padded = item['human_size'].rjust(max_size_len)
-            temp_file.write(f"#{i+1}: {size_padded} -> {item['filename']}\n")
+    with open(output_path, "w") as temp_file:
+        if results:
+            max_size_len = max(len(r["human_size"]) for r in results)
+            for i, item in enumerate(results):
+                size_padded = item["human_size"].rjust(max_size_len)
+                temp_file.write(f"#{i+1}: {size_padded} -> {item['filename']}\n")
 
-        # Get the name of the temporary file
+    return output_path
+
+
+def write_to_temp_file(results: List[Dict]) -> str:
+    with tempfile.NamedTemporaryFile(
+        mode="w+t",
+        delete=False,
+        prefix="git-commit-analyzer-all-sorted-",
+    ) as temp_file:
         temp_file_name = temp_file.name
 
-    return temp_file_name
+    return write_sorted_file(results, temp_file_name)
+
 
 if __name__ == "__main__":
-    top_n = 200 # Default to show top 200, user can change this line if they want a different N
+    parser = argparse.ArgumentParser(
+        description="Sort commit file size data and show the largest files.",
+    )
+    parser.add_argument("input_filepath", help="Path to git-commit-size-detailed.sh output")
+    parser.add_argument(
+        "--all-sorted-out",
+        help="Write the full sorted file list to this path (used by git_move_large_files.sh)",
+    )
+    parser.add_argument(
+        "--top-n",
+        type=int,
+        default=200,
+        help="Number of largest files to print to stdout (default: 200)",
+    )
+    args = parser.parse_args()
+
+    top_n = args.top_n
     chunk_size = 20
     chunks = [2, 4, 6, 8, 10] + [i * chunk_size for i in range(int(top_n / chunk_size))] + [top_n]
     chunks.remove(0)
 
-    # 1. Check for the required file argument
-    if len(sys.argv) != 2:
-        print(f"Usage: python {sys.argv[0]} <path_to_size_file>")
-        # print("-" * 50)
-        # print("Run Example: python commit_size_analyzer.py my_commit_data.txt")
-        sys.exit(1)
+    input_filepath = args.input_filepath
 
-    input_filepath = sys.argv[1]
-
-    # 2. Read the data from the specified file
     try:
-        with open(input_filepath, 'r') as f:
+        with open(input_filepath, "r") as f:
             raw_data = f.read()
     except FileNotFoundError:
         print(f"Error: The file '{input_filepath}' was not found.")
@@ -134,27 +154,29 @@ if __name__ == "__main__":
 
     # 3. Analyze and get results
     results = analyze_sizes(raw_data)
-    temp_file_name = write_to_temp_file(results)
+    if args.all_sorted_out:
+        all_sorted_path = write_sorted_file(results, os.path.expanduser(args.all_sorted_out))
+    else:
+        all_sorted_path = write_to_temp_file(results)
 
     top_results = results[:top_n]
 
     if top_results:
         # Determine the maximum width for the size column for clean alignment
-        max_size_len = max(len(r['human_size']) for r in top_results)
+        max_size_len = max(len(r["human_size"]) for r in top_results)
 
         # Output the results
         for i, item in enumerate(top_results):
             # Print rank, human-readable size (left-padded for alignment), and filename
-            size_padded = item['human_size'].rjust(max_size_len)
+            size_padded = item["human_size"].rjust(max_size_len)
             print(f"#{i+1}: {size_padded} -> {item['filename']}")
     else:
         print("No valid file size data found to process.")
 
     print("-" * 50)
-    print(f"Temporary file with all results ordered created at: {temp_file_name}")
+    print(f"Temporary file with all results ordered created at: {all_sorted_path}")
 
     # Print sums
-    from functools import reduce
     sum_bytes = sum_bytes_of_items(results)
     print(f"Sum size of all files: {convert_bytes_to_human_readable(sum_bytes)}")
 

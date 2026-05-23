@@ -1,28 +1,22 @@
-import re
-import sys
-import os
-import shutil
+import argparse
 import datetime
-from typing import Optional, Dict
+import os
+import re
+import shutil
+import sys
+from typing import List, Optional
 
-# --- Configuration Constants ---
-# Set to False to actually execute the file move operations
-DRY_RUN = True
-# The root destination directory on your local machine
-GOOGLE_DRIVE_ROOT = os.path.expanduser('~/googledrive/development/KB-private-offloaded')
-
-# The prefix to strip from the relative path before moving.
-# This ensures the files are nested correctly inside the GOOGLE_DRIVE_ROOT.
-PATH_PREFIX_TO_STRIP = 'cloudera/tasks/cde/'
+# --- Default configuration ---
+GOOGLE_DRIVE_ROOT = os.path.expanduser("~/googledrive/development/KB-private-offloaded")
+PATH_PREFIX_TO_STRIP = "cloudera/tasks/cde/"
 KB_PRIVATE_ROOT = os.path.expanduser("~/development/my-repos/knowledge-base-private")
+ALLOWED_EXTENSIONS = [".tar.gz", ".gz", ".zip", ".gzip"]
+# -----------------------------
 
-# NEW CONFIGURATION: Extensions that are allowed to be moved
-# All extensions should be lowercase for case-insensitive matching.
-ALLOWED_EXTENSIONS = ['.tar.gz', '.gz', '.zip', '.gzip']
-# -------------------------------
 
 def convert_bytes_to_human_readable(bytes: int):
-    return f"{bytes / 1024 ** 3:.2f} GB" if bytes > 1024 ** 3 else f"{bytes / 1024 ** 2:.2f} MB"
+    return f"{bytes / 1024 ** 3:.2f} GB" if bytes > 1024**3 else f"{bytes / 1024 ** 2:.2f} MB"
+
 
 def parse_human_size(size_str: str) -> Optional[int]:
     """
@@ -44,18 +38,27 @@ def parse_human_size(size_str: str) -> Optional[int]:
 
     units_map = {
         None: 1,
-        'K': 1024,
-        'M': 1024**2,
-        'G': 1024**3,
-        'T': 1024**4,
-        'P': 1024**5,
+        "K": 1024,
+        "M": 1024**2,
+        "G": 1024**3,
+        "T": 1024**4,
+        "P": 1024**5,
     }
 
     multiplier = units_map.get(unit, 1)
     return int(value * multiplier)
 
 
-def process_and_move(input_filepath: str, threshold_bytes: int):
+def process_and_move(  # noqa: C901
+    input_filepath: str,
+    threshold_bytes: int,
+    *,
+    dry_run: bool = True,
+    google_drive_root: str = GOOGLE_DRIVE_ROOT,
+    path_prefix_to_strip: str = PATH_PREFIX_TO_STRIP,
+    repo_root: str = KB_PRIVATE_ROOT,
+    allowed_extensions: Optional[List[str]] = None,
+):
     """
     Reads the file list, identifies files larger than the threshold, and moves them
     to the Google Drive root, preserving the relative path after stripping the prefix.
@@ -65,25 +68,28 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         input_filepath: Path to the file containing the size analysis output.
         threshold_bytes: The minimum file size in bytes required for a move.
     """
-    if DRY_RUN:
+    if allowed_extensions is None:
+        allowed_extensions = ALLOWED_EXTENSIONS
+
+    if dry_run:
         print("!!! DRY RUN MODE ACTIVE !!!")
         print("No files will be moved. Commands are printed below.")
     else:
         print("!!! REAL MOVE MODE ACTIVE !!!")
-        print(f"Files > {threshold_bytes // 1024 // 1024}MB will be MOVED to {GOOGLE_DRIVE_ROOT}")
+        print(f"Files > {threshold_bytes // 1024 // 1024}MB will be MOVED to {google_drive_root}")
 
     print("-" * 60)
-    print(f"NOTE: Stripping prefix '{PATH_PREFIX_TO_STRIP}' from source paths.")
-    print(f"NOTE: Only processing files with extensions: {', '.join(ALLOWED_EXTENSIONS)}")
+    print(f"NOTE: Stripping prefix '{path_prefix_to_strip}' from source paths.")
+    print(f"NOTE: Only processing files with extensions: {', '.join(allowed_extensions)}")
 
     try:
-        with open(input_filepath, 'r') as f:
+        with open(input_filepath, "r") as f:
             raw_data = f.read()
     except Exception as e:
         print(f"Error reading input file: {e}")
         return
 
-    lines = raw_data.strip().split('\n')
+    lines = raw_data.strip().split("\n")
     files_moved = 0
     files_skipped_by_extension = 0
     total_space_saved_bytes = 0
@@ -92,7 +98,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
     current_candidate_no = 1
     for line in lines:
         # Skip header/footer lines and lines that don't look like file entries
-        if not line.startswith('#'):
+        if not line.startswith("#"):
             continue
 
         # Use regex to robustly extract SIZE and FILENAME
@@ -115,7 +121,7 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
 
         # 0. NEW CHECK: Filter by allowed extension
         is_allowed = False
-        for ext in ALLOWED_EXTENSIONS:
+        for ext in allowed_extensions:
             if repository_relative_filepath.lower().endswith(ext):
                 is_allowed = True
                 break
@@ -123,36 +129,33 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         if not is_allowed:
             files_skipped_by_extension += 1
             total_space_reclaimed_non_matching_extension += size_in_bytes
-            # print(f"[SKIP Candidate #{i + 1}: {human_size}] Extension filter: {repository_relative_filepath}")
             continue
 
         # 1. Determine destination paths
-        source_path_abs = os.path.join(KB_PRIVATE_ROOT, repository_relative_filepath)
+        source_path_abs = os.path.join(repo_root, repository_relative_filepath)
 
         # Sanity check
         if not os.path.isfile(source_path_abs):
-            # We don't increment files_moved here, as it was never successfully moved
             print(f"ERROR: File does not exist at source: {source_path_abs}")
             continue
 
         # Strip the configured prefix from the relative path
-        if repository_relative_filepath.startswith(PATH_PREFIX_TO_STRIP):
-            # Remove the common repository path prefix
-            new_relative_path = repository_relative_filepath[len(PATH_PREFIX_TO_STRIP):]
+        if repository_relative_filepath.startswith(path_prefix_to_strip):
+            new_relative_path = repository_relative_filepath[len(path_prefix_to_strip) :]
         else:
             new_relative_path = repository_relative_filepath
 
         # Combine the clean relative path with the Google Drive root
-        target_path_abs = os.path.join(GOOGLE_DRIVE_ROOT, new_relative_path)
+        target_path_abs = os.path.join(google_drive_root, new_relative_path)
         target_dir_abs = os.path.dirname(target_path_abs)
-        placeholder_path = source_path_abs + ".MOVED.txt" # Define placeholder path
+        placeholder_path = source_path_abs + ".MOVED.txt"
 
         print(f"\n[MOVE Candidate #{current_candidate_no}: {human_size}]")
         print(f"  SOURCE: {source_path_abs}")
         print(f"  TARGET: {target_path_abs}")
 
         # 2. Execute/Simulate directory creation
-        if not DRY_RUN:
+        if not dry_run:
             try:
                 os.makedirs(target_dir_abs, exist_ok=True)
                 print(f"  Created directory: {target_dir_abs}")
@@ -162,16 +165,13 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
         else:
             print(f"  Dry Run: mkdir -p {target_dir_abs}")
 
-
         total_space_saved_bytes += size_in_bytes
         # 3. Execute/Simulate file move
-        if not DRY_RUN:
+        if not dry_run:
             try:
-                # Use shutil.move for a robust atomic move operation
                 shutil.move(source_path_abs, target_path_abs)
-                print(f"  SUCCESS: Moved file.")
+                print("  SUCCESS: Moved file.")
 
-                # --- NEW LOGIC: Create Placeholder File ---
                 placeholder_content = (
                     "--- FILE MOVED ---\n"
                     f"Original file was moved by large_file_mover.py script on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.\n"
@@ -179,57 +179,74 @@ def process_and_move(input_filepath: str, threshold_bytes: int):
                     "--------------------\n"
                 )
 
-                with open(placeholder_path, 'w') as ph_file:
+                with open(placeholder_path, "w") as ph_file:
                     ph_file.write(placeholder_content)
 
                 print(f"  SUCCESS: Created placeholder at {os.path.basename(placeholder_path)}")
-                # --- END NEW LOGIC ---
-
                 files_moved += 1
             except FileNotFoundError:
                 print(f"  ERROR: Source file not found at {source_path_abs}. Skipping.")
             except Exception as e:
                 print(f"  ERROR moving file: {e}")
         else:
-            # Dry Run Output
             print(f"  Dry Run: mv {source_path_abs} {target_path_abs}")
             print(f"  Dry Run: Creating placeholder file: {placeholder_path}")
-            files_moved += 1 # Count for summary, even if dry run
+            files_moved += 1
         current_candidate_no += 1
 
     print("-" * 60)
-    print(f"Summary:")
+    print("Summary:")
     print(f"Files meeting size and extension criteria: {files_moved}")
     if files_skipped_by_extension > 0:
         print(f"Files skipped due to extension filter: {files_skipped_by_extension}")
 
     total_space_saved_human = convert_bytes_to_human_readable(total_space_saved_bytes)
-    if not DRY_RUN:
-        print(f"Estimated Space Saved: {total_space_saved_human}")
-        print(f"Would save estimated space for non-matching extensions: {convert_bytes_to_human_readable(total_space_reclaimed_non_matching_extension)}")
-
-    if DRY_RUN:
+    non_matching_human = convert_bytes_to_human_readable(total_space_reclaimed_non_matching_extension)
+    if dry_run:
         print(f"Would save estimated space: {total_space_saved_human}")
-        print(f"Would save estimated space for non-matching extensions: {convert_bytes_to_human_readable(total_space_reclaimed_non_matching_extension)}")
-        print("\nNote: Change DRY_RUN = False inside the script to execute the actual move.")
+        print(f"Would save estimated space for non-matching extensions: {non_matching_human}")
+        print("\nNote: Re-run with --execute to perform the actual move.")
+    else:
+        print(f"Estimated Space Saved: {total_space_saved_human}")
+        print(f"Space for non-matching extensions (not moved): {non_matching_human}")
 
 
 if __name__ == "__main__":
-    # Ensure the script is called with expected number of arguments
-    if len(sys.argv) != 3:
-        print(f"Usage: python {sys.argv[0]} <path_to_commit_size_output_file> <threshold MB>")
-        print(f"Example: python {sys.argv[0]} {os.path.expanduser('~/Downloads/git-details-kb-private-hash-60f41a56.txt')} 20")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Move large repository files to offloaded storage and leave placeholders.",
+    )
+    parser.add_argument(
+        "input_filepath",
+        help="Path to sorted analyzer output (full list, not top-N stdout only)",
+    )
+    parser.add_argument("threshold_mb", type=int, help="Minimum file size in MB to move")
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help="Actually move files (default: dry run)",
+    )
+    parser.add_argument(
+        "--repo",
+        default=KB_PRIVATE_ROOT,
+        help=f"Local repository root (default: {KB_PRIVATE_ROOT})",
+    )
+    parser.add_argument(
+        "--drive-root",
+        default=GOOGLE_DRIVE_ROOT,
+        help=f"Offload destination root (default: {GOOGLE_DRIVE_ROOT})",
+    )
+    parser.add_argument(
+        "--path-prefix-to-strip",
+        default=PATH_PREFIX_TO_STRIP,
+        help=f"Repository path prefix stripped before offload (default: {PATH_PREFIX_TO_STRIP})",
+    )
+    args = parser.parse_args()
 
-    input_filepath = sys.argv[1]
-
-    try:
-        threshold_mb = int(sys.argv[2])
-    except ValueError:
-        print(f"Error: Threshold MB must be an integer, got '{sys.argv[2]}'")
-        sys.exit(1)
-
-    # Threshold for moving files (20 Megabytes in bytes)
-    threshold_bytes = threshold_mb * 1024 * 1024
-
-    process_and_move(input_filepath, threshold_bytes)
+    process_and_move(
+        args.input_filepath,
+        args.threshold_mb * 1024 * 1024,
+        dry_run=not args.execute,
+        google_drive_root=os.path.expanduser(args.drive_root),
+        path_prefix_to_strip=args.path_prefix_to_strip,
+        repo_root=os.path.expanduser(args.repo),
+    )
