@@ -14,6 +14,43 @@ ALLOWED_EXTENSIONS = [".tar.gz", ".gz", ".zip", ".gzip"]
 # -----------------------------
 
 
+class FileStats:
+    def __init__(self):
+        self.files_moved = 0
+        self.files_skipped_by_extension = 0
+        self.total_space_saved_bytes = 0
+        self.total_space_reclaimed_non_matching_extension = 0
+
+    def skip_file(self, file_path, size_in_bytes):
+        self.files_skipped_by_extension += 1
+        self.total_space_reclaimed_non_matching_extension += size_in_bytes
+
+    def add_saved_space(self, size_in_bytes):
+        self.total_space_saved_bytes += size_in_bytes
+
+    def record_file_moved(self, file_path):
+        self.files_moved += 1
+
+    def print(self, dry_run: bool):
+        print("-" * 60)
+        print("Summary:")
+        print(f"Files meeting size and extension criteria: {self.files_moved}")
+        if self.files_skipped_by_extension > 0:
+            print(f"Files skipped due to extension filter: {self.files_skipped_by_extension}")
+
+        total_space_saved_human = GitLargeFileMover.convert_bytes_to_human_readable(self.total_space_saved_bytes)
+        non_matching_human = GitLargeFileMover.convert_bytes_to_human_readable(
+            self.total_space_reclaimed_non_matching_extension
+        )
+        if dry_run:
+            print(f"Would save estimated space: {total_space_saved_human}")
+            print(f"Would save estimated space for non-matching extensions: {non_matching_human}")
+            print("\nNote: Re-run with --execute to perform the actual move.")
+        else:
+            print(f"Estimated Space Saved: {total_space_saved_human}")
+            print(f"Space for non-matching extensions (not moved): {non_matching_human}")
+
+
 class GitLargeFileMover:
     def __init__(
         self,
@@ -102,10 +139,7 @@ class GitLargeFileMover:
             return
 
         lines = raw_data.strip().split("\n")
-        files_moved = 0
-        files_skipped_by_extension = 0
-        total_space_saved_bytes = 0
-        total_space_reclaimed_non_matching_extension = 0
+        stats = FileStats()
 
         current_candidate_no = 1
         for line in lines:
@@ -113,9 +147,11 @@ class GitLargeFileMover:
             if not line.startswith("#"):
                 continue
 
+            # from now on, line is file_path
+            file_path = line
             # Use regex to robustly extract SIZE and FILENAME
             # Example format: #1: 1013MB -> cloudera/tasks/...
-            match = re.search(r":\s*(\d+(\.\d+)?\s*[KMGTPE]?B?)\s*->\s*(.*)", line)
+            match = re.search(r":\s*(\d+(\.\d+)?\s*[KMGTPE]?B?)\s*->\s*(.*)", file_path)
 
             if not match:
                 continue
@@ -139,8 +175,7 @@ class GitLargeFileMover:
                     break
 
             if not is_allowed:
-                files_skipped_by_extension += 1
-                total_space_reclaimed_non_matching_extension += size_in_bytes
+                stats.skip_file(file_path, size_in_bytes)
                 continue
 
             # 1. Determine destination paths
@@ -177,7 +212,7 @@ class GitLargeFileMover:
             else:
                 print(f"  Dry Run: mkdir -p {target_dir_abs}")
 
-            total_space_saved_bytes += size_in_bytes
+            stats.add_saved_space(size_in_bytes)
             # 3. Execute/Simulate file move
             if not self.dry_run:
                 try:
@@ -195,7 +230,7 @@ class GitLargeFileMover:
                         ph_file.write(placeholder_content)
 
                     print(f"  SUCCESS: Created placeholder at {os.path.basename(placeholder_path)}")
-                    files_moved += 1
+                    stats.record_file_moved(file_path)
                 except FileNotFoundError:
                     print(f"  ERROR: Source file not found at {source_path_abs}. Skipping.")
                 except Exception as e:
@@ -203,26 +238,9 @@ class GitLargeFileMover:
             else:
                 print(f"  Dry Run: mv {source_path_abs} {target_path_abs}")
                 print(f"  Dry Run: Creating placeholder file: {placeholder_path}")
-                files_moved += 1
+                stats.record_file_moved(file_path)
             current_candidate_no += 1
-
-        print("-" * 60)
-        print("Summary:")
-        print(f"Files meeting size and extension criteria: {files_moved}")
-        if files_skipped_by_extension > 0:
-            print(f"Files skipped due to extension filter: {files_skipped_by_extension}")
-
-        total_space_saved_human = GitLargeFileMover.convert_bytes_to_human_readable(total_space_saved_bytes)
-        non_matching_human = GitLargeFileMover.convert_bytes_to_human_readable(
-            total_space_reclaimed_non_matching_extension
-        )
-        if self.dry_run:
-            print(f"Would save estimated space: {total_space_saved_human}")
-            print(f"Would save estimated space for non-matching extensions: {non_matching_human}")
-            print("\nNote: Re-run with --execute to perform the actual move.")
-        else:
-            print(f"Estimated Space Saved: {total_space_saved_human}")
-            print(f"Space for non-matching extensions (not moved): {non_matching_human}")
+        stats.print(self.dry_run)
 
 
 if __name__ == "__main__":
