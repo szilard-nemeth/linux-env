@@ -1,0 +1,40 @@
+---
+description: Use click for Python CLI entry points, not argparse
+globs: **/*.py
+alwaysApply: true
+---
+
+# Python CLI: use click, not argparse
+
+When writing or refactoring Python scripts with a command-line interface:
+
+- Use **click** (`@click.command`, `@click.option`, `@click.argument`)
+- Do **not** use `argparse` for new code
+- When converting existing argparse scripts, preserve CLI behavior and flag names where possible
+
+## Patterns
+
+```python
+import click
+
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.option("--commit", required=True)
+@click.option("--repo", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--execute/--dry-run", "execute", default=False, show_default=True)
+def main(commit: str, repo: Path, execute: bool) -> None:
+    """Short description shown in --help."""
+    ...
+
+if __name__ == "__main__":
+    main()
+```
+
+## Errors
+
+- Use `click.UsageError` for invalid flag combinations
+- Use `click.ClickException` for runtime failures the user should see
+
+## Exceptions
+
+- Do not rewrite argparse in third-party or vendored code
+- Libraries (non-CLI modules) do not need click
