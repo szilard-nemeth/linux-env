@@ -18,7 +18,7 @@ import click
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 # --- Default configuration ---
-GOOGLE_DRIVE_ROOT = os.path.expanduser("~/googledrive/development/KB-private-offloaded")
+DEFAULT_OFFLOAD_ROOT = os.path.expanduser("~/googledrive/development/KB-private-offloaded")
 PATH_PREFIX_TO_STRIP = "cloudera/tasks/cde/"
 KB_PRIVATE_ROOT = os.path.expanduser("~/development/my-repos/knowledge-base-private")
 ALLOWED_EXTENSIONS = [".tar.gz", ".gz", ".zip", ".gzip"]
@@ -146,7 +146,7 @@ class GitLargeFileMover:
         input_filepath: str,
         threshold_bytes: int,
         dry_run: bool = True,
-        google_drive_root: str = GOOGLE_DRIVE_ROOT,
+        offload_root: str = DEFAULT_OFFLOAD_ROOT,
         path_prefix_to_strip: str = PATH_PREFIX_TO_STRIP,
         repo_root: str = KB_PRIVATE_ROOT,
         allowed_extensions: Optional[List[str]] = None,
@@ -154,7 +154,7 @@ class GitLargeFileMover:
         self.input_filepath = input_filepath
         self.threshold_bytes = threshold_bytes
         self.dry_run = dry_run
-        self.google_drive_root = google_drive_root
+        self.offload_root = offload_root
         self.path_prefix_to_strip = path_prefix_to_strip
         self.repo_root = repo_root
         self.allowed_extensions = allowed_extensions
@@ -203,15 +203,15 @@ class GitLargeFileMover:
         else:
             c.paths.new_relative_path = rel_path
 
-        # Combine the clean relative path with the Google Drive root
-        c.paths.target_path_abs = os.path.join(self.google_drive_root, c.paths.new_relative_path)
+        # Combine the clean relative path with the offload root
+        c.paths.target_path_abs = os.path.join(self.offload_root, c.paths.new_relative_path)
         c.paths.target_dir_abs = os.path.dirname(c.paths.target_path_abs)
         c.paths.placeholder_path = c.paths.source_path_abs + ".MOVED.txt"
 
     def process_and_move(self):  # noqa: C901
         """
         Reads the file list, identifies files larger than the threshold, and moves them
-        to the Google Drive root, preserving the relative path after stripping the prefix.
+        to the offload root, preserving the relative path after stripping the prefix.
         It also creates a placeholder file in the original location upon a successful move.
         """
         if self.allowed_extensions is None:
@@ -222,7 +222,7 @@ class GitLargeFileMover:
             print("No files will be moved. Commands are printed below.")
         else:
             print("!!! REAL MOVE MODE ACTIVE !!!")
-            print(f"Files > {self.threshold_bytes // 1024 // 1024}MB will be MOVED to {self.google_drive_root}")
+            print(f"Files > {self.threshold_bytes // 1024 // 1024}MB will be MOVED to {self.offload_root}")
 
         print("-" * 60)
         print(f"NOTE: Stripping prefix '{self.path_prefix_to_strip}' from source paths.")
@@ -363,7 +363,7 @@ class GitLargeFileWorkflow:
         threshold_mb: int,
         repo: Path,
         execute: bool,
-        drive_root: Optional[str],
+        offload_root: Optional[str],
         path_prefix: Optional[str],
     ) -> None:
         mover = GitLargeFileMover(
@@ -371,7 +371,7 @@ class GitLargeFileWorkflow:
             threshold_mb * 1024 * 1024,
             dry_run=not execute,
             repo_root=str(repo),
-            google_drive_root=os.path.expanduser(drive_root) if drive_root else GOOGLE_DRIVE_ROOT,
+            offload_root=os.path.expanduser(offload_root) if offload_root else DEFAULT_OFFLOAD_ROOT,
             path_prefix_to_strip=path_prefix if path_prefix else PATH_PREFIX_TO_STRIP,
         )
         buffer = io.StringIO()
@@ -455,7 +455,7 @@ class GitLargeFileWorkflow:
     is_flag=True,
     help="After moving, stage git rm/add for deleted files and MOVED placeholders",
 )
-@click.option("--drive-root", help=f"Offload destination (default: {GOOGLE_DRIVE_ROOT})")
+@click.option("--offload-root", help=f"Offload destination root (default: {DEFAULT_OFFLOAD_ROOT})")
 @click.option(
     "--path-prefix",
     help=f"Repository path prefix to strip before offload (default: {PATH_PREFIX_TO_STRIP})",
@@ -467,7 +467,7 @@ def main(
     threshold_mb: int,
     execute: bool,
     stage: bool,
-    drive_root: Optional[str],
+    offload_root: Optional[str],
     path_prefix: Optional[str],
 ) -> None:
     """Analyze a commit for large files, optionally offload them, and optionally stage git changes."""
@@ -515,7 +515,7 @@ def main(
         threshold_mb=threshold_mb,
         repo=repo,
         execute=execute,
-        drive_root=drive_root,
+        offload_root=offload_root,
         path_prefix=path_prefix,
     )
     print(f"  Wrote {mover_out}")

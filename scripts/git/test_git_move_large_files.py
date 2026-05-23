@@ -26,7 +26,7 @@ class TestGitLargeFileMover(unittest.TestCase):
             input_filepath="/tmp/unused",
             threshold_bytes=1024,
             path_prefix_to_strip=PATH_PREFIX_TO_STRIP,
-            google_drive_root="/offload",
+            offload_root="/offload",
             repo_root="/repo",
         )
         c = FileMoveCandidate("#1: 22.5M -> cloudera/tasks/cde/subdir/archive.zip")
@@ -68,7 +68,7 @@ class TestGitLargeFileMover(unittest.TestCase):
                     threshold_bytes=20 * 1024 * 1024,
                     dry_run=True,
                     repo_root=repo,
-                    google_drive_root=os.path.join(repo, "offload"),
+                    offload_root=os.path.join(repo, "offload"),
                 )
                 mover.process_and_move()
             finally:

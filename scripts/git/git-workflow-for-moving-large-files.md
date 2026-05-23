@@ -1,6 +1,6 @@
 # Moving large files out of a git repository
 
-Offload oversized binary files from a repo commit to Google Drive, leaving `.MOVED.txt` placeholders in their place.
+Offload oversized binary files from a repo commit to external storage, leaving `.MOVED.txt` placeholders in their place.
 
 ## When to use this
 
@@ -69,7 +69,7 @@ git-move-large-files \
 git-move-large-files \
   --commit 6619c839 \
   --repo ~/development/my-repos/knowledge-base-private \
-  --drive-root ~/googledrive/development/KB-private-offloaded \
+  --offload-root ~/googledrive/development/KB-private-offloaded \
   --path-prefix cloudera/tasks/cde/ \
   --dry-run
 ```
@@ -108,7 +108,7 @@ python3 scripts/git/git_move_large_files.py \
 - **Always dry-run first.** `--dry-run` is the default; pass `--execute` only after reviewing `git-large-file-mover-out-<commit>.txt`.
 - **Does not commit.** The script moves files and optionally stages changes (`--stage`); you commit manually after reviewing.
 - **Extension filter.** Only `.tar.gz`, `.gz`, `.zip`, and `.gzip` files above the threshold are moved. Other large files are reported but skipped.
-- **Offload destination.** Defaults to `~/googledrive/development/KB-private-offloaded`. Override with `--drive-root`.
+- **Offload destination.** Defaults to `~/googledrive/development/KB-private-offloaded`. Override with `--offload-root`.
 - **`--stage` requires `--execute`.** Staging deleted files and MOVED placeholders only makes sense after a real move.
 
 ## Underlying tools
