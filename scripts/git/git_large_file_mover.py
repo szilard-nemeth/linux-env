@@ -37,12 +37,12 @@ def parse_human_size(size_str: str) -> Optional[int]:
     unit = match.group(3)
 
     units_map = {
-        None: 1,
-        "K": 1024,
-        "M": 1024**2,
-        "G": 1024**3,
-        "T": 1024**4,
-        "P": 1024**5,
+        None: 1,  # Bytes
+        "K": 1024,  # Kibibytes
+        "M": 1024**2,  # Mebibytes
+        "G": 1024**3,  # Gibibytes
+        "T": 1024**4,  # Tebibytes
+        "P": 1024**5,  # Pebibytes
     }
 
     multiplier = units_map.get(unit, 1)

@@ -1,10 +1,13 @@
-import argparse
+#!/usr/bin/env python3
+
 import os
 import re
-import sys
 import tempfile
 from functools import reduce
-from typing import List, Dict, Optional
+from pathlib import Path
+from typing import Dict, List, Optional
+
+import click
 
 
 def convert_bytes_to_human_readable(bytes: int):
@@ -99,6 +102,7 @@ def write_sorted_file(results: List[Dict], output_path: str) -> str:
         if results:
             max_size_len = max(len(r["human_size"]) for r in results)
             for i, item in enumerate(results):
+                # Print rank, human-readable size (left-padded for alignment), and filename
                 size_padded = item["human_size"].rjust(max_size_len)
                 temp_file.write(f"#{i+1}: {size_padded} -> {item['filename']}\n")
 
@@ -106,6 +110,9 @@ def write_sorted_file(results: List[Dict], output_path: str) -> str:
 
 
 def write_to_temp_file(results: List[Dict]) -> str:
+    # Create a named temporary file in text mode ('w+t')
+    # 'delete=False' prevents immediate deletion when the file is closed,
+    # allowing you to access it by its name after closing.
     with tempfile.NamedTemporaryFile(
         mode="w+t",
         delete=False,
@@ -116,46 +123,46 @@ def write_to_temp_file(results: List[Dict]) -> str:
     return write_sorted_file(results, temp_file_name)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Sort commit file size data and show the largest files.",
-    )
-    parser.add_argument("input_filepath", help="Path to git-commit-size-detailed.sh output")
-    parser.add_argument(
-        "--all-sorted-out",
-        help="Write the full sorted file list to this path (used by git_move_large_files.py)",
-    )
-    parser.add_argument(
-        "--top-n",
-        type=int,
-        default=200,
-        help="Number of largest files to print to stdout (default: 200)",
-    )
-    args = parser.parse_args()
-
-    top_n = args.top_n
+def build_chunk_sizes(top_n: int) -> List[int]:
     chunk_size = 20
     chunks = [2, 4, 6, 8, 10] + [i * chunk_size for i in range(int(top_n / chunk_size))] + [top_n]
     chunks.remove(0)
+    return chunks
 
-    input_filepath = args.input_filepath
+
+@click.command(
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
+@click.argument(
+    "input_filepath",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--all-sorted-out",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Write the full sorted file list to this path (used by git_move_large_files.py)",
+)
+@click.option(
+    "--top-n",
+    default=200,
+    show_default=True,
+    help="Number of largest files to print to stdout",
+)
+def main(input_filepath: Path, all_sorted_out: Optional[Path], top_n: int) -> None:
+    """Sort commit file size data and show the largest files."""
+    chunks = build_chunk_sizes(top_n)
 
     try:
-        with open(input_filepath, "r") as f:
-            raw_data = f.read()
-    except FileNotFoundError:
-        print(f"Error: The file '{input_filepath}' was not found.")
-        sys.exit(1)
-    except Exception as e:
-        print(f"An error occurred while reading the file: {e}")
-        sys.exit(1)
+        raw_data = input_filepath.read_text()
+    except OSError as e:
+        raise click.ClickException(f"An error occurred while reading the file: {e}") from e
 
     print(f"--- Analyzing Commit Size Data from '{input_filepath}' (Top {top_n}) ---")
 
     # 3. Analyze and get results
     results = analyze_sizes(raw_data)
-    if args.all_sorted_out:
-        all_sorted_path = write_sorted_file(results, os.path.expanduser(args.all_sorted_out))
+    if all_sorted_out:
+        all_sorted_path = write_sorted_file(results, str(all_sorted_out.expanduser()))
     else:
         all_sorted_path = write_to_temp_file(results)
 
@@ -187,3 +194,7 @@ if __name__ == "__main__":
     for idx, sc in enumerate(sum_chunks):
         print(f"Sum of first {chunks[idx]} items: {convert_bytes_to_human_readable(sc)}")
     print(f"Sum of the rest of items: {convert_bytes_to_human_readable(sum_bytes_of_items(results[top_n:]))}")
+
+
+if __name__ == "__main__":
+    main()
