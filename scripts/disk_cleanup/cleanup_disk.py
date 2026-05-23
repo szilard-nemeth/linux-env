@@ -620,11 +620,13 @@ class _DockerPruneMixin:
         except subprocess.CalledProcessError as exc:
             logger.error("Docker prune failed (%s): %s", exc.returncode, full_cmd)
             self._prune_failed = True
+            self._record_command_outcome(exc.returncode)
             if exc.output:
                 for line in exc.output.splitlines():
                     logger.debug("[Subprocess] %s", line)
             return 0
 
+        self._record_command_outcome(0)
         for line in output.splitlines():
             logger.debug("[Subprocess] %s", line)
         return self._parse_total_reclaimed(output)
