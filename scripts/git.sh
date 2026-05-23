@@ -390,6 +390,12 @@ function git-sync-cde-featurebranch {
     set +x
 }
 
+function git-move-large-files {
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    python3 "${script_dir}/git/git_move_large_files.py" "$@"
+}
+
 function git-format-patch {
     #alias git-save-all-commits="git format-patch $(git rev-list --max-parents=0 HEAD)..HEAD -o /tmp/patches"
     if [ $# -ne 2 ]; then

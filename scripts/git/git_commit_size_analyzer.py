@@ -123,7 +123,7 @@ if __name__ == "__main__":
     parser.add_argument("input_filepath", help="Path to git-commit-size-detailed.sh output")
     parser.add_argument(
         "--all-sorted-out",
-        help="Write the full sorted file list to this path (used by git_move_large_files.sh)",
+        help="Write the full sorted file list to this path (used by git_move_large_files.py)",
     )
     parser.add_argument(
         "--top-n",

@@ -10,13 +10,13 @@ Use this workflow when cleaning up a repository that accumulated large archives 
 
 ```bash
 # 1. Preview what would be moved
-./git_move_large_files.sh \
+git-move-large-files \
   --commit 6619c839 \
   --repo ~/development/my-repos/knowledge-base-private \
   --dry-run
 
 # 2. Move files and stage git changes
-./git_move_large_files.sh \
+git-move-large-files \
   --commit 6619c839 \
   --repo ~/development/my-repos/knowledge-base-private \
   --execute --stage
@@ -24,6 +24,8 @@ Use this workflow when cleaning up a repository that accumulated large archives 
 # 3. Review and commit manually
 cd ~/development/my-repos/knowledge-base-private && git status
 ```
+
+(`git-move-large-files` is defined in `scripts/git.sh`.)
 
 Output files land in `~/Downloads/git-large-files-<commit>/` by default. Override with `--out-dir`.
 
@@ -37,7 +39,7 @@ Output files land in `~/Downloads/git-large-files-<commit>/` by default. Overrid
 
 ## Underlying tools
 
-`git_move_large_files.sh` orchestrates:
+`git_move_large_files.py` orchestrates:
 
 1. `git-commit-size-detailed.sh` — list changed files and sizes for a commit
 2. `git_commit_size_analyzer.py` — sort by size; writes full sorted list via `--all-sorted-out`
