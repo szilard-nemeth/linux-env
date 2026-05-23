@@ -1,0 +1,26 @@
+name: Test Report
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion != 'cancelled'
+    steps:
+      - name: Publish pytest results
+        uses: dorny/test-reporter@v1
+        with:
+          artifact: pytest-results
+          name: Pytest Tests
+          path: junit/test-results.xml
+          reporter: java-junit
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -53,6 +53,13 @@ google-api-wrapper2 = { path = "../google-api-wrapper", develop = false }
 yarn-dev-tools = { path = "../yarn-dev-tools", develop = false }
 
 
+[tool.pytest.ini_options]
+testpaths = [
+    "scripts/git",
+    "scripts/disk_cleanup",
+]
+python_files = ["test_*.py"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

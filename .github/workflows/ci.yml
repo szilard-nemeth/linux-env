@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --only main,dev --no-interaction
+
+      - name: Run pytest
+        run: |
+          mkdir -p junit
+          poetry run python -m pytest \
+            --junitxml=junit/test-results.xml \
+            --cov=scripts/git \
+            --cov=scripts/disk_cleanup \
+            --cov-report=xml \
+            --cov-report=html
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+      - name: Upload pytest results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pytest-results
+          path: |
+            junit/test-results.xml
+            htmlcov
+          if-no-files-found: error
+
+  shell-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
+
+      - name: Set execute permissions on test scripts
+        run: |
+          find tests -type f \( -name "*.sh" -o -name "*.zsh" \) -exec chmod +x {} \;
+
+      - name: Run shell tests
+        run: |
+          set -e
+          find tests -type f \( -name "*.sh" -o -name "*.zsh" \) -print0 | while IFS= read -r -d '' script; do
+            echo "Running $script..."
+            "$script"
+          done
