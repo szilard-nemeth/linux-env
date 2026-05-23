@@ -1,10 +1,12 @@
 import argparse
 import datetime
+import enum
 import os
 import re
 import shutil
-import sys
+from dataclasses import dataclass
 from typing import List, Optional
+
 
 # --- Default configuration ---
 GOOGLE_DRIVE_ROOT = os.path.expanduser("~/googledrive/development/KB-private-offloaded")
@@ -49,6 +51,84 @@ class FileStats:
         else:
             print(f"Estimated Space Saved: {total_space_saved_human}")
             print(f"Space for non-matching extensions (not moved): {non_matching_human}")
+
+
+class CandidateValidationCode(enum.Enum):
+    FILE_PATTERN_DOES_NOT_MATCH = 0
+    FILE_SIZE_BELOW_THRESHOLD = 1
+    FILE_EXTENSION_NOT_ALLOWED = 2
+    FILE_DOES_NOT_EXIST = 3
+    VALID = 4
+
+
+class FileMoveCandidate:
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+        self.size_in_bytes = -1
+        self.human_size = -1
+        self.paths = FileMoveCandidatePaths()
+
+
+class FileMoveCandidatePaths:
+    def __init__(self):
+        self.source_path_abs: str = None
+        self.repository_relative_filepath: str = None
+        self.new_relative_path: str = None
+        self.target_path_abs: str = None
+        self.target_dir_abs: str = None
+        self.placeholder_path: str = None
+
+
+@dataclass
+class FilePathValidationResult:
+    code: CandidateValidationCode
+    candidate: FileMoveCandidate
+
+
+class FilePathValidator:
+    def __init__(self, repo_root: str, allowed_extensions: List[str], threshold_bytes: int):
+        self.repo_root = repo_root
+        self.allowed_extensions = allowed_extensions
+        self.threshold_bytes = threshold_bytes
+
+    def is_ext_allowed(self, candidate, stats):
+        is_allowed = False
+        for ext in self.allowed_extensions:
+            if candidate.paths.repository_relative_filepath.lower().endswith(ext):
+                is_allowed = True
+                break
+
+        if not is_allowed:
+            stats.skip_file(candidate.paths.file_path, candidate.size_in_bytes)
+            return False
+        return True
+
+    def validate_candidate(self, file_path: str, stats: FileStats) -> FilePathValidationResult:
+        # Use regex to robustly extract SIZE and FILENAME
+        # Example format: #1: 1013MB -> cloudera/tasks/...
+        c = FileMoveCandidate(file_path)
+        match = re.search(r":\s*(\d+(\.\d+)?\s*[KMGTPE]?B?)\s*->\s*(.*)", c.file_path)
+
+        if not match:
+            return FilePathValidationResult(CandidateValidationCode.FILE_PATTERN_DOES_NOT_MATCH, c)
+
+        # Set human size, repository_relative_filepath and size_in_bytes as early as possible
+        c.human_size = match.group(1).strip()
+        c.paths.repository_relative_filepath = match.group(3).strip()
+        c.size_in_bytes = GitLargeFileMover.parse_human_size(c.human_size)
+
+        if c.size_in_bytes is None or c.size_in_bytes < self.threshold_bytes:
+            # Since the input is sorted, we can usually stop early, but checking all lines is safer.
+            return FilePathValidationResult(CandidateValidationCode.FILE_SIZE_BELOW_THRESHOLD, c)
+
+        if not self.is_ext_allowed(c, stats):
+            return FilePathValidationResult(CandidateValidationCode.FILE_EXTENSION_NOT_ALLOWED, c)
+
+        c.paths.source_path_abs = os.path.join(self.repo_root, c.paths.repository_relative_filepath)
+        if not os.path.isfile(c.paths.source_path_abs):
+            return FilePathValidationResult(CandidateValidationCode.FILE_DOES_NOT_EXIST, c)
+
+        return FilePathValidationResult(CandidateValidationCode.VALID, c)
 
 
 class GitLargeFileMover:
@@ -105,6 +185,20 @@ class GitLargeFileMover:
         multiplier = units_map.get(unit, 1)
         return int(value * multiplier)
 
+    def set_file_paths_for_candidate(self, c: FileMoveCandidate):
+        rel_path = c.paths.repository_relative_filepath
+
+        # Strip the configured prefix from the relative path
+        if rel_path.startswith(self.google_drive_root, self.path_prefix_to_strip):
+            c.paths.new_relative_path = rel_path[len(self.google_drive_root, self.path_prefix_to_strip) :]
+        else:
+            c.paths.new_relative_path = rel_path
+
+        # Combine the clean relative path with the Google Drive root
+        c.paths.target_path_abs = os.path.join(self.google_drive_root, c.paths.new_relative_path)
+        c.paths.target_dir_abs = os.path.dirname(c.paths.target_path_abs)
+        c.paths.placeholder_path = c.paths.source_path_abs + ".MOVED.txt"
+
     def process_and_move(  # noqa: C901
         self,
     ):
@@ -118,7 +212,7 @@ class GitLargeFileMover:
             threshold_bytes: The minimum file size in bytes required for a move.
         """
         if self.allowed_extensions is None:
-            allowed_extensions = ALLOWED_EXTENSIONS
+            self.allowed_extensions = ALLOWED_EXTENSIONS
 
         if self.dry_run:
             print("!!! DRY RUN MODE ACTIVE !!!")
@@ -129,7 +223,7 @@ class GitLargeFileMover:
 
         print("-" * 60)
         print(f"NOTE: Stripping prefix '{self.path_prefix_to_strip}' from source paths.")
-        print(f"NOTE: Only processing files with extensions: {', '.join(allowed_extensions)}")
+        print(f"NOTE: Only processing files with extensions: {', '.join(self.allowed_extensions)}")
 
         try:
             with open(self.input_filepath, "r") as f:
@@ -149,95 +243,65 @@ class GitLargeFileMover:
 
             # from now on, line is file_path
             file_path = line
-            # Use regex to robustly extract SIZE and FILENAME
-            # Example format: #1: 1013MB -> cloudera/tasks/...
-            match = re.search(r":\s*(\d+(\.\d+)?\s*[KMGTPE]?B?)\s*->\s*(.*)", file_path)
 
-            if not match:
+            validator = FilePathValidator(stats, self.repo_root, self.allowed_extensions, self.threshold_bytes)
+            result = validator.validate_candidate(file_path, stats)
+            if result.code in (
+                CandidateValidationCode.FILE_SIZE_BELOW_THRESHOLD,
+                CandidateValidationCode.FILE_PATTERN_DOES_NOT_MATCH,
+                CandidateValidationCode.FILE_EXTENSION_NOT_ALLOWED,
+                CandidateValidationCode.FILE_DOES_NOT_EXIST,
+            ):
+                if result.code == CandidateValidationCode.FILE_DOES_NOT_EXIST:
+                    print(f"ERROR: File does not exist at source: {result.candidate.paths.source_path_abs}")
                 continue
 
-            human_size = match.group(1).strip()
-            repository_relative_filepath = match.group(3).strip()
+            c: FileMoveCandidate = result.candidate
 
-            size_in_bytes = GitLargeFileMover.parse_human_size(human_size)
+            # Determine destination paths and print candidate
+            self.set_file_paths_for_candidate(c)
+            print(f"\n[MOVE Candidate #{current_candidate_no}: {c.human_size}]")
+            print(f"  SOURCE: {c.paths.source_path_abs}")
+            print(f"  TARGET: {c.paths.target_path_abs}")
 
-            if size_in_bytes is None or size_in_bytes < self.threshold_bytes:
-                # Since the input is sorted, we can usually stop early, but checking all lines is safer.
-                continue
-
-            # --- File is larger than threshold, proceed with move logic ---
-
-            # 0. NEW CHECK: Filter by allowed extension
-            is_allowed = False
-            for ext in allowed_extensions:
-                if repository_relative_filepath.lower().endswith(ext):
-                    is_allowed = True
-                    break
-
-            if not is_allowed:
-                stats.skip_file(file_path, size_in_bytes)
-                continue
-
-            # 1. Determine destination paths
-            source_path_abs = os.path.join(self.repo_root, repository_relative_filepath)
-
-            # Sanity check
-            if not os.path.isfile(source_path_abs):
-                print(f"ERROR: File does not exist at source: {source_path_abs}")
-                continue
-
-            # Strip the configured prefix from the relative path
-            if repository_relative_filepath.startswith(self.path_prefix_to_strip):
-                new_relative_path = repository_relative_filepath[len(self.path_prefix_to_strip) :]
-            else:
-                new_relative_path = repository_relative_filepath
-
-            # Combine the clean relative path with the Google Drive root
-            target_path_abs = os.path.join(self.google_drive_root, new_relative_path)
-            target_dir_abs = os.path.dirname(target_path_abs)
-            placeholder_path = source_path_abs + ".MOVED.txt"
-
-            print(f"\n[MOVE Candidate #{current_candidate_no}: {human_size}]")
-            print(f"  SOURCE: {source_path_abs}")
-            print(f"  TARGET: {target_path_abs}")
-
-            # 2. Execute/Simulate directory creation
+            # Execute/Simulate directory creation
             if not self.dry_run:
                 try:
-                    os.makedirs(target_dir_abs, exist_ok=True)
-                    print(f"  Created directory: {target_dir_abs}")
+                    os.makedirs(c.paths.target_dir_abs, exist_ok=True)
+                    print(f"  Created directory: {c.paths.target_dir_abs}")
                 except Exception as e:
                     print(f"  ERROR creating directory: {e}")
                     continue
             else:
-                print(f"  Dry Run: mkdir -p {target_dir_abs}")
+                print(f"  Dry Run: mkdir -p {c.paths.target_dir_abs}")
 
-            stats.add_saved_space(size_in_bytes)
-            # 3. Execute/Simulate file move
+            stats.add_saved_space(c.size_in_bytes)
+
+            # Execute/Simulate file move
             if not self.dry_run:
                 try:
-                    shutil.move(source_path_abs, target_path_abs)
+                    shutil.move(c.paths.source_path_abs, c.paths.target_path_abs)
                     print("  SUCCESS: Moved file.")
 
                     placeholder_content = (
                         "--- FILE MOVED ---\n"
                         f"Original file was moved by large_file_mover.py script on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.\n"
-                        f"New location: {target_path_abs}\n"
+                        f"New location: {c.paths.target_path_abs}\n"
                         "--------------------\n"
                     )
 
-                    with open(placeholder_path, "w") as ph_file:
+                    with open(c.paths.placeholder_path, "w") as ph_file:
                         ph_file.write(placeholder_content)
 
-                    print(f"  SUCCESS: Created placeholder at {os.path.basename(placeholder_path)}")
+                    print(f"  SUCCESS: Created placeholder at {os.path.basename(c.paths.placeholder_path)}")
                     stats.record_file_moved(file_path)
                 except FileNotFoundError:
-                    print(f"  ERROR: Source file not found at {source_path_abs}. Skipping.")
+                    print(f"  ERROR: Source file not found at {c.paths.source_path_abs}. Skipping.")
                 except Exception as e:
                     print(f"  ERROR moving file: {e}")
             else:
-                print(f"  Dry Run: mv {source_path_abs} {target_path_abs}")
-                print(f"  Dry Run: Creating placeholder file: {placeholder_path}")
+                print(f"  Dry Run: mv {c.paths.source_path_abs} {c.paths.target_path_abs}")
+                print(f"  Dry Run: Creating placeholder file: {c.paths.placeholder_path}")
                 stats.record_file_moved(file_path)
             current_candidate_no += 1
         stats.print(self.dry_run)
