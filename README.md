@@ -15,6 +15,59 @@ Commands:
    `$HOME/Library/Python/3.8/bin/pre-commit`.
 2. Execute `pre-commit install` to install git hooks in your `.git/` directory.
 
+## Testing
+
+Python tests use [Poetry](https://python-poetry.org/) 2.x and [pytest](https://docs.pytest.org/). Shell tests live under `tests/`.
+
+### Prerequisites
+
+- Python 3.9 or newer
+- Poetry 2.x (`pip install "poetry>=2.0,<3.0"`)
+
+### Install dependencies
+
+From the repo root:
+
+```bash
+poetry install --only main,dev
+```
+
+This installs runtime and dev dependencies. The optional `localdev` group (sibling repos such as `python-commons`) is not required for tests.
+
+### Run Python tests
+
+```bash
+poetry run python -m pytest
+```
+
+Pytest is configured in `pyproject.toml` to collect tests from `scripts/git` and `scripts/disk_cleanup`.
+
+With coverage (same as CI):
+
+```bash
+mkdir -p junit
+poetry run python -m pytest \
+  --junitxml=junit/test-results.xml \
+  --cov=scripts/git \
+  --cov=scripts/disk_cleanup \
+  --cov-report=xml \
+  --cov-report=html
+```
+
+Coverage HTML is written to `htmlcov/`. JUnit XML goes to `junit/test-results.xml`.
+
+### Run shell tests
+
+```bash
+find tests -type f \( -name "*.sh" -o -name "*.zsh" \) -exec chmod +x {} \;
+find tests -type f \( -name "*.sh" -o -name "*.zsh" \) -print0 | while IFS= read -r -d '' script; do
+  echo "Running $script..."
+  "$script"
+done
+```
+
+On Ubuntu/Debian, install `zsh` first if needed (`sudo apt-get install -y zsh`).
+
 ## Troubleshooting
 
 ### pre-commit installation
