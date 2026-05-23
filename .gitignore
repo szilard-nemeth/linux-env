@@ -4,3 +4,9 @@
 venv
 dist
 __pycache__
+
+# pytest / coverage outputs
+junit/
+htmlcov/
+coverage.xml
+.coverage

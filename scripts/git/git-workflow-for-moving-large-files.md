@@ -1,63 +1,136 @@
-## Commands to run
+# Moving large files out of a git repository
 
-1. `git-commit-size-detailed.sh`: Checks the specified commit hash for modified/added/deleted files and prints human-readable file sizes.
-2. `git_commit_size_analyzer.py`: Sorts the result of `git-commit-size-detailed.sh` by size (bytes) and shows top N results.
-3. `git_large_file_mover.py`: Moves large files above a certain threshold to Google Drive (offload). Input is the output of `git_commit_size_analyzer.py`.
+Offload oversized binary files from a repo to external storage, leaving `.MOVED.txt` placeholders in their place.
+
+## When to use this
+
+Use this workflow when cleaning up a repository that accumulated large archives (`.tar.gz`, `.zip`, etc.) in the working tree. Two modes:
+
+- **`--scan-working-tree`** — find large tracked files on disk now (most common)
+- **`--commit`** — analyze files changed in a specific commit (useful when you know which commit introduced bulk)
+
+## Quick start
+
+### Scan working tree (recommended)
 
 ```bash
-COMMIT=6619c839
+# 1. Preview what would be moved
+git-move-large-files \
+  --scan-working-tree \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --dry-run
 
-# Scripts
-GIT_SCRIPT_COMMIT_SIZE_SH="$HOME/development/my-repos/linux-env/scripts/git/git-commit-size-detailed.sh"
-GIT_SCRIPT_COMMIT_SIZE_ANALYZER="$HOME/development/my-repos/linux-env/scripts/git/git_commit_size_analyzer.py"
-GIT_SCRIPT_LARGE_FILE_MOVER="$HOME/development/my-repos/linux-env/scripts/git/git_large_file_mover.py"
+# 2. Move files and stage git changes
+git-move-large-files \
+  --scan-working-tree \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --execute --stage
 
-# Output files
-BASEDIR="$HOME/Downloads/git-cleanup-kb-private-20251022/part2/"
-GIT_DETAILS_OUT="$BASEDIR/git-details-kb-private-hash-$COMMIT.txt"
-GIT_SIZE_ANALYZER_OUT="$BASEDIR/git-commit-size-analyzer-out-$COMMIT.txt"
-GIT_LARGE_FILE_MOVER_OUT="$BASEDIR/git-large-file-mover-out-$COMMIT.txt"
-
-# Launch scripts
-$GIT_SCRIPT_COMMIT_SIZE_SH $COMMIT > $GIT_DETAILS_OUT
-python3 $GIT_SCRIPT_COMMIT_SIZE_ANALYZER $GIT_DETAILS_OUT > $GIT_SIZE_ANALYZER_OUT
-
-GIT_SIZE_ANALYZER_ALL_RESULTS_OUT=$(grep "Temporary file with all results ordered created at.*" $GIT_SIZE_ANALYZER_OUT | cut -d ':' -f2 | sed 's/^[[:space:]]*//')
-echo "git_commit_size_analyzer.py all results file: $GIT_SIZE_ANALYZER_ALL_RESULTS_OUT"
-cp $GIT_SIZE_ANALYZER_ALL_RESULTS_OUT $BASEDIR/git-commit-analyzer-all-results-sorted.txt
-
-# !! Make sure to enable dry run first !!
-python3 $GIT_SCRIPT_LARGE_FILE_MOVER $GIT_SIZE_ANALYZER_OUT 20 > $GIT_LARGE_FILE_MOVER_OUT
+# 3. Review and commit manually
+cd ~/development/my-repos/knowledge-base-private && git status
 ```
 
-## Verification, checking results
+### Single commit
 
-1. git rm all removed files:
 ```bash
-git ls-files --deleted -z | xargs -0 git rm
+git-move-large-files \
+  --commit 6619c839 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --dry-run
 ```
 
-2. git add files matching pattern, untracked
+(`git-move-large-files` is defined in `scripts/git.sh`.)
+
+Output files land in `~/git-large-files-<label>/` by default (`working-tree` or commit hash). Override with `--out-dir`.
+
+## Examples
+
+### Shell function (after sourcing `scripts/git.sh`)
+
 ```bash
-find . -name '*MOVED*' -not -name "*REMOVED*" -print0 | xargs -0 git add
+# Scan all tracked files on disk (default use case)
+git-move-large-files \
+  --scan-working-tree \
+  --repo ~/development/my-repos/knowledge-base-private
+
+# Scan + custom output directory
+git-move-large-files \
+  --scan-working-tree \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --out-dir ~/Downloads/git-cleanup-kb-private/part2 \
+  --dry-run
+
+# Scan, move, and stage
+git-move-large-files \
+  --scan-working-tree \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --execute --stage
+
+# Single commit — files changed in that commit
+git-move-large-files \
+  --commit 6619c839 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --dry-run
+
+# Raise size threshold to 50 MB
+git-move-large-files \
+  --scan-working-tree \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --threshold-mb 50 \
+  --dry-run
+
+# Override offload destination and repo path prefix
+git-move-large-files \
+  --scan-working-tree \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --offload-root ~/googledrive/development/KB-private-offloaded \
+  --path-prefix cloudera/tasks/cde/ \
+  --dry-run
 ```
 
-3. Check all added/remove files
+### Direct Python invocation
+
 ```bash
-git st | grep "deleted\|new file" > /tmp/results
+python3 scripts/git/git_move_large_files.py --help
+
+python3 scripts/git/git_move_large_files.py \
+  --scan-working-tree \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --dry-run
+
+python3 scripts/git/git_move_large_files.py \
+  --scan-working-tree \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --out-dir ~/Downloads/git-cleanup-kb-private/part2 \
+  --threshold-mb 20 \
+  --execute --stage
 ```
 
-4. Verify contents of MOVED files
-```bash
-git diff --name-only --cached | grep ".*MOVED.*" | xargs -n 1 -I {} /bin/bash -c "echo 'Processing file: {}'; cat {}"
-```
+### Output files (default `--out-dir`)
 
-or if the above does not work:
-```bash
-git diff --name-only --cached | grep ".*MOVED.*" | while read -r filename; do
-    echo "Processing file: $filename"
-    cat "$filename"
-done > ~/Downloads/git-cleanup-kb-private-20251022/contents-MOVED-files.txt
-```
+| File | Purpose |
+|------|---------|
+| `git-details-working-tree.txt` or `git-details-hash-<commit>.txt` | Raw size listing (working tree or commit) |
+| `git-commit-size-analyzer-out-*.txt` | Analyzer summary (top N + stats) |
+| `git-commit-analyzer-all-results-sorted.txt` | Full sorted list fed to the mover |
+| `git-large-file-mover-out-*.txt` | Move dry-run or execute log — **review before `--execute`** |
+| `git-stage-summary.txt` | Staged changes summary (with `--stage`) |
+| `contents-MOVED-files.txt` | Placeholder file contents (with `--stage`) |
 
-## Script output
+## Safety notes
+
+- **Always dry-run first.** `--dry-run` is the default; pass `--execute` only after reviewing the mover output log.
+- **Does not commit.** The script moves files and optionally stages changes (`--stage`); you commit manually after reviewing.
+- **Extension filter.** Only `.tar.gz`, `.gz`, `.zip`, and `.gzip` files above the threshold are moved. Other large files are reported but skipped.
+- **Offload destination.** Defaults to `~/googledrive/development/KB-private-offloaded`. Override with `--offload-root`.
+- **`--stage` requires `--execute`.** Staging deleted files and MOVED placeholders only makes sense after a real move.
+
+## Underlying tools
+
+`git_move_large_files.py` orchestrates:
+
+1. Working tree scan (`git ls-files` + file sizes) or `git-commit-size-detailed.sh` for a single commit
+2. `GitCommitSizeAnalyzer` (in the same file) — sort by size; writes full sorted list
+3. `GitLargeFileMover` (in the same file) — move files above threshold; `--execute` to run for real
+
+The shell size script can still be run standalone if needed.

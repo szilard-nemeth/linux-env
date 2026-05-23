@@ -1,0 +1,15 @@
+---
+description: Preserve existing comments when editing code
+alwaysApply: true
+---
+
+# Preserve comments
+
+When modifying existing code in this repository:
+
+- **Do not remove** existing comments unless the user explicitly asks you to
+- **Do not strip** inline comments (e.g. `# Bytes`, `# Kibibytes`) during refactors, formatting, or argparse→click migrations
+- If code moves, **move the comment with it** or rewrite it to still apply
+- Only add or remove comments when the change requires it, or the user requests cleanup
+
+Refactors (rename, restructure, change libraries) should keep explanatory comments the author left in place.
