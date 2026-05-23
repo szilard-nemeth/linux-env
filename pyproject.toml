@@ -36,6 +36,7 @@ python = "^3.9"
 lxml = "^5.2.2"
 paramiko = "^4.0.0"
 humanfriendly = "^10.0"
+click = "^8.0.0"
 
 
 [tool.poetry.group.dev.dependencies]
