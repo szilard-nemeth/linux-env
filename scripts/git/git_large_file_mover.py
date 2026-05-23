@@ -7,8 +7,6 @@ import shutil
 from dataclasses import dataclass
 from typing import List, Optional
 
-from pip._internal.resolution.resolvelib.base import Candidate
-
 # --- Default configuration ---
 GOOGLE_DRIVE_ROOT = os.path.expanduser("~/googledrive/development/KB-private-offloaded")
 PATH_PREFIX_TO_STRIP = "cloudera/tasks/cde/"
@@ -272,31 +270,7 @@ class GitLargeFileMover:
             stats.add_saved_space(c.size_in_bytes)
 
             # Execute/Simulate file move
-            if not self.dry_run:
-                try:
-                    shutil.move(c.paths.source_path_abs, c.paths.target_path_abs)
-                    print("  SUCCESS: Moved file.")
-
-                    placeholder_content = (
-                        "--- FILE MOVED ---\n"
-                        f"Original file was moved by large_file_mover.py script on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.\n"
-                        f"New location: {c.paths.target_path_abs}\n"
-                        "--------------------\n"
-                    )
-
-                    with open(c.paths.placeholder_path, "w") as ph_file:
-                        ph_file.write(placeholder_content)
-
-                    print(f"  SUCCESS: Created placeholder at {os.path.basename(c.paths.placeholder_path)}")
-                    stats.record_file_moved(file_path)
-                except FileNotFoundError:
-                    print(f"  ERROR: Source file not found at {c.paths.source_path_abs}. Skipping.")
-                except Exception as e:
-                    print(f"  ERROR moving file: {e}")
-            else:
-                print(f"  Dry Run: mv {c.paths.source_path_abs} {c.paths.target_path_abs}")
-                print(f"  Dry Run: Creating placeholder file: {c.paths.placeholder_path}")
-                stats.record_file_moved(file_path)
+            self._perform_file_move(c, stats)
             current_candidate_no += 1
         stats.print(self.dry_run)
 
@@ -312,6 +286,33 @@ class GitLargeFileMover:
         else:
             print(f"  Dry Run: mkdir -p {c.paths.target_dir_abs}")
             return True
+
+    def _perform_file_move(self, c: FileMoveCandidate, stats: FileStats):
+        if not self.dry_run:
+            try:
+                shutil.move(c.paths.source_path_abs, c.paths.target_path_abs)
+                print("  SUCCESS: Moved file.")
+
+                placeholder_content = (
+                    "--- FILE MOVED ---\n"
+                    f"Original file was moved by large_file_mover.py script on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.\n"
+                    f"New location: {c.paths.target_path_abs}\n"
+                    "--------------------\n"
+                )
+
+                with open(c.paths.placeholder_path, "w") as ph_file:
+                    ph_file.write(placeholder_content)
+
+                print(f"  SUCCESS: Created placeholder at {os.path.basename(c.paths.placeholder_path)}")
+                stats.record_file_moved(c.file_path)
+            except FileNotFoundError:
+                print(f"  ERROR: Source file not found at {c.paths.source_path_abs}. Skipping.")
+            except Exception as e:
+                print(f"  ERROR moving file: {e}")
+        else:
+            print(f"  Dry Run: mv {c.paths.source_path_abs} {c.paths.target_path_abs}")
+            print(f"  Dry Run: Creating placeholder file: {c.paths.placeholder_path}")
+            stats.record_file_moved(c.file_path)
 
 
 if __name__ == "__main__":
