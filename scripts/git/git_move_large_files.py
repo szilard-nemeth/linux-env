@@ -71,6 +71,19 @@ def parse_human_size(size_str: str) -> Optional[int]:
     return int(value * multiplier)
 
 
+def format_size_for_details_output(size_bytes: int) -> str:
+    """Format bytes like git-commit-size-detailed.sh (numfmt --to=iec, single token)."""
+    if size_bytes >= 1024**4:
+        return f"{size_bytes / 1024 ** 4:.1f}T"
+    if size_bytes >= 1024**3:
+        return f"{size_bytes / 1024 ** 3:.1f}G"
+    if size_bytes >= 1024**2:
+        return f"{size_bytes / 1024 ** 2:.1f}M"
+    if size_bytes >= 1024:
+        return f"{size_bytes / 1024:.1f}K"
+    return f"{size_bytes}B"
+
+
 class GitCommitSizeAnalyzer:
     @staticmethod
     def build_chunk_sizes(top_n: int) -> List[int]:
@@ -142,7 +155,7 @@ class GitCommitSizeAnalyzer:
         chunks = GitCommitSizeAnalyzer.build_chunk_sizes(top_n)
         raw_data = input_path.read_text()
 
-        print(f"--- Analyzing Commit Size Data from '{input_path}' (Top {top_n}) ---")
+        print(f"--- Analyzing Size Data from '{input_path}' (Top {top_n}) ---")
 
         # Analyze and get results
         results = GitCommitSizeAnalyzer.analyze_sizes(raw_data)
@@ -457,6 +470,26 @@ class GitLargeFileWorkflow:
             )
 
     @staticmethod
+    def run_working_tree_scan(repo: Path, output_path: Path) -> None:
+        tracked = subprocess.check_output(
+            ["git", "ls-files", "-z"],
+            cwd=repo,
+        ).split(b"\0")
+
+        lines: List[str] = []
+        for raw in tracked:
+            if not raw:
+                continue
+            rel_path = raw.decode()
+            abs_path = repo / rel_path
+            if not abs_path.is_file():
+                continue
+            human_size = format_size_for_details_output(abs_path.stat().st_size)
+            lines.append(f"{human_size} {rel_path}")
+
+        output_path.write_text("\n".join(lines) + ("\n" if lines else ""))
+
+    @staticmethod
     def run_analyzer(
         details_path: Path,
         analyzer_out: Path,
@@ -551,7 +584,12 @@ class GitLargeFileWorkflow:
 @click.command(
     context_settings={"help_option_names": ["-h", "--help"]},
 )
-@click.option("--commit", required=True, help="Commit hash to analyze")
+@click.option("--commit", help="Commit hash to analyze (required unless --scan-working-tree)")
+@click.option(
+    "--scan-working-tree",
+    is_flag=True,
+    help="Scan tracked files on disk instead of analyzing a single commit",
+)
 @click.option(
     "--repo",
     required=True,
@@ -561,7 +599,7 @@ class GitLargeFileWorkflow:
 @click.option(
     "--out-dir",
     type=click.Path(file_okay=False, path_type=Path),
-    help="Directory for intermediate output files (default: ~/Downloads/git-large-files-<commit>)",
+    help="Directory for intermediate output files (default: ~/Downloads/git-large-files-<label>)",
 )
 @click.option(
     "--threshold-mb",
@@ -587,7 +625,8 @@ class GitLargeFileWorkflow:
     help=f"Repository path prefix to strip before offload (default: {PATH_PREFIX_TO_STRIP})",
 )
 def main(
-    commit: str,
+    commit: Optional[str],
+    scan_working_tree: bool,
     repo: Path,
     out_dir: Optional[Path],
     threshold_mb: int,
@@ -596,37 +635,56 @@ def main(
     offload_root: Optional[str],
     path_prefix: Optional[str],
 ) -> None:
-    """Analyze a commit for large files, optionally offload them, and optionally stage git changes."""
+    """Analyze large files in a repo, optionally offload them, and optionally stage git changes."""
+    if scan_working_tree and commit:
+        raise click.UsageError("Use either --commit or --scan-working-tree, not both.")
+    if not scan_working_tree and not commit:
+        raise click.UsageError("Provide --commit or --scan-working-tree.")
     if stage and not execute:
         raise click.UsageError("--stage requires --execute (nothing to stage after a dry run).")
 
     repo = repo.expanduser().resolve()
+    run_label = "working-tree" if scan_working_tree else commit
 
     if out_dir:
         resolved_out_dir = out_dir.expanduser().resolve()
     else:
-        resolved_out_dir = Path.home() / "Downloads" / f"git-large-files-{commit}"
+        resolved_out_dir = Path.home() / "Downloads" / f"git-large-files-{run_label}"
     resolved_out_dir.mkdir(parents=True, exist_ok=True)
 
     _ = GitLargeFileWorkflow()
-    GitLargeFileWorkflow.verify_commit(repo, commit)
+    if not scan_working_tree:
+        GitLargeFileWorkflow.verify_commit(repo, commit)
 
-    details_out = resolved_out_dir / f"git-details-hash-{commit}.txt"
-    analyzer_out = resolved_out_dir / f"git-commit-size-analyzer-out-{commit}.txt"
+    if scan_working_tree:
+        details_out = resolved_out_dir / "git-details-working-tree.txt"
+        analyzer_out = resolved_out_dir / "git-commit-size-analyzer-out-working-tree.txt"
+        mover_out = resolved_out_dir / "git-large-file-mover-out-working-tree.txt"
+    else:
+        details_out = resolved_out_dir / f"git-details-hash-{commit}.txt"
+        analyzer_out = resolved_out_dir / f"git-commit-size-analyzer-out-{commit}.txt"
+        mover_out = resolved_out_dir / f"git-large-file-mover-out-{commit}.txt"
+
     all_sorted_out = resolved_out_dir / "git-commit-analyzer-all-results-sorted.txt"
-    mover_out = resolved_out_dir / f"git-large-file-mover-out-{commit}.txt"
     stage_summary_out = resolved_out_dir / "git-stage-summary.txt"
     moved_contents_out = resolved_out_dir / "contents-MOVED-files.txt"
 
     print(f"Repository: {repo}")
-    print(f"Commit: {commit}")
+    if scan_working_tree:
+        print("Source: working tree (tracked files on disk)")
+    else:
+        print(f"Commit: {commit}")
     print(f"Output directory: {resolved_out_dir}")
     print(f"Threshold: {threshold_mb}MB")
     print(f"Mode: {'EXECUTE (files will be moved)' if execute else 'DRY RUN (preview only)'}")
     print("")
 
-    print("Step 1/3: Collecting file sizes from commit...")
-    GitLargeFileWorkflow.run_commit_size_detailed(repo, commit, details_out)
+    if scan_working_tree:
+        print("Step 1/3: Collecting file sizes from working tree...")
+        GitLargeFileWorkflow.run_working_tree_scan(repo, details_out)
+    else:
+        print("Step 1/3: Collecting file sizes from commit...")
+        GitLargeFileWorkflow.run_commit_size_detailed(repo, commit, details_out)
     print(f"  Wrote {details_out}")
 
     print("Step 2/3: Sorting files by size...")

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -87,7 +88,39 @@ class TestGitLargeFileMover(unittest.TestCase):
             self.assertEqual(len(sorted_lines), 6)
             self.assertIn("large/data.bin", sorted_lines[0])
             self.assertIn("assets/model.zip", sorted_lines[1])
-            self.assertIn("Analyzing Commit Size Data", analyzer_out.read_text())
+            self.assertIn("Analyzing Size Data", analyzer_out.read_text())
+
+    def test_working_tree_scan_lists_tracked_files(self):
+        with tempfile.TemporaryDirectory() as repo_dir:
+            repo = Path(repo_dir)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "config", "user.email", "test@example.com"],
+                cwd=repo,
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Test User"],
+                cwd=repo,
+                check=True,
+                capture_output=True,
+            )
+
+            small = repo / "small.txt"
+            small.write_text("small")
+            big = repo / "big.bin"
+            big.write_bytes(b"x" * (25 * 1024 * 1024))
+            subprocess.run(["git", "add", "small.txt", "big.bin"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+
+            details_out = repo / "details.txt"
+            GitLargeFileWorkflow.run_working_tree_scan(repo, details_out)
+
+            lines = details_out.read_text().splitlines()
+            self.assertEqual(len(lines), 2)
+            self.assertTrue(any("big.bin" in line for line in lines))
+            self.assertTrue(any("small.txt" in line for line in lines))
 
 
 if __name__ == "__main__":
