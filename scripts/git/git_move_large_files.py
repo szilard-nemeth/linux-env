@@ -337,7 +337,7 @@ class GitLargeFileMover:
         c.paths.target_dir_abs = os.path.dirname(c.paths.target_path_abs)
         c.paths.placeholder_path = c.paths.source_path_abs + ".MOVED.txt"
 
-    def process_and_move(self):  # noqa: C901
+    def process_and_move(self) -> FileStats:  # noqa: C901
         """
         Reads the file list, identifies files larger than the threshold, and moves them
         to the offload root, preserving the relative path after stripping the prefix.
@@ -357,15 +357,15 @@ class GitLargeFileMover:
         print(f"NOTE: Stripping prefix '{self.path_prefix_to_strip}' from source paths.")
         print(f"NOTE: Only processing files with extensions: {', '.join(self.allowed_extensions)}")
 
+        stats = FileStats()
         try:
             with open(self.input_filepath, "r") as f:
                 raw_data = f.read()
         except Exception as e:
             print(f"Error reading input file: {e}")
-            return
+            return stats
 
         lines = raw_data.strip().split("\n")
-        stats = FileStats()
         validator = FilePathValidator(self.repo_root, self.allowed_extensions, self.threshold_bytes)
 
         current_candidate_no = 1
@@ -406,6 +406,7 @@ class GitLargeFileMover:
             self._perform_file_move(c, stats)
             current_candidate_no += 1
         stats.print(self.dry_run)
+        return stats
 
     def _make_dir_for_candidate(self, c: FileMoveCandidate):
         if not self.dry_run:
@@ -511,7 +512,7 @@ class GitLargeFileWorkflow:
         execute: bool,
         offload_root: Optional[str],
         path_prefix: Optional[str],
-    ) -> None:
+    ) -> FileStats:
         mover = GitLargeFileMover(
             str(all_sorted_out),
             threshold_mb * 1024 * 1024,
@@ -522,8 +523,9 @@ class GitLargeFileWorkflow:
         )
         buffer = io.StringIO()
         with redirect_stdout(buffer):
-            mover.process_and_move()
+            stats = mover.process_and_move()
         mover_out.write_text(buffer.getvalue())
+        return stats
 
     @staticmethod
     def git_rm_deleted_files(repo: Path) -> None:
@@ -581,7 +583,7 @@ class GitLargeFileWorkflow:
         GitLargeFileWorkflow.write_moved_contents(repo, moved_contents_out)
 
     @staticmethod
-    def _print_run_header(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
+    def print_run_header(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
         print(f"Repository: {config.resolved_repo()}")
         if config.scan_working_tree:
             print("Source: working tree (tracked files on disk)")
@@ -593,7 +595,7 @@ class GitLargeFileWorkflow:
         print("")
 
     @staticmethod
-    def _collect_file_sizes(config: "WorkflowConfig", repo: Path, details_out: Path) -> None:
+    def collect_file_sizes(config: "WorkflowConfig", repo: Path, details_out: Path) -> None:
         if config.scan_working_tree:
             print("Step 1/3: Collecting file sizes from working tree...")
             GitLargeFileWorkflow.run_working_tree_scan(repo, details_out)
@@ -603,7 +605,7 @@ class GitLargeFileWorkflow:
         print(f"  Wrote {details_out}")
 
     @staticmethod
-    def _analyze_and_sort(paths: "WorkflowOutputPaths") -> None:
+    def analyze_and_sort(paths: "WorkflowOutputPaths") -> None:
         print("Step 2/3: Sorting files by size...")
         GitLargeFileWorkflow.run_analyzer(paths.details_out, paths.analyzer_out, paths.all_sorted_out)
         print(f"  Wrote {paths.analyzer_out}")
@@ -635,7 +637,7 @@ class GitLargeFileWorkflow:
         print(f"  cd {repo} && git status")
 
     @staticmethod
-    def _print_completion(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
+    def print_completion(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
         print("")
         if config.execute:
             print("Done. Files were moved.")
@@ -653,15 +655,15 @@ class GitLargeFileWorkflow:
         if not config.scan_working_tree:
             GitLargeFileWorkflow.verify_commit(repo, config.commit)
 
-        GitLargeFileWorkflow._print_run_header(config, paths)
-        GitLargeFileWorkflow._collect_file_sizes(config, repo, paths.details_out)
-        GitLargeFileWorkflow._analyze_and_sort(paths)
+        GitLargeFileWorkflow.print_run_header(config, paths)
+        GitLargeFileWorkflow.collect_file_sizes(config, repo, paths.details_out)
+        GitLargeFileWorkflow.analyze_and_sort(paths)
         GitLargeFileWorkflow._move_large_files(config, repo, paths)
 
         if config.stage:
             GitLargeFileWorkflow._stage_repo_changes(repo, paths)
 
-        GitLargeFileWorkflow._print_completion(config, paths)
+        GitLargeFileWorkflow.print_completion(config, paths)
 
 
 @dataclass

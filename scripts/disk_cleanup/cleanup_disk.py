@@ -1,4 +1,5 @@
 import click
+import io
 import logging
 import re
 import shutil
@@ -7,14 +8,26 @@ import os
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from contextlib import redirect_stdout
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Dict, Optional, Any, Set, TextIO
 
 import humanfriendly
 
+from scripts.git.git_move_large_files import (
+    DEFAULT_OFFLOAD_ROOT,
+    GitLargeFileWorkflow,
+    KB_PRIVATE_ROOT,
+    PATH_PREFIX_TO_STRIP,
+    WorkflowConfig,
+    WorkflowOutputPaths,
+)
+
 DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 TOOL_OUTPUT_BASEDIR = Path(os.path.expanduser("~/snemeth-dev-projects/cleanup_disk/"))
+KB_PRIVATE_GIT_OFFLOAD_OUT_DIR = TOOL_OUTPUT_BASEDIR / "kb_private_git_offload"
+KB_PRIVATE_GIT_OFFLOAD_THRESHOLD_MB = 20
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
 # TODO Add JetBrains tool cleanup?
 
@@ -895,6 +908,136 @@ class PoetryCacheCleanup(CleanupTool):
         return self._verify_with_tracker(self.tracker)
 
 
+class KbPrivateGitOffloadCleanup(CleanupTool):
+    """Offload large tracked archives from knowledge-base-private to external storage."""
+
+    summary_name = "KB private git large-file offload"
+
+    def __init__(self, interactive: bool = True):
+        super().__init__(interactive=interactive)
+        self.repo = Path(KB_PRIVATE_ROOT)
+        self._estimated_reclaim_bytes = 0
+        self._repo_before_size: Optional[int] = None
+        self._execute_stats_bytes = 0
+        self._workflow_failed = False
+
+    def _has_pending_work(self) -> bool:
+        return self._estimated_reclaim_bytes > 0
+
+    def estimated_reclaim_bytes(self) -> Optional[int]:
+        if self._estimated_reclaim_bytes <= 0:
+            return None
+        return self._estimated_reclaim_bytes
+
+    def _confirmation_prompt(self) -> str:
+        return self._confirmation_prompt_with_estimate(
+            "Proceed with offloading large files from knowledge-base-private "
+            f"(moved to {DEFAULT_OFFLOAD_ROOT}; git changes are not staged automatically)"
+        )
+
+    def _log_captured_output(self, text: str) -> None:
+        for line in text.splitlines():
+            if line.strip():
+                logger.info(line)
+
+    def _workflow_config(self, execute: bool) -> WorkflowConfig:
+        return WorkflowConfig(
+            commit=None,
+            scan_working_tree=True,
+            repo=self.repo,
+            out_dir=KB_PRIVATE_GIT_OFFLOAD_OUT_DIR,
+            threshold_mb=KB_PRIVATE_GIT_OFFLOAD_THRESHOLD_MB,
+            execute=execute,
+            stage=False,
+            offload_root=None,
+            path_prefix=None,
+        )
+
+    def _run_workflow(self, execute: bool):
+        config = self._workflow_config(execute)
+        config.validate()
+        repo = config.resolved_repo()
+        out_dir = config.resolved_out_dir()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        paths = WorkflowOutputPaths.for_run(out_dir, config.scan_working_tree, config.commit)
+
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            GitLargeFileWorkflow.print_run_header(config, paths)
+            GitLargeFileWorkflow.collect_file_sizes(config, repo, paths.details_out)
+            GitLargeFileWorkflow.analyze_and_sort(paths)
+            stats = GitLargeFileWorkflow.run_mover(
+                paths.all_sorted_out,
+                paths.mover_out,
+                threshold_mb=config.threshold_mb,
+                repo=repo,
+                execute=execute,
+                offload_root=config.offload_root,
+                path_prefix=config.path_prefix,
+            )
+            GitLargeFileWorkflow.print_completion(config, paths)
+
+        self._log_captured_output(buffer.getvalue())
+        return stats
+
+    def prepare(self):
+        # TODO Paths should be read from actual config - self._workflow_config
+        logger.info("--- KB private git large-file offload ---")
+        logger.info("Repository: %s", self.repo)
+        logger.info("Offload root: %s", DEFAULT_OFFLOAD_ROOT)
+        logger.info("Path prefix stripped: %s", PATH_PREFIX_TO_STRIP)
+        logger.info("Threshold: %dMB (archives only)", KB_PRIVATE_GIT_OFFLOAD_THRESHOLD_MB)
+        logger.info("Mode: dry-run preview (no files moved until confirmed)")
+
+        if not self.repo.is_dir():
+            logger.error("Repository not found: %s", self.repo)
+            self._workflow_failed = True
+            return
+
+        self._repo_before_size = FileUtils.get_dir_size(self.repo)
+        try:
+            stats = self._run_workflow(execute=False)
+        except (OSError, subprocess.CalledProcessError, click.ClickException) as exc:
+            logger.error("KB private git offload dry-run failed: %s", exc)
+            self._workflow_failed = True
+            return
+
+        self._estimated_reclaim_bytes = stats.total_space_saved_bytes
+        if self._estimated_reclaim_bytes <= 0:
+            logger.info("No large archive files matched the offload criteria.")
+
+    def execute(self):
+        if self._workflow_failed or not self.repo.is_dir():
+            logger.info("Skipping KB private git offload (repository unavailable or dry-run failed).")
+            self._execute_skipped = True
+            return
+
+        if self._repo_before_size is None:
+            self._repo_before_size = FileUtils.get_dir_size(self.repo)
+
+        try:
+            stats = self._run_workflow(execute=True)
+            self._execute_stats_bytes = stats.total_space_saved_bytes
+        except (OSError, subprocess.CalledProcessError, click.ClickException) as exc:
+            logger.error("KB private git offload failed: %s", exc)
+            self._workflow_failed = True
+            return
+
+        logger.info("Review git status in %s and commit when ready.", self.repo)
+
+    def verify(self) -> CleanupResult:
+        if self._execute_skipped:
+            self.cleanup_result = CleanupResult.from_bytes(0, success=not self._workflow_failed)
+            return self.cleanup_result
+
+        after_size = FileUtils.get_dir_size(self.repo)
+        before_size = self._repo_before_size or 0
+        reclaimed_from_dir = max(0, before_size - after_size)
+        reclaimed = max(reclaimed_from_dir, self._execute_stats_bytes)
+        self.cleanup_result = CleanupResult.from_bytes(reclaimed, success=not self._workflow_failed)
+        return self.cleanup_result
+
+
 def format_du_style(size_in_bytes):
     """Formats bytes to 1.2G, 400M, etc. using humanfriendly 10.0"""
     # Use binary=True to get 1024-base (MiB/GiB)
@@ -963,10 +1106,22 @@ class ToolRunner:
     show_default=True,
     help="Docker until= filter duration",
 )
-def main(docker_only: bool, docker_system_prune_only: bool, force: bool, docker_time_limit: str):
+@click.option(
+    "--kb-private-git-offload",
+    is_flag=True,
+    help="Offload large tracked archives from knowledge-base-private to Google Drive storage",
+)
+def main(
+    docker_only: bool,
+    docker_system_prune_only: bool,
+    force: bool,
+    docker_time_limit: str,
+    kb_private_git_offload: bool,
+):
     """Disk cleanup utilities."""
-    if docker_only and docker_system_prune_only:
-        raise click.UsageError("Use only one of --docker-only or --docker-system-prune-only")
+    exclusive_modes = [docker_only, docker_system_prune_only, kb_private_git_offload]
+    if sum(exclusive_modes) > 1:
+        raise click.UsageError("Use only one of --docker-only, --docker-system-prune-only, or --kb-private-git-offload")
 
     interactive = not force
 
@@ -976,6 +1131,8 @@ def main(docker_only: bool, docker_system_prune_only: bool, force: bool, docker_
         ]
     elif docker_system_prune_only:
         tools = [DockerSystemPruneCleanup(interactive=interactive)]
+    elif kb_private_git_offload:
+        tools = [KbPrivateGitOffloadCleanup(interactive=interactive)]
     else:
         tools = build_default_tools(interactive, docker_time_limit)
     ToolRunner.run_tools(tools)
