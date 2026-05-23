@@ -741,6 +741,17 @@ class WorkflowOutputPaths:
         )
 
 
+class ExpandedDirectoryPath(click.Path):
+    """click.Path that expands ~ before existence checks."""
+
+    def convert(self, value, param, ctx):
+        if isinstance(value, Path):
+            value = str(value.expanduser())
+        else:
+            value = os.path.expanduser(value)
+        return super().convert(value, param, ctx)
+
+
 @click.command(
     context_settings={"help_option_names": ["-h", "--help"]},
 )
@@ -753,12 +764,12 @@ class WorkflowOutputPaths:
 @click.option(
     "--repo",
     required=True,
-    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    type=ExpandedDirectoryPath(exists=True, file_okay=False, path_type=Path),
     help="Local git repository root",
 )
 @click.option(
     "--out-dir",
-    type=click.Path(file_okay=False, path_type=Path),
+    type=ExpandedDirectoryPath(file_okay=False, path_type=Path),
     help="Directory for intermediate output files (default: ~/git-large-files-<label>)",
 )
 @click.option(

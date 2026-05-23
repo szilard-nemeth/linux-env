@@ -13,6 +13,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from git_move_large_files import (  # noqa: E402
     CandidateValidationCode,
+    ExpandedDirectoryPath,
     FileMoveCandidate,
     FilePathValidator,
     FileStats,
@@ -121,6 +122,17 @@ class TestGitLargeFileMover(unittest.TestCase):
             self.assertEqual(len(lines), 2)
             self.assertTrue(any("big.bin" in line for line in lines))
             self.assertTrue(any("small.txt" in line for line in lines))
+
+
+def test_expanded_directory_path_expands_tilde_before_exists_check(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    repo = tmp_path / "knowledge-base-private"
+    repo.mkdir()
+
+    path_type = ExpandedDirectoryPath(exists=True, file_okay=False, path_type=Path)
+    resolved = path_type.convert("~/knowledge-base-private", None, None)
+
+    assert resolved == Path(str(repo))
 
 
 if __name__ == "__main__":
