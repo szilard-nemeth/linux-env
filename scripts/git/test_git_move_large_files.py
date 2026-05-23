@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
+import io
 import os
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 import sys
@@ -77,6 +79,36 @@ class TestGitLargeFileMover(unittest.TestCase):
                 mover.process_and_move()
             finally:
                 os.unlink(listing_path)
+
+    def test_dry_run_lists_skipped_extension_above_threshold(self):
+        with tempfile.TemporaryDirectory() as repo:
+            listing_path = os.path.join(repo, "listing.txt")
+            with open(listing_path, "w") as listing:
+                listing.write("#1: 22.5M -> data/large.bin\n")
+                listing.write("#2: 25.0M -> data/large.zip\n")
+
+            abs_dir = os.path.join(repo, "data")
+            os.makedirs(abs_dir, exist_ok=True)
+            with open(os.path.join(abs_dir, "large.zip"), "wb") as f:
+                f.write(b"x" * (25 * 1024 * 1024))
+
+            mover = GitLargeFileMover(
+                input_filepath=listing_path,
+                threshold_bytes=20 * 1024 * 1024,
+                dry_run=True,
+                repo_root=repo,
+                offload_root=os.path.join(repo, "offload"),
+                allowed_extensions=[".zip"],
+            )
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                stats = mover.process_and_move()
+
+            output = buffer.getvalue()
+            self.assertIn("[#1 SKIP extension: 22.5M]", output)
+            self.assertIn("[#2 MOVE: 25.0M]", output)
+            self.assertEqual(stats.files_moved, 1)
+            self.assertEqual(stats.files_skipped_by_extension, 1)
 
     def test_analyzer_sorts_and_writes_sorted_file(self):
         sample = SCRIPT_DIR / "input-files" / "git-commit-size-analyzer-sample-data.txt"

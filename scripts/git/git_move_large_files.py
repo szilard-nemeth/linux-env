@@ -195,12 +195,16 @@ class FileStats:
     def __init__(self):
         self.files_moved = 0
         self.files_skipped_by_extension = 0
+        self.files_missing = 0
         self.total_space_saved_bytes = 0
         self.total_space_reclaimed_non_matching_extension = 0
 
     def skip_file(self, file_path, size_in_bytes):
         self.files_skipped_by_extension += 1
         self.total_space_reclaimed_non_matching_extension += size_in_bytes
+
+    def record_missing(self):
+        self.files_missing += 1
 
     def add_saved_space(self, size_in_bytes):
         self.total_space_saved_bytes += size_in_bytes
@@ -211,19 +215,25 @@ class FileStats:
     def print(self, dry_run: bool):
         print("-" * 60)
         print("Summary:")
-        print(f"Files meeting size and extension criteria: {self.files_moved}")
+        above_threshold = self.files_moved + self.files_skipped_by_extension + self.files_missing
+        print(f"Files above size threshold: {above_threshold}")
+        print(f"  Will move (allowed extension): {self.files_moved}")
         if self.files_skipped_by_extension > 0:
-            print(f"Files skipped due to extension filter: {self.files_skipped_by_extension}")
+            print(f"  Skipped (extension filter): {self.files_skipped_by_extension}")
+        if self.files_missing > 0:
+            print(f"  Skipped (not on disk): {self.files_missing}")
 
         total_space_saved_human = convert_bytes_to_human_readable(self.total_space_saved_bytes)
         non_matching_human = convert_bytes_to_human_readable(self.total_space_reclaimed_non_matching_extension)
         if dry_run:
             print(f"Would save estimated space: {total_space_saved_human}")
-            print(f"Would save estimated space for non-matching extensions: {non_matching_human}")
+            if self.total_space_reclaimed_non_matching_extension > 0:
+                print(f"Space in skipped-extension files (not moved): {non_matching_human}")
             print("\nNote: Re-run with --execute to perform the actual move.")
         else:
             print(f"Estimated Space Saved: {total_space_saved_human}")
-            print(f"Space for non-matching extensions (not moved): {non_matching_human}")
+            if self.total_space_reclaimed_non_matching_extension > 0:
+                print(f"Space in skipped-extension files (not moved): {non_matching_human}")
 
 
 class CandidateValidationCode(enum.Enum):
@@ -299,12 +309,15 @@ class FilePathValidator:
 
         c.paths.source_path_abs = os.path.join(self.repo_root, c.paths.repository_relative_filepath)
         if not os.path.isfile(c.paths.source_path_abs):
+            stats.record_missing()
             return FilePathValidationResult(CandidateValidationCode.FILE_DOES_NOT_EXIST, c)
 
         return FilePathValidationResult(CandidateValidationCode.VALID, c)
 
 
 class GitLargeFileMover:
+    SORTED_RANK_RE = re.compile(r"#(\d+):")
+
     def __init__(
         self,
         input_filepath: str,
@@ -368,7 +381,6 @@ class GitLargeFileMover:
         lines = raw_data.strip().split("\n")
         validator = FilePathValidator(self.repo_root, self.allowed_extensions, self.threshold_bytes)
 
-        current_candidate_no = 1
         for line in lines:
             # Skip header/footer lines and lines that don't look like file entries
             if not line.startswith("#"):
@@ -376,23 +388,31 @@ class GitLargeFileMover:
 
             # from now on, line is file_path
             file_path = line
+            rank_match = self.SORTED_RANK_RE.search(file_path)
+            rank_label = f"#{rank_match.group(1)}" if rank_match else "#?"
 
             result = validator.validate_candidate(file_path, stats)
             if result.code in (
                 CandidateValidationCode.FILE_SIZE_BELOW_THRESHOLD,
                 CandidateValidationCode.FILE_PATTERN_DOES_NOT_MATCH,
-                CandidateValidationCode.FILE_EXTENSION_NOT_ALLOWED,
-                CandidateValidationCode.FILE_DOES_NOT_EXIST,
             ):
-                if result.code == CandidateValidationCode.FILE_DOES_NOT_EXIST:
-                    print(f"ERROR: File does not exist at source: {result.candidate.paths.source_path_abs}")
                 continue
 
             c: FileMoveCandidate = result.candidate
 
+            if result.code == CandidateValidationCode.FILE_EXTENSION_NOT_ALLOWED:
+                print(f"\n[{rank_label} SKIP extension: {c.human_size}] {c.paths.repository_relative_filepath}")
+                print(f"  Allowed extensions: {', '.join(self.allowed_extensions)}")
+                continue
+
+            if result.code == CandidateValidationCode.FILE_DOES_NOT_EXIST:
+                print(f"\n[{rank_label} SKIP missing: {c.human_size}] {c.paths.repository_relative_filepath}")
+                print(f"  Not found on disk: {c.paths.source_path_abs}")
+                continue
+
             # Determine destination paths and print candidate
             self.set_file_paths_for_candidate(c)
-            print(f"\n[MOVE Candidate #{current_candidate_no}: {c.human_size}]")
+            print(f"\n[{rank_label} MOVE: {c.human_size}]")
             print(f"  SOURCE: {c.paths.source_path_abs}")
             print(f"  TARGET: {c.paths.target_path_abs}")
 
@@ -404,7 +424,6 @@ class GitLargeFileMover:
 
             # Execute/Simulate file move
             self._perform_file_move(c, stats)
-            current_candidate_no += 1
         stats.print(self.dry_run)
         return stats
 
