@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-import argparse
 import re
 import subprocess
 import sys
 from pathlib import Path
 from typing import List, Optional
+
+import click
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -20,8 +21,7 @@ def verify_commit(repo: Path, commit: str) -> None:
         capture_output=True,
     )
     if result.returncode != 0:
-        print(f"Error: commit '{commit}' not found in repository '{repo}'.", file=sys.stderr)
-        sys.exit(1)
+        raise click.ClickException(f"commit '{commit}' not found in repository '{repo}'.")
 
 
 def run_commit_size_detailed(repo: Path, commit: str, output_path: Path) -> None:
@@ -121,86 +121,79 @@ def stage_changes(repo: Path, stage_summary_out: Path, moved_contents_out: Path)
     moved_contents_out.write_text("\n".join(parts))
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Analyze a commit for large files, optionally offload them, and optionally stage git changes.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""\
-examples:
-  %(prog)s --commit 6619c839 --repo ~/development/my-repos/knowledge-base-private --dry-run
-  %(prog)s --commit 6619c839 --repo ~/development/my-repos/knowledge-base-private --execute --stage
-""",
-    )
-    parser.add_argument("--commit", required=True, help="Commit hash to analyze")
-    parser.add_argument("--repo", required=True, type=Path, help="Local git repository root")
-    parser.add_argument(
-        "--out-dir",
-        type=Path,
-        help="Directory for intermediate output files (default: ~/Downloads/git-large-files-<commit>)",
-    )
-    parser.add_argument(
-        "--threshold-mb",
-        type=int,
-        default=20,
-        help="Minimum file size in MB to move (default: 20)",
-    )
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument(
-        "--dry-run",
-        dest="execute",
-        action="store_false",
-        help="Preview moves without changing files (default)",
-    )
-    mode.add_argument(
-        "--execute",
-        dest="execute",
-        action="store_true",
-        help="Actually move files to offloaded storage",
-    )
-    parser.set_defaults(execute=False)
-    parser.add_argument(
-        "--stage",
-        action="store_true",
-        help="After moving, stage git rm/add for deleted files and MOVED placeholders",
-    )
-    parser.add_argument("--drive-root", help="Offload destination (passed to git_large_file_mover.py)")
-    parser.add_argument(
-        "--path-prefix",
-        dest="path_prefix",
-        help="Repository path prefix to strip before offload",
-    )
-    return parser.parse_args()
+@click.command(
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
+@click.option("--commit", required=True, help="Commit hash to analyze")
+@click.option(
+    "--repo",
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Local git repository root",
+)
+@click.option(
+    "--out-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="Directory for intermediate output files (default: ~/Downloads/git-large-files-<commit>)",
+)
+@click.option(
+    "--threshold-mb",
+    default=20,
+    show_default=True,
+    help="Minimum file size in MB to move",
+)
+@click.option(
+    "--execute/--dry-run",
+    "execute",
+    default=False,
+    show_default=True,
+    help="Actually move files to offloaded storage, or preview moves (default)",
+)
+@click.option(
+    "--stage",
+    is_flag=True,
+    help="After moving, stage git rm/add for deleted files and MOVED placeholders",
+)
+@click.option("--drive-root", help="Offload destination (passed to git_large_file_mover.py)")
+@click.option(
+    "--path-prefix",
+    help="Repository path prefix to strip before offload",
+)
+def main(
+    commit: str,
+    repo: Path,
+    out_dir: Optional[Path],
+    threshold_mb: int,
+    execute: bool,
+    stage: bool,
+    drive_root: Optional[str],
+    path_prefix: Optional[str],
+) -> None:
+    """Analyze a commit for large files, optionally offload them, and optionally stage git changes."""
+    if stage and not execute:
+        raise click.UsageError("--stage requires --execute (nothing to stage after a dry run).")
 
+    repo = repo.expanduser().resolve()
 
-def main() -> None:
-    args = parse_args()
-    execute = args.execute
-    repo = args.repo.expanduser().resolve()
-    commit = args.commit
-
-    if args.stage and not execute:
-        print("Error: --stage requires --execute (nothing to stage after a dry run).", file=sys.stderr)
-        sys.exit(1)
-
-    if args.out_dir:
-        out_dir = args.out_dir.expanduser().resolve()
+    if out_dir:
+        resolved_out_dir = out_dir.expanduser().resolve()
     else:
-        out_dir = Path.home() / "Downloads" / f"git-large-files-{commit}"
-    out_dir.mkdir(parents=True, exist_ok=True)
+        resolved_out_dir = Path.home() / "Downloads" / f"git-large-files-{commit}"
+    resolved_out_dir.mkdir(parents=True, exist_ok=True)
 
     verify_commit(repo, commit)
 
-    details_out = out_dir / f"git-details-hash-{commit}.txt"
-    analyzer_out = out_dir / f"git-commit-size-analyzer-out-{commit}.txt"
-    all_sorted_out = out_dir / "git-commit-analyzer-all-results-sorted.txt"
-    mover_out = out_dir / f"git-large-file-mover-out-{commit}.txt"
-    stage_summary_out = out_dir / "git-stage-summary.txt"
-    moved_contents_out = out_dir / "contents-MOVED-files.txt"
+    details_out = resolved_out_dir / f"git-details-hash-{commit}.txt"
+    analyzer_out = resolved_out_dir / f"git-commit-size-analyzer-out-{commit}.txt"
+    all_sorted_out = resolved_out_dir / "git-commit-analyzer-all-results-sorted.txt"
+    mover_out = resolved_out_dir / f"git-large-file-mover-out-{commit}.txt"
+    stage_summary_out = resolved_out_dir / "git-stage-summary.txt"
+    moved_contents_out = resolved_out_dir / "contents-MOVED-files.txt"
 
     msg(f"Repository: {repo}")
     msg(f"Commit: {commit}")
-    msg(f"Output directory: {out_dir}")
-    msg(f"Threshold: {args.threshold_mb}MB")
+    msg(f"Output directory: {resolved_out_dir}")
+    msg(f"Threshold: {threshold_mb}MB")
     msg(f"Mode: {'EXECUTE (files will be moved)' if execute else 'DRY RUN (preview only)'}")
     msg()
 
@@ -217,15 +210,15 @@ def main() -> None:
     run_mover(
         all_sorted_out,
         mover_out,
-        threshold_mb=args.threshold_mb,
+        threshold_mb=threshold_mb,
         repo=repo,
         execute=execute,
-        drive_root=args.drive_root,
-        path_prefix=args.path_prefix,
+        drive_root=drive_root,
+        path_prefix=path_prefix,
     )
     msg(f"  Wrote {mover_out}")
 
-    if args.stage:
+    if stage:
         msg()
         msg("Staging git changes...")
         stage_changes(repo, stage_summary_out, moved_contents_out)
