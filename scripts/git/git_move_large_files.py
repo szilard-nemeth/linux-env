@@ -580,6 +580,155 @@ class GitLargeFileWorkflow:
         GitLargeFileWorkflow.write_stage_summary(repo, stage_summary_out)
         GitLargeFileWorkflow.write_moved_contents(repo, moved_contents_out)
 
+    @staticmethod
+    def _print_run_header(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
+        print(f"Repository: {config.resolved_repo()}")
+        if config.scan_working_tree:
+            print("Source: working tree (tracked files on disk)")
+        else:
+            print(f"Commit: {config.commit}")
+        print(f"Output directory: {paths.out_dir}")
+        print(f"Threshold: {config.threshold_mb}MB")
+        print(f"Mode: {'EXECUTE (files will be moved)' if config.execute else 'DRY RUN (preview only)'}")
+        print("")
+
+    @staticmethod
+    def _collect_file_sizes(config: "WorkflowConfig", repo: Path, details_out: Path) -> None:
+        if config.scan_working_tree:
+            print("Step 1/3: Collecting file sizes from working tree...")
+            GitLargeFileWorkflow.run_working_tree_scan(repo, details_out)
+        else:
+            print("Step 1/3: Collecting file sizes from commit...")
+            GitLargeFileWorkflow.run_commit_size_detailed(repo, config.commit, details_out)
+        print(f"  Wrote {details_out}")
+
+    @staticmethod
+    def _analyze_and_sort(paths: "WorkflowOutputPaths") -> None:
+        print("Step 2/3: Sorting files by size...")
+        GitLargeFileWorkflow.run_analyzer(paths.details_out, paths.analyzer_out, paths.all_sorted_out)
+        print(f"  Wrote {paths.analyzer_out}")
+        print(f"  Wrote {paths.all_sorted_out}")
+
+    @staticmethod
+    def _move_large_files(config: "WorkflowConfig", repo: Path, paths: "WorkflowOutputPaths") -> None:
+        print("Step 3/3: Processing large files...")
+        GitLargeFileWorkflow.run_mover(
+            paths.all_sorted_out,
+            paths.mover_out,
+            threshold_mb=config.threshold_mb,
+            repo=repo,
+            execute=config.execute,
+            offload_root=config.offload_root,
+            path_prefix=config.path_prefix,
+        )
+        print(f"  Wrote {paths.mover_out}")
+
+    @staticmethod
+    def _stage_repo_changes(repo: Path, paths: "WorkflowOutputPaths") -> None:
+        print("")
+        print("Staging git changes...")
+        GitLargeFileWorkflow.stage_changes(repo, paths.stage_summary_out, paths.moved_contents_out)
+        print(f"  Wrote {paths.stage_summary_out}")
+        print(f"  Wrote {paths.moved_contents_out}")
+        print("")
+        print(f"Review staged changes in {repo}, then commit when ready:")
+        print(f"  cd {repo} && git status")
+
+    @staticmethod
+    def _print_completion(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
+        print("")
+        if config.execute:
+            print("Done. Files were moved.")
+        else:
+            print(f"Dry run complete. Review {paths.mover_out}, then re-run with --execute.")
+
+    @staticmethod
+    def run(config: "WorkflowConfig") -> None:
+        config.validate()
+        repo = config.resolved_repo()
+        out_dir = config.resolved_out_dir()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        paths = WorkflowOutputPaths.for_run(out_dir, config.scan_working_tree, config.commit)
+
+        if not config.scan_working_tree:
+            GitLargeFileWorkflow.verify_commit(repo, config.commit)
+
+        GitLargeFileWorkflow._print_run_header(config, paths)
+        GitLargeFileWorkflow._collect_file_sizes(config, repo, paths.details_out)
+        GitLargeFileWorkflow._analyze_and_sort(paths)
+        GitLargeFileWorkflow._move_large_files(config, repo, paths)
+
+        if config.stage:
+            GitLargeFileWorkflow._stage_repo_changes(repo, paths)
+
+        GitLargeFileWorkflow._print_completion(config, paths)
+
+
+@dataclass
+class WorkflowConfig:
+    commit: Optional[str]
+    scan_working_tree: bool
+    repo: Path
+    out_dir: Optional[Path]
+    threshold_mb: int
+    execute: bool
+    stage: bool
+    offload_root: Optional[str]
+    path_prefix: Optional[str]
+
+    def validate(self) -> None:
+        if self.scan_working_tree and self.commit:
+            raise click.UsageError("Use either --commit or --scan-working-tree, not both.")
+        if not self.scan_working_tree and not self.commit:
+            raise click.UsageError("Provide --commit or --scan-working-tree.")
+        if self.stage and not self.execute:
+            raise click.UsageError("--stage requires --execute (nothing to stage after a dry run).")
+
+    @property
+    def run_label(self) -> str:
+        return "working-tree" if self.scan_working_tree else self.commit
+
+    def resolved_repo(self) -> Path:
+        return self.repo.expanduser().resolve()
+
+    def resolved_out_dir(self) -> Path:
+        if self.out_dir:
+            return self.out_dir.expanduser().resolve()
+        # TODO Use hom dir instead of ~/Downloads
+        return Path.home() / "Downloads" / f"git-large-files-{self.run_label}"
+
+
+@dataclass
+class WorkflowOutputPaths:
+    out_dir: Path
+    details_out: Path
+    analyzer_out: Path
+    all_sorted_out: Path
+    mover_out: Path
+    stage_summary_out: Path
+    moved_contents_out: Path
+
+    @classmethod
+    def for_run(cls, out_dir: Path, scan_working_tree: bool, commit: Optional[str]) -> "WorkflowOutputPaths":
+        if scan_working_tree:
+            details_out = out_dir / "git-details-working-tree.txt"
+            analyzer_out = out_dir / "git-commit-size-analyzer-out-working-tree.txt"
+            mover_out = out_dir / "git-large-file-mover-out-working-tree.txt"
+        else:
+            details_out = out_dir / f"git-details-hash-{commit}.txt"
+            analyzer_out = out_dir / f"git-commit-size-analyzer-out-{commit}.txt"
+            mover_out = out_dir / f"git-large-file-mover-out-{commit}.txt"
+
+        return cls(
+            out_dir=out_dir,
+            details_out=details_out,
+            analyzer_out=analyzer_out,
+            all_sorted_out=out_dir / "git-commit-analyzer-all-results-sorted.txt",
+            mover_out=mover_out,
+            stage_summary_out=out_dir / "git-stage-summary.txt",
+            moved_contents_out=out_dir / "contents-MOVED-files.txt",
+        )
+
 
 @click.command(
     context_settings={"help_option_names": ["-h", "--help"]},
@@ -636,89 +785,19 @@ def main(
     path_prefix: Optional[str],
 ) -> None:
     """Analyze large files in a repo, optionally offload them, and optionally stage git changes."""
-    if scan_working_tree and commit:
-        raise click.UsageError("Use either --commit or --scan-working-tree, not both.")
-    if not scan_working_tree and not commit:
-        raise click.UsageError("Provide --commit or --scan-working-tree.")
-    if stage and not execute:
-        raise click.UsageError("--stage requires --execute (nothing to stage after a dry run).")
-
-    repo = repo.expanduser().resolve()
-    run_label = "working-tree" if scan_working_tree else commit
-
-    if out_dir:
-        resolved_out_dir = out_dir.expanduser().resolve()
-    else:
-        resolved_out_dir = Path.home() / "Downloads" / f"git-large-files-{run_label}"
-    resolved_out_dir.mkdir(parents=True, exist_ok=True)
-
-    _ = GitLargeFileWorkflow()
-    if not scan_working_tree:
-        GitLargeFileWorkflow.verify_commit(repo, commit)
-
-    if scan_working_tree:
-        details_out = resolved_out_dir / "git-details-working-tree.txt"
-        analyzer_out = resolved_out_dir / "git-commit-size-analyzer-out-working-tree.txt"
-        mover_out = resolved_out_dir / "git-large-file-mover-out-working-tree.txt"
-    else:
-        details_out = resolved_out_dir / f"git-details-hash-{commit}.txt"
-        analyzer_out = resolved_out_dir / f"git-commit-size-analyzer-out-{commit}.txt"
-        mover_out = resolved_out_dir / f"git-large-file-mover-out-{commit}.txt"
-
-    all_sorted_out = resolved_out_dir / "git-commit-analyzer-all-results-sorted.txt"
-    stage_summary_out = resolved_out_dir / "git-stage-summary.txt"
-    moved_contents_out = resolved_out_dir / "contents-MOVED-files.txt"
-
-    print(f"Repository: {repo}")
-    if scan_working_tree:
-        print("Source: working tree (tracked files on disk)")
-    else:
-        print(f"Commit: {commit}")
-    print(f"Output directory: {resolved_out_dir}")
-    print(f"Threshold: {threshold_mb}MB")
-    print(f"Mode: {'EXECUTE (files will be moved)' if execute else 'DRY RUN (preview only)'}")
-    print("")
-
-    if scan_working_tree:
-        print("Step 1/3: Collecting file sizes from working tree...")
-        GitLargeFileWorkflow.run_working_tree_scan(repo, details_out)
-    else:
-        print("Step 1/3: Collecting file sizes from commit...")
-        GitLargeFileWorkflow.run_commit_size_detailed(repo, commit, details_out)
-    print(f"  Wrote {details_out}")
-
-    print("Step 2/3: Sorting files by size...")
-    GitLargeFileWorkflow.run_analyzer(details_out, analyzer_out, all_sorted_out)
-    print(f"  Wrote {analyzer_out}")
-    print(f"  Wrote {all_sorted_out}")
-
-    print("Step 3/3: Processing large files...")
-    GitLargeFileWorkflow.run_mover(
-        all_sorted_out,
-        mover_out,
-        threshold_mb=threshold_mb,
-        repo=repo,
-        execute=execute,
-        offload_root=offload_root,
-        path_prefix=path_prefix,
+    GitLargeFileWorkflow.run(
+        WorkflowConfig(
+            commit=commit,
+            scan_working_tree=scan_working_tree,
+            repo=repo,
+            out_dir=out_dir,
+            threshold_mb=threshold_mb,
+            execute=execute,
+            stage=stage,
+            offload_root=offload_root,
+            path_prefix=path_prefix,
+        )
     )
-    print(f"  Wrote {mover_out}")
-
-    if stage:
-        print("")
-        print("Staging git changes...")
-        GitLargeFileWorkflow.stage_changes(repo, stage_summary_out, moved_contents_out)
-        print(f"  Wrote {stage_summary_out}")
-        print(f"  Wrote {moved_contents_out}")
-        print("")
-        print(f"Review staged changes in {repo}, then commit when ready:")
-        print(f"  cd {repo} && git status")
-
-    print("")
-    if execute:
-        print("Done. Files were moved.")
-    else:
-        print(f"Dry run complete. Review {mover_out}, then re-run with --execute.")
 
 
 if __name__ == "__main__":
