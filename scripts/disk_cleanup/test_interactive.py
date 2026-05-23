@@ -1,12 +1,21 @@
-from scripts.disk_cleanup.cleanup_disk import CleanupResult, CleanupTool, _DockerPruneMixin
+import logging
+
+from scripts.disk_cleanup.cleanup_disk import (
+    CleanupResult,
+    CleanupTool,
+    ToolRunner,
+    _DockerPruneMixin,
+    confirm_cleanup,
+)
 
 
 class _StubCleanup(CleanupTool):
-    def __init__(self, interactive: bool = True, pending: bool = True):
-        super().__init__(interactive=interactive)
+    def __init__(self, pending: bool = True):
+        super().__init__()
         self.pending = pending
         self.prepare_called = False
         self.execute_called = False
+        self.verify_called = False
 
     def _has_pending_work(self) -> bool:
         return self.pending
@@ -18,46 +27,44 @@ class _StubCleanup(CleanupTool):
         self.execute_called = True
 
     def verify(self) -> CleanupResult:
+        self.verify_called = True
         return CleanupResult.from_bytes(0)
 
     def print_summary(self):
         pass
 
 
-def test_confirm_execution_accepts_yes_variants():
+def _run_tools(tools, monkeypatch, *, dry_run=False, confirm=True):
+    monkeypatch.setattr("scripts.disk_cleanup.cleanup_disk.setup_logging", lambda: None)
+    monkeypatch.setattr(
+        "scripts.disk_cleanup.cleanup_disk.TOOL_OUTPUT_BASEDIR",
+        type("P", (), {"mkdir": lambda *a, **k: None})(),
+    )
+    ToolRunner.run_tools(tools, dry_run=dry_run, confirm=confirm)
+
+
+def test_confirm_cleanup_accepts_yes_variants():
     import builtins
 
     for answer in ("y", "Y", "yes", "YES", " Yes "):
-        tool = _StubCleanup()
-
-        def fake_input(_prompt):
-            return answer
-
         original = builtins.input
-        builtins.input = fake_input
+        builtins.input = lambda _prompt: answer
         try:
-            assert tool._confirm_execution("Proceed? (y/n): ")
+            assert confirm_cleanup("Proceed? (y/n): ")
         finally:
             builtins.input = original
 
 
-def test_confirm_execution_rejects_no_and_eof():
+def test_confirm_cleanup_rejects_no_and_eof():
     import builtins
 
     for answer in ("n", "no", ""):
-        tool = _StubCleanup()
-
-        def fake_input(_prompt):
-            return answer
-
         original = builtins.input
-        builtins.input = fake_input
+        builtins.input = lambda _prompt: answer
         try:
-            assert not tool._confirm_execution("Proceed? (y/n): ")
+            assert not confirm_cleanup("Proceed? (y/n): ")
         finally:
             builtins.input = original
-
-    tool = _StubCleanup()
 
     def eof_input(_prompt):
         raise EOFError
@@ -65,37 +72,53 @@ def test_confirm_execution_rejects_no_and_eof():
     original = builtins.input
     builtins.input = eof_input
     try:
-        assert not tool._confirm_execution("Proceed? (y/n): ")
+        assert not confirm_cleanup("Proceed? (y/n): ")
     finally:
         builtins.input = original
 
 
-def test_execute_flow_skips_execute_when_interactive_declined(monkeypatch):
-    tool = _StubCleanup(interactive=True, pending=True)
+def test_run_tools_skips_execute_when_declined(monkeypatch):
+    tool = _StubCleanup(pending=True)
     monkeypatch.setattr("builtins.input", lambda _prompt: "n")
-    tool.execute_flow()
+    _run_tools([tool], monkeypatch, confirm=True)
     assert tool.prepare_called
     assert not tool.execute_called
-    assert tool._execute_skipped
+    assert not tool.verify_called
 
 
-def test_execute_flow_runs_execute_when_interactive_confirmed(monkeypatch):
-    tool = _StubCleanup(interactive=True, pending=True)
-    monkeypatch.setattr("builtins.input", lambda _prompt: "y")
-    tool.execute_flow()
-    assert tool.execute_called
-    assert not tool._execute_skipped
-
-
-def test_execute_flow_no_prompt_when_force_mode():
-    tool = _StubCleanup(interactive=False, pending=True)
-    tool.execute_flow()
-    assert tool.execute_called
-
-
-def test_execute_flow_prompts_by_default():
+def test_run_tools_runs_execute_when_confirmed(monkeypatch):
     tool = _StubCleanup(pending=True)
-    assert tool.interactive
+    monkeypatch.setattr("builtins.input", lambda _prompt: "y")
+    _run_tools([tool], monkeypatch, confirm=True)
+    assert tool.execute_called
+    assert tool.verify_called
+
+
+def test_run_tools_no_prompt_when_force_mode(monkeypatch):
+    tool = _StubCleanup(pending=True)
+
+    def fail_if_called(_prompt):
+        raise AssertionError("input should not be called when confirm=False")
+
+    monkeypatch.setattr("builtins.input", fail_if_called)
+    _run_tools([tool], monkeypatch, confirm=False)
+    assert tool.execute_called
+
+
+def test_run_tools_dry_run_prepares_only(monkeypatch, caplog):
+    caplog.set_level(logging.INFO)
+    tool = _StubCleanup(pending=True)
+
+    def fail_if_called(_prompt):
+        raise AssertionError("input should not be called in dry-run mode")
+
+    monkeypatch.setattr("builtins.input", fail_if_called)
+    _run_tools([tool], monkeypatch, dry_run=True)
+    assert tool.prepare_called
+    assert not tool.execute_called
+    assert not tool.verify_called
+    assert "DRY RUN MODE" in caplog.text
+    assert "Dry run complete" in caplog.text
 
 
 class _StubWithEstimate(_StubCleanup):
@@ -103,36 +126,25 @@ class _StubWithEstimate(_StubCleanup):
         return 1024 * 1024
 
 
-def test_execute_flow_logs_estimate_before_confirm(monkeypatch, caplog):
-    import logging
-
+def test_run_tools_prints_plan_table(monkeypatch, caplog):
     caplog.set_level(logging.INFO)
-    tool = _StubWithEstimate(interactive=True, pending=True)
-    prompts = []
-
-    def fake_input(prompt):
-        prompts.append(prompt)
-        return "n"
-
-    monkeypatch.setattr("builtins.input", fake_input)
-    tool.execute_flow()
-    assert any("disk space reclaimable (estimate" in r.message for r in caplog.records)
-    assert "reclaimable" in prompts[0]
-    assert "~1" in prompts[0]
+    tool = _StubWithEstimate(pending=True)
+    monkeypatch.setattr("builtins.input", lambda _prompt: "n")
+    _run_tools([tool], monkeypatch, confirm=True)
+    assert "Cleanup plan" in caplog.text
+    assert "TOTAL" in caplog.text
 
 
-def test_execute_flow_logs_command_outcomes(monkeypatch, caplog):
-    import logging
-
+def test_run_tools_logs_command_outcomes(monkeypatch, caplog):
     class _StubCommands(_StubCleanup):
         def execute(self):
             self._record_command_outcome(0)
             self._record_command_outcome(1)
 
     caplog.set_level(logging.INFO)
-    tool = _StubCommands(interactive=True, pending=True)
+    tool = _StubCommands(pending=True)
     monkeypatch.setattr("builtins.input", lambda _prompt: "y")
-    tool.execute_flow()
+    _run_tools([tool], monkeypatch, confirm=True)
     assert any("commands finished: 1 succeeded, 1 failed" in r.message for r in caplog.records)
 
 

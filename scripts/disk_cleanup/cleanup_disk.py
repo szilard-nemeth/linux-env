@@ -222,11 +222,18 @@ class CleanupResult:
         return cls(bytes_reclaimed=bytes_reclaimed, success=success)
 
 
+def confirm_cleanup(prompt: str) -> bool:
+    try:
+        answer = input(prompt)
+    except EOFError:
+        return False
+    return answer.strip().lower() in ("y", "yes")
+
+
 class CleanupTool(ABC):
     summary_name: str = ""
 
-    def __init__(self, interactive: bool = True):
-        self.interactive = interactive
+    def __init__(self):
         self._execute_skipped = False
         self.cleanup_result: Optional[CleanupResult] = None
         self._commands_succeeded = 0
@@ -254,35 +261,6 @@ class CleanupTool(ABC):
     def estimated_reclaim_bytes(self) -> Optional[int]:
         """Upper-bound reclaimable bytes from prepare(); None if unknown."""
         return None
-
-    def _reclaim_estimate_suffix(self) -> str:
-        estimate = self.estimated_reclaim_bytes()
-        if estimate is None or estimate <= 0:
-            return ""
-        return f" (~{format_du_style(estimate)} reclaimable)"
-
-    def _log_reclaim_estimate_before_confirm(self) -> None:
-        estimate = self.estimated_reclaim_bytes()
-        if estimate is None:
-            return
-        logger.info(
-            "%s: ~%s disk space reclaimable (estimate; actual may differ)",
-            self._summary_label(),
-            format_du_style(estimate),
-        )
-
-    def _confirmation_prompt_with_estimate(self, action: str) -> str:
-        return f"{action}{self._reclaim_estimate_suffix()}? (y/n): "
-
-    def _confirmation_prompt(self) -> str:
-        return self._confirmation_prompt_with_estimate("Proceed with cleanup as described above")
-
-    def _confirm_execution(self, prompt: str) -> bool:
-        try:
-            answer = input(prompt)
-        except EOFError:
-            return False
-        return answer.strip().lower() in ("y", "yes")
 
     def _reset_command_outcomes(self) -> None:
         self._commands_succeeded = 0
@@ -353,30 +331,15 @@ class CleanupTool(ABC):
         self.cleanup_result = tracker.build_cleanup_result_unnamed(success=success)
         return self.cleanup_result
 
-    def execute_flow(self):
-        self.prepare()
-        if self.interactive and self._has_pending_work():
-            self._log_reclaim_estimate_before_confirm()
-            if not self._confirm_execution(self._confirmation_prompt()):
-                logger.info("Operation canceled by user.")
-                self._execute_skipped = True
-        if not self._execute_skipped:
-            self._reset_command_outcomes()
-            self.execute()
-            self._log_command_outcomes()
-        _ = self.verify()
-        self.print_summary()
-        logger.info("-" * 30)
-
 
 class MavenCleanup(CleanupTool):
     summary_name = "Maven cleanup"
 
-    def __init__(self, limit: str, interactive: bool = True):
+    def __init__(self, limit: str):
         """
         :param limit: Human-readable limit for directory size, e.g. 100M
         """
-        super().__init__(interactive=interactive)
+        super().__init__()
         self.root_to_targets: Dict[Path, List[Path]] = defaultdict(list)
         self.tracker = CleanupDetailsTracker()
         self._limit_str: str = limit
@@ -387,10 +350,6 @@ class MavenCleanup(CleanupTool):
 
     def estimated_reclaim_bytes(self) -> Optional[int]:
         return self.tracker.sum_unnamed_before_bytes()
-
-    def _confirmation_prompt(self) -> str:
-        count = len(self.root_to_targets)
-        return self._confirmation_prompt_with_estimate(f"Proceed with Maven clean on {count} project(s)")
 
     def prepare(self):
         logger.info(f"Scanning for Maven target directories > {self._limit_str}...")
@@ -466,8 +425,8 @@ class MavenCleanup(CleanupTool):
 class AsdfGolangCleanup(CleanupTool):
     summary_name = "ASDF Golang cleanup"
 
-    def __init__(self, keep_versions: List[str], interactive: bool = True):
-        super().__init__(interactive=interactive)
+    def __init__(self, keep_versions: List[str]):
+        super().__init__()
         self.keep_versions = keep_versions
         self.tracker = CleanupDetailsTracker()
 
@@ -486,14 +445,6 @@ class AsdfGolangCleanup(CleanupTool):
         except ValueError:
             pass
         return total
-
-    def _confirmation_prompt(self) -> str:
-        versions = [d.metadata["version"] for d in self.tracker.unnamed_cleanup]
-        if versions:
-            action = f"Proceed with uninstalling Go {', '.join(versions)} and cleaning caches"
-        else:
-            action = "Proceed with Go cache cleanup"
-        return self._confirmation_prompt_with_estimate(action)
 
     def prepare(self):
         logger.info("Scanning ASDF Golang versions...")
@@ -660,8 +611,8 @@ class DockerCleanup(CleanupTool, _DockerPruneMixin):
     IMAGE_FORMAT = "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedAt}}\t{{.Size}}"
     DEFAULT_TIME_LIMIT = "1440h"  # ~60 days; Go duration (h=hours, not calendar months)
 
-    def __init__(self, time_limit: str = DEFAULT_TIME_LIMIT, interactive: bool = True):
-        super().__init__(interactive=interactive)
+    def __init__(self, time_limit: str = DEFAULT_TIME_LIMIT):
+        super().__init__()
         self._init_docker_prune_state()
         self.time_limit = time_limit
         self.until_filter = f"until={time_limit}"
@@ -701,9 +652,6 @@ class DockerCleanup(CleanupTool, _DockerPruneMixin):
             logger.info("Nothing to clean up.")
         else:
             self._estimated_reclaim_bytes = self._sum_filtered_image_sizes([["dangling=true"], [self.until_filter]])
-
-    def _confirmation_prompt(self) -> str:
-        return self._confirmation_prompt_with_estimate("Proceed with Docker image deletion as described above")
 
     def execute(self):
         if not self._docker_available:
@@ -766,15 +714,12 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
 
     SYSTEM_PRUNE_CMD = ["docker", "system", "prune", "-a", "--volumes", "-f"]
 
-    def __init__(self, interactive: bool = True):
-        super().__init__(interactive=interactive)
+    def __init__(self):
+        super().__init__()
         self._init_docker_prune_state()
 
     def _has_pending_work(self) -> bool:
         return self._docker_available
-
-    def _confirmation_prompt(self) -> str:
-        return self._confirmation_prompt_with_estimate("Proceed with 'docker system prune -a --volumes -f'")
 
     def prepare(self):
         logger.info("--- Docker system prune (aggressive) ---")
@@ -818,8 +763,8 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
 class DiscoveryCleanup(CleanupTool):
     """Generic tool to find and delete specific directory patterns."""
 
-    def __init__(self, name, root_path, patterns: List[str], age_days: int = 30, interactive: bool = True):
-        super().__init__(interactive=interactive)
+    def __init__(self, name, root_path, patterns: List[str], age_days: int = 30):
+        super().__init__()
         self.name = name
         self.summary_name = name
         self.root_path = Path(root_path)
@@ -832,10 +777,6 @@ class DiscoveryCleanup(CleanupTool):
 
     def estimated_reclaim_bytes(self) -> Optional[int]:
         return self.tracker.sum_unnamed_before_bytes()
-
-    def _confirmation_prompt(self) -> str:
-        count = len(self.tracker.unnamed_cleanup)
-        return self._confirmation_prompt_with_estimate(f"Proceed with removing {count} {self.name} director(ies)")
 
     def prepare(self):
         if self.age_days != -1:
@@ -878,8 +819,8 @@ class DiscoveryCleanup(CleanupTool):
 class PoetryCacheCleanup(CleanupTool):
     summary_name = "Poetry cache cleanup"
 
-    def __init__(self, interactive: bool = True):
-        super().__init__(interactive=interactive)
+    def __init__(self):
+        super().__init__()
         self.tracker = CleanupDetailsTracker()
 
     def _has_pending_work(self) -> bool:
@@ -891,9 +832,6 @@ class PoetryCacheCleanup(CleanupTool):
         if details is None:
             return 0
         return details.before_size or 0
-
-    def _confirmation_prompt(self) -> str:
-        return self._confirmation_prompt_with_estimate("Proceed with clearing the Poetry cache")
 
     def prepare(self):
         cache_dir, _ = self.run_command_check_output(["poetry", "config", "cache-dir"])
@@ -911,8 +849,8 @@ class KbPrivateGitOffloadCleanup(CleanupTool):
 
     summary_name = "KB private git large-file offload"
 
-    def __init__(self, interactive: bool = True):
-        super().__init__(interactive=interactive)
+    def __init__(self):
+        super().__init__()
         self.repo = Path(KB_PRIVATE_ROOT)
         self._estimated_reclaim_bytes = 0
         self._repo_before_size: Optional[int] = None
@@ -926,13 +864,6 @@ class KbPrivateGitOffloadCleanup(CleanupTool):
         if self._estimated_reclaim_bytes <= 0:
             return None
         return self._estimated_reclaim_bytes
-
-    def _confirmation_prompt(self) -> str:
-        config = self._workflow_config(execute=False)
-        return self._confirmation_prompt_with_estimate(
-            "Proceed with offloading large files from knowledge-base-private "
-            f"(moved to {config.resolved_offload_root()}; git changes are not staged automatically)"
-        )
 
     def _log_captured_output(self, text: str) -> None:
         for line in text.splitlines():
@@ -1064,31 +995,30 @@ OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD = "kb-private-offload"
 DEFAULT_OPTIONAL_TOOLS = (OPTIONAL_TOOL_DOCKER_CLEANUP, OPTIONAL_TOOL_DOCKER_SYSTEM_PRUNE)
 
 
-def build_default_tools(interactive: bool) -> List[CleanupTool]:
+def build_default_tools() -> List[CleanupTool]:
     pip_cache_root = Path(os.path.expanduser("~/Library/Caches/pip"))
     return [
-        MavenCleanup("100M", interactive=interactive),
-        AsdfGolangCleanup(keep_versions=["1.24.11"], interactive=interactive),
-        DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"], interactive=interactive),
-        DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"], interactive=interactive),
-        DiscoveryCleanup("Pip Cache", pip_cache_root, ["*"], interactive=interactive),
-        PoetryCacheCleanup(interactive=interactive),
+        MavenCleanup("100M"),
+        AsdfGolangCleanup(keep_versions=["1.24.11"]),
+        DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
+        DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
+        DiscoveryCleanup("Pip Cache", pip_cache_root, ["*"]),
+        PoetryCacheCleanup(),
     ]
 
 
-def build_optional_tool(name: str, *, interactive: bool, docker_time_limit: str) -> CleanupTool:
+def build_optional_tool(name: str, *, docker_time_limit: str) -> CleanupTool:
     if name == OPTIONAL_TOOL_DOCKER_CLEANUP:
-        return DockerCleanup(time_limit=docker_time_limit, interactive=interactive)
+        return DockerCleanup(time_limit=docker_time_limit)
     if name == OPTIONAL_TOOL_DOCKER_SYSTEM_PRUNE:
-        return DockerSystemPruneCleanup(interactive=interactive)
+        return DockerSystemPruneCleanup()
     if name == OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD:
-        return KbPrivateGitOffloadCleanup(interactive=interactive)
+        return KbPrivateGitOffloadCleanup()
     raise ValueError(f"Unknown optional cleanup tool: {name}")
 
 
 def resolve_tools(
     *,
-    interactive: bool,
     docker_time_limit: str,
     skip_defaults: bool = False,
     include_optional: Optional[List[str]] = None,
@@ -1097,14 +1027,14 @@ def resolve_tools(
     tools: List[CleanupTool] = []
 
     if not skip_defaults:
-        tools.extend(build_default_tools(interactive))
+        tools.extend(build_default_tools())
 
     if include_optional:
         for name in include_optional:
-            tools.append(build_optional_tool(name, interactive=interactive, docker_time_limit=docker_time_limit))
+            tools.append(build_optional_tool(name, docker_time_limit=docker_time_limit))
     elif not skip_defaults:
         for name in DEFAULT_OPTIONAL_TOOLS:
-            tools.append(build_optional_tool(name, interactive=interactive, docker_time_limit=docker_time_limit))
+            tools.append(build_optional_tool(name, docker_time_limit=docker_time_limit))
 
     if not tools:
         raise click.UsageError(
@@ -1115,17 +1045,99 @@ def resolve_tools(
     return tools
 
 
+def _format_reclaimable_estimate(tool: CleanupTool) -> str:
+    estimate = tool.estimated_reclaim_bytes()
+    if estimate is None:
+        return "unknown"
+    if estimate <= 0:
+        return "0"
+    return format_du_style(estimate)
+
+
 class ToolRunner:
     @staticmethod
-    def run_tools(tools: List[CleanupTool]):
+    def _tools_with_work(tools: List[CleanupTool]) -> List[CleanupTool]:
+        return [tool for tool in tools if tool._has_pending_work()]
+
+    @staticmethod
+    def _sum_estimated_reclaim(tools: List[CleanupTool]) -> int:
+        total = 0
+        for tool in tools:
+            if not tool._has_pending_work():
+                continue
+            estimate = tool.estimated_reclaim_bytes()
+            if estimate is not None:
+                total += estimate
+        return total
+
+    @staticmethod
+    def _print_plan_table(tools: List[CleanupTool]) -> None:
+        if not tools:
+            return
+
+        rows = [(tool._summary_label(), _format_reclaimable_estimate(tool)) for tool in tools]
+        max_label = max(len(label) for label, _ in rows)
+        reclaim_header = "Reclaimable"
+
+        logger.info("")
+        logger.info("--- Cleanup plan ---")
+        logger.info(f"{'Tool':<{max_label}}  {reclaim_header}")
+        logger.info(f"{'-' * max_label}  {'-' * len(reclaim_header)}")
+        for label, reclaimable in rows:
+            logger.info(f"{label:<{max_label}}  {reclaimable}")
+        logger.info(f"{'TOTAL':<{max_label}}  {format_du_style(ToolRunner._sum_estimated_reclaim(tools))}")
+        logger.info("")
+
+    @staticmethod
+    def run_tools(tools: List[CleanupTool], *, dry_run: bool = False, confirm: bool = True):
         setup_logging()
         TOOL_OUTPUT_BASEDIR.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Starting cleanup. Detailed logs: {LOG_FILE_PATH}")
+
+        if dry_run:
+            logger.info("!!! DRY RUN MODE !!!")
+            logger.info("No changes will be made.")
+
+        for tool in tools:
+            logger.info("=" * 30)
+            tool.prepare()
+
+        ToolRunner._print_plan_table(tools)
+        tools_with_work = ToolRunner._tools_with_work(tools)
+
+        if dry_run:
+            logger.info("Dry run complete. Review the plan above, then re-run without --dry-run to execute.")
+            return
+
+        if not tools_with_work:
+            logger.info("Nothing to clean up.")
+            return
+
+        total_estimate = ToolRunner._sum_estimated_reclaim(tools)
+        if confirm:
+            if total_estimate > 0:
+                prompt = (
+                    f"Proceed with all cleanup actions above "
+                    f"(~{format_du_style(total_estimate)} reclaimable)? (y/n): "
+                )
+            else:
+                prompt = "Proceed with all cleanup actions above? (y/n): "
+            if not confirm_cleanup(prompt):
+                logger.info("Operation canceled by user.")
+                return
+
         total_reclaimed = 0
         for tool in tools:
-            tool.execute_flow()
+            if tool._has_pending_work():
+                tool._reset_command_outcomes()
+                tool.execute()
+                tool._log_command_outcomes()
+            tool.verify()
+            tool.print_summary()
+            logger.info("-" * 30)
             total_reclaimed += tool.reclaimed_bytes()
+
         logger.info("All tools: %s disk space reclaimed", format_du_style(total_reclaimed))
 
 
@@ -1141,9 +1153,14 @@ class ToolRunner:
     help="Run aggressive Docker system prune (all unused images, containers, networks, volumes)",
 )
 @click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Preview all cleanup tools and reclaimable space without making changes or prompting",
+)
+@click.option(
     "--force",
     is_flag=True,
-    help="Run all tools without confirmation prompts (default: prompt before each deletion)",
+    help="Run cleanup without a confirmation prompt (default: one prompt for all tools)",
 )
 @click.option(
     "--docker-time-limit",
@@ -1179,6 +1196,7 @@ class ToolRunner:
 def main(
     docker_only: bool,
     docker_system_prune_only: bool,
+    dry_run: bool,
     force: bool,
     docker_time_limit: str,
     kb_private_git_offload: bool,
@@ -1192,16 +1210,14 @@ def main(
     if sum(exclusive_modes) > 1:
         raise click.UsageError("Use only one of --docker-only, --docker-system-prune-only, or --kb-private-git-offload")
 
-    interactive = not force
-
     if docker_only:
         tools: List[CleanupTool] = [
-            DockerCleanup(time_limit=docker_time_limit, interactive=interactive),
+            DockerCleanup(time_limit=docker_time_limit),
         ]
     elif docker_system_prune_only:
-        tools = [DockerSystemPruneCleanup(interactive=interactive)]
+        tools = [DockerSystemPruneCleanup()]
     elif kb_private_git_offload:
-        tools = [KbPrivateGitOffloadCleanup(interactive=interactive)]
+        tools = [KbPrivateGitOffloadCleanup()]
     else:
         include_optional: List[str] = []
         if include_docker_cleanup:
@@ -1212,12 +1228,11 @@ def main(
             include_optional.append(OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD)
 
         tools = resolve_tools(
-            interactive=interactive,
             docker_time_limit=docker_time_limit,
             skip_defaults=skip_defaults,
             include_optional=include_optional or None,
         )
-    ToolRunner.run_tools(tools)
+    ToolRunner.run_tools(tools, dry_run=dry_run, confirm=not force)
 
 
 if __name__ == "__main__":

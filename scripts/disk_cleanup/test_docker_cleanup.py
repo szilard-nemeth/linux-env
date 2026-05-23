@@ -32,7 +32,7 @@ def test_system_prune_command():
 
 
 def test_run_prune_records_success(monkeypatch):
-    tool = DockerCleanup(interactive=False)
+    tool = DockerCleanup()
     tool._reset_command_outcomes()
 
     def fake_check_output(cmd, **kwargs):
@@ -46,7 +46,7 @@ def test_run_prune_records_success(monkeypatch):
 
 
 def test_run_prune_records_failure(monkeypatch):
-    tool = DockerCleanup(interactive=False)
+    tool = DockerCleanup()
     tool._reset_command_outcomes()
 
     def fake_check_output(cmd, **kwargs):
