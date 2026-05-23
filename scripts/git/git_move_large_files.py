@@ -380,7 +380,7 @@ class GitLargeFileWorkflow:
         mover_out.write_text(buffer.getvalue())
 
     @staticmethod
-    def stage_changes(repo: Path, stage_summary_out: Path, moved_contents_out: Path) -> None:
+    def git_rm_deleted_files(repo: Path) -> None:
         deleted = subprocess.check_output(
             ["git", "ls-files", "--deleted"],
             cwd=repo,
@@ -393,12 +393,16 @@ class GitLargeFileWorkflow:
                 check=True,
             )
 
+    @staticmethod
+    def git_add_moved_placeholders(repo: Path) -> None:
         for path in repo.rglob("*MOVED*"):
             if "REMOVED" in path.name:
                 continue
             rel = path.relative_to(repo)
             subprocess.run(["git", "add", str(rel)], cwd=repo, check=True)
 
+    @staticmethod
+    def write_stage_summary(repo: Path, stage_summary_out: Path) -> None:
         status = subprocess.check_output(
             ["git", "status", "--short"],
             cwd=repo,
@@ -407,6 +411,8 @@ class GitLargeFileWorkflow:
         summary_lines = [line for line in status.splitlines() if re.search(r"deleted|^\?\?|^A ", line)]
         stage_summary_out.write_text("\n".join(summary_lines) + ("\n" if summary_lines else ""))
 
+    @staticmethod
+    def write_moved_contents(repo: Path, moved_contents_out: Path) -> None:
         cached = subprocess.check_output(
             ["git", "diff", "--name-only", "--cached"],
             cwd=repo,
@@ -420,6 +426,13 @@ class GitLargeFileWorkflow:
             parts.append((repo / filename).read_text())
             parts.append("")
         moved_contents_out.write_text("\n".join(parts))
+
+    @staticmethod
+    def stage_changes(repo: Path, stage_summary_out: Path, moved_contents_out: Path) -> None:
+        GitLargeFileWorkflow.git_rm_deleted_files(repo)
+        GitLargeFileWorkflow.git_add_moved_placeholders(repo)
+        GitLargeFileWorkflow.write_stage_summary(repo, stage_summary_out)
+        GitLargeFileWorkflow.write_moved_contents(repo, moved_contents_out)
 
 
 @click.command(
