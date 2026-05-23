@@ -21,7 +21,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_OFFLOAD_ROOT = os.path.expanduser("~/googledrive/development/KB-private-offloaded")
 PATH_PREFIX_TO_STRIP = "cloudera/tasks/cde/"
 KB_PRIVATE_ROOT = os.path.expanduser("~/development/my-repos/knowledge-base-private")
-ALLOWED_EXTENSIONS = [".tar.gz", ".gz", ".zip", ".gzip"]
+ALLOWED_EXTENSIONS = [".tar.gz", ".gz", ".zip", ".gzip", ".log", ".tar", ".json", ".tgz"]
 ANALYZER_DEFAULT_TOP_N = 200
 # -----------------------------
 
@@ -195,12 +195,16 @@ class FileStats:
     def __init__(self):
         self.files_moved = 0
         self.files_skipped_by_extension = 0
+        self.files_missing = 0
         self.total_space_saved_bytes = 0
         self.total_space_reclaimed_non_matching_extension = 0
 
     def skip_file(self, file_path, size_in_bytes):
         self.files_skipped_by_extension += 1
         self.total_space_reclaimed_non_matching_extension += size_in_bytes
+
+    def record_missing(self):
+        self.files_missing += 1
 
     def add_saved_space(self, size_in_bytes):
         self.total_space_saved_bytes += size_in_bytes
@@ -211,19 +215,25 @@ class FileStats:
     def print(self, dry_run: bool):
         print("-" * 60)
         print("Summary:")
-        print(f"Files meeting size and extension criteria: {self.files_moved}")
+        above_threshold = self.files_moved + self.files_skipped_by_extension + self.files_missing
+        print(f"Files above size threshold: {above_threshold}")
+        print(f"  Will move (allowed extension): {self.files_moved}")
         if self.files_skipped_by_extension > 0:
-            print(f"Files skipped due to extension filter: {self.files_skipped_by_extension}")
+            print(f"  Skipped (extension filter): {self.files_skipped_by_extension}")
+        if self.files_missing > 0:
+            print(f"  Skipped (not on disk): {self.files_missing}")
 
         total_space_saved_human = convert_bytes_to_human_readable(self.total_space_saved_bytes)
         non_matching_human = convert_bytes_to_human_readable(self.total_space_reclaimed_non_matching_extension)
         if dry_run:
             print(f"Would save estimated space: {total_space_saved_human}")
-            print(f"Would save estimated space for non-matching extensions: {non_matching_human}")
+            if self.total_space_reclaimed_non_matching_extension > 0:
+                print(f"Space in skipped-extension files (not moved): {non_matching_human}")
             print("\nNote: Re-run with --execute to perform the actual move.")
         else:
             print(f"Estimated Space Saved: {total_space_saved_human}")
-            print(f"Space for non-matching extensions (not moved): {non_matching_human}")
+            if self.total_space_reclaimed_non_matching_extension > 0:
+                print(f"Space in skipped-extension files (not moved): {non_matching_human}")
 
 
 class CandidateValidationCode(enum.Enum):
@@ -299,12 +309,15 @@ class FilePathValidator:
 
         c.paths.source_path_abs = os.path.join(self.repo_root, c.paths.repository_relative_filepath)
         if not os.path.isfile(c.paths.source_path_abs):
+            stats.record_missing()
             return FilePathValidationResult(CandidateValidationCode.FILE_DOES_NOT_EXIST, c)
 
         return FilePathValidationResult(CandidateValidationCode.VALID, c)
 
 
 class GitLargeFileMover:
+    SORTED_RANK_RE = re.compile(r"#(\d+):")
+
     def __init__(
         self,
         input_filepath: str,
@@ -337,7 +350,7 @@ class GitLargeFileMover:
         c.paths.target_dir_abs = os.path.dirname(c.paths.target_path_abs)
         c.paths.placeholder_path = c.paths.source_path_abs + ".MOVED.txt"
 
-    def process_and_move(self):  # noqa: C901
+    def process_and_move(self) -> FileStats:  # noqa: C901
         """
         Reads the file list, identifies files larger than the threshold, and moves them
         to the offload root, preserving the relative path after stripping the prefix.
@@ -357,18 +370,17 @@ class GitLargeFileMover:
         print(f"NOTE: Stripping prefix '{self.path_prefix_to_strip}' from source paths.")
         print(f"NOTE: Only processing files with extensions: {', '.join(self.allowed_extensions)}")
 
+        stats = FileStats()
         try:
             with open(self.input_filepath, "r") as f:
                 raw_data = f.read()
         except Exception as e:
             print(f"Error reading input file: {e}")
-            return
+            return stats
 
         lines = raw_data.strip().split("\n")
-        stats = FileStats()
         validator = FilePathValidator(self.repo_root, self.allowed_extensions, self.threshold_bytes)
 
-        current_candidate_no = 1
         for line in lines:
             # Skip header/footer lines and lines that don't look like file entries
             if not line.startswith("#"):
@@ -376,23 +388,31 @@ class GitLargeFileMover:
 
             # from now on, line is file_path
             file_path = line
+            rank_match = self.SORTED_RANK_RE.search(file_path)
+            rank_label = f"#{rank_match.group(1)}" if rank_match else "#?"
 
             result = validator.validate_candidate(file_path, stats)
             if result.code in (
                 CandidateValidationCode.FILE_SIZE_BELOW_THRESHOLD,
                 CandidateValidationCode.FILE_PATTERN_DOES_NOT_MATCH,
-                CandidateValidationCode.FILE_EXTENSION_NOT_ALLOWED,
-                CandidateValidationCode.FILE_DOES_NOT_EXIST,
             ):
-                if result.code == CandidateValidationCode.FILE_DOES_NOT_EXIST:
-                    print(f"ERROR: File does not exist at source: {result.candidate.paths.source_path_abs}")
                 continue
 
             c: FileMoveCandidate = result.candidate
 
+            if result.code == CandidateValidationCode.FILE_EXTENSION_NOT_ALLOWED:
+                print(f"\n[{rank_label} SKIP extension: {c.human_size}] {c.paths.repository_relative_filepath}")
+                print(f"  Allowed extensions: {', '.join(self.allowed_extensions)}")
+                continue
+
+            if result.code == CandidateValidationCode.FILE_DOES_NOT_EXIST:
+                print(f"\n[{rank_label} SKIP missing: {c.human_size}] {c.paths.repository_relative_filepath}")
+                print(f"  Not found on disk: {c.paths.source_path_abs}")
+                continue
+
             # Determine destination paths and print candidate
             self.set_file_paths_for_candidate(c)
-            print(f"\n[MOVE Candidate #{current_candidate_no}: {c.human_size}]")
+            print(f"\n[{rank_label} MOVE: {c.human_size}]")
             print(f"  SOURCE: {c.paths.source_path_abs}")
             print(f"  TARGET: {c.paths.target_path_abs}")
 
@@ -404,8 +424,8 @@ class GitLargeFileMover:
 
             # Execute/Simulate file move
             self._perform_file_move(c, stats)
-            current_candidate_no += 1
         stats.print(self.dry_run)
+        return stats
 
     def _make_dir_for_candidate(self, c: FileMoveCandidate):
         if not self.dry_run:
@@ -459,35 +479,52 @@ class GitLargeFileWorkflow:
             raise click.ClickException(f"commit '{commit}' not found in repository '{repo}'.")
 
     @staticmethod
-    def run_commit_size_detailed(repo: Path, commit: str, output_path: Path) -> None:
+    def run_commit_size_detailed(
+        repo: Path,
+        commit: str,
+        output_path: Path,
+        *,
+        verbose: bool = False,
+    ) -> None:
         script = SCRIPT_DIR / "git-commit-size-detailed.sh"
+        cmd = [str(script), commit]
+        if verbose:
+            cmd.append("--verbose")
         with output_path.open("w") as out:
             subprocess.run(
-                [str(script), commit],
+                cmd,
                 cwd=repo,
                 stdout=out,
                 check=True,
             )
 
     @staticmethod
-    def run_working_tree_scan(repo: Path, output_path: Path) -> None:
+    def run_working_tree_scan(repo: Path, output_path: Path, *, verbose: bool = False) -> None:
         tracked = subprocess.check_output(
             ["git", "ls-files", "-z"],
             cwd=repo,
         ).split(b"\0")
 
+        paths = [raw.decode() for raw in tracked if raw]
+        total = len(paths)
+        if verbose:
+            print(f"  Scanning {total} tracked path(s)...", flush=True)
+
         lines: List[str] = []
-        for raw in tracked:
-            if not raw:
-                continue
-            rel_path = raw.decode()
+        for index, rel_path in enumerate(paths, start=1):
             abs_path = repo / rel_path
             if not abs_path.is_file():
+                if verbose and (index == 1 or index % 500 == 0 or index == total):
+                    print(f"  [{index}/{total}] skip (not a file): {rel_path}", flush=True)
                 continue
             human_size = format_size_for_details_output(abs_path.stat().st_size)
             lines.append(f"{human_size} {rel_path}")
+            if verbose and (index == 1 or index % 500 == 0 or index == total):
+                print(f"  [{index}/{total}] {human_size}  {rel_path}", flush=True)
 
         output_path.write_text("\n".join(lines) + ("\n" if lines else ""))
+        if verbose:
+            print(f"  Sized {len(lines)} file(s) from working tree", flush=True)
 
     @staticmethod
     def run_analyzer(
@@ -511,7 +548,7 @@ class GitLargeFileWorkflow:
         execute: bool,
         offload_root: Optional[str],
         path_prefix: Optional[str],
-    ) -> None:
+    ) -> FileStats:
         mover = GitLargeFileMover(
             str(all_sorted_out),
             threshold_mb * 1024 * 1024,
@@ -522,8 +559,9 @@ class GitLargeFileWorkflow:
         )
         buffer = io.StringIO()
         with redirect_stdout(buffer):
-            mover.process_and_move()
+            stats = mover.process_and_move()
         mover_out.write_text(buffer.getvalue())
+        return stats
 
     @staticmethod
     def git_rm_deleted_files(repo: Path) -> None:
@@ -581,7 +619,7 @@ class GitLargeFileWorkflow:
         GitLargeFileWorkflow.write_moved_contents(repo, moved_contents_out)
 
     @staticmethod
-    def _print_run_header(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
+    def print_run_header(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
         print(f"Repository: {config.resolved_repo()}")
         if config.scan_working_tree:
             print("Source: working tree (tracked files on disk)")
@@ -590,20 +628,30 @@ class GitLargeFileWorkflow:
         print(f"Output directory: {paths.out_dir}")
         print(f"Threshold: {config.threshold_mb}MB")
         print(f"Mode: {'EXECUTE (files will be moved)' if config.execute else 'DRY RUN (preview only)'}")
+        if config.verbose:
+            print("Verbose: enabled")
         print("")
 
     @staticmethod
-    def _collect_file_sizes(config: "WorkflowConfig", repo: Path, details_out: Path) -> None:
+    def collect_file_sizes(config: "WorkflowConfig", repo: Path, details_out: Path) -> None:
         if config.scan_working_tree:
-            print("Step 1/3: Collecting file sizes from working tree...")
-            GitLargeFileWorkflow.run_working_tree_scan(repo, details_out)
+            print("Step 1/3: Collecting file sizes from working tree...", flush=True)
+            GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, verbose=config.verbose)
         else:
-            print("Step 1/3: Collecting file sizes from commit...")
-            GitLargeFileWorkflow.run_commit_size_detailed(repo, config.commit, details_out)
-        print(f"  Wrote {details_out}")
+            print("Step 1/3: Collecting file sizes from commit...", flush=True)
+            if config.verbose:
+                print(f"  Commit: {config.commit}", flush=True)
+                print("  Running git-commit-size-detailed.sh (progress on stderr)...", flush=True)
+            GitLargeFileWorkflow.run_commit_size_detailed(
+                repo,
+                config.commit,
+                details_out,
+                verbose=config.verbose,
+            )
+        print(f"  Wrote {details_out}", flush=True)
 
     @staticmethod
-    def _analyze_and_sort(paths: "WorkflowOutputPaths") -> None:
+    def analyze_and_sort(paths: "WorkflowOutputPaths") -> None:
         print("Step 2/3: Sorting files by size...")
         GitLargeFileWorkflow.run_analyzer(paths.details_out, paths.analyzer_out, paths.all_sorted_out)
         print(f"  Wrote {paths.analyzer_out}")
@@ -635,7 +683,7 @@ class GitLargeFileWorkflow:
         print(f"  cd {repo} && git status")
 
     @staticmethod
-    def _print_completion(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
+    def print_completion(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
         print("")
         if config.execute:
             print("Done. Files were moved.")
@@ -653,15 +701,15 @@ class GitLargeFileWorkflow:
         if not config.scan_working_tree:
             GitLargeFileWorkflow.verify_commit(repo, config.commit)
 
-        GitLargeFileWorkflow._print_run_header(config, paths)
-        GitLargeFileWorkflow._collect_file_sizes(config, repo, paths.details_out)
-        GitLargeFileWorkflow._analyze_and_sort(paths)
+        GitLargeFileWorkflow.print_run_header(config, paths)
+        GitLargeFileWorkflow.collect_file_sizes(config, repo, paths.details_out)
+        GitLargeFileWorkflow.analyze_and_sort(paths)
         GitLargeFileWorkflow._move_large_files(config, repo, paths)
 
         if config.stage:
             GitLargeFileWorkflow._stage_repo_changes(repo, paths)
 
-        GitLargeFileWorkflow._print_completion(config, paths)
+        GitLargeFileWorkflow.print_completion(config, paths)
 
 
 @dataclass
@@ -675,6 +723,7 @@ class WorkflowConfig:
     stage: bool
     offload_root: Optional[str]
     path_prefix: Optional[str]
+    verbose: bool = False
 
     def validate(self) -> None:
         if self.scan_working_tree and self.commit:
@@ -695,6 +744,16 @@ class WorkflowConfig:
         if self.out_dir:
             return self.out_dir.expanduser().resolve()
         return Path.home() / f"git-large-files-{self.run_label}"
+
+    def resolved_offload_root(self) -> str:
+        if self.offload_root:
+            return os.path.expanduser(self.offload_root)
+        return DEFAULT_OFFLOAD_ROOT
+
+    def resolved_path_prefix(self) -> str:
+        if self.path_prefix:
+            return self.path_prefix
+        return PATH_PREFIX_TO_STRIP
 
 
 @dataclass
@@ -729,6 +788,17 @@ class WorkflowOutputPaths:
         )
 
 
+class ExpandedDirectoryPath(click.Path):
+    """click.Path that expands ~ before existence checks."""
+
+    def convert(self, value, param, ctx):
+        if isinstance(value, Path):
+            value = str(value.expanduser())
+        else:
+            value = os.path.expanduser(value)
+        return super().convert(value, param, ctx)
+
+
 @click.command(
     context_settings={"help_option_names": ["-h", "--help"]},
 )
@@ -741,12 +811,12 @@ class WorkflowOutputPaths:
 @click.option(
     "--repo",
     required=True,
-    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    type=ExpandedDirectoryPath(exists=True, file_okay=False, path_type=Path),
     help="Local git repository root",
 )
 @click.option(
     "--out-dir",
-    type=click.Path(file_okay=False, path_type=Path),
+    type=ExpandedDirectoryPath(file_okay=False, path_type=Path),
     help="Directory for intermediate output files (default: ~/git-large-files-<label>)",
 )
 @click.option(
@@ -756,11 +826,14 @@ class WorkflowOutputPaths:
     help="Minimum file size in MB to move",
 )
 @click.option(
-    "--execute/--dry-run",
-    "execute",
-    default=False,
-    show_default=True,
-    help="Actually move files to offloaded storage, or preview moves (default)",
+    "--execute",
+    is_flag=True,
+    help="Move files to offloaded storage (default: dry-run preview only)",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Preview moves without changing files (default when neither flag is given)",
 )
 @click.option(
     "--stage",
@@ -772,6 +845,12 @@ class WorkflowOutputPaths:
     "--path-prefix",
     help=f"Repository path prefix to strip before offload (default: {PATH_PREFIX_TO_STRIP})",
 )
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Print progress while collecting file sizes (commit scan logs to stderr)",
+)
 def main(
     commit: Optional[str],
     scan_working_tree: bool,
@@ -779,11 +858,16 @@ def main(
     out_dir: Optional[Path],
     threshold_mb: int,
     execute: bool,
+    dry_run: bool,
     stage: bool,
     offload_root: Optional[str],
     path_prefix: Optional[str],
+    verbose: bool,
 ) -> None:
     """Analyze large files in a repo, optionally offload them, and optionally stage git changes."""
+    if execute and dry_run:
+        raise click.UsageError("Use only one of --execute or --dry-run")
+
     GitLargeFileWorkflow.run(
         WorkflowConfig(
             commit=commit,
@@ -795,6 +879,7 @@ def main(
             stage=stage,
             offload_root=offload_root,
             path_prefix=path_prefix,
+            verbose=verbose,
         )
     )
 
