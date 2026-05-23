@@ -98,7 +98,7 @@ class FilePathValidator:
                 break
 
         if not is_allowed:
-            stats.skip_file(candidate.paths.file_path, candidate.size_in_bytes)
+            stats.skip_file(candidate.paths.repository_relative_filepath, candidate.size_in_bytes)
             return False
         return True
 
@@ -188,8 +188,8 @@ class GitLargeFileMover:
         rel_path = c.paths.repository_relative_filepath
 
         # Strip the configured prefix from the relative path
-        if rel_path.startswith(self.google_drive_root, self.path_prefix_to_strip):
-            c.paths.new_relative_path = rel_path[len(self.google_drive_root, self.path_prefix_to_strip) :]
+        if rel_path.startswith(self.path_prefix_to_strip):
+            c.paths.new_relative_path = rel_path[len(self.path_prefix_to_strip) :]
         else:
             c.paths.new_relative_path = rel_path
 
@@ -233,6 +233,7 @@ class GitLargeFileMover:
 
         lines = raw_data.strip().split("\n")
         stats = FileStats()
+        validator = FilePathValidator(self.repo_root, self.allowed_extensions, self.threshold_bytes)
 
         current_candidate_no = 1
         for line in lines:
@@ -243,7 +244,6 @@ class GitLargeFileMover:
             # from now on, line is file_path
             file_path = line
 
-            validator = FilePathValidator(self.repo_root, self.allowed_extensions, self.threshold_bytes)
             result = validator.validate_candidate(file_path, stats)
             if result.code in (
                 CandidateValidationCode.FILE_SIZE_BELOW_THRESHOLD,
