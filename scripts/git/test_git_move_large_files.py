@@ -135,5 +135,39 @@ def test_expanded_directory_path_expands_tilde_before_exists_check(tmp_path, mon
     assert resolved == Path(str(repo))
 
 
+def test_run_commit_size_detailed_passes_verbose_flag(monkeypatch, tmp_path):
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    output_path = tmp_path / "details.txt"
+    GitLargeFileWorkflow.run_commit_size_detailed(tmp_path, "abc123", output_path, verbose=True)
+
+    assert calls
+    assert calls[0][0][-1] == "--verbose"
+
+
+def test_run_working_tree_scan_verbose_prints_progress(capsys, tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "a.txt").write_text("a")
+    (repo / "b.txt").write_text("b")
+
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+
+    details_out = repo / "details.txt"
+    GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, verbose=True)
+
+    captured = capsys.readouterr()
+    assert "Scanning 2 tracked path(s)" in captured.out
+    assert details_out.read_text().count("\n") >= 1
+
+
 if __name__ == "__main__":
     unittest.main()

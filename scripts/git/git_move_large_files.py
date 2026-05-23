@@ -460,35 +460,52 @@ class GitLargeFileWorkflow:
             raise click.ClickException(f"commit '{commit}' not found in repository '{repo}'.")
 
     @staticmethod
-    def run_commit_size_detailed(repo: Path, commit: str, output_path: Path) -> None:
+    def run_commit_size_detailed(
+        repo: Path,
+        commit: str,
+        output_path: Path,
+        *,
+        verbose: bool = False,
+    ) -> None:
         script = SCRIPT_DIR / "git-commit-size-detailed.sh"
+        cmd = [str(script), commit]
+        if verbose:
+            cmd.append("--verbose")
         with output_path.open("w") as out:
             subprocess.run(
-                [str(script), commit],
+                cmd,
                 cwd=repo,
                 stdout=out,
                 check=True,
             )
 
     @staticmethod
-    def run_working_tree_scan(repo: Path, output_path: Path) -> None:
+    def run_working_tree_scan(repo: Path, output_path: Path, *, verbose: bool = False) -> None:
         tracked = subprocess.check_output(
             ["git", "ls-files", "-z"],
             cwd=repo,
         ).split(b"\0")
 
+        paths = [raw.decode() for raw in tracked if raw]
+        total = len(paths)
+        if verbose:
+            print(f"  Scanning {total} tracked path(s)...", flush=True)
+
         lines: List[str] = []
-        for raw in tracked:
-            if not raw:
-                continue
-            rel_path = raw.decode()
+        for index, rel_path in enumerate(paths, start=1):
             abs_path = repo / rel_path
             if not abs_path.is_file():
+                if verbose and (index == 1 or index % 500 == 0 or index == total):
+                    print(f"  [{index}/{total}] skip (not a file): {rel_path}", flush=True)
                 continue
             human_size = format_size_for_details_output(abs_path.stat().st_size)
             lines.append(f"{human_size} {rel_path}")
+            if verbose and (index == 1 or index % 500 == 0 or index == total):
+                print(f"  [{index}/{total}] {human_size}  {rel_path}", flush=True)
 
         output_path.write_text("\n".join(lines) + ("\n" if lines else ""))
+        if verbose:
+            print(f"  Sized {len(lines)} file(s) from working tree", flush=True)
 
     @staticmethod
     def run_analyzer(
@@ -592,17 +609,27 @@ class GitLargeFileWorkflow:
         print(f"Output directory: {paths.out_dir}")
         print(f"Threshold: {config.threshold_mb}MB")
         print(f"Mode: {'EXECUTE (files will be moved)' if config.execute else 'DRY RUN (preview only)'}")
+        if config.verbose:
+            print("Verbose: enabled")
         print("")
 
     @staticmethod
     def collect_file_sizes(config: "WorkflowConfig", repo: Path, details_out: Path) -> None:
         if config.scan_working_tree:
-            print("Step 1/3: Collecting file sizes from working tree...")
-            GitLargeFileWorkflow.run_working_tree_scan(repo, details_out)
+            print("Step 1/3: Collecting file sizes from working tree...", flush=True)
+            GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, verbose=config.verbose)
         else:
-            print("Step 1/3: Collecting file sizes from commit...")
-            GitLargeFileWorkflow.run_commit_size_detailed(repo, config.commit, details_out)
-        print(f"  Wrote {details_out}")
+            print("Step 1/3: Collecting file sizes from commit...", flush=True)
+            if config.verbose:
+                print(f"  Commit: {config.commit}", flush=True)
+                print("  Running git-commit-size-detailed.sh (progress on stderr)...", flush=True)
+            GitLargeFileWorkflow.run_commit_size_detailed(
+                repo,
+                config.commit,
+                details_out,
+                verbose=config.verbose,
+            )
+        print(f"  Wrote {details_out}", flush=True)
 
     @staticmethod
     def analyze_and_sort(paths: "WorkflowOutputPaths") -> None:
@@ -677,6 +704,7 @@ class WorkflowConfig:
     stage: bool
     offload_root: Optional[str]
     path_prefix: Optional[str]
+    verbose: bool = False
 
     def validate(self) -> None:
         if self.scan_working_tree and self.commit:
@@ -795,6 +823,12 @@ class ExpandedDirectoryPath(click.Path):
     "--path-prefix",
     help=f"Repository path prefix to strip before offload (default: {PATH_PREFIX_TO_STRIP})",
 )
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Print progress while collecting file sizes (commit scan logs to stderr)",
+)
 def main(
     commit: Optional[str],
     scan_working_tree: bool,
@@ -805,6 +839,7 @@ def main(
     stage: bool,
     offload_root: Optional[str],
     path_prefix: Optional[str],
+    verbose: bool,
 ) -> None:
     """Analyze large files in a repo, optionally offload them, and optionally stage git changes."""
     GitLargeFileWorkflow.run(
@@ -818,6 +853,7 @@ def main(
             stage=stage,
             offload_root=offload_root,
             path_prefix=path_prefix,
+            verbose=verbose,
         )
     )
 
