@@ -29,6 +29,80 @@ cd ~/development/my-repos/knowledge-base-private && git status
 
 Output files land in `~/Downloads/git-large-files-<commit>/` by default. Override with `--out-dir`.
 
+## Examples
+
+### Shell function (after sourcing `scripts/git.sh`)
+
+```bash
+# Dry run (default) — preview moves, write logs under ~/Downloads/git-large-files-<commit>/
+git-move-large-files \
+  --commit 6619c839 \
+  --repo ~/development/my-repos/knowledge-base-private
+
+# Explicit dry run + custom output directory
+git-move-large-files \
+  --commit 6619c839 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --out-dir ~/Downloads/git-cleanup-kb-private/part2 \
+  --dry-run
+
+# Move files only (no git staging)
+git-move-large-files \
+  --commit 6619c839 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --execute
+
+# Move files and stage deletions + MOVED placeholders
+git-move-large-files \
+  --commit 6619c839 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --execute --stage
+
+# Raise size threshold to 50 MB
+git-move-large-files \
+  --commit 6619c839 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --threshold-mb 50 \
+  --dry-run
+
+# Override offload destination and repo path prefix
+git-move-large-files \
+  --commit 6619c839 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --drive-root ~/googledrive/development/KB-private-offloaded \
+  --path-prefix cloudera/tasks/cde/ \
+  --dry-run
+```
+
+### Direct Python invocation
+
+```bash
+python3 scripts/git/git_move_large_files.py --help
+
+python3 scripts/git/git_move_large_files.py \
+  --commit 6619c839 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --dry-run
+
+python3 scripts/git/git_move_large_files.py \
+  --commit 6619c839 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --out-dir ~/Downloads/git-cleanup-kb-private/part2 \
+  --threshold-mb 20 \
+  --execute --stage
+```
+
+### Output files (default `--out-dir`)
+
+| File | Purpose |
+|------|---------|
+| `git-details-hash-<commit>.txt` | Raw sizes from `git-commit-size-detailed.sh` |
+| `git-commit-size-analyzer-out-<commit>.txt` | Analyzer summary (top N + stats) |
+| `git-commit-analyzer-all-results-sorted.txt` | Full sorted list fed to the mover |
+| `git-large-file-mover-out-<commit>.txt` | Move dry-run or execute log — **review before `--execute`** |
+| `git-stage-summary.txt` | Staged changes summary (with `--stage`) |
+| `contents-MOVED-files.txt` | Placeholder file contents (with `--stage`) |
+
 ## Safety notes
 
 - **Always dry-run first.** `--dry-run` is the default; pass `--execute` only after reviewing `git-large-file-mover-out-<commit>.txt`.

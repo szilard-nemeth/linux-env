@@ -504,7 +504,7 @@ def main(
     print(f"  Wrote {details_out}")
 
     print("Step 2/3: Sorting files by size...")
-    GitLargeFileWorkflow.run_analyzer(analyzer_out, all_sorted_out)
+    GitLargeFileWorkflow.run_analyzer(details_out, analyzer_out, all_sorted_out)
     print(f"  Wrote {analyzer_out}")
     print(f"  Wrote {all_sorted_out}")
 
