@@ -18,7 +18,7 @@ class _StubCleanup(CleanupTool):
         self.execute_called = True
 
     def verify(self) -> CleanupResult:
-        return CleanupResult(0, True, [])
+        return CleanupResult.from_bytes(0)
 
     def print_summary(self):
         pass

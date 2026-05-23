@@ -16,7 +16,6 @@ import humanfriendly
 DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 TOOL_OUTPUT_BASEDIR = Path(os.path.expanduser("~/snemeth-dev-projects/cleanup_disk/"))
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
-# TODO Prepare commands, before execute prompt user for all tools or for each tool one by one or use dry-run
 # TODO Add JetBrains tool cleanup?
 
 # Setup Global Logging Path
@@ -70,11 +69,17 @@ class FileUtils:
 
 @dataclass
 class CleanupDetails:
-    # TODO Similar to CleanupResult, refactor
     dir: Path
     before_size: Optional[int] = None
     after_size: Optional[int] = None
     metadata: Optional[Dict[str, Any]] = None
+
+    @property
+    def reclaimed_bytes(self) -> int:
+        before = self.before_size or 0
+        if self.after_size is None:
+            return 0
+        return max(0, before - (self.after_size or 0))
 
 
 @dataclass
@@ -91,8 +96,12 @@ class AggregateCleanupDetails:
         self.sum_before_size = 0
         self.sum_after_size = 0
         for detail in self.components:
-            self.sum_before_size += detail.before_size
-            self.sum_after_size += detail.after_size if detail.after_size else 0
+            self.sum_before_size += detail.before_size or 0
+            self.sum_after_size += detail.after_size or 0
+
+    @property
+    def reclaimed_bytes(self) -> int:
+        return max(0, (self.sum_before_size or 0) - (self.sum_after_size or 0))
 
 
 class CleanupDetailsTracker:
@@ -166,31 +175,40 @@ class CleanupDetailsTracker:
             return self._aggregate_cleanup[key].sum_after_size
         raise ValueError("Key not found: " + key)
 
-    def get_space_reclaimed_for_named_cleanup(self, key: str):
+    def get_space_reclaimed_for_named_cleanup(self, key: str) -> int:
         if key in self._named_cleanup:
-            details = self._named_cleanup[key]
-            return details.before_size - details.after_size
+            return self._named_cleanup[key].reclaimed_bytes
         if key in self._aggregate_cleanup:
-            details = self._aggregate_cleanup[key]
-            return details.sum_before_size - details.sum_after_size
+            return self._aggregate_cleanup[key].reclaimed_bytes
         raise ValueError("Key not found: " + key)
 
     def sum_unnamed_before_bytes(self) -> int:
         return sum((item.before_size or 0) for item in self.unnamed_cleanup)
 
-    def get_space_reclaimed_for_unnamed_cleanup(self) -> int:
-        return self.sum_unnamed_before_bytes()
+    def sum_unnamed_reclaimed_bytes(self) -> int:
+        return sum(item.reclaimed_bytes for item in self.unnamed_cleanup)
 
-    def get_space_reclaimed_total(self):
-        details = self._aggregate_cleanup[CleanupDetailsTracker.TOTAL_KEY]
-        return details.sum_before_size - details.sum_after_size
+    def get_space_reclaimed_for_unnamed_cleanup(self) -> int:
+        return self.sum_unnamed_reclaimed_bytes()
+
+    def get_space_reclaimed_total(self) -> int:
+        return self._aggregate_cleanup[CleanupDetailsTracker.TOTAL_KEY].reclaimed_bytes
+
+    def build_cleanup_result(self, *, success: bool = True, key: str = TOTAL_KEY) -> "CleanupResult":
+        return CleanupResult(bytes_reclaimed=self.get_space_reclaimed_for_named_cleanup(key), success=success)
+
+    def build_cleanup_result_unnamed(self, *, success: bool = True) -> "CleanupResult":
+        return CleanupResult(bytes_reclaimed=self.sum_unnamed_reclaimed_bytes(), success=success)
 
 
 @dataclass
 class CleanupResult:
     bytes_reclaimed: int
-    success: bool
-    logs: List[str]
+    success: bool = True
+
+    @classmethod
+    def from_bytes(cls, bytes_reclaimed: int, success: bool = True) -> "CleanupResult":
+        return cls(bytes_reclaimed=bytes_reclaimed, success=success)
 
 
 class CleanupTool(ABC):
@@ -285,6 +303,22 @@ class CleanupTool(ABC):
     def verify(self) -> CleanupResult:
         pass
 
+    def _verify_with_tracker(
+        self,
+        tracker: CleanupDetailsTracker,
+        *,
+        success: bool = True,
+        key: str = CleanupDetailsTracker.TOTAL_KEY,
+    ) -> CleanupResult:
+        tracker.calculate_after_sizes()
+        self.cleanup_result = tracker.build_cleanup_result(success=success, key=key)
+        return self.cleanup_result
+
+    def _verify_with_tracker_unnamed(self, tracker: CleanupDetailsTracker, *, success: bool = True) -> CleanupResult:
+        tracker.calculate_after_sizes()
+        self.cleanup_result = tracker.build_cleanup_result_unnamed(success=success)
+        return self.cleanup_result
+
     def execute_flow(self):
         self.prepare()
         if self.interactive and self._has_pending_work():
@@ -362,7 +396,7 @@ class MavenCleanup(CleanupTool):
 
         targets = self.tracker.unnamed_cleanup
         for target in targets:
-            reclaimed = target.before_size - target.after_size
+            reclaimed = target.reclaimed_bytes
 
             if target.dir.exists() and reclaimed == 0:
                 logger.info(f"Target: {target.dir}")
@@ -372,8 +406,7 @@ class MavenCleanup(CleanupTool):
                 logger.info(f"Target: {target.dir}")
                 logger.info(f"  {format_du_style(target.before_size)} -> {status} (Saved {format_du_style(reclaimed)})")
 
-        total_reclaimed_bytes = self.tracker.get_space_reclaimed_total()
-        self.cleanup_result = CleanupResult(bytes_reclaimed=total_reclaimed_bytes, success=True, logs=[])
+        self.cleanup_result = self.tracker.build_cleanup_result()
         return self.cleanup_result
 
     def _get_mvn_target_dirs(self, limit_bytes: int):
@@ -480,10 +513,9 @@ class AsdfGolangCleanup(CleanupTool):
 
         logger.info(
             "Removed Go versions: %s disk space reclaimed",
-            format_du_style(self.tracker.get_space_reclaimed_for_unnamed_cleanup()),
+            format_du_style(self.tracker.sum_unnamed_reclaimed_bytes()),
         )
-        total_reclaimed = self.tracker.get_space_reclaimed_for_named_cleanup(CleanupDetailsTracker.TOTAL_KEY)
-        self.cleanup_result = CleanupResult(total_reclaimed, True, [])
+        self.cleanup_result = self.tracker.build_cleanup_result()
         return self.cleanup_result
 
 
@@ -661,7 +693,7 @@ class DockerCleanup(CleanupTool, _DockerPruneMixin):
 
     def verify(self) -> CleanupResult:
         success = self._docker_available and not self._prune_failed
-        self.cleanup_result = CleanupResult(self._bytes_reclaimed, success, [])
+        self.cleanup_result = CleanupResult.from_bytes(self._bytes_reclaimed, success=success)
         return self.cleanup_result
 
     def print_summary(self) -> None:
@@ -740,7 +772,7 @@ class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
 
     def verify(self) -> CleanupResult:
         success = self._docker_available and not self._prune_failed
-        self.cleanup_result = CleanupResult(self._bytes_reclaimed, success, [])
+        self.cleanup_result = CleanupResult.from_bytes(self._bytes_reclaimed, success=success)
         return self.cleanup_result
 
     def print_summary(self) -> None:
@@ -807,10 +839,7 @@ class DiscoveryCleanup(CleanupTool):
                 shutil.rmtree(details.dir, ignore_errors=True)
 
     def verify(self) -> CleanupResult:
-        self.tracker.calculate_after_sizes()
-        reclaimed = self.tracker.get_space_reclaimed_for_unnamed_cleanup()
-        self.cleanup_result = CleanupResult(reclaimed, True, [])
-        return self.cleanup_result
+        return self._verify_with_tracker_unnamed(self.tracker)
 
 
 class PoetryCacheCleanup(CleanupTool):
@@ -841,10 +870,7 @@ class PoetryCacheCleanup(CleanupTool):
         _ = self.run_command(["poetry", "cache", "clear", ".", "--all"])
 
     def verify(self) -> CleanupResult:
-        self.tracker.calculate_after_sizes()
-        total_reclaimed_bytes = self.tracker.get_space_reclaimed_total()
-        self.cleanup_result = CleanupResult(total_reclaimed_bytes, True, [])
-        return self.cleanup_result
+        return self._verify_with_tracker(self.tracker)
 
 
 def format_du_style(size_in_bytes):
