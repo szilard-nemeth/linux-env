@@ -319,10 +319,6 @@ class GitLargeFileMover:
             stats.record_file_moved(c.file_path)
 
 
-def msg(text: str = "") -> None:
-    print(text)
-
-
 def verify_commit(repo: Path, commit: str) -> None:
     result = subprocess.run(
         ["git", "-C", str(repo), "rev-parse", "--verify", f"{commit}^{{commit}}"],
@@ -493,23 +489,23 @@ def main(
     stage_summary_out = resolved_out_dir / "git-stage-summary.txt"
     moved_contents_out = resolved_out_dir / "contents-MOVED-files.txt"
 
-    msg(f"Repository: {repo}")
-    msg(f"Commit: {commit}")
-    msg(f"Output directory: {resolved_out_dir}")
-    msg(f"Threshold: {threshold_mb}MB")
-    msg(f"Mode: {'EXECUTE (files will be moved)' if execute else 'DRY RUN (preview only)'}")
-    msg()
+    print(f"Repository: {repo}")
+    print(f"Commit: {commit}")
+    print(f"Output directory: {resolved_out_dir}")
+    print(f"Threshold: {threshold_mb}MB")
+    print(f"Mode: {'EXECUTE (files will be moved)' if execute else 'DRY RUN (preview only)'}")
+    print("")
 
-    msg("Step 1/3: Collecting file sizes from commit...")
+    print("Step 1/3: Collecting file sizes from commit...")
     run_commit_size_detailed(repo, commit, details_out)
-    msg(f"  Wrote {details_out}")
+    print(f"  Wrote {details_out}")
 
-    msg("Step 2/3: Sorting files by size...")
+    print("Step 2/3: Sorting files by size...")
     run_analyzer(details_out, analyzer_out, all_sorted_out)
-    msg(f"  Wrote {analyzer_out}")
-    msg(f"  Wrote {all_sorted_out}")
+    print(f"  Wrote {analyzer_out}")
+    print(f"  Wrote {all_sorted_out}")
 
-    msg("Step 3/3: Processing large files...")
+    print("Step 3/3: Processing large files...")
     run_mover(
         all_sorted_out,
         mover_out,
@@ -519,23 +515,23 @@ def main(
         drive_root=drive_root,
         path_prefix=path_prefix,
     )
-    msg(f"  Wrote {mover_out}")
+    print(f"  Wrote {mover_out}")
 
     if stage:
-        msg()
-        msg("Staging git changes...")
+        print("")
+        print("Staging git changes...")
         stage_changes(repo, stage_summary_out, moved_contents_out)
-        msg(f"  Wrote {stage_summary_out}")
-        msg(f"  Wrote {moved_contents_out}")
-        msg()
-        msg(f"Review staged changes in {repo}, then commit when ready:")
-        msg(f"  cd {repo} && git status")
+        print(f"  Wrote {stage_summary_out}")
+        print(f"  Wrote {moved_contents_out}")
+        print("")
+        print(f"Review staged changes in {repo}, then commit when ready:")
+        print(f"  cd {repo} && git status")
 
-    msg()
+    print("")
     if execute:
-        msg("Done. Files were moved.")
+        print("Done. Files were moved.")
     else:
-        msg(f"Dry run complete. Review {mover_out}, then re-run with --execute.")
+        print(f"Dry run complete. Review {mover_out}, then re-run with --execute.")
 
 
 if __name__ == "__main__":
