@@ -64,3 +64,78 @@ def test_main_rejects_conflicting_exclusive_flags():
 
     with pytest.raises(click.UsageError):
         main(["--docker-only", "--kb-private-git-offload"], standalone_mode=False)
+
+
+def test_resolve_tools_full_default_run():
+    from scripts.disk_cleanup.cleanup_disk import (
+        AsdfGolangCleanup,
+        DEFAULT_OPTIONAL_TOOLS,
+        DockerCleanup,
+        DockerSystemPruneCleanup,
+        MavenCleanup,
+        OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD,
+        resolve_tools,
+    )
+
+    tools = resolve_tools(interactive=False, docker_time_limit="24h")
+    types = [type(t) for t in tools]
+
+    assert MavenCleanup in types
+    assert AsdfGolangCleanup in types
+    assert DockerCleanup in types
+    assert DockerSystemPruneCleanup in types
+    assert len([t for t in tools if type(t) is DockerCleanup]) == 1
+    assert DEFAULT_OPTIONAL_TOOLS == ("docker-cleanup", "docker-system-prune")
+    assert OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD not in [t.summary_name for t in tools]
+
+
+def test_resolve_tools_skip_defaults_requires_include():
+    from scripts.disk_cleanup.cleanup_disk import resolve_tools
+
+    with pytest.raises(click.UsageError):
+        resolve_tools(interactive=False, docker_time_limit="24h", skip_defaults=True)
+
+
+def test_resolve_tools_skip_defaults_with_include():
+    from scripts.disk_cleanup.cleanup_disk import (
+        DockerCleanup,
+        KbPrivateGitOffloadCleanup,
+        OPTIONAL_TOOL_DOCKER_CLEANUP,
+        OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD,
+        resolve_tools,
+    )
+
+    tools = resolve_tools(
+        interactive=False,
+        docker_time_limit="48h",
+        skip_defaults=True,
+        include_optional=[OPTIONAL_TOOL_DOCKER_CLEANUP, OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD],
+    )
+
+    assert len(tools) == 2
+    assert isinstance(tools[0], DockerCleanup)
+    assert tools[0].time_limit == "48h"
+    assert isinstance(tools[1], KbPrivateGitOffloadCleanup)
+
+
+def test_resolve_tools_include_kb_without_docker():
+    from scripts.disk_cleanup.cleanup_disk import (
+        DockerCleanup,
+        DockerSystemPruneCleanup,
+        KbPrivateGitOffloadCleanup,
+        MavenCleanup,
+        OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD,
+        resolve_tools,
+    )
+
+    tools = resolve_tools(
+        interactive=False,
+        docker_time_limit="24h",
+        include_optional=[OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD],
+    )
+    types = [type(t) for t in tools]
+
+    assert MavenCleanup in types
+    assert KbPrivateGitOffloadCleanup in types
+    assert DockerCleanup not in types
+    assert DockerSystemPruneCleanup not in types

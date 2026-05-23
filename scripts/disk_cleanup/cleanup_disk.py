@@ -1056,18 +1056,63 @@ def parse_to_bytes(size_str):
     return humanfriendly.parse_size(size_str, binary=True)
 
 
-def build_default_tools(interactive: bool, docker_time_limit: str) -> List[CleanupTool]:
+OPTIONAL_TOOL_DOCKER_CLEANUP = "docker-cleanup"
+OPTIONAL_TOOL_DOCKER_SYSTEM_PRUNE = "docker-system-prune"
+OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD = "kb-private-offload"
+
+# Optional tools included in a full default run (no --skip-defaults, no --include-*).
+DEFAULT_OPTIONAL_TOOLS = (OPTIONAL_TOOL_DOCKER_CLEANUP, OPTIONAL_TOOL_DOCKER_SYSTEM_PRUNE)
+
+
+def build_default_tools(interactive: bool) -> List[CleanupTool]:
     pip_cache_root = Path(os.path.expanduser("~/Library/Caches/pip"))
     return [
         MavenCleanup("100M", interactive=interactive),
         AsdfGolangCleanup(keep_versions=["1.24.11"], interactive=interactive),
-        DockerCleanup(time_limit=docker_time_limit, interactive=interactive),
-        DockerSystemPruneCleanup(interactive=interactive),
         DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"], interactive=interactive),
         DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"], interactive=interactive),
         DiscoveryCleanup("Pip Cache", pip_cache_root, ["*"], interactive=interactive),
         PoetryCacheCleanup(interactive=interactive),
     ]
+
+
+def build_optional_tool(name: str, *, interactive: bool, docker_time_limit: str) -> CleanupTool:
+    if name == OPTIONAL_TOOL_DOCKER_CLEANUP:
+        return DockerCleanup(time_limit=docker_time_limit, interactive=interactive)
+    if name == OPTIONAL_TOOL_DOCKER_SYSTEM_PRUNE:
+        return DockerSystemPruneCleanup(interactive=interactive)
+    if name == OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD:
+        return KbPrivateGitOffloadCleanup(interactive=interactive)
+    raise ValueError(f"Unknown optional cleanup tool: {name}")
+
+
+def resolve_tools(
+    *,
+    interactive: bool,
+    docker_time_limit: str,
+    skip_defaults: bool = False,
+    include_optional: Optional[List[str]] = None,
+) -> List[CleanupTool]:
+    include_optional = include_optional or []
+    tools: List[CleanupTool] = []
+
+    if not skip_defaults:
+        tools.extend(build_default_tools(interactive))
+
+    if include_optional:
+        for name in include_optional:
+            tools.append(build_optional_tool(name, interactive=interactive, docker_time_limit=docker_time_limit))
+    elif not skip_defaults:
+        for name in DEFAULT_OPTIONAL_TOOLS:
+            tools.append(build_optional_tool(name, interactive=interactive, docker_time_limit=docker_time_limit))
+
+    if not tools:
+        raise click.UsageError(
+            "No cleanup tools selected. Omit --skip-defaults or pass one or more "
+            "--include-docker-cleanup / --include-docker-system-prune / --include-kb-private-offload."
+        )
+
+    return tools
 
 
 class ToolRunner:
@@ -1111,15 +1156,37 @@ class ToolRunner:
     is_flag=True,
     help="Offload large tracked archives from knowledge-base-private to Google Drive storage",
 )
+@click.option(
+    "--skip-defaults",
+    is_flag=True,
+    help="Skip default cleanup tools (Maven, Go, venvs, Terraform, pip, Poetry)",
+)
+@click.option(
+    "--include-docker-cleanup",
+    is_flag=True,
+    help="Include Docker image cleanup (dangling + age-based prune)",
+)
+@click.option(
+    "--include-docker-system-prune",
+    is_flag=True,
+    help="Include aggressive Docker system prune",
+)
+@click.option(
+    "--include-kb-private-offload",
+    is_flag=True,
+    help="Include KB private git large-file offload",
+)
 def main(
     docker_only: bool,
     docker_system_prune_only: bool,
     force: bool,
     docker_time_limit: str,
     kb_private_git_offload: bool,
+    skip_defaults: bool,
+    include_docker_cleanup: bool,
+    include_docker_system_prune: bool,
+    include_kb_private_offload: bool,
 ):
-    # TODO --skip-defaults should skip the defaults, otherwise they always run
-    # TODO --include-<toolname> -> toolname can be docker-cleanup, docker-system-prune or kb-private-offload
     """Disk cleanup utilities."""
     exclusive_modes = [docker_only, docker_system_prune_only, kb_private_git_offload]
     if sum(exclusive_modes) > 1:
@@ -1136,7 +1203,20 @@ def main(
     elif kb_private_git_offload:
         tools = [KbPrivateGitOffloadCleanup(interactive=interactive)]
     else:
-        tools = build_default_tools(interactive, docker_time_limit)
+        include_optional: List[str] = []
+        if include_docker_cleanup:
+            include_optional.append(OPTIONAL_TOOL_DOCKER_CLEANUP)
+        if include_docker_system_prune:
+            include_optional.append(OPTIONAL_TOOL_DOCKER_SYSTEM_PRUNE)
+        if include_kb_private_offload:
+            include_optional.append(OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD)
+
+        tools = resolve_tools(
+            interactive=interactive,
+            docker_time_limit=docker_time_limit,
+            skip_defaults=skip_defaults,
+            include_optional=include_optional or None,
+        )
     ToolRunner.run_tools(tools)
 
 
