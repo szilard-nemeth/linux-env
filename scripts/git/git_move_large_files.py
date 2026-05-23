@@ -21,7 +21,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_OFFLOAD_ROOT = os.path.expanduser("~/googledrive/development/KB-private-offloaded")
 PATH_PREFIX_TO_STRIP = "cloudera/tasks/cde/"
 KB_PRIVATE_ROOT = os.path.expanduser("~/development/my-repos/knowledge-base-private")
-ALLOWED_EXTENSIONS = [".tar.gz", ".gz", ".zip", ".gzip"]
+ALLOWED_EXTENSIONS = [".tar.gz", ".gz", ".zip", ".gzip", ".log", ".tar", ".json", ".tgz"]
 ANALYZER_DEFAULT_TOP_N = 200
 # -----------------------------
 
