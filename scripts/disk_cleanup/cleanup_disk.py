@@ -607,7 +607,7 @@ class _DockerPruneMixin:
         return reclaimed
 
 
-class DockerCleanup(CleanupTool, _DockerPruneMixin):
+class DockerCleanup(_DockerPruneMixin, CleanupTool):
     """Remove unused dangling images, then unused images older than a time limit."""
 
     summary_name = "Docker images cleanup"
@@ -708,7 +708,7 @@ class DockerCleanup(CleanupTool, _DockerPruneMixin):
             logger.info(line)
 
 
-class DockerSystemPruneCleanup(CleanupTool, _DockerPruneMixin):
+class DockerSystemPruneCleanup(_DockerPruneMixin, CleanupTool):
     """
     Aggressive Docker cleanup: all unused images (any age), stopped containers,
     unused networks, and unused volumes.
