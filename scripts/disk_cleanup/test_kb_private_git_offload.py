@@ -162,6 +162,21 @@ def test_main_list_tools_rejects_other_flags():
         main(["--list-tools", "--dry-run"], standalone_mode=False)
 
 
+def test_log_run_tool_selection_logs_excluded_and_resolved(caplog):
+    import logging
+
+    from scripts.disk_cleanup.cleanup_disk import MavenCleanup, ToolRunner
+
+    caplog.set_level(logging.INFO)
+
+    tools = [MavenCleanup("100M")]
+    ToolRunner.log_run_tool_selection(tools, ["Python Venvs"])
+
+    messages = [r.message for r in caplog.records]
+    assert "Excluded tools: Python Venvs" in messages
+    assert "Resolved tool: Maven cleanup (slug: maven-cleanup)" in messages
+
+
 def test_resolve_tools_exclude_python_venvs():
     from scripts.disk_cleanup.cleanup_disk import DiscoveryCleanup, MavenCleanup, resolve_tools
 

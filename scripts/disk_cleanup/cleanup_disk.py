@@ -1164,12 +1164,8 @@ def _log_cleanup_plan_table(tools: List[CleanupTool]) -> None:
     logger.info("TOTAL: %s reclaimable", format_du_style(ToolRunner._sum_estimated_reclaim(tools)))
 
 
-def _build_tool_catalog_table(entries: List[tuple[str, str]]) -> Table:
-    table = Table(
-        title="Cleanup tools for --exclude-tool",
-        show_header=True,
-        header_style="bold",
-    )
+def _build_tool_name_slug_table(title: str, entries: List[tuple[str, str]]) -> Table:
+    table = Table(title=title, show_header=True, header_style="bold")
     table.add_column("Tool", style="cyan", no_wrap=True)
     table.add_column("Slug", style="green", no_wrap=True)
 
@@ -1177,6 +1173,10 @@ def _build_tool_catalog_table(entries: List[tuple[str, str]]) -> Table:
         table.add_row(label, slug)
 
     return table
+
+
+def _build_tool_catalog_table(entries: List[tuple[str, str]]) -> Table:
+    return _build_tool_name_slug_table("Cleanup tools for --exclude-tool", entries)
 
 
 class ToolRunner:
@@ -1204,12 +1204,15 @@ class ToolRunner:
         return {label_key, ToolRunner.tool_exclusion_slug(tool)}
 
     @staticmethod
-    def catalog_entries(*, docker_time_limit: str) -> List[tuple[str, str]]:
-        tools = build_catalog_tools(docker_time_limit=docker_time_limit)
+    def resolved_tool_entries(tools: List[CleanupTool]) -> List[tuple[str, str]]:
         return [
             (tool._summary_label(), ToolRunner.tool_exclusion_slug(tool))
             for tool in sorted(tools, key=lambda entry: entry._summary_label().lower())
         ]
+
+    @staticmethod
+    def catalog_entries(*, docker_time_limit: str) -> List[tuple[str, str]]:
+        return ToolRunner.resolved_tool_entries(build_catalog_tools(docker_time_limit=docker_time_limit))
 
     @staticmethod
     def print_tool_catalog(*, docker_time_limit: str) -> None:
@@ -1217,6 +1220,16 @@ class ToolRunner:
         console.print(_build_tool_catalog_table(ToolRunner.catalog_entries(docker_time_limit=docker_time_limit)))
         console.print("[dim]Pass either the Tool name or Slug to --exclude-tool " "(names are case-insensitive).[/dim]")
         console.print()
+
+    @staticmethod
+    def log_run_tool_selection(tools: List[CleanupTool], exclude_tools: Sequence[str]) -> None:
+        if exclude_tools:
+            logger.info("Excluded tools: %s", ", ".join(exclude_tools))
+        else:
+            logger.info("Excluded tools: none")
+
+        for label, slug in ToolRunner.resolved_tool_entries(tools):
+            logger.info("Resolved tool: %s (slug: %s)", label, slug)
 
     @staticmethod
     def filter_excluded_tools(tools: List[CleanupTool], exclude: Sequence[str]) -> List[CleanupTool]:
@@ -1295,7 +1308,13 @@ class ToolRunner:
         logger.info("All tools: %s disk space reclaimed", format_du_style(total_reclaimed))
 
     @staticmethod
-    def run_tools(tools: List[CleanupTool], *, dry_run: bool = False, confirm: bool = True):
+    def run_tools(
+        tools: List[CleanupTool],
+        *,
+        dry_run: bool = False,
+        confirm: bool = True,
+        exclude_tools: Sequence[str] = (),
+    ):
         setup_logging()
         TOOL_OUTPUT_BASEDIR.mkdir(parents=True, exist_ok=True)
 
@@ -1304,6 +1323,8 @@ class ToolRunner:
         if dry_run:
             console.print(Panel("DRY RUN — no changes will be made", style="bold yellow", expand=False))
             logger.info("DRY RUN mode — no changes will be made")
+
+        ToolRunner.log_run_tool_selection(tools, exclude_tools)
 
         for tool in tools:
             logger.info("=" * 30)
@@ -1475,7 +1496,7 @@ def main(
             include_optional=include_optional or None,
             exclude_tools=exclude_tools,
         )
-    ToolRunner.run_tools(tools, dry_run=dry_run, confirm=not force)
+    ToolRunner.run_tools(tools, dry_run=dry_run, confirm=not force, exclude_tools=exclude_tools)
 
 
 if __name__ == "__main__":
