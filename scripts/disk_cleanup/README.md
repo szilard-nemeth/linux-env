@@ -80,3 +80,19 @@ poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/disk_cleanup/cle
 ```
 
 Use `--list-tools` to see exact tool names and slugs for `--exclude-tool`.
+
+## App cache only cleanup
+
+To run only the app and package manager cache cleanups (Chrome, Cursor, JetBrains, Slack, Pip, and Poetry) while preserving development tools (Docker, Go, Maven, Python venvs, and Terraform), use multiple `--exclude-tool` flags:
+
+```bash
+export LINUX_ENV_REPO=~/development/my-repos/linux-env
+
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/disk_cleanup/cleanup_disk.py" \
+  --exclude-tool asdf-golang-cleanup \
+  --exclude-tool python-venvs \
+  --exclude-tool terraform \
+  --exclude-tool docker-cleanup \
+  --exclude-tool docker-system-prune \
+  --exclude-tool maven-cleanup
+```

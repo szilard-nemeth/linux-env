@@ -1091,6 +1091,23 @@ def build_default_tools() -> List[CleanupTool]:
         DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
         DiscoveryCleanup("Pip Cache", pip_cache_root, ["*"]),
         PoetryCacheCleanup(),
+        # --- App Caches (Targeted & Age-based: 30 days) ---
+        DiscoveryCleanup("JetBrains Cache", Path(os.path.expanduser("~/Library/Caches/JetBrains")), ["*"], age_days=30),
+        DiscoveryCleanup(
+            "Cursor Cache", Path(os.path.expanduser("~/Library/Application Support/Cursor/Cache")), ["*"], age_days=30
+        ),
+        DiscoveryCleanup(
+            "Cursor Code Cache",
+            Path(os.path.expanduser("~/Library/Application Support/Cursor/Code Cache")),
+            ["*"],
+            age_days=30,
+        ),
+        DiscoveryCleanup(
+            "Slack Cache", Path(os.path.expanduser("~/Library/Application Support/Slack/Cache")), ["*"], age_days=30
+        ),
+        DiscoveryCleanup(
+            "Chrome Cache", Path(os.path.expanduser("~/Library/Caches/Google/Chrome/Default/Cache")), ["*"], age_days=30
+        ),
     ]
 
 
