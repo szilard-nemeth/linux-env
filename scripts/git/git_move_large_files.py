@@ -743,7 +743,8 @@ class WorkflowConfig:
     def resolved_out_dir(self) -> Path:
         if self.out_dir:
             return self.out_dir.expanduser().resolve()
-        return Path.home() / f"git-large-files-{self.run_label}"
+        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        return Path.home() / f"git-large-files-{self.run_label}_{timestamp}"
 
     def resolved_offload_root(self) -> str:
         if self.offload_root:
@@ -817,7 +818,7 @@ class ExpandedDirectoryPath(click.Path):
 @click.option(
     "--out-dir",
     type=ExpandedDirectoryPath(file_okay=False, path_type=Path),
-    help="Directory for intermediate output files (default: ~/git-large-files-<label>)",
+    help="Directory for intermediate output files (default: ~/git-large-files-<label>_<timestamp>)",
 )
 @click.option(
     "--threshold-mb",
