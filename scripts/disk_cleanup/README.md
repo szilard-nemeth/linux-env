@@ -22,6 +22,19 @@ Skip the confirmation prompt:
 poetry run python scripts/disk_cleanup/cleanup_disk.py --force
 ```
 
+Skip one or more tools (names match the plan table; repeatable):
+
+```bash
+poetry run python scripts/disk_cleanup/cleanup_disk.py --dry-run --exclude-tool "Python Venvs"
+poetry run python scripts/disk_cleanup/cleanup_disk.py --exclude-tool "Python Venvs" --exclude-tool docker-cleanup
+```
+
+List tool names and slugs for `--exclude-tool`:
+
+```bash
+poetry run python scripts/disk_cleanup/cleanup_disk.py --list-tools
+```
+
 ## Single-tool modes
 
 Use one of these flags to run a single cleanup tool instead of the default batch:

@@ -120,6 +120,88 @@ def test_resolve_tools_skip_defaults_with_include():
     assert isinstance(tools[1], KbPrivateGitOffloadCleanup)
 
 
+def test_build_catalog_table_includes_defaults_and_kb_offload():
+    from scripts.disk_cleanup.cleanup_disk import OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD, ToolRunner
+
+    entries = ToolRunner.catalog_entries(docker_time_limit="24h")
+    labels = [label for label, _slug in entries]
+    slugs = [slug for _label, slug in entries]
+
+    assert "Python Venvs" in labels
+    assert "Maven cleanup" in labels
+    assert "python-venvs" in slugs
+    assert "terraform" in slugs
+    assert "maven-cleanup" in slugs
+    assert "docker-cleanup" in slugs
+    assert OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD in slugs
+    assert any(label.startswith("KB private") for label in labels)
+
+
+def test_main_list_tools_prints_catalog(monkeypatch):
+    from scripts.disk_cleanup.cleanup_disk import main
+
+    called: list[str] = []
+
+    def fake_print_catalog(*, docker_time_limit: str) -> None:
+        called.append(docker_time_limit)
+
+    monkeypatch.setattr(
+        "scripts.disk_cleanup.cleanup_disk.ToolRunner.print_tool_catalog",
+        fake_print_catalog,
+    )
+
+    main(["--list-tools"], standalone_mode=False)
+
+    assert called == ["1440h"]
+
+
+def test_main_list_tools_rejects_other_flags():
+    from scripts.disk_cleanup.cleanup_disk import main
+
+    with pytest.raises(click.UsageError, match="cannot be combined"):
+        main(["--list-tools", "--dry-run"], standalone_mode=False)
+
+
+def test_resolve_tools_exclude_python_venvs():
+    from scripts.disk_cleanup.cleanup_disk import DiscoveryCleanup, MavenCleanup, resolve_tools
+
+    tools = resolve_tools(docker_time_limit="24h", exclude_tools=["Python Venvs"])
+    summary_names = [t.summary_name for t in tools]
+
+    assert "Python Venvs" not in summary_names
+    assert any(isinstance(t, MavenCleanup) for t in tools)
+    assert any(isinstance(t, DiscoveryCleanup) and t.summary_name == "Terraform" for t in tools)
+
+
+def test_resolve_tools_exclude_by_slug():
+    from scripts.disk_cleanup.cleanup_disk import DockerCleanup, DockerSystemPruneCleanup, resolve_tools
+
+    tools = resolve_tools(docker_time_limit="24h", exclude_tools=["docker-cleanup"])
+    types = [type(t) for t in tools]
+
+    assert DockerCleanup not in types
+    assert DockerSystemPruneCleanup in types
+
+
+def test_resolve_tools_exclude_unknown_raises():
+    from scripts.disk_cleanup.cleanup_disk import resolve_tools
+
+    with pytest.raises(click.UsageError, match="Unknown --exclude-tool"):
+        resolve_tools(docker_time_limit="24h", exclude_tools=["not-a-real-tool"])
+
+
+def test_resolve_tools_exclude_all_raises():
+    from scripts.disk_cleanup.cleanup_disk import OPTIONAL_TOOL_DOCKER_CLEANUP, resolve_tools
+
+    with pytest.raises(click.UsageError, match="All cleanup tools were excluded"):
+        resolve_tools(
+            docker_time_limit="24h",
+            skip_defaults=True,
+            include_optional=[OPTIONAL_TOOL_DOCKER_CLEANUP],
+            exclude_tools=["docker-cleanup"],
+        )
+
+
 def test_resolve_tools_include_kb_without_docker():
     from scripts.disk_cleanup.cleanup_disk import (
         DockerCleanup,

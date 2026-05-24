@@ -11,7 +11,7 @@ from collections import defaultdict
 from contextlib import redirect_stdout
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Optional, Any, Set, TextIO
+from typing import Any, Dict, List, Optional, Sequence, Set, TextIO
 
 import humanfriendly
 from rich.console import Console
@@ -1087,11 +1087,21 @@ def build_optional_tool(name: str, *, docker_time_limit: str) -> CleanupTool:
     raise ValueError(f"Unknown optional cleanup tool: {name}")
 
 
+def build_catalog_tools(*, docker_time_limit: str) -> List[CleanupTool]:
+    """All cleanup tools for reference listing (default batch plus optional-only tools)."""
+    tools = build_default_tools()
+    for name in DEFAULT_OPTIONAL_TOOLS:
+        tools.append(build_optional_tool(name, docker_time_limit=docker_time_limit))
+    tools.append(build_optional_tool(OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD, docker_time_limit=docker_time_limit))
+    return tools
+
+
 def resolve_tools(
     *,
     docker_time_limit: str,
     skip_defaults: bool = False,
     include_optional: Optional[List[str]] = None,
+    exclude_tools: Optional[Sequence[str]] = None,
 ) -> List[CleanupTool]:
     include_optional = include_optional or []
     tools: List[CleanupTool] = []
@@ -1112,7 +1122,7 @@ def resolve_tools(
             "--include-docker-cleanup / --include-docker-system-prune / --include-kb-private-offload."
         )
 
-    return tools
+    return ToolRunner.filter_excluded_tools(tools, exclude_tools or ())
 
 
 def _format_reclaimable_estimate(tool: CleanupTool) -> str:
@@ -1154,7 +1164,88 @@ def _log_cleanup_plan_table(tools: List[CleanupTool]) -> None:
     logger.info("TOTAL: %s reclaimable", format_du_style(ToolRunner._sum_estimated_reclaim(tools)))
 
 
+def _build_tool_catalog_table(entries: List[tuple[str, str]]) -> Table:
+    table = Table(
+        title="Cleanup tools for --exclude-tool",
+        show_header=True,
+        header_style="bold",
+    )
+    table.add_column("Tool", style="cyan", no_wrap=True)
+    table.add_column("Slug", style="green", no_wrap=True)
+
+    for label, slug in entries:
+        table.add_row(label, slug)
+
+    return table
+
+
 class ToolRunner:
+    OPTIONAL_TOOL_SLUG_BY_TYPE = {
+        DockerCleanup: OPTIONAL_TOOL_DOCKER_CLEANUP,
+        DockerSystemPruneCleanup: OPTIONAL_TOOL_DOCKER_SYSTEM_PRUNE,
+        KbPrivateGitOffloadCleanup: OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD,
+    }
+
+    @staticmethod
+    def normalize_tool_name(name: str) -> str:
+        """Normalize a tool name for exclusion matching (case-insensitive, spaces/underscores -> hyphens)."""
+        return "-".join(name.strip().lower().replace("_", " ").split())
+
+    @staticmethod
+    def tool_exclusion_slug(tool: CleanupTool) -> str:
+        """Primary slug for --exclude-tool (optional slug when defined, else normalized label)."""
+        return ToolRunner.OPTIONAL_TOOL_SLUG_BY_TYPE.get(type(tool)) or ToolRunner.normalize_tool_name(
+            tool._summary_label()
+        )
+
+    @staticmethod
+    def tool_exclusion_keys(tool: CleanupTool) -> Set[str]:
+        label_key = ToolRunner.normalize_tool_name(tool._summary_label())
+        return {label_key, ToolRunner.tool_exclusion_slug(tool)}
+
+    @staticmethod
+    def catalog_entries(*, docker_time_limit: str) -> List[tuple[str, str]]:
+        tools = build_catalog_tools(docker_time_limit=docker_time_limit)
+        return [
+            (tool._summary_label(), ToolRunner.tool_exclusion_slug(tool))
+            for tool in sorted(tools, key=lambda entry: entry._summary_label().lower())
+        ]
+
+    @staticmethod
+    def print_tool_catalog(*, docker_time_limit: str) -> None:
+        console.print()
+        console.print(_build_tool_catalog_table(ToolRunner.catalog_entries(docker_time_limit=docker_time_limit)))
+        console.print("[dim]Pass either the Tool name or Slug to --exclude-tool " "(names are case-insensitive).[/dim]")
+        console.print()
+
+    @staticmethod
+    def filter_excluded_tools(tools: List[CleanupTool], exclude: Sequence[str]) -> List[CleanupTool]:
+        if not exclude:
+            return tools
+
+        exclude_norm = [ToolRunner.normalize_tool_name(entry) for entry in exclude if entry.strip()]
+        if not exclude_norm:
+            return tools
+
+        exclude_set = set(exclude_norm)
+        available_labels = sorted({tool._summary_label() for tool in tools})
+
+        for ex in exclude_norm:
+            if not any(ex in ToolRunner.tool_exclusion_keys(tool) for tool in tools):
+                hint = ", ".join(f'"{label}"' for label in available_labels)
+                slugs = sorted({ToolRunner.tool_exclusion_slug(tool) for tool in tools})
+                hint += f"; slugs: {', '.join(slugs)}"
+                raise click.UsageError(
+                    f"Unknown --exclude-tool {ex!r} for the current tool selection. Available: {hint}"
+                )
+
+        filtered = [tool for tool in tools if not (ToolRunner.tool_exclusion_keys(tool) & exclude_set)]
+        if not filtered:
+            raise click.UsageError(
+                "All cleanup tools were excluded. Remove some --exclude-tool values or change tool selection."
+            )
+        return filtered
+
     @staticmethod
     def _tools_with_work(tools: List[CleanupTool]) -> List[CleanupTool]:
         return [tool for tool in tools if tool._has_pending_work()]
@@ -1311,6 +1402,21 @@ class ToolRunner:
     is_flag=True,
     help="Include KB private git large-file offload",
 )
+@click.option(
+    "--exclude-tool",
+    "exclude_tools",
+    multiple=True,
+    help=(
+        "Skip a cleanup tool by name (repeatable). Use plan-table labels "
+        '(e.g. "Python Venvs", "Maven cleanup") or optional slugs (e.g. docker-cleanup). '
+        "See --list-tools for the full list."
+    ),
+)
+@click.option(
+    "--list-tools",
+    is_flag=True,
+    help="Print cleanup tool names and slugs for --exclude-tool, then exit",
+)
 def main(
     docker_only: bool,
     docker_system_prune_only: bool,
@@ -1322,20 +1428,38 @@ def main(
     include_docker_cleanup: bool,
     include_docker_system_prune: bool,
     include_kb_private_offload: bool,
+    exclude_tools: tuple[str, ...],
+    list_tools: bool,
 ):
     """Disk cleanup utilities."""
     exclusive_modes = [docker_only, docker_system_prune_only, kb_private_git_offload]
     if sum(exclusive_modes) > 1:
         raise click.UsageError("Use only one of --docker-only, --docker-system-prune-only, or --kb-private-git-offload")
 
+    if list_tools:
+        if (
+            any(exclusive_modes)
+            or exclude_tools
+            or skip_defaults
+            or include_docker_cleanup
+            or include_docker_system_prune
+            or include_kb_private_offload
+        ):
+            raise click.UsageError("--list-tools cannot be combined with other cleanup options")
+        if dry_run or force:
+            raise click.UsageError("--list-tools cannot be combined with --dry-run or --force")
+        ToolRunner.print_tool_catalog(docker_time_limit=docker_time_limit)
+        return
+
     if docker_only:
-        tools: List[CleanupTool] = [
-            DockerCleanup(time_limit=docker_time_limit),
-        ]
+        tools: List[CleanupTool] = ToolRunner.filter_excluded_tools(
+            [DockerCleanup(time_limit=docker_time_limit)],
+            exclude_tools,
+        )
     elif docker_system_prune_only:
-        tools = [DockerSystemPruneCleanup()]
+        tools = ToolRunner.filter_excluded_tools([DockerSystemPruneCleanup()], exclude_tools)
     elif kb_private_git_offload:
-        tools = [KbPrivateGitOffloadCleanup()]
+        tools = ToolRunner.filter_excluded_tools([KbPrivateGitOffloadCleanup()], exclude_tools)
     else:
         include_optional: List[str] = []
         if include_docker_cleanup:
@@ -1349,6 +1473,7 @@ def main(
             docker_time_limit=docker_time_limit,
             skip_defaults=skip_defaults,
             include_optional=include_optional or None,
+            exclude_tools=exclude_tools,
         )
     ToolRunner.run_tools(tools, dry_run=dry_run, confirm=not force)
 
