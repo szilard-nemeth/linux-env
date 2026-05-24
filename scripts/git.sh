@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ -n "${ZSH_VERSION:-}" ]; then
+    _GIT_SH_DIR="$(cd "$(dirname "${(%):-%x}")" && pwd)"
+else
+    _GIT_SH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
 function commit-all-unstaged {
     for i in $(git diff --name-only); do
         git add ${i}
@@ -165,7 +171,7 @@ function gh-backport-cde-pr {
         echo "Found commit: $COMMIT_HASH"
         git --no-pager log --format=%B -n 1 $COMMIT_HASH
 
-        git checkout -b $TARGET_L_BRANCH $SOURCE_BRANCH || { echo "git checkout failed, restoring branch"; git checkout $orig_branch; return 1 }
+        git checkout -b $TARGET_L_BRANCH $SOURCE_BRANCH || { echo "git checkout failed, restoring branch"; git checkout $orig_branch; return 1; }
         git branch --unset-upstream || true
 
         if ! git cherry-pick -x "$COMMIT_HASH"; then
@@ -391,9 +397,7 @@ function git-sync-cde-featurebranch {
 }
 
 function git-move-large-files {
-    local script_dir
-    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    python3 "${script_dir}/git/git_move_large_files.py" "$@"
+    python3 "${_GIT_SH_DIR}/git/git_move_large_files.py" "$@"
 }
 
 function git-format-patch {

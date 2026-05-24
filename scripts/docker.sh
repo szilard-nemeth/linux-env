@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+if [ -n "${ZSH_VERSION:-}" ]; then
+    _DOCKER_SH_DIR="$(cd "$(dirname "${(%):-%x}")" && pwd)"
+else
+    _DOCKER_SH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
 if ! ensure-command-available "docker"
 then
     return 1
@@ -17,9 +23,7 @@ function docker-cleanup-images {
 
 # Delegates to Python implementation in scripts/disk_cleanup/cleanup_disk.py
 function docker-cleanup-auto {
-  local script_dir
-  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  python3 "${script_dir}/disk_cleanup/cleanup_disk.py" --docker-only "$@"
+  python3 "${_DOCKER_SH_DIR}/disk_cleanup/cleanup_disk.py" --docker-only "$@"
 }
 
 
