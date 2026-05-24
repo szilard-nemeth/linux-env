@@ -1577,6 +1577,41 @@ class ToolRunner:
         ToolRunner._print_results_table(tools)
 
 
+def print_disk_info(top_n: int = 25) -> None:
+    home_dir = Path.home()
+    console.print(f"[bold cyan]Scanning disk usage in {home_dir} (this may take a minute)...[/bold cyan]")
+
+    # Using the shell command to find the largest directories dynamically
+    # We use ~/* and ~/.* to match the shell expansion behavior
+    cmd = f"du -sh {home_dir}/* {home_dir}/.* 2>/dev/null | sort -rh | head -n {top_n}"
+
+    try:
+        output = subprocess.check_output(cmd, shell=True, text=True)
+
+        table = Table(title=f"Top {top_n} Largest Items in ~", show_header=True, header_style="bold")
+        table.add_column("Size", justify="right", style="green")
+        table.add_column("Item", style="cyan")
+
+        for line in output.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split("\t", 1)
+            if len(parts) == 2:
+                size, path = parts
+                # Filter out the . and .. directories which are just the current/parent dir
+                if path.endswith("/.") or path.endswith("/.."):
+                    continue
+                home_str = str(home_dir)
+                if path.startswith(home_str):
+                    path = "~" + path[len(home_str) :]
+                table.add_row(size.strip(), path.strip())
+
+        console.print(table)
+    except subprocess.CalledProcessError as e:
+        console.print(f"[bold red]Failed to scan disk usage: {e}[/bold red]")
+
+
 @click.command()
 @click.option(
     "--docker-only",
@@ -1644,6 +1679,11 @@ class ToolRunner:
     is_flag=True,
     help="Print cleanup tool names and slugs for --exclude-tool, then exit",
 )
+@click.option(
+    "--info",
+    is_flag=True,
+    help="Print disk usage information for common large directories and exit",
+)
 def main(
     docker_only: bool,
     docker_system_prune_only: bool,
@@ -1657,11 +1697,28 @@ def main(
     include_kb_private_offload: bool,
     exclude_tools: tuple[str, ...],
     list_tools: bool,
+    info: bool,
 ):
     """Disk cleanup utilities."""
     exclusive_modes = [docker_only, docker_system_prune_only, kb_private_git_offload]
     if sum(exclusive_modes) > 1:
         raise click.UsageError("Use only one of --docker-only, --docker-system-prune-only, or --kb-private-git-offload")
+
+    if info:
+        if (
+            any(exclusive_modes)
+            or exclude_tools
+            or skip_defaults
+            or include_docker_cleanup
+            or include_docker_system_prune
+            or include_kb_private_offload
+            or list_tools
+        ):
+            raise click.UsageError("--info cannot be combined with other cleanup options")
+        if dry_run or force:
+            raise click.UsageError("--info cannot be combined with --dry-run or --force")
+        print_disk_info()
+        return
 
     if list_tools:
         if (
