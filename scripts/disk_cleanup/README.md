@@ -35,6 +35,20 @@ List tool names and slugs for `--exclude-tool`:
 poetry run python scripts/disk_cleanup/cleanup_disk.py --list-tools
 ```
 
+## Disk usage info
+
+To quickly find the largest directories and files taking up space on your system, use the `--info` flag. This runs a dynamic scan and prints the top 25 largest items in a formatted table:
+
+```bash
+poetry run python scripts/disk_cleanup/cleanup_disk.py --info
+```
+
+By default, this scans your home directory (`~`). To drill down into a specific directory, use the `--info-dir` flag:
+
+```bash
+poetry run python scripts/disk_cleanup/cleanup_disk.py --info --info-dir "~/Library"
+```
+
 ## Single-tool modes
 
 Use one of these flags to run a single cleanup tool instead of the default batch:

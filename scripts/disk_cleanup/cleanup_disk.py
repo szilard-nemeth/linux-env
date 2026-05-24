@@ -1577,21 +1577,28 @@ class ToolRunner:
         ToolRunner._print_results_table(tools)
 
 
-def print_disk_info(top_n: int = 25) -> None:
-    home_dir = Path.home()
-    console.print(f"[bold cyan]Scanning disk usage in {home_dir} (this may take a minute)...[/bold cyan]")
+def print_disk_info(target_dir: Optional[str] = None, top_n: int = 25) -> None:
+    if target_dir:
+        scan_path = Path(os.path.expanduser(target_dir)).resolve()
+        if not scan_path.exists():
+            console.print(f"[bold red]Directory not found: {scan_path}[/bold red]")
+            return
+    else:
+        scan_path = Path.home()
+
+    console.print(f"[bold cyan]Scanning disk usage in {scan_path} (this may take a minute)...[/bold cyan]")
 
     # Using the shell command to find the largest directories dynamically
-    # We use ~/* and ~/.* to match the shell expansion behavior
-    cmd = f"du -sh {home_dir}/* {home_dir}/.* 2>/dev/null | sort -rh | head -n {top_n}"
+    cmd = f"du -sh {scan_path}/* {scan_path}/.* 2>/dev/null | sort -rh | head -n {top_n}"
 
     try:
         output = subprocess.check_output(cmd, shell=True, text=True)
 
-        table = Table(title=f"Top {top_n} Largest Items in ~", show_header=True, header_style="bold")
+        table = Table(title=f"Top {top_n} Largest Items in {scan_path}", show_header=True, header_style="bold")
         table.add_column("Size", justify="right", style="green")
         table.add_column("Item", style="cyan")
 
+        home_str = str(Path.home())
         for line in output.splitlines():
             line = line.strip()
             if not line:
@@ -1602,7 +1609,6 @@ def print_disk_info(top_n: int = 25) -> None:
                 # Filter out the . and .. directories which are just the current/parent dir
                 if path.endswith("/.") or path.endswith("/.."):
                     continue
-                home_str = str(home_dir)
                 if path.startswith(home_str):
                     path = "~" + path[len(home_str) :]
                 table.add_row(size.strip(), path.strip())
@@ -1684,6 +1690,11 @@ def print_disk_info(top_n: int = 25) -> None:
     is_flag=True,
     help="Print disk usage information for common large directories and exit",
 )
+@click.option(
+    "--info-dir",
+    type=str,
+    help="When used with --info, scans the specified directory instead of the home directory",
+)
 def main(
     docker_only: bool,
     docker_system_prune_only: bool,
@@ -1698,6 +1709,7 @@ def main(
     exclude_tools: tuple[str, ...],
     list_tools: bool,
     info: bool,
+    info_dir: Optional[str],
 ):
     """Disk cleanup utilities."""
     exclusive_modes = [docker_only, docker_system_prune_only, kb_private_git_offload]
@@ -1717,7 +1729,7 @@ def main(
             raise click.UsageError("--info cannot be combined with other cleanup options")
         if dry_run or force:
             raise click.UsageError("--info cannot be combined with --dry-run or --force")
-        print_disk_info()
+        print_disk_info(target_dir=info_dir)
         return
 
     if list_tools:
