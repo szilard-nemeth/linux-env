@@ -1589,7 +1589,8 @@ def print_disk_info(target_dir: Optional[str] = None, top_n: int = 25) -> None:
     console.print(f"[bold cyan]Scanning disk usage in {scan_path} (this may take a minute)...[/bold cyan]")
 
     # Using the shell command to find the largest directories dynamically
-    cmd = f"du -sh {scan_path}/* {scan_path}/.* 2>/dev/null | sort -rh | head -n {top_n}"
+    # We quote the scan_path to handle directories with spaces (like "Application Support")
+    cmd = f'du -sh "{scan_path}"/* "{scan_path}"/.* 2>/dev/null | sort -rh | head -n {top_n}'
 
     try:
         output = subprocess.check_output(cmd, shell=True, text=True)
