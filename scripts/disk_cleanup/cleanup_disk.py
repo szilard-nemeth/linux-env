@@ -116,10 +116,12 @@ def setup_logging():
 class FileUtils:
     @staticmethod
     def get_dir_size(path):
-        """Calculates total size of a directory in bytes natively."""
+        """Calculates total size of a directory or file in bytes natively."""
         path = Path(path)
         if not path.exists():
             return 0
+        if path.is_file():
+            return path.stat().st_size
         total = 0
         try:
             for entry in os.scandir(path):
@@ -849,15 +851,19 @@ class DockerSystemPruneCleanup(_DockerPruneMixin, CleanupTool):
 
 
 class DiscoveryCleanup(CleanupTool):
-    """Generic tool to find and delete specific directory patterns."""
+    """Generic tool to find and delete specific directory or file patterns."""
 
-    def __init__(self, name, root_path, patterns: List[str], age_days: int = 30):
+    def __init__(
+        self, name, root_path, patterns: List[str], age_days: int = 30, target_type: str = "dir", recursive: bool = True
+    ):
         super().__init__()
         self.name = name
         self.summary_name = name
         self.root_path = Path(root_path)
         self.patterns = patterns
         self.age_days = age_days
+        self.target_type = target_type
+        self.recursive = recursive
         self.tracker = CleanupDetailsTracker()
 
     def _has_pending_work(self) -> bool:
@@ -876,19 +882,28 @@ class DiscoveryCleanup(CleanupTool):
         threshold_seconds = self.age_days * 24 * 60 * 60
 
         for pattern in self.patterns:
-            for p in self.root_path.rglob(pattern):
-                if p.is_dir():
+            iterator = self.root_path.rglob(pattern) if self.recursive else self.root_path.glob(pattern)
+            for p in iterator:
+                is_match = False
+                if self.target_type == "dir" and p.is_dir():
+                    is_match = True
+                elif self.target_type == "file" and p.is_file():
+                    is_match = True
+                elif self.target_type == "any":
+                    is_match = True
+
+                if is_match:
                     if self.age_days != -1:
-                        # Check the last modified time of the directory itself
+                        # Check the last modified time
                         mtime = p.stat().st_mtime
                         if (now - mtime) > threshold_seconds:
                             details = self.tracker.register_unnamed_dir(p)
                             last_touched = time.strftime("%Y-%m-%d", time.localtime(mtime))
                             logger.info(
-                                f"Found stale dir: {p} (Last mod: {last_touched}, Size: {format_du_style(details.before_size)})"
+                                f"Found stale target: {p} (Last mod: {last_touched}, Size: {format_du_style(details.before_size)})"
                             )
                         else:
-                            logger.info(f"Skipping active dir: {p} (Recently modified)")
+                            logger.info(f"Skipping active target: {p} (Recently modified)")
                     else:
                         details = self.tracker.register_unnamed_dir(p)
                         logger.info(f"Found {p} ({format_du_style(details.before_size)})")
@@ -897,8 +912,10 @@ class DiscoveryCleanup(CleanupTool):
         for details in self.tracker.unnamed_cleanup:
             path = details.dir
             logger.info(f"Removing {path}...")
-            if details.dir.is_dir():
-                shutil.rmtree(details.dir, ignore_errors=True)
+            if path.is_dir():
+                shutil.rmtree(path, ignore_errors=True)
+            elif path.is_file():
+                path.unlink(missing_ok=True)
 
     def verify(self) -> CleanupResult:
         return self._verify_with_tracker_unnamed(self.tracker)
@@ -1221,6 +1238,47 @@ def build_default_tools() -> List[CleanupTool]:
         ),
         DiscoveryCleanup(
             "Chrome Cache", Path(os.path.expanduser("~/Library/Caches/Google/Chrome/Default/Cache")), ["*"], age_days=30
+        ),
+        # --- Additional Caches based on ncdu ---
+        DiscoveryCleanup(
+            "Maven Local Repo", Path(os.path.expanduser("~/.m2/repository")), ["*"], age_days=60, recursive=False
+        ),
+        DiscoveryCleanup(
+            "SDKMAN Archives",
+            Path(os.path.expanduser("~/.sdkman/archives")),
+            ["*"],
+            age_days=30,
+            target_type="file",
+            recursive=False,
+        ),
+        DiscoveryCleanup(
+            "Minikube Cache",
+            Path(os.path.expanduser("~/.minikube/cache")),
+            ["*"],
+            age_days=30,
+            target_type="any",
+            recursive=False,
+        ),
+        DiscoveryCleanup("Kube Cache", Path(os.path.expanduser("~/.kube/cache")), ["*"], age_days=30, recursive=False),
+        DiscoveryCleanup("SBT Cache", Path(os.path.expanduser("~/.sbt")), ["*"], age_days=30, recursive=False),
+        DiscoveryCleanup(
+            "PyCharm Crash Logs",
+            Path.home(),
+            ["PY-*.jfr", "PY-*.zip", "java_error_in_pycharm_*.log"],
+            age_days=7,
+            target_type="file",
+            recursive=False,
+        ),
+        DiscoveryCleanup(
+            "Root Pod Logs",
+            Path.home(),
+            ["pod-log-*.txt", "dex-cp-logs-*.txt"],
+            age_days=7,
+            target_type="file",
+            recursive=False,
+        ),
+        DiscoveryCleanup(
+            "Downloads", Path(os.path.expanduser("~/Downloads")), ["*"], age_days=60, target_type="any", recursive=False
         ),
     ]
 
