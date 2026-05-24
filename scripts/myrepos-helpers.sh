@@ -292,3 +292,7 @@ function myscript-print-dexter-run-configs {
   venv=$(poetry env list --full-path | grep "3\.9" | cut -d ' ' -f1)
   $venv/bin/python $(which print_jetbrains_run_configs.py) dexter | grep -o "cli.py.*"
 }
+
+function disk-cleanup() {
+  poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/disk_cleanup/cleanup_disk.py" "$@"
+}
