@@ -336,13 +336,26 @@ class CleanupTool(ABC):
             self._commands_failed,
         )
 
-    def run_command(self, cmd: List[str], cwd: Optional[Path] = None):
+    def run_command(
+        self,
+        cmd: List[str],
+        cwd: Optional[Path] = None,
+        *,
+        stdin: Optional[int] = None,
+    ):
         """Runs a command and pipes output directly to the logger."""
         full_cmd = " ".join(cmd)
         logger.debug(f"Executing: {full_cmd}")
 
         # We use Popen to capture line-by-line to avoid memory issues and keep log order
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=cwd)
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            cwd=cwd,
+            stdin=stdin,
+        )
         if process.stdout:
             for line in process.stdout:
                 logger.debug(f"[Subprocess] {line.strip()}")
@@ -906,7 +919,11 @@ class PoetryCacheCleanup(CleanupTool):
         self.tracker.register_named_dir("poetry_cache", Path(cache_dir))
 
     def execute(self):
-        _ = self.run_command(["poetry", "cache", "clear", ".", "--all"])
+        # -n: skip "Delete N entries?" prompt; DEVNULL avoids blocking if Poetry still reads stdin
+        _ = self.run_command(
+            ["poetry", "-n", "cache", "clear", ".", "--all"],
+            stdin=subprocess.DEVNULL,
+        )
 
     def verify(self) -> CleanupResult:
         return self._verify_with_tracker(self.tracker)
