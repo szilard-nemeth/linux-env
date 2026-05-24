@@ -57,4 +57,26 @@ Run it for real (one confirmation after the plan table):
 poetry run python scripts/disk_cleanup/cleanup_disk.py --kb-private-git-offload
 ```
 
-This scans the working tree for tracked archive files above 20 MB (`.tar.gz`, `.zip`, etc.), previews what would be moved, and on confirmation moves them to `~/googledrive/development/KB-private-offloaded`. Git changes are **not** staged automatically; review `git status` in the repo and commit when ready. For commit-based analysis, staging, and other options, use [`git_move_large_files.py`](../git/git_move_large_files.py) directly — see [`scripts/git/git-workflow-for-moving-large-files.md`](../git/git-workflow-for-moving-large-files.md).
+This scans the working tree for tracked archive files above 20 MB (`.tar.gz`, `.zip`, etc.), previews what would be moved, and on confirmation moves them to `~/googledrive/development/KB-private-offloaded`. Git changes are **not** staged automatically; review `git status` in the repo and commit when ready. For commit-based analysis, staging, and other options, use [`git_move_large_files.py`](../git/git_move_large_files.py) via Poetry — see [`scripts/git/git-workflow-for-moving-large-files.md`](../git/git-workflow-for-moving-large-files.md).
+
+## Real-world example: Docker cleanup without removing Python venvs
+
+When reclaiming disk space on a dev machine, start with dry-runs, tune Docker retention, then exclude tools you want to keep. Use `$LINUX_ENV_REPO` when running from outside the repo.
+
+```bash
+export LINUX_ENV_REPO=~/development/my-repos/linux-env
+
+# 1. Preview default batch (Maven, Go SDKs, Docker, venvs, pip, Poetry)
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/disk_cleanup/cleanup_disk.py" --include-docker-cleanup --dry-run
+
+# 2. Same preview with a longer Docker image age limit (480h ≈ 20 days)
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/disk_cleanup/cleanup_disk.py" --include-docker-cleanup --docker-time-limit 480h --dry-run
+
+# 3. Keep Python venvs; still preview only
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/disk_cleanup/cleanup_disk.py" --include-docker-cleanup --exclude-tool "python-venvs" --docker-time-limit 480h --dry-run
+
+# 4. Run for real (one confirmation after the plan table)
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/disk_cleanup/cleanup_disk.py" --include-docker-cleanup --exclude-tool "python-venvs" --docker-time-limit 480h
+```
+
+Use `--list-tools` to see exact tool names and slugs for `--exclude-tool`.

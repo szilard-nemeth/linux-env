@@ -9,6 +9,27 @@ Use this workflow when cleaning up a repository that accumulated large archives 
 - **`--scan-working-tree`** — find large tracked files on disk now (most common)
 - **`--commit`** — analyze files changed in a specific commit (useful when you know which commit introduced bulk)
 
+## Prerequisites
+
+From the [linux-env](https://github.com/szilard-nemeth/linux-env) repo root, install dependencies once:
+
+```bash
+poetry install --only main,dev
+```
+
+Run the script through Poetry so `click` and other dependencies come from the project venv (not system Python):
+
+```bash
+export LINUX_ENV_REPO=~/development/my-repos/linux-env   # adjust if needed
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/git/git_move_large_files.py" --help
+```
+
+From inside the repo, the same command is:
+
+```bash
+poetry run python scripts/git/git_move_large_files.py --help
+```
+
 ## Quick start
 
 ### Scan working tree (recommended)
@@ -88,17 +109,45 @@ git-move-large-files \
   --dry-run
 ```
 
-### Direct Python invocation
+### Poetry invocation (recommended)
+
+Use `$LINUX_ENV_REPO` when calling from another directory; omit `-C` and the full script path when your shell is already in the repo root.
 
 ```bash
-python3 scripts/git/git_move_large_files.py --help
+export LINUX_ENV_REPO=~/development/my-repos/linux-env
+export KB_PRIVATE=~/development/my-repos/knowledge-base-private
 
-python3 scripts/git/git_move_large_files.py \
+# Round 1: dry-run for a specific commit
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/git/git_move_large_files.py" --commit 44a8f9b8 --repo "$KB_PRIVATE" --dry-run --verbose
+
+# Round 1: move files for that commit
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/git/git_move_large_files.py" --commit 44a8f9b8 --repo "$KB_PRIVATE" --execute --verbose
+
+# Round 2: another commit (dry-run, then execute)
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/git/git_move_large_files.py" --commit be745a05 --repo "$KB_PRIVATE" --dry-run --verbose
+
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/git/git_move_large_files.py" --commit be745a05 --repo "$KB_PRIVATE" --execute --verbose
+
+# Round 3: scan the whole working tree (dry-run)
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/git/git_move_large_files.py" --scan-working-tree --repo "$KB_PRIVATE" --dry-run --verbose
+
+# Scan, move, and stage (when ready)
+poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/git/git_move_large_files.py" --scan-working-tree --repo "$KB_PRIVATE" --execute --stage --verbose
+```
+
+### Direct Python invocation
+
+Prefer Poetry (above) so dependencies are guaranteed. If you use system Python, ensure `click` is installed.
+
+```bash
+poetry run python scripts/git/git_move_large_files.py --help
+
+poetry run python scripts/git/git_move_large_files.py \
   --scan-working-tree \
   --repo ~/development/my-repos/knowledge-base-private \
   --dry-run
 
-python3 scripts/git/git_move_large_files.py \
+poetry run python scripts/git/git_move_large_files.py \
   --scan-working-tree \
   --repo ~/development/my-repos/knowledge-base-private \
   --out-dir ~/Downloads/git-cleanup-kb-private/part2 \

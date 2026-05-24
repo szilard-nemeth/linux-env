@@ -72,6 +72,10 @@ On Ubuntu/Debian, install `zsh` first if needed (`sudo apt-get install -y zsh`).
 
 See [scripts/disk_cleanup/README.md](scripts/disk_cleanup/README.md) for usage of [`cleanup_disk.py`](scripts/disk_cleanup/cleanup_disk.py).
 
+## Git: moving large files out of a repo
+
+See [scripts/git/git-workflow-for-moving-large-files.md](scripts/git/git-workflow-for-moving-large-files.md) for offloading large archives from a git working tree or specific commits via [`git_move_large_files.py`](scripts/git/git_move_large_files.py). Run it with `poetry run python scripts/git/git_move_large_files.py ...` from this repo so dependencies are available.
+
 ## Troubleshooting
 
 ### pre-commit installation
