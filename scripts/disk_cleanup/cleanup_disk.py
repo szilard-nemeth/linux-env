@@ -30,7 +30,57 @@ TOOL_OUTPUT_BASEDIR = Path(os.path.expanduser("~/snemeth-dev-projects/cleanup_di
 KB_PRIVATE_GIT_OFFLOAD_OUT_DIR = TOOL_OUTPUT_BASEDIR / "kb_private_git_offload"
 KB_PRIVATE_GIT_OFFLOAD_THRESHOLD_MB = 20
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
+DEX_PROJECT_DIR = Path(os.path.expanduser("~/development/cloudera/cde/dex"))
 # TODO Add JetBrains tool cleanup?
+
+
+def parse_asdf_current_golang_version(output: str) -> Optional[str]:
+    """Parse version from `asdf current golang` stdout (second column)."""
+    parts = output.strip().split()
+    if len(parts) >= 2 and parts[0] == "golang":
+        return parts[1]
+    return None
+
+
+def asdf_current_golang_version(*, cwd: Optional[Path] = None) -> Optional[str]:
+    try:
+        output = subprocess.check_output(
+            ["asdf", "current", "golang"],
+            cwd=str(cwd) if cwd is not None else None,
+            stderr=subprocess.DEVNULL,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+    return parse_asdf_current_golang_version(output.decode().strip())
+
+
+def resolve_asdf_golang_keep_versions() -> List[str]:
+    """Keep global/home golang plus golang selected in the DEX project directory."""
+    keep: List[str] = []
+    seen: Set[str] = set()
+
+    home = Path.home()
+    home_version = asdf_current_golang_version(cwd=home)
+    if home_version:
+        keep.append(home_version)
+        seen.add(home_version)
+        logger.info("Keeping Go %s (asdf current from %s)", home_version, home)
+    else:
+        logger.info("No Go version from asdf current (cwd=%s)", home)
+
+    if DEX_PROJECT_DIR.is_dir():
+        dex_version = asdf_current_golang_version(cwd=DEX_PROJECT_DIR)
+        if dex_version:
+            if dex_version not in seen:
+                keep.append(dex_version)
+            logger.info("Keeping Go %s (asdf current from %s)", dex_version, DEX_PROJECT_DIR)
+        else:
+            logger.info("No Go version from asdf current (cwd=%s)", DEX_PROJECT_DIR)
+    else:
+        logger.info("DEX project dir not found at %s; skipping dex golang version", DEX_PROJECT_DIR)
+
+    return keep
+
 
 # Setup Global Logging Path
 TIMESTAMP = time.strftime("%Y%m%d-%H%M%S")
@@ -429,9 +479,10 @@ class MavenCleanup(CleanupTool):
 class AsdfGolangCleanup(CleanupTool):
     summary_name = "ASDF Golang cleanup"
 
-    def __init__(self, keep_versions: List[str]):
+    def __init__(self, keep_versions: Optional[List[str]] = None):
         super().__init__()
-        self.keep_versions = keep_versions
+        self._keep_versions_override = keep_versions
+        self.keep_versions: List[str] = []
         self.tracker = CleanupDetailsTracker()
 
     def _has_pending_work(self) -> bool:
@@ -450,17 +501,30 @@ class AsdfGolangCleanup(CleanupTool):
             pass
         return total
 
+    def _resolve_keep_versions(self) -> List[str]:
+        if self._keep_versions_override is not None:
+            return list(self._keep_versions_override)
+        return resolve_asdf_golang_keep_versions()
+
     def prepare(self):
         logger.info("Scanning ASDF Golang versions...")
+        self.keep_versions = self._resolve_keep_versions()
         self.tracker.register_named_dir("asdf_golang_root", ASDF_GOLANG_ROOT)
         if not ASDF_GOLANG_ROOT.exists():
             logger.info(f"asdf golang root does not exist at: {ASDF_GOLANG_ROOT}")
             return
 
-        for item in ASDF_GOLANG_ROOT.iterdir():
-            if item.is_dir() and item.name not in self.keep_versions:
-                details = self.tracker.register_unnamed_dir(item, {"version": item.name})
-                logger.info(f"Found old version: {item.name} ({format_du_style(details.before_size)})")
+        installed = [item for item in ASDF_GOLANG_ROOT.iterdir() if item.is_dir()]
+        if not self.keep_versions and installed:
+            logger.warning(
+                "No Go versions resolved to keep (home + DEX asdf current); " "skipping uninstall of: %s",
+                ", ".join(sorted(item.name for item in installed)),
+            )
+        else:
+            for item in installed:
+                if item.name not in self.keep_versions:
+                    details = self.tracker.register_unnamed_dir(item, {"version": item.name})
+                    logger.info(f"Found old version: {item.name} ({format_du_style(details.before_size)})")
 
         go_cache, _ = self.run_command_check_output(["go", "env", "GOCACHE"])
         go_mod_cache, _ = self.run_command_check_output(["go", "env", "GOMODCACHE"])
@@ -1005,7 +1069,7 @@ def build_default_tools() -> List[CleanupTool]:
     pip_cache_root = Path(os.path.expanduser("~/Library/Caches/pip"))
     return [
         MavenCleanup("100M"),
-        AsdfGolangCleanup(keep_versions=["1.24.11"]),
+        AsdfGolangCleanup(),
         DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
         DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
         DiscoveryCleanup("Pip Cache", pip_cache_root, ["*"]),
