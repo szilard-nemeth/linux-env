@@ -640,8 +640,15 @@ class _DockerPruneMixin:
             parts = line.split()
             if len(parts) < 2:
                 continue
+
+            # The RECLAIMABLE column might look like "2.936GB (28%)" or just "10.3GB"
+            # We need to find the size string, which is typically the second to last or third to last token
+            # But the easiest way is to look at parts[-1] and parts[-2].
+            # If parts[-1] starts with '(', the size is in parts[-2].
+            size_str = parts[-2] if parts[-1].startswith("(") else parts[-1]
+
             try:
-                total += humanfriendly.parse_size(parts[-1])
+                total += humanfriendly.parse_size(size_str)
             except (ValueError, TypeError):
                 logger.debug("Could not parse docker system df reclaimable: %s", line)
         return total
