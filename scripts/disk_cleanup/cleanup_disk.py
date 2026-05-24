@@ -936,6 +936,108 @@ class PoetryCacheCleanup(CleanupTool):
         return self._verify_with_tracker(self.tracker)
 
 
+class HomebrewCleanup(CleanupTool):
+    summary_name = "Homebrew cleanup"
+
+    def __init__(self):
+        super().__init__()
+        self.tracker = CleanupDetailsTracker()
+        self._has_work = False
+
+    def _has_pending_work(self) -> bool:
+        return self._has_work
+
+    def estimated_reclaim_bytes(self) -> Optional[int]:
+        try:
+            cache_dir, _ = self.run_command_check_output(["brew", "--cache"])
+            return FileUtils.get_dir_size(cache_dir)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return 0
+
+    def prepare(self):
+        try:
+            cache_dir, _ = self.run_command_check_output(["brew", "--cache"])
+            cache_path = Path(cache_dir).resolve()
+            if cache_path.exists():
+                size = FileUtils.get_dir_size(cache_path)
+                if size > 0:
+                    self.tracker.register_named_dir("brew_cache", cache_path)
+                    self._has_work = True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
+
+    def execute(self):
+        self.run_command(["brew", "cleanup"])
+
+    def verify(self) -> CleanupResult:
+        if not self._has_work:
+            self.cleanup_result = CleanupResult(bytes_reclaimed=0, success=True)
+            return self.cleanup_result
+        return self._verify_with_tracker(self.tracker, key="brew_cache")
+
+
+class NpmCacheCleanup(CleanupTool):
+    summary_name = "NPM cache cleanup"
+
+    def __init__(self):
+        super().__init__()
+        self.tracker = CleanupDetailsTracker()
+
+    def _has_pending_work(self) -> bool:
+        return bool(self.tracker.unnamed_cleanup)
+
+    def estimated_reclaim_bytes(self) -> Optional[int]:
+        return self.tracker.sum_unnamed_before_bytes()
+
+    def prepare(self):
+        try:
+            cache_dir, _ = self.run_command_check_output(["npm", "config", "get", "cache"])
+            p = Path(cache_dir).expanduser()
+            if p.exists():
+                size = FileUtils.get_dir_size(p)
+                if size > 0:
+                    self.tracker.register_unnamed_dir(p)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
+
+    def execute(self):
+        self.run_command(["npm", "cache", "clean", "--force"])
+
+    def verify(self) -> CleanupResult:
+        return self._verify_with_tracker_unnamed(self.tracker)
+
+
+class YarnCacheCleanup(CleanupTool):
+    summary_name = "Yarn cache cleanup"
+
+    def __init__(self):
+        super().__init__()
+        self.tracker = CleanupDetailsTracker()
+
+    def _has_pending_work(self) -> bool:
+        return bool(self.tracker.unnamed_cleanup)
+
+    def estimated_reclaim_bytes(self) -> Optional[int]:
+        return self.tracker.sum_unnamed_before_bytes()
+
+    def prepare(self):
+        try:
+            cache_dir, _ = self.run_command_check_output(["yarn", "cache", "dir"])
+            p = Path(cache_dir).expanduser()
+            if p.exists():
+                size = FileUtils.get_dir_size(p)
+                if size > 0:
+                    self.tracker.register_unnamed_dir(p)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
+
+    def execute(self):
+        self.run_command(["yarn", "cache", "clean"])
+
+    def verify(self) -> CleanupResult:
+        return self._verify_with_tracker_unnamed(self.tracker)
+
+
 class KbPrivateGitOffloadCleanup(CleanupTool):
     """Offload large tracked archives from knowledge-base-private to external storage."""
 
@@ -1098,8 +1200,13 @@ def build_default_tools() -> List[CleanupTool]:
         DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
         DiscoveryCleanup("Pip Cache", pip_cache_root, ["*"]),
         PoetryCacheCleanup(),
+        HomebrewCleanup(),
+        NpmCacheCleanup(),
+        YarnCacheCleanup(),
         # --- App Caches (Targeted & Age-based: 30 days) ---
         DiscoveryCleanup("JetBrains Cache", Path(os.path.expanduser("~/Library/Caches/JetBrains")), ["*"], age_days=30),
+        DiscoveryCleanup("Gradle Cache", Path(os.path.expanduser("~/.gradle/caches")), ["*"], age_days=30),
+        DiscoveryCleanup("System Logs", Path(os.path.expanduser("~/Library/Logs")), ["*"], age_days=30),
         DiscoveryCleanup(
             "Cursor Cache", Path(os.path.expanduser("~/Library/Application Support/Cursor/Cache")), ["*"], age_days=30
         ),
