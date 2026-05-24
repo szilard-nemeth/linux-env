@@ -1234,10 +1234,43 @@ def build_default_tools() -> List[CleanupTool]:
             age_days=30,
         ),
         DiscoveryCleanup(
+            "Cursor User Data Cache",
+            Path(os.path.expanduser("~/Library/Application Support/Cursor/User/workspaceStorage")),
+            ["*"],
+            age_days=30,
+        ),
+        DiscoveryCleanup(
             "Slack Cache", Path(os.path.expanduser("~/Library/Application Support/Slack/Cache")), ["*"], age_days=30
         ),
         DiscoveryCleanup(
             "Chrome Cache", Path(os.path.expanduser("~/Library/Caches/Google/Chrome/Default/Cache")), ["*"], age_days=30
+        ),
+        DiscoveryCleanup(
+            "Spotify Cache", Path(os.path.expanduser("~/Library/Caches/com.spotify.client")), ["*"], age_days=30
+        ),
+        DiscoveryCleanup(
+            "Discord Cache", Path(os.path.expanduser("~/Library/Application Support/discord/Cache")), ["*"], age_days=30
+        ),
+        DiscoveryCleanup(
+            "Apple Music Cache", Path(os.path.expanduser("~/Library/Caches/com.apple.Music")), ["*"], age_days=30
+        ),
+        DiscoveryCleanup(
+            "Apple Podcasts Cache", Path(os.path.expanduser("~/Library/Caches/com.apple.podcasts")), ["*"], age_days=30
+        ),
+        DiscoveryCleanup(
+            "Apple TV Cache", Path(os.path.expanduser("~/Library/Caches/com.apple.tv")), ["*"], age_days=30
+        ),
+        DiscoveryCleanup("Coursier Cache", Path(os.path.expanduser("~/Library/Caches/Coursier")), ["*"], age_days=30),
+        DiscoveryCleanup("Trivy Cache", Path(os.path.expanduser("~/Library/Caches/trivy")), ["*"], age_days=30),
+        DiscoveryCleanup("Firefox Cache", Path(os.path.expanduser("~/Library/Caches/Firefox")), ["*"], age_days=30),
+        DiscoveryCleanup(
+            "Playwright Cache", Path(os.path.expanduser("~/Library/Caches/ms-playwright")), ["*"], age_days=30
+        ),
+        DiscoveryCleanup(
+            "Virtualenv Cache", Path(os.path.expanduser("~/Library/Caches/virtualenv")), ["*"], age_days=30
+        ),
+        DiscoveryCleanup(
+            "Golangci-lint Cache", Path(os.path.expanduser("~/Library/Caches/golangci-lint")), ["*"], age_days=30
         ),
         # --- Additional Caches based on ncdu ---
         DiscoveryCleanup(
@@ -1279,6 +1312,35 @@ def build_default_tools() -> List[CleanupTool]:
         ),
         DiscoveryCleanup(
             "Downloads", Path(os.path.expanduser("~/Downloads")), ["*"], age_days=60, target_type="any", recursive=False
+        ),
+        # --- Node/JS Modules ---
+        DiscoveryCleanup("Node Modules", DEVELOPMENT_ROOT, ["node_modules"], age_days=60),
+        # --- Build/Target Directories ---
+        DiscoveryCleanup("Python Build Dirs", DEVELOPMENT_ROOT, ["build", "dist", "*.egg-info"], age_days=30),
+        # --- Application Support Caches ---
+        DiscoveryCleanup(
+            "Google App Support Cache",
+            Path(os.path.expanduser("~/Library/Application Support/Google")),
+            ["*"],
+            age_days=60,
+        ),
+        DiscoveryCleanup(
+            "Firefox App Support Cache",
+            Path(os.path.expanduser("~/Library/Application Support/Firefox")),
+            ["*"],
+            age_days=60,
+        ),
+        DiscoveryCleanup(
+            "Evernote App Support Cache",
+            Path(os.path.expanduser("~/Library/Application Support/Evernote")),
+            ["*"],
+            age_days=60,
+        ),
+        DiscoveryCleanup(
+            "Slack App Support Cache",
+            Path(os.path.expanduser("~/Library/Application Support/Slack")),
+            ["*"],
+            age_days=60,
         ),
     ]
 
