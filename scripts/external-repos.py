@@ -167,6 +167,35 @@ def print_prefixed(repo: RepoConfig, s: str):
     print(f"{prefix}{s}")
 
 
+def _docker_image_built_commit(image: str) -> Optional[str]:
+    """Return the git-commit label baked into an existing image, or None if the image does not exist."""
+    result = subprocess.run(
+        ["docker", "image", "inspect", "--format", '{{index .Config.Labels "git-commit"}}', image],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def _docker_build(repo: RepoConfig, current_commit: Optional[str]) -> None:
+    setup = repo.setup
+    cmd = [
+        "docker",
+        "build",
+        "-f",
+        f"{repo.repo_dir}/{setup.dockerfile}",
+        "-t",
+        setup.image,
+    ]
+    if current_commit:
+        cmd += ["--label", f"git-commit={current_commit}"]
+    cmd.append(f"{repo.repo_dir}/{setup.docker_context}")
+    _run_command(cmd)
+
+
 def _docker_ensure_running(repo: RepoConfig) -> None:
     print("Ensuring Docker is running...")
     if shutil.which("docker") is None:
@@ -190,26 +219,27 @@ def _docker_ensure_running(repo: RepoConfig) -> None:
     if setup.run_args_env:
         run_args = os.environ.get(setup.run_args_env, run_args)
 
-    if (
-        _run_command(
-            ["docker", "image", "inspect", setup.image],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        ).returncode
-        != 0
-    ):
+    # Determine the commit the repo is currently at (may be None for non-git repos).
+    current_commit: Optional[str] = None
+    if repo.repo_dir and (Path(repo.repo_dir) / ".git").exists():
+        current_commit = _run_capture(["git", "-C", repo.repo_dir, "rev-parse", "HEAD"]) or None
+
+    built_commit = _docker_image_built_commit(setup.image)
+
+    if built_commit is None:
         print_prefixed(repo, f"Docker image '{setup.image}' is not built! Building...")
-        _run_command(
-            [
-                "docker",
-                "build",
-                "-f",
-                f"{repo.repo_dir}/{setup.dockerfile}",
-                "-t",
-                setup.image,
-                f"{repo.repo_dir}/{setup.docker_context}",
-            ]
+        _docker_build(repo, current_commit)
+    elif current_commit and built_commit != current_commit:
+        print_prefixed(
+            repo,
+            f"Docker image '{setup.image}' was built at {built_commit[:12]}, "
+            f"but repo is at {current_commit[:12]}. Rebuilding...",
+        )
+        _docker_build(repo, current_commit)
+    else:
+        print_prefixed(
+            repo,
+            f"Docker image '{setup.image}' is up to date (commit {(current_commit or built_commit or 'unknown')[:12]})",
         )
 
     running = _run_capture(["docker", "ps", "--format", "{{.Names}}"]).splitlines()
