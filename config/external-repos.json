@@ -5,7 +5,7 @@
   "repos": {
     "claude_proxy": {
       "url": "https://github.infra.cloudera.com/jonathan-hurley/dev-tools.git",
-      "ref": "992513dad64b238a4b2b5688afff34dd154620b3",
+      "ref": "157fce98469e3830b505c8bac0dacb479fe4f55d",
       "dir": "$HOME/development/other-repos/jonathan-hurley/claude-proxy",
       "sparse_paths": [
         "docker/assets/bin/bedrock-strip-proxy.py",
