@@ -35,8 +35,7 @@ HOME = Path.home()
 DEFAULT_PROJECTS_DIR = HOME / ".claude" / "projects"
 DEFAULT_KB_REPO = HOME / "development" / "my-repos" / "knowledge-base-private"
 DEFAULT_DEST_DIR = DEFAULT_KB_REPO / "claude-sessions"
-DEFAULT_LINUX_ENV_REPO = HOME / "development" / "my-repos" / "linux-env"
-DEFAULT_STATE_FILE = DEFAULT_LINUX_ENV_REPO / "config" / "claude-session-export-state.json"
+DEFAULT_STATE_FILE = HOME / ".claude" / "session-export-state.json"
 
 STATE_VERSION = 1
 
@@ -397,7 +396,7 @@ def commit_repo(repo: Path, paths: list[Path], message: str, console: Console) -
     "--commit",
     "do_commit",
     is_flag=True,
-    help="After exporting, git-commit the new transcripts AND the updated state file.",
+    help="After exporting, git-commit the new transcripts in the knowledge-base repo.",
 )
 def main(
     projects_dir: Path,
@@ -472,15 +471,6 @@ def main(
             commit_repo(kb_repo, written_paths, msg, console)
         else:
             console.print(f"[yellow]Skip commit: {dest_dir} has no parent .git repo[/yellow]")
-
-        # linux-env: the state file.
-        le_repo = state_file.parent
-        while le_repo != le_repo.parent and not (le_repo / ".git").exists():
-            le_repo = le_repo.parent
-        if (le_repo / ".git").exists():
-            commit_repo(le_repo, [state_file], msg, console)
-        else:
-            console.print(f"[yellow]Skip commit: {state_file} has no parent .git repo[/yellow]")
 
 
 if __name__ == "__main__":
