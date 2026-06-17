@@ -53,15 +53,20 @@ function export-claude-settings {
     echo "Exporting Claude Code settings..."
     export ANTHROPIC_AUTH_TOKEN=$(cat ~/claude-key.txt)
     export ANTHROPIC_BASE_URL=http://127.0.0.1:8083
-    export ANTHROPIC_DEFAULT_SONNET_MODEL="anthropic.claude-sonnet-4-6"
-    export ANTHROPIC_DEFAULT_HAIKU_MODEL="us.anthropic.claude-haiku-4-5-20251001-v1:0"
-    export CLAUDE_CODE_SUBAGENT_MODEL="anthropic.claude-sonnet-4-6"
-    local tmp_log=$(mktemp)
-    if python3 -u "$HOME_LINUXENV_DIR/scripts/external-repos.py" sync-and-setup "claude_proxy" > "$tmp_log" 2>&1; then
-        print_debug "$(cat "$tmp_log")"
-        rm -f "$tmp_log"
+    export ANTHROPIC_DEFAULT_OPUS_MODEL="claude-opus"
+    export ANTHROPIC_DEFAULT_SONNET_MODEL="claude-sonnet"
+    export ANTHROPIC_DEFAULT_HAIKU_MODEL="claude-haiku"
+    export CLAUDE_CODE_SUBAGENT_MODEL="claude-sonnet"
+
+    # Remove any leftover logs from the previous run before starting a new one
+    rm -f /tmp/claude-proxy-setup-*.log
+    local setup_log
+    setup_log=$(mktemp /tmp/claude-proxy-setup-XXXXXX.log)
+    echo "Logging Claude code setup to: $setup_log"
+    if python3 -u "$HOME_LINUXENV_DIR/scripts/external-repos.py" sync-and-setup "claude_proxy" > "$setup_log" 2>&1; then
+        print_debug "$(cat "$setup_log")"
     else
-        print_red "Error during claude_proxy setup. Logs saved to: $tmp_log"
+        print_red "Error during claude_proxy setup. Logs saved to: $setup_log"
     fi
 }
 

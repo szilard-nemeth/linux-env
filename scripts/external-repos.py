@@ -167,6 +167,61 @@ def print_prefixed(repo: RepoConfig, s: str):
     print(f"{prefix}{s}")
 
 
+def _docker_image_built_commit(image: str) -> Optional[str]:
+    """Return the git-commit label baked into an existing image, or None if the image does not exist."""
+    result = subprocess.run(
+        ["docker", "image", "inspect", "--format", '{{index .Config.Labels "git-commit"}}', image],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def _docker_image_id(image: str) -> Optional[str]:
+    """Return the full image ID for the given image name/tag, or None if it does not exist."""
+    result = subprocess.run(
+        ["docker", "image", "inspect", "--format", "{{.Id}}", image],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def _docker_container_image_id(container: str) -> Optional[str]:
+    """Return the image ID that a container (running or stopped) was created from, or None."""
+    result = subprocess.run(
+        ["docker", "inspect", "--format", "{{.Image}}", container],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def _docker_build(repo: RepoConfig, current_commit: Optional[str]) -> None:
+    setup = repo.setup
+    cmd = [
+        "docker",
+        "build",
+        "-f",
+        f"{repo.repo_dir}/{setup.dockerfile}",
+        "-t",
+        setup.image,
+    ]
+    if current_commit:
+        cmd += ["--label", f"git-commit={current_commit}"]
+    cmd.append(f"{repo.repo_dir}/{setup.docker_context}")
+    _run_command(cmd)
+
+
 def _docker_ensure_running(repo: RepoConfig) -> None:
     print("Ensuring Docker is running...")
     if shutil.which("docker") is None:
@@ -190,27 +245,53 @@ def _docker_ensure_running(repo: RepoConfig) -> None:
     if setup.run_args_env:
         run_args = os.environ.get(setup.run_args_env, run_args)
 
-    if (
-        _run_command(
-            ["docker", "image", "inspect", setup.image],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        ).returncode
-        != 0
-    ):
+    # Determine the commit the repo is currently at (may be None for non-git repos).
+    current_commit: Optional[str] = None
+    if repo.repo_dir and (Path(repo.repo_dir) / ".git").exists():
+        current_commit = _run_capture(["git", "-C", repo.repo_dir, "rev-parse", "HEAD"]) or None
+
+    built_commit = _docker_image_built_commit(setup.image)
+
+    image_rebuilt = False
+    if built_commit is None:
         print_prefixed(repo, f"Docker image '{setup.image}' is not built! Building...")
-        _run_command(
-            [
-                "docker",
-                "build",
-                "-f",
-                f"{repo.repo_dir}/{setup.dockerfile}",
-                "-t",
-                setup.image,
-                f"{repo.repo_dir}/{setup.docker_context}",
-            ]
+        _docker_build(repo, current_commit)
+        image_rebuilt = True
+    elif current_commit and built_commit != current_commit:
+        print_prefixed(
+            repo,
+            f"Docker image '{setup.image}' was built at {built_commit[:12]}, "
+            f"but repo is at {current_commit[:12]}. Rebuilding...",
         )
+        _docker_build(repo, current_commit)
+        image_rebuilt = True
+    else:
+        print_prefixed(
+            repo,
+            f"Docker image '{setup.image}' is up to date (commit {(current_commit or built_commit or 'unknown')[:12]})",
+        )
+
+    # If the image was just rebuilt, tear down any existing container so it is
+    # recreated from the new image below.
+    if image_rebuilt:
+        all_containers = _run_capture(["docker", "ps", "-a", "--format", "{{.Names}}"]).splitlines()
+        if container in all_containers:
+            print_prefixed(repo, f"Stopping and removing stale container '{container}' after image rebuild...")
+            _run_command(["docker", "stop", container])
+            _run_command(["docker", "rm", container])
+
+    # Check whether the container (running or stopped) is using the current image.
+    # This catches the case where the image was rebuilt in a previous run but the
+    # container was never restarted.
+    current_image_id = _docker_image_id(setup.image)
+    container_image_id = _docker_container_image_id(container)
+    if current_image_id and container_image_id and current_image_id != container_image_id:
+        print_prefixed(
+            repo,
+            f"Container '{container}' is using a stale image; stopping and removing it...",
+        )
+        _run_command(["docker", "stop", container], check=False)
+        _run_command(["docker", "rm", container])
 
     running = _run_capture(["docker", "ps", "--format", "{{.Names}}"]).splitlines()
     if container in running:

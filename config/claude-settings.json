@@ -1,0 +1,47 @@
+{
+  "model": "opus",
+  "theme": "auto",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Agent",
+      "WebSearch",
+
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(file:*)",
+
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git blame:*)",
+
+      "Bash(bash docs/scripts/threat-modeling/*)",
+
+      "Edit(docs/security/**)",
+      "Write(docs/security/**)",
+      "Edit(.claude/worktrees/*/docs/security/**)",
+      "Write(.claude/worktrees/*/docs/security/**)"
+    ],
+    "deny": [
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(rm -rf:*)",
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Write(.git/**)",
+      "Write(.env*)"
+    ]
+  }
+}
