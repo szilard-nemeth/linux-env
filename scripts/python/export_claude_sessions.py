@@ -16,11 +16,12 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import os
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
 
 import click
 from rich.console import Console
@@ -62,14 +63,28 @@ class Session:
     source_path: Path
     source_mtime: float
     line_count: int
+    ai_title: Optional[str] = None
+    first_user_text: Optional[str] = None
+    earliest_ts: Optional[str] = None  # ISO8601 string from jsonl
+
+    @property
+    def short_name(self) -> str:
+        """Deterministic, readable filename stem: <YYYY-MM-DD>-<slug>--<id8>."""
+        date_part = (self.earliest_ts or "")[:10]
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_part):
+            # Fall back to source mtime when no jsonl timestamp is available.
+            date_part = _dt.datetime.fromtimestamp(self.source_mtime).strftime("%Y-%m-%d")
+        title = self.ai_title or self.first_user_text or self.session_id
+        slug = _slugify(title, max_len=60) or self.session_id[:8]
+        return f"{date_part}-{slug}--{self.session_id[:8]}"
 
     @property
     def md_dest(self) -> Path:
-        return Path(self.project_slug) / f"{self.session_id}.md"
+        return Path(self.project_slug) / f"{self.short_name}.md"
 
     @property
     def jsonl_dest(self) -> Path:
-        return Path(self.project_slug) / f"{self.session_id}.jsonl"
+        return Path(self.project_slug) / f"{self.short_name}.jsonl"
 
 
 # ---------------------------------------------------------------------------
@@ -82,6 +97,65 @@ def decode_project_slug(slug: str) -> str:
     return slug.replace("-", "/")
 
 
+_SLUG_BAD = re.compile(r"[^a-z0-9]+")
+
+
+def _slugify(text: str, max_len: int = 60) -> str:
+    """Lower-kebab-case, ASCII-only, trimmed at word boundary when possible."""
+    s = (text or "").lower().strip()
+    s = _SLUG_BAD.sub("-", s).strip("-")
+    if len(s) <= max_len:
+        return s
+    cut = s[:max_len]
+    # Trim trailing partial word so the slug ends cleanly.
+    if "-" in cut:
+        cut = cut.rsplit("-", 1)[0]
+    return cut.strip("-")
+
+
+def _scan_session_metadata(jsonl_path: Path) -> tuple[Optional[str], Optional[str], Optional[str], int]:
+    """Return (ai_title, first_user_text, earliest_ts, line_count) for a session jsonl."""
+    ai_title: Optional[str] = None
+    first_user_text: Optional[str] = None
+    earliest_ts: Optional[str] = None
+    line_count = 0
+    try:
+        with jsonl_path.open("r", encoding="utf-8") as fh:
+            for raw in fh:
+                line_count += 1
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    rec = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                rtype = rec.get("type")
+                if rtype == "ai-title" and ai_title is None:
+                    ai_title = rec.get("aiTitle") or rec.get("title")
+                ts = rec.get("timestamp")
+                if ts and (earliest_ts is None or ts < earliest_ts):
+                    earliest_ts = ts
+                if rtype == "user" and first_user_text is None:
+                    msg = rec.get("message", {})
+                    content = msg.get("content") if isinstance(msg, dict) else msg
+                    text = ""
+                    if isinstance(content, str):
+                        text = content
+                    elif isinstance(content, list):
+                        for block in content:
+                            if isinstance(block, dict) and block.get("type") == "text":
+                                text = block.get("text", "")
+                                break
+                    text = text.strip()
+                    # Skip tool-result-only "user" entries and command stubs.
+                    if text and not text.startswith("<") and not text.startswith("[Request interrupted"):
+                        first_user_text = text[:200]
+    except OSError:
+        pass
+    return ai_title, first_user_text, earliest_ts, line_count
+
+
 def discover_sessions(projects_dir: Path) -> list[Session]:
     sessions: list[Session] = []
     if not projects_dir.exists():
@@ -92,11 +166,9 @@ def discover_sessions(projects_dir: Path) -> list[Session]:
         for jf in sorted(proj.glob("*.jsonl")):
             try:
                 stat = jf.stat()
-                # Cheap line count — these files aren't huge.
-                with jf.open("rb") as fh:
-                    line_count = sum(1 for _ in fh)
             except OSError:
                 continue
+            ai_title, first_user, earliest_ts, line_count = _scan_session_metadata(jf)
             sessions.append(
                 Session(
                     project_slug=proj.name,
@@ -105,6 +177,9 @@ def discover_sessions(projects_dir: Path) -> list[Session]:
                     source_path=jf,
                     source_mtime=stat.st_mtime,
                     line_count=line_count,
+                    ai_title=ai_title,
+                    first_user_text=first_user,
+                    earliest_ts=earliest_ts,
                 )
             )
     return sessions
@@ -246,11 +321,53 @@ def render_markdown(session: Session) -> str:
 def export_session(session: Session, dest_dir: Path) -> tuple[Path, Path]:
     out_dir = dest_dir / session.project_slug
     out_dir.mkdir(parents=True, exist_ok=True)
-    md_path = out_dir / f"{session.session_id}.md"
-    jsonl_path = out_dir / f"{session.session_id}.jsonl"
+    md_path = out_dir / f"{session.short_name}.md"
+    jsonl_path = out_dir / f"{session.short_name}.jsonl"
     md_path.write_text(render_markdown(session), encoding="utf-8")
     shutil.copy2(session.source_path, jsonl_path)
     return md_path, jsonl_path
+
+
+def migrate_existing_exports(
+    sessions: Iterable[Session],
+    state: dict,
+    dest_dir: Path,
+    console: Console,
+    *,
+    dry_run: bool,
+) -> int:
+    """Rename previously-exported `<session-id>.{md,jsonl}` to the new short name.
+
+    Returns the number of sessions whose exports were renamed.
+    """
+    renamed = 0
+    for s in sessions:
+        entry = state["entries"].get(str(s.source_path))
+        if not entry:
+            continue
+        old_md = Path(entry.get("md_path", ""))
+        old_jsonl = Path(entry.get("jsonl_path", ""))
+        new_md = dest_dir / s.md_dest
+        new_jsonl = dest_dir / s.jsonl_dest
+        moves: list[tuple[Path, Path]] = []
+        if old_md and old_md != new_md and old_md.exists() and not new_md.exists():
+            moves.append((old_md, new_md))
+        if old_jsonl and old_jsonl != new_jsonl and old_jsonl.exists() and not new_jsonl.exists():
+            moves.append((old_jsonl, new_jsonl))
+        if not moves:
+            continue
+        if dry_run:
+            for src, dst in moves:
+                console.print(f"[cyan]would rename[/cyan] {src.name} -> {dst.name}")
+        else:
+            new_md.parent.mkdir(parents=True, exist_ok=True)
+            for src, dst in moves:
+                src.rename(dst)
+                console.print(f"[cyan]renamed[/cyan] {src.name} -> {dst.name}")
+            entry["md_path"] = str(new_md)
+            entry["jsonl_path"] = str(new_jsonl)
+        renamed += 1
+    return renamed
 
 
 # ---------------------------------------------------------------------------
@@ -290,7 +407,7 @@ def render_table(
 ) -> Table:
     table = Table(title=title, show_lines=False, header_style="bold cyan")
     table.add_column("Project", overflow="fold", max_width=30)
-    table.add_column("Session", overflow="fold")
+    table.add_column("Session (short name)", overflow="fold", max_width=42)
     table.add_column("Source path", overflow="fold", max_width=50)
     table.add_column("State", justify="center")
     table.add_column("MTime")
@@ -303,7 +420,7 @@ def render_table(
         entry = state["entries"].get(str(s.source_path))
         table.add_row(
             s.project_label,
-            s.session_id,
+            s.short_name,
             str(s.source_path),
             f"[{colour}]{cell} {status}[/{colour}]",
             _fmt_mtime(s.source_mtime),
@@ -423,6 +540,12 @@ def main(
         return
 
     state = load_state(state_file)
+
+    # Migrate any pre-existing exports to the new <date>-<slug>--<id8> naming.
+    migrated = migrate_existing_exports(sessions, state, dest_dir, console, dry_run=dry_run)
+    if migrated and not dry_run:
+        save_state(state_file, state)
+        console.print(f"[cyan]Migrated {migrated} existing export(s) to short-name files.[/cyan]")
 
     pending = [s for s in sessions if export_status(s, state) in ("never", "stale")]
 
