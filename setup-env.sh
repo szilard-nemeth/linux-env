@@ -538,6 +538,9 @@ function copy_files_from_linuxenv_repo_to_home {
     COPY_LIST+=("$DIR/config/kitty.conf $HOME/.config/kitty/kitty.conf")
     COPY_LIST+=("$DIR/config/theme.conf $HOME/.config/kitty/theme.conf")
     COPY_LIST+=("$DIR/config/external-repos.json $HOME_LINUXENV_DIR/config/external-repos.json")
+
+    # Claude
+    COPY_LIST+=("$DIR/config/claude-settings.json $HOME/.claude/settings.json")
     
     #Can't use is-platform-macos alias here as it's not yet loaded
     if [[ ! ${platform} == 'macOS' ]]; then
