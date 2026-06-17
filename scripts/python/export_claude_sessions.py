@@ -186,6 +186,31 @@ def discover_sessions(projects_dir: Path) -> list[Session]:
 
 
 def load_state(path: Path) -> dict:
+    """Load the export state file.
+
+    Schema (also see the write site in main()):
+
+        {
+          "version": 1,
+          "entries": {
+            # KEY = the original source jsonl path verbatim. This is how we
+            # remember the "real" filename of each session even though the
+            # exported copies live under a renamed short name.
+            "/Users/.../.claude/projects/<proj>/<session-id>.jsonl": {
+              "exported_at":   "<ISO8601>",                 # when we wrote it
+              "source_mtime":  <float>,                     # source mtime at export time
+              "md_path":       "<abs path to .md export>",  # renamed short-name copy
+              "jsonl_path":    "<abs path to .jsonl copy>", # renamed short-name copy
+              "lines":         <int>,                       # source line count at export time
+              "project_label": "<decoded project path>"
+            },
+            ...
+          }
+        }
+
+    A session is considered "unexported" when its source path is missing from
+    `entries`, or its current mtime is newer than the recorded `source_mtime`.
+    """
     if not path.exists():
         return {"version": STATE_VERSION, "entries": {}}
     try:
@@ -577,6 +602,13 @@ def main(
     now_iso = _dt.datetime.now().isoformat(timespec="seconds")
     for s in pending:
         md_path, jsonl_path = export_session(s, dest_dir)
+        # The state-file entry is keyed by the ORIGINAL source jsonl path
+        # (e.g. ~/.claude/projects/<proj>/<session-id>.jsonl). That key is the
+        # link between a session's source-of-truth and its renamed exports —
+        # `md_path` / `jsonl_path` record where the short-named copies live in
+        # knowledge-base-private. The file's basename is the raw session UUID,
+        # so the original "filename" is preserved both as the dict key and in
+        # the path itself.
         state["entries"][str(s.source_path)] = {
             "exported_at": now_iso,
             "source_mtime": s.source_mtime,
