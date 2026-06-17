@@ -743,7 +743,8 @@ class WorkflowConfig:
     def resolved_out_dir(self) -> Path:
         if self.out_dir:
             return self.out_dir.expanduser().resolve()
-        return Path.home() / f"git-large-files-{self.run_label}"
+        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        return Path.home() / f"git-large-files-{self.run_label}_{timestamp}"
 
     def resolved_offload_root(self) -> str:
         if self.offload_root:
@@ -817,7 +818,7 @@ class ExpandedDirectoryPath(click.Path):
 @click.option(
     "--out-dir",
     type=ExpandedDirectoryPath(file_okay=False, path_type=Path),
-    help="Directory for intermediate output files (default: ~/git-large-files-<label>)",
+    help="Directory for intermediate output files (default: ~/git-large-files-<label>_<timestamp>)",
 )
 @click.option(
     "--threshold-mb",
@@ -826,14 +827,11 @@ class ExpandedDirectoryPath(click.Path):
     help="Minimum file size in MB to move",
 )
 @click.option(
-    "--execute",
-    is_flag=True,
+    "--execute/--dry-run",
+    "execute",
+    default=False,
+    show_default=True,
     help="Move files to offloaded storage (default: dry-run preview only)",
-)
-@click.option(
-    "--dry-run",
-    is_flag=True,
-    help="Preview moves without changing files (default when neither flag is given)",
 )
 @click.option(
     "--stage",
@@ -858,15 +856,12 @@ def main(
     out_dir: Optional[Path],
     threshold_mb: int,
     execute: bool,
-    dry_run: bool,
     stage: bool,
     offload_root: Optional[str],
     path_prefix: Optional[str],
     verbose: bool,
 ) -> None:
     """Analyze large files in a repo, optionally offload them, and optionally stage git changes."""
-    if execute and dry_run:
-        raise click.UsageError("Use only one of --execute or --dry-run")
 
     GitLargeFileWorkflow.run(
         WorkflowConfig(
