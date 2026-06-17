@@ -510,6 +510,12 @@ def commit_repo(repo: Path, paths: list[Path], message: str, console: Console) -
 )
 @click.option("--dry-run", is_flag=True, help="Show the table; do not write or commit anything.")
 @click.option(
+    "--force",
+    is_flag=True,
+    help="Re-export every (filtered) session regardless of state/mtime. "
+    "Useful when the markdown template changes or the dest dir was wiped.",
+)
+@click.option(
     "--commit",
     "do_commit",
     is_flag=True,
@@ -521,6 +527,7 @@ def main(
     state_file: Path,
     filter_substr: str | None,
     dry_run: bool,
+    force: bool,
     do_commit: bool,
 ) -> None:
     """Export unexported Claude session transcripts."""
@@ -547,10 +554,16 @@ def main(
         save_state(state_file, state)
         console.print(f"[cyan]Migrated {migrated} existing export(s) to short-name files.[/cyan]")
 
-    pending = [s for s in sessions if export_status(s, state) in ("never", "stale")]
+    if force:
+        pending = list(sessions)
+    else:
+        pending = [s for s in sessions if export_status(s, state) in ("never", "stale")]
 
     console.print(render_table(sessions, state, dest_dir, title="Claude session transcripts (before)"))
-    console.print(f"\n[bold]{len(pending)}[/bold] of [bold]{len(sessions)}[/bold] sessions need export.")
+    if force:
+        console.print(f"\n[bold]--force[/bold]: re-exporting all [bold]{len(pending)}[/bold] session(s).")
+    else:
+        console.print(f"\n[bold]{len(pending)}[/bold] of [bold]{len(sessions)}[/bold] sessions need export.")
 
     if dry_run:
         console.print("[dim]--dry-run: not writing anything.[/dim]")
