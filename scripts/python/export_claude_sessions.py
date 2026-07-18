@@ -9,6 +9,8 @@ re-export when the source mtime moves forward.
 
 Usage:
     python export_claude_sessions.py [--dry-run] [--commit] [--filter SUBSTR]
+    python export_claude_sessions.py --list [--filter SUBSTR]
+    python export_claude_sessions.py --session-id <ID> [--commit]
 """
 
 from __future__ import annotations
@@ -531,7 +533,23 @@ def commit_repo(repo: Path, paths: list[Path], message: str, console: Console) -
     "--filter",
     "filter_substr",
     default=None,
-    help="Only consider sessions whose project label or session id contains this substring.",
+    help="Only consider sessions whose project label, session id, ai-title, "
+    "or first-user-message contains this substring (case-insensitive).",
+)
+@click.option(
+    "--session-id",
+    "session_id",
+    default=None,
+    help="Export exactly one session by id (exact match, or unambiguous prefix). "
+    "Errors out if 0 or >1 sessions match. Implies --force.",
+)
+@click.option(
+    "--list",
+    "list_sessions",
+    is_flag=True,
+    help="List every discovered session (id, name, project) and exit. "
+    "Pipe-friendly: one TAB-separated row per session, sorted by project then mtime. "
+    "Honours --filter to narrow the list.",
 )
 @click.option("--dry-run", is_flag=True, help="Show the table; do not write or commit anything.")
 @click.option(
@@ -551,6 +569,8 @@ def main(
     dest_dir: Path,
     state_file: Path,
     filter_substr: str | None,
+    session_id: str | None,
+    list_sessions: bool,
     dry_run: bool,
     force: bool,
     do_commit: bool,
@@ -561,11 +581,61 @@ def main(
     sessions = discover_sessions(projects_dir)
     if filter_substr:
         needle = filter_substr.lower()
-        sessions = [
-            s
-            for s in sessions
-            if needle in s.project_label.lower() or needle in s.project_slug.lower() or needle in s.session_id.lower()
-        ]
+
+        def _matches(s: Session) -> bool:
+            haystacks = [
+                s.project_label,
+                s.project_slug,
+                s.session_id,
+                s.ai_title or "",
+                s.first_user_text or "",
+            ]
+            return any(needle in h.lower() for h in haystacks)
+
+        sessions = [s for s in sessions if _matches(s)]
+
+    if list_sessions:
+        if not sessions:
+            console.print("[yellow]No sessions found.[/yellow]")
+            return
+        # TAB-separated so it's grep/awk-friendly. Columns:
+        #   session_id  mtime  lines  name  project_label
+        # `name` is the AI-generated title, falling back to the first user
+        # message, falling back to "-" — same precedence used for the short
+        # filename slug.
+        for s in sorted(sessions, key=lambda x: (x.project_label, x.source_mtime)):
+            name = s.ai_title or s.first_user_text or "-"
+            name = name.replace("\t", " ").replace("\n", " ").strip()
+            if len(name) > 120:
+                name = name[:117] + "..."
+            print(
+                "\t".join(
+                    [
+                        s.session_id,
+                        _fmt_mtime(s.source_mtime),
+                        str(s.line_count),
+                        name,
+                        s.project_label,
+                    ]
+                )
+            )
+        return
+
+    if session_id:
+        needle = session_id.lower()
+        exact = [s for s in sessions if s.session_id.lower() == needle]
+        prefix = [s for s in sessions if s.session_id.lower().startswith(needle)]
+        matches = exact if exact else prefix
+        if not matches:
+            console.print(f"[red]No session matches id '{session_id}'.[/red]")
+            raise SystemExit(1)
+        if len(matches) > 1:
+            console.print(f"[red]Session id '{session_id}' is ambiguous — {len(matches)} matches:[/red]")
+            for s in matches:
+                console.print(f"  {s.session_id}  ({s.project_label})")
+            raise SystemExit(1)
+        sessions = matches
+        force = True  # single-session exports are almost always "rewrite this now".
 
     if not sessions:
         console.print("[yellow]No sessions found.[/yellow]")
