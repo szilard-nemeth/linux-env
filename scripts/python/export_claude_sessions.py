@@ -116,8 +116,15 @@ def _slugify(text: str, max_len: int = 60) -> str:
 
 
 def _scan_session_metadata(jsonl_path: Path) -> tuple[Optional[str], Optional[str], Optional[str], int]:
-    """Return (ai_title, first_user_text, earliest_ts, line_count) for a session jsonl."""
+    """Return (title, first_user_text, earliest_ts, line_count) for a session jsonl.
+
+    Title precedence: the LATEST `custom-title` (user-set, e.g. via `/title`) wins
+    over any `ai-title` (auto-generated). A session can have both; renames produce
+    multiple `custom-title` records and we want the freshest one. `ai-title` is
+    stable across the session so we take the first we see.
+    """
     ai_title: Optional[str] = None
+    custom_title: Optional[str] = None  # latest wins — renames overwrite
     first_user_text: Optional[str] = None
     earliest_ts: Optional[str] = None
     line_count = 0
@@ -135,6 +142,10 @@ def _scan_session_metadata(jsonl_path: Path) -> tuple[Optional[str], Optional[st
                 rtype = rec.get("type")
                 if rtype == "ai-title" and ai_title is None:
                     ai_title = rec.get("aiTitle") or rec.get("title")
+                elif rtype == "custom-title":
+                    ct = rec.get("customTitle") or rec.get("title")
+                    if ct:
+                        custom_title = ct  # keep overwriting → latest wins
                 ts = rec.get("timestamp")
                 if ts and (earliest_ts is None or ts < earliest_ts):
                     earliest_ts = ts
@@ -155,7 +166,10 @@ def _scan_session_metadata(jsonl_path: Path) -> tuple[Optional[str], Optional[st
                         first_user_text = text[:200]
     except OSError:
         pass
-    return ai_title, first_user_text, earliest_ts, line_count
+    # Custom title wins over ai-title. Callers use this as `ai_title` — keeping
+    # the field name for backward compat, but semantically it's "the best title
+    # we could find" (user-set > AI-generated).
+    return custom_title or ai_title, first_user_text, earliest_ts, line_count
 
 
 def discover_sessions(projects_dir: Path) -> list[Session]:
