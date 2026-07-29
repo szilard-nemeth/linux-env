@@ -1,5 +1,5 @@
 {
-  "model": "opus",
+  "model": "opus[1m]",
   "theme": "auto",
   "permissions": {
     "allow": [
@@ -26,6 +26,21 @@
       "Bash(git rev-parse:*)",
       "Bash(git ls-files:*)",
       "Bash(git blame:*)",
+      "Bash(git branch:*)",
+      "Bash(git for-each-ref:*)",
+      "Bash(git ls-remote:*)",
+      "Bash(git merge-base:*)",
+      "Bash(git remote:*)",
+      "Bash(git add docs/security/**)",
+      "Bash(git commit:*)",
+
+      "Bash(mkdir docs/security/**)",
+      "Bash(ln:*)",
+      "Bash(cp /tmp/*:*)",
+      "Bash(awk:*)",
+      "Bash(python3:*)",
+      "Bash(npx --yes @mermaid-js/mermaid-cli:*)",
+      "Bash(npx @mermaid-js/mermaid-cli:*)",
 
       "Bash(bash docs/scripts/threat-modeling/*)",
 
