@@ -9,8 +9,11 @@ re-export when the source mtime moves forward.
 
 Usage:
     python export_claude_sessions.py [--dry-run] [--commit] [--filter SUBSTR]
-    python export_claude_sessions.py --list [--filter SUBSTR]
+    python export_claude_sessions.py --list [--filter SUBSTR] [--sort ORDER]
     python export_claude_sessions.py --session-id <ID> [--commit]
+
+Table + --list output is sorted newest-first by default. Override with
+--sort {mtime|mtime-asc|project|id|name}.
 """
 
 from __future__ import annotations
@@ -428,6 +431,28 @@ def _fmt_mtime(ts: float) -> str:
     return _dt.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
 
 
+# --- sort keys ---
+# Choices are shared between the table renderer, --list output, and the CLI.
+# `mtime` (newest-first) is the default — most workflows want "what did I
+# touch recently?" over grouping by project.
+SORT_CHOICES = ("mtime", "mtime-asc", "project", "id", "name")
+
+
+def _sort_key(sort: str):
+    """Return a key function suitable for `sorted(sessions, key=...)`."""
+    if sort == "mtime":
+        return lambda s: -s.source_mtime  # newest-first
+    if sort == "mtime-asc":
+        return lambda s: s.source_mtime
+    if sort == "project":
+        return lambda s: (s.project_label, s.source_mtime)
+    if sort == "id":
+        return lambda s: s.session_id
+    if sort == "name":
+        return lambda s: ((s.ai_title or s.first_user_text or "").lower(), s.source_mtime)
+    raise ValueError(f"unknown sort: {sort}")
+
+
 def _fmt_export_loc(entry: dict | None, dest_dir: Path, session: Session) -> str:
     if not entry:
         return "—"
@@ -445,6 +470,7 @@ def render_table(
     state: dict,
     dest_dir: Path,
     title: str = "Claude session transcripts",
+    sort: str = "mtime",
 ) -> Table:
     table = Table(title=title, show_lines=False, header_style="bold cyan")
     table.add_column("Project", overflow="fold", max_width=30)
@@ -455,7 +481,7 @@ def render_table(
     table.add_column("Export location", overflow="fold", max_width=40)
     table.add_column("Lines", justify="right")
 
-    for s in sorted(sessions, key=lambda x: (x.project_label, x.source_mtime)):
+    for s in sorted(sessions, key=_sort_key(sort)):
         status = export_status(s, state)
         cell, colour = STATUS_CELLS[status]
         entry = state["entries"].get(str(s.source_path))
@@ -562,8 +588,17 @@ def commit_repo(repo: Path, paths: list[Path], message: str, console: Console) -
     "list_sessions",
     is_flag=True,
     help="List every discovered session (id, name, project) and exit. "
-    "Pipe-friendly: one TAB-separated row per session, sorted by project then mtime. "
-    "Honours --filter to narrow the list.",
+    "Pipe-friendly: one TAB-separated row per session. Honours --filter and --sort.",
+)
+@click.option(
+    "--sort",
+    "sort",
+    type=click.Choice(list(SORT_CHOICES), case_sensitive=False),
+    default="mtime",
+    show_default=True,
+    help="Sort order for the table and --list output. 'mtime' is newest-first; "
+    "'mtime-asc' is oldest-first; 'project' groups by project then mtime; "
+    "'id' sorts by session UUID; 'name' sorts by title/first-user-message.",
 )
 @click.option("--dry-run", is_flag=True, help="Show the table; do not write or commit anything.")
 @click.option(
@@ -585,6 +620,7 @@ def main(
     filter_substr: str | None,
     session_id: str | None,
     list_sessions: bool,
+    sort: str,
     dry_run: bool,
     force: bool,
     do_commit: bool,
@@ -617,7 +653,7 @@ def main(
         # `name` is the AI-generated title, falling back to the first user
         # message, falling back to "-" — same precedence used for the short
         # filename slug.
-        for s in sorted(sessions, key=lambda x: (x.project_label, x.source_mtime)):
+        for s in sorted(sessions, key=_sort_key(sort)):
             name = s.ai_title or s.first_user_text or "-"
             name = name.replace("\t", " ").replace("\n", " ").strip()
             if len(name) > 120:
@@ -668,7 +704,7 @@ def main(
     else:
         pending = [s for s in sessions if export_status(s, state) in ("never", "stale")]
 
-    console.print(render_table(sessions, state, dest_dir, title="Claude session transcripts (before)"))
+    console.print(render_table(sessions, state, dest_dir, title="Claude session transcripts (before)", sort=sort))
     if force:
         console.print(f"\n[bold]--force[/bold]: re-exporting all [bold]{len(pending)}[/bold] session(s).")
     else:
@@ -708,7 +744,7 @@ def main(
     console.print(f"\n[bold]Exported {len(pending)} session(s).[/bold] State: {state_file}")
 
     # Re-render after exports so the user sees the updated status column.
-    console.print(render_table(sessions, state, dest_dir, title="Claude session transcripts (after)"))
+    console.print(render_table(sessions, state, dest_dir, title="Claude session transcripts (after)", sort=sort))
 
     if do_commit:
         today = _dt.date.today().isoformat()
