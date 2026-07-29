@@ -203,12 +203,30 @@ function gh-backport-cde-pr {
 }
 
 function gh-create-pr {
-    # echo "TODO INCOMPLETE"
-    # return 1
+    # Create a draft PR against CDH/dex.
+    #
+    # Cross-repo PRs from a personal fork are blocked by a GitHub App scope
+    # limitation on our Enterprise instance (see notes at the bottom), so this
+    # function pushes the current branch to origin under a `snemeth-` prefix and
+    # opens the PR same-repo. It also pushes to the personal fork as a backup.
+    #
+    # Usage:
+    #   gh-create-pr <PR title> <base branch>
+    #
+    # Examples:
+    #   gh-create-pr DEX-5669 develop
+    #   gh-create-pr "DEX-22779. Add tm-review artifacts" develop-taikun
+    #
+    # PR body:
+    #   Uses the in-repo template `.github/pull_request_template.md` as the
+    #   source of truth (this is what GitHub itself loads in the compare UI).
+    #   Before each run, that file is copied over the linuxenv cached copy so
+    #   the cache never drifts.
 
-    if [[ "$#" -ne 1 ]]; then
-        echo "Usage: $0 <PR title>"
-        echo "Usage example: $0 DEX-5669"
+    if [[ "$#" -ne 2 ]]; then
+        echo "Usage: $0 <PR title> <base branch>"
+        echo "Usage example: $0 DEX-5669 develop"
+        echo "Usage example: $0 DEX-22779 develop-taikun"
         return 1
     fi
 
@@ -217,41 +235,89 @@ function gh-create-pr {
         return 1
     fi
 
-    set -x
+    local PR_TITLE="$1"
+    local BASE_BRANCH="$2"
+    local FORK_REMOTE="fork"
+    local ORIGIN_REMOTE="origin"
+
+    local curr_branch
     curr_branch=$(git rev-parse --abbrev-ref HEAD)
-    PR_TITLE="$1"
-    TARGET_R_BRANCH="develop"
-    FORK_REPO_NAME="fork"
-    FORK_REMOTE=fork
-    TARGET_L_BRANCH="$curr_branch"
-    TARGET_R_BRANCH="snemeth-$TARGET_L_BRANCH"
+    local TARGET_L_BRANCH="$curr_branch"
+    local TARGET_R_BRANCH="snemeth-$TARGET_L_BRANCH"
 
+    # Refuse to open a PR from the base branch itself.
+    if [[ "$curr_branch" == "$BASE_BRANCH" ]]; then
+        echo "Refusing to open a PR from '$curr_branch' into itself." >&2
+        return 1
+    fi
 
-    echo "Pushing (dry-run)"
-    git push --dry-run $FORK_REMOTE -u $TARGET_L_BRANCH
+    # Refresh the cached PR template from the in-repo source of truth.
+    # `.github/pull_request_template.md` is version-controlled and matches
+    # exactly what GitHub loads in the compare UI, so this eliminates drift.
+    local repo_template=".github/pull_request_template.md"
+    local cached_template="$HOME/development/my-repos/linux-env/workplace-specific/cloudera/config/cde-github-pr-template.txt"
+
+    if [[ -f "$repo_template" ]]; then
+        echo "Refreshing PR template cache from in-repo source: $repo_template -> $cached_template"
+        cp "$repo_template" "$cached_template" || {
+            echo "Warning: could not refresh cached template; falling back to existing cache." >&2
+        }
+    else
+        echo "Warning: $repo_template not found in current repo; using existing cache at $cached_template" >&2
+    fi
+
+    if [[ ! -f "$cached_template" ]]; then
+        echo "Error: no PR template available at $cached_template and no in-repo source." >&2
+        return 1
+    fi
 
     set -x
-    if ! git push -u $FORK_REMOTE -u $TARGET_L_BRANCH; then
-        echo "Error while pushing commit"
+
+    echo "Pushing to fork (dry-run)..."
+    git push --dry-run "$FORK_REMOTE" -u "$TARGET_L_BRANCH"
+
+    echo "Pushing to fork..."
+    if ! git push -u "$FORK_REMOTE" "$TARGET_L_BRANCH"; then
+        echo "Error while pushing to $FORK_REMOTE" >&2
         # TODO Reset to original branch
         # git checkout origin/develop && git branch -D $TARGET_L_BRANCH
+        set +x
         return 2
     fi
 
-    echo "Pushing code to forked repo..."
-    git push $FORK_REPO_NAME $TARGET_L_BRANCH:$TARGET_L_BRANCH
+    echo "Pushing to origin under prefixed name..."
+    if ! git push -u "$ORIGIN_REMOTE" "$TARGET_L_BRANCH:$TARGET_R_BRANCH"; then
+        echo "Error while pushing to $ORIGIN_REMOTE" >&2
+        set +x
+        return 2
+    fi
 
-    echo "Pushing code to origin..."
-    git push -u origin $TARGET_L_BRANCH:"$TARGET_R_BRANCH"
+    echo "Push successful; creating PR with template: $cached_template"
+    echo "  head: $TARGET_R_BRANCH  base: $BASE_BRANCH"
 
+    if ! gh pr create --draft \
+            --title "$PR_TITLE" \
+            --body-file "$cached_template" \
+            --base "$BASE_BRANCH" \
+            --head "$TARGET_R_BRANCH"; then
+        echo "Error: gh pr create failed." >&2
+        set +x
+        return 3
+    fi
 
-    pr_template_file_path=$(find $HOME_LINUXENV_DIR -iname cde-github-pr-template.txt)
-    echo "Git push successful, Creating PR with PR template from file: $pr_template_file_path"
+    # Open the newly-created PR in the browser for immediate editing / marking-ready.
+    echo "Opening PR in browser..."
+    gh pr view "$TARGET_R_BRANCH" --web
 
+    set +x
 
-
-    # NOTE: gh pr create does not seem to work well with a forked repo!
-    # Related links: 
+    # ---------------------------------------------------------------------
+    # NOTE (kept from earlier iterations for future maintainers):
+    # gh pr create does NOT reliably work with `--head fork:<branch>` on our
+    # GitHub Enterprise instance. The `snemeth-<branch>` prefix pushed to origin
+    # is the workaround so the PR is created same-repo.
+    #
+    # Related links:
     #   https://zakuarbor.github.io/blog/github-app-limitation-not-all-refs-are-readable-error/
     #   https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps
     #   https://stackoverflow.com/questions/67628262/oauth-scope-required-for-creating-github-pull-requests-with-personal-access-toke
@@ -259,20 +325,21 @@ function gh-create-pr {
     #   https://github.com/cli/cli/issues/575#issuecomment-1163143215
     #   https://graphite.dev/guides/create-pr-from-gh-command-line
     #   https://stackoverflow.com/questions/64853120/how-to-make-a-pull-request-using-the-new-github-cli-to-a-remote-repo-without-pu
-
-    # !! DID NOT WORK !!
-    # gh pr create --draft --title DEX-15745 --body 'test body' --base develop --head fork:$TARGET_L_BRANCH
-    # gh pr create --draft --fill-first --base develop --head DEX-15714
-
-    # OUTPUT: 
-    # +gh-create-pr:60> gh pr create --draft --title DEX-15745 --body 'test body' --base develop --head fork:DEX-15745
-    # Creating draft pull request for fork:DEX-15745 into develop in CDH/dex
-    # pull request create failed: GraphQL: Head sha can't be blank, Base sha can't be blank, Head user can't be blank, Head repository can't be blank, No commits between CDH:develop and , Head ref must be a branch, not all refs are readable (createPullRequest)
-    
-    # From same repo it works!
-    # https://graphite.dev/guides/create-pr-from-gh-command-line
-    gh pr create --draft --title $PR_TITLE --body-file $pr_template_file_path  --base develop --head $TARGET_R_BRANCH
-    set +x
+    #
+    # !! DID NOT WORK !! (attempted variants of gh pr create against a fork)
+    #   gh pr create --draft --title DEX-15745 --body 'test body' --base develop --head fork:$TARGET_L_BRANCH
+    #   gh pr create --draft --fill-first --base develop --head DEX-15714
+    #
+    # OUTPUT of the failing --head fork:<branch> attempt:
+    #   +gh-create-pr:60> gh pr create --draft --title DEX-15745 --body 'test body' --base develop --head fork:DEX-15745
+    #   Creating draft pull request for fork:DEX-15745 into develop in CDH/dex
+    #   pull request create failed: GraphQL: Head sha can't be blank, Base sha can't be blank,
+    #     Head user can't be blank, Head repository can't be blank,
+    #     No commits between CDH:develop and , Head ref must be a branch,
+    #     not all refs are readable (createPullRequest)
+    #
+    # From same repo it works! -- hence the snemeth-<branch> workaround above.
+    # ---------------------------------------------------------------------
 }
 
 function gh-list-branches {
