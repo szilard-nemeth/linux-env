@@ -32,7 +32,11 @@
       "Bash(git merge-base:*)",
       "Bash(git remote:*)",
       "Bash(git add docs/security/**)",
+      "Bash(git add:*)",
       "Bash(git commit:*)",
+      "Bash(git fetch:*)",
+
+      "Bash(./docs/security/tools/render-diagrams.sh:*)",
 
       "Bash(mkdir docs/security/**)",
       "Bash(ln:*)",
