@@ -342,6 +342,57 @@ function gh-create-pr {
     # ---------------------------------------------------------------------
 }
 
+function gh-pr-comments {
+    # Print review comments on a CDH/dex PR from the Cloudera Enterprise
+    # GitHub instance.
+    #
+    # `gh pr view --comments` only surfaces the issue-thread comments, which
+    # misses inline diff review comments (the ones anchored to a file:line)
+    # and the review-summary bodies (approve / request-changes text). This
+    # function pulls all three sources via the REST API and prints them in a
+    # consistent, greppable format.
+    #
+    # Usage:
+    #   gh-pr-comments <PR ID> [repo]
+    #
+    # Examples:
+    #   gh-pr-comments 14241
+    #   gh-pr-comments 14241 CDH/dex
+    #
+    # Sections printed (in order):
+    #   1. Inline review comments  (pulls/{n}/comments)
+    #   2. Review summary bodies   (pulls/{n}/reviews with non-empty body)
+    #   3. Issue-thread comments   (issues/{n}/comments)
+
+    if [[ "$#" -lt 1 || "$#" -gt 2 ]]; then
+        echo "Usage: $0 <PR ID> [repo]"
+        echo "Usage example: $0 14241"
+        echo "Usage example: $0 14241 CDH/dex"
+        return 1
+    fi
+
+    local PR_ID="$1"
+    local REPO="${2:-CDH/dex}"
+    local GH_ENTERPRISE_HOST="github.infra.cloudera.com"
+
+    echo "=== Inline review comments (${REPO}#${PR_ID}) ==="
+    GH_HOST="$GH_ENTERPRISE_HOST" gh api \
+        "repos/${REPO}/pulls/${PR_ID}/comments" \
+        --jq '.[] | "--- \(.user.login) on \(.path):\(.line // .original_line) (id=\(.id)) ---\n\(.body)\n"'
+
+    echo
+    echo "=== Review summaries (${REPO}#${PR_ID}) ==="
+    GH_HOST="$GH_ENTERPRISE_HOST" gh api \
+        "repos/${REPO}/pulls/${PR_ID}/reviews" \
+        --jq '.[] | select(.body != "") | "--- \(.user.login) [\(.state)] ---\n\(.body)\n"'
+
+    echo
+    echo "=== Issue-thread comments (${REPO}#${PR_ID}) ==="
+    GH_HOST="$GH_ENTERPRISE_HOST" gh api \
+        "repos/${REPO}/issues/${PR_ID}/comments" \
+        --jq '.[] | "--- \(.user.login) ---\n\(.body)\n"'
+}
+
 function gh-list-branches {
     git_script=$(find $HOME_LINUXENV_DIR/scripts -iname git.sh)
     # export -f _gh-list-branches
