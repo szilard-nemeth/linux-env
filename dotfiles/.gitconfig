@@ -2,7 +2,7 @@
     insteadOf = git://
 
 [push]
-    default=current
+    default=upstream
 
 [alias]
     co = checkout
