@@ -49,8 +49,13 @@ claude-export --force --commit   # re-export everything and commit
    under the **deterministic short name**
    `<YYYY-MM-DD>-<slug>--<id8>` — e.g.
    `2026-07-16-dex-21945-spark-shs-tm-phase1-20260716-20260717--57bc07c7.md`.
-5. Updates the state file.
-6. Optionally commits the new transcripts to `knowledge-base-private`.
+   Both files have their **mtime set to the session's last-message
+   timestamp**, so `ls -lt` in the knowledge-base repo sorts by conversation
+   recency (not export time). Filenames themselves stay stable across
+   re-exports.
+5. Rebuilds `_INDEX.md` for every project directory (see below).
+6. Updates the state file.
+7. Optionally commits the new transcripts to `knowledge-base-private`.
 
 ## Just want to see the state?
 
@@ -69,6 +74,7 @@ The table shows every session with these columns:
 | Source path            | Raw jsonl under `~/.claude/projects/...`                   |
 | State                  | ✓ fresh · ↻ stale (source newer than export) · ✗ never    |
 | MTime                  | Source jsonl mtime                                         |
+| Last msg               | Timestamp of the last message inside the jsonl (`—` if none)|
 | Export location        | Path under `claude-sessions/...` if previously exported    |
 | Lines                  | Total lines in the source jsonl                            |
 
@@ -212,6 +218,35 @@ If a previous run used a different short name for a session (e.g. because the
 title precedence rules changed, or the older raw-UUID scheme was in use), the
 next run detects the mismatch and renames the existing exports in place — no
 manual cleanup needed.
+
+## Per-project `_INDEX.md`
+
+Every non-dry-run rebuilds `<claude-sessions>/<project-slug>/_INDEX.md`, one
+per project directory. The file is a markdown table listing every previously
+exported session in that project, sorted newest-first by last-message time:
+
+```markdown
+# Claude sessions — `/Users/snemeth/development/cloudera/cde-dex`
+
+_Updated 2026-08-01T10:45:00. Sorted newest-first by last message._
+
+| File | First msg | Last msg | Lines | Title | Fork of |
+|---|---|---|---|---|---|
+| [2026-08-01-dex-22833--b71e940a.md](2026-08-01-dex-22833--b71e940a.md) | 2026-08-01 03:26 | 2026-08-01 05:17 | 373 | DEX-22833 | — |
+| [2026-08-01-dex-22833--d42fcdd1.md](2026-08-01-dex-22833--d42fcdd1.md) | 2026-08-01 03:26 | 2026-08-01 04:22 | 328 | DEX-22833 | b71e940a |
+```
+
+**"Fork of"** shows the parent session's `id[:8]` when a fork is detected —
+Claude Code creates a new session id when you resume or rewind a conversation,
+copying the prior transcript records forward. The exporter detects that by
+checking whether the majority of one file's `parentUuid` values appear as
+`uuid` values in the other. Detection only runs when two sessions in the same
+project share a `<date>-<slug>` prefix (i.e. would otherwise be
+indistinguishable), so it's essentially free on projects with no forks.
+
+The index is always regenerated from `_scan_session_metadata` output on every
+run — nothing is persisted, and it's safe to `rm` any `_INDEX.md`; the next
+export recreates it.
 
 ## Companion tool: session_rename_report.py
 

@@ -71,6 +71,7 @@ class Session:
     ai_title: Optional[str] = None
     first_user_text: Optional[str] = None
     earliest_ts: Optional[str] = None  # ISO8601 string from jsonl
+    latest_ts: Optional[str] = None  # ISO8601 string of the last message in the jsonl
 
     @property
     def short_name(self) -> str:
@@ -118,8 +119,31 @@ def _slugify(text: str, max_len: int = 60) -> str:
     return cut.strip("-")
 
 
-def _scan_session_metadata(jsonl_path: Path) -> tuple[Optional[str], Optional[str], Optional[str], int]:
-    """Return (title, first_user_text, earliest_ts, line_count) for a session jsonl.
+def _extract_user_text(rec: dict) -> Optional[str]:
+    """Pull the first-real-user-text out of a `type: user` record, or None.
+
+    Filters out tool-result-only entries (`<tool_use_result…>`) and command
+    stubs (`[Request interrupted…]`) that shouldn't be used as a title
+    fallback.
+    """
+    msg = rec.get("message", {})
+    content = msg.get("content") if isinstance(msg, dict) else msg
+    text = ""
+    if isinstance(content, str):
+        text = content
+    elif isinstance(content, list):
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "text":
+                text = block.get("text", "")
+                break
+    text = text.strip()
+    if not text or text.startswith("<") or text.startswith("[Request interrupted"):
+        return None
+    return text[:200]
+
+
+def _scan_session_metadata(jsonl_path: Path) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str], int]:
+    """Return (title, first_user_text, earliest_ts, latest_ts, line_count) for a session jsonl.
 
     Title precedence: the LATEST `custom-title` (user-set, e.g. via `/title`) wins
     over any `ai-title` (auto-generated). A session can have both; renames produce
@@ -130,6 +154,7 @@ def _scan_session_metadata(jsonl_path: Path) -> tuple[Optional[str], Optional[st
     custom_title: Optional[str] = None  # latest wins — renames overwrite
     first_user_text: Optional[str] = None
     earliest_ts: Optional[str] = None
+    latest_ts: Optional[str] = None
     line_count = 0
     try:
         with jsonl_path.open("r", encoding="utf-8") as fh:
@@ -150,29 +175,118 @@ def _scan_session_metadata(jsonl_path: Path) -> tuple[Optional[str], Optional[st
                     if ct:
                         custom_title = ct  # keep overwriting → latest wins
                 ts = rec.get("timestamp")
-                if ts and (earliest_ts is None or ts < earliest_ts):
-                    earliest_ts = ts
+                if ts:
+                    if earliest_ts is None or ts < earliest_ts:
+                        earliest_ts = ts
+                    if latest_ts is None or ts > latest_ts:
+                        latest_ts = ts
                 if rtype == "user" and first_user_text is None:
-                    msg = rec.get("message", {})
-                    content = msg.get("content") if isinstance(msg, dict) else msg
-                    text = ""
-                    if isinstance(content, str):
-                        text = content
-                    elif isinstance(content, list):
-                        for block in content:
-                            if isinstance(block, dict) and block.get("type") == "text":
-                                text = block.get("text", "")
-                                break
-                    text = text.strip()
-                    # Skip tool-result-only "user" entries and command stubs.
-                    if text and not text.startswith("<") and not text.startswith("[Request interrupted"):
-                        first_user_text = text[:200]
+                    first_user_text = _extract_user_text(rec)
     except OSError:
         pass
     # Custom title wins over ai-title. Callers use this as `ai_title` — keeping
     # the field name for backward compat, but semantically it's "the best title
     # we could find" (user-set > AI-generated).
-    return custom_title or ai_title, first_user_text, earliest_ts, line_count
+    return custom_title or ai_title, first_user_text, earliest_ts, latest_ts, line_count
+
+
+def _load_uuid_pairs(jsonl_path: Path) -> tuple[set[str], set[str]]:
+    """Return (record_uuids, parent_uuids) for every record in a session jsonl.
+
+    Used only for fork detection on same-day same-slug sibling sessions — we
+    don't call this on every session because it re-reads the file.
+    """
+    uuids: set[str] = set()
+    parents: set[str] = set()
+    try:
+        with jsonl_path.open("r", encoding="utf-8") as fh:
+            for raw in fh:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    rec = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                u = rec.get("uuid")
+                if u:
+                    uuids.add(u)
+                p = rec.get("parentUuid")
+                if p:
+                    parents.add(p)
+    except OSError:
+        pass
+    return uuids, parents
+
+
+def _detect_forks(sessions: list[Session]) -> dict[str, Optional[str]]:
+    """Return {session_id: parent_session_id_or_None} for likely-sibling sessions.
+
+    Claude Code creates a fork when a session is resumed/rewound — a new
+    session_id is allocated and prior transcript records are copied forward,
+    keeping their original `uuid`s. We detect that by looking for pairs where
+    the majority of one file's `parentUuid`s appear as `uuid`s in the other.
+    Cost is bounded to the number of same-day-same-slug siblings per project,
+    which is almost always 0 — we only pay the extra read when there's a
+    genuine ambiguity to resolve.
+    """
+    forks: dict[str, Optional[str]] = {s.session_id: None for s in sessions}
+
+    groups: dict[tuple[str, str], list[Session]] = {}
+    for s in sessions:
+        # Group by project + short_name prefix (everything before the `--<id8>`
+        # suffix) so we compare true siblings — sessions whose `<date>-<slug>`
+        # would collide are exactly the ones the user can't tell apart without
+        # this metadata. Splitting on `--` isolates that prefix cheaply.
+        prefix = s.short_name.rsplit("--", 1)[0]
+        key = (s.project_slug, prefix)
+        groups.setdefault(key, []).append(s)
+
+    for group in groups.values():
+        if len(group) < 2:
+            continue
+        loaded: dict[str, tuple[set[str], set[str]]] = {}
+        for s in group:
+            loaded[s.session_id] = _load_uuid_pairs(s.source_path)
+        # For each ordered pair (a, b), check whether b looks like a fork of a.
+        for b in group:
+            b_uuids, b_parents = loaded[b.session_id]
+            if not b_parents:
+                continue
+            best_parent: Optional[str] = None
+            best_score = 0.0
+            for a in group:
+                if a.session_id == b.session_id:
+                    continue
+                a_uuids, _ = loaded[a.session_id]
+                if not a_uuids:
+                    continue
+                overlap = len(b_parents & a_uuids)
+                score = overlap / max(1, len(b_parents))
+                # Require a majority of b's parent-uuids to live in a; ties
+                # broken toward the *larger* candidate (the longer/surviving
+                # branch is the parent).
+                if score > 0.5 and (
+                    score > best_score
+                    or (score == best_score and best_parent is not None
+                        and len(loaded[a.session_id][0]) > len(loaded[best_parent][0]))
+                ):
+                    best_parent = a.session_id
+                    best_score = score
+            if best_parent:
+                forks[b.session_id] = best_parent
+        # If detection made everyone a child of everyone else (rare — happens
+        # when two forks are near-identical), keep only the newest as child
+        # and clear the rest so the index shows one clear parent.
+        children = [s.session_id for s in group if forks[s.session_id] in {x.session_id for x in group}]
+        if len(children) == len(group):
+            newest = max(group, key=lambda s: s.latest_ts or s.earliest_ts or "")
+            for s in group:
+                if s.session_id != newest.session_id:
+                    forks[s.session_id] = newest.session_id
+                else:
+                    forks[s.session_id] = None
+    return forks
 
 
 def discover_sessions(projects_dir: Path) -> list[Session]:
@@ -187,7 +301,7 @@ def discover_sessions(projects_dir: Path) -> list[Session]:
                 stat = jf.stat()
             except OSError:
                 continue
-            ai_title, first_user, earliest_ts, line_count = _scan_session_metadata(jf)
+            ai_title, first_user, earliest_ts, latest_ts, line_count = _scan_session_metadata(jf)
             sessions.append(
                 Session(
                     project_slug=proj.name,
@@ -199,6 +313,7 @@ def discover_sessions(projects_dir: Path) -> list[Session]:
                     ai_title=ai_title,
                     first_user_text=first_user,
                     earliest_ts=earliest_ts,
+                    latest_ts=latest_ts,
                 )
             )
     return sessions
@@ -362,6 +477,20 @@ def render_markdown(session: Session) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _parse_iso_ts(ts: Optional[str]) -> Optional[float]:
+    """Parse an ISO8601 timestamp from the jsonl into a POSIX float, or None.
+
+    Claude Code writes timestamps like "2026-08-01T05:17:30.811Z"; we normalise
+    the trailing "Z" to a "+00:00" offset so `fromisoformat` accepts it on 3.9+.
+    """
+    if not ts:
+        return None
+    try:
+        return _dt.datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
 def export_session(session: Session, dest_dir: Path) -> tuple[Path, Path]:
     out_dir = dest_dir / session.project_slug
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -369,7 +498,151 @@ def export_session(session: Session, dest_dir: Path) -> tuple[Path, Path]:
     jsonl_path = out_dir / f"{session.short_name}.jsonl"
     md_path.write_text(render_markdown(session), encoding="utf-8")
     shutil.copy2(session.source_path, jsonl_path)
+    # Stamp both exports with the session's last-message time so `ls -lt` in
+    # the knowledge-base repo sorts by conversation recency, not export time.
+    # If we can't parse a timestamp we leave mtime alone — `shutil.copy2`
+    # already preserved the source's mtime on the jsonl copy.
+    last_ts = _parse_iso_ts(session.latest_ts)
+    if last_ts is not None:
+        os.utime(md_path, (last_ts, last_ts))
+        os.utime(jsonl_path, (last_ts, last_ts))
     return md_path, jsonl_path
+
+
+def _print_session_list(sessions: list[Session], sort: str, console: Console) -> None:
+    """Emit TAB-separated `session_id mtime lines name project_label` rows.
+
+    `name` uses the same precedence as the short filename slug: AI-generated
+    title (or user-set custom title if present), falling back to the first user
+    message, falling back to `-`.
+    """
+    if not sessions:
+        console.print("[yellow]No sessions found.[/yellow]")
+        return
+    for s in sorted(sessions, key=_sort_key(sort)):
+        name = s.ai_title or s.first_user_text or "-"
+        name = name.replace("\t", " ").replace("\n", " ").strip()
+        if len(name) > 120:
+            name = name[:117] + "..."
+        print(
+            "\t".join(
+                [
+                    s.session_id,
+                    _fmt_mtime(s.source_mtime),
+                    str(s.line_count),
+                    name,
+                    s.project_label,
+                ]
+            )
+        )
+
+
+def _export_pending(
+    pending: Iterable[Session],
+    state: dict,
+    dest_dir: Path,
+    console: Console,
+) -> list[Path]:
+    """Export each pending session and update `state["entries"]` in place.
+
+    The state-file entry is keyed by the ORIGINAL source jsonl path
+    (e.g. `~/.claude/projects/<proj>/<session-id>.jsonl`). That key is the
+    link between a session's source-of-truth and its renamed exports —
+    `md_path` / `jsonl_path` record where the short-named copies live in
+    knowledge-base-private. The file's basename is the raw session UUID, so
+    the original "filename" is preserved both as the dict key and in the
+    path itself.
+    """
+    written: list[Path] = []
+    now_iso = _dt.datetime.now().isoformat(timespec="seconds")
+    for s in pending:
+        md_path, jsonl_path = export_session(s, dest_dir)
+        state["entries"][str(s.source_path)] = {
+            "exported_at": now_iso,
+            "source_mtime": s.source_mtime,
+            "md_path": str(md_path),
+            "jsonl_path": str(jsonl_path),
+            "lines": s.line_count,
+            "project_label": s.project_label,
+        }
+        written.extend([md_path, jsonl_path])
+        console.print(f"[green]exported[/green] {s.project_label} / {s.session_id}")
+    return written
+
+
+def _fmt_ts_short(ts: Optional[str]) -> str:
+    """`2026-08-01T05:17:30.811Z` -> `2026-08-01 05:17`. Returns `—` on empty/parse fail."""
+    if not ts:
+        return "—"
+    # ISO timestamps sort correctly as strings; cheap slice avoids parse cost.
+    return ts[:16].replace("T", " ")
+
+
+def write_project_indexes(
+    sessions: Iterable[Session],
+    state: dict,
+    dest_dir: Path,
+    forks: dict[str, Optional[str]],
+) -> list[Path]:
+    """Write `_INDEX.md` for every project directory that has exported sessions.
+
+    Called unconditionally on non-dry-run invocations: the index is derived
+    entirely from state + discovered sessions, so rebuilding is cheap and
+    guarantees correctness even when a fork's sibling was exported in a prior
+    run. Returns the list of index files written (so --commit picks them up).
+    """
+    by_project: dict[str, list[Session]] = {}
+    for s in sessions:
+        # Only include sessions that have actually been exported at least once —
+        # unexported ones don't correspond to files on disk yet, and the index
+        # is meant to describe the exported directory.
+        if str(s.source_path) in state["entries"]:
+            by_project.setdefault(s.project_slug, []).append(s)
+
+    written: list[Path] = []
+    now = _dt.datetime.now().replace(microsecond=0).isoformat()
+
+    for project_slug, group in sorted(by_project.items()):
+        # Newest-first by last message, falling back to earliest, then to the
+        # source mtime so entries without any timestamps still get an order.
+        group.sort(
+            key=lambda s: (s.latest_ts or "", s.earliest_ts or "", s.source_mtime),
+            reverse=True,
+        )
+        project_label = decode_project_slug(project_slug)
+        lines = [
+            f"# Claude sessions — `{project_label}`",
+            "",
+            f"_Updated {now}. Sorted newest-first by last message._",
+            "",
+            "| File | First msg | Last msg | Lines | Title | Fork of |",
+            "|---|---|---|---|---|---|",
+        ]
+        for s in group:
+            title = (s.ai_title or s.first_user_text or "").strip()
+            # Collapse newlines/tabs so a table row stays a single markdown
+            # row — first_user_text can be multi-line when it falls back from
+            # a missing ai-title.
+            title = re.sub(r"\s+", " ", title).replace("|", "\\|")
+            if len(title) > 80:
+                title = title[:77] + "..."
+            if not title:
+                title = "—"
+            parent_id = forks.get(s.session_id)
+            fork_cell = parent_id[:8] if parent_id else "—"
+            md_name = f"{s.short_name}.md"
+            lines.append(
+                f"| [{md_name}]({md_name}) | {_fmt_ts_short(s.earliest_ts)} | "
+                f"{_fmt_ts_short(s.latest_ts)} | {s.line_count} | {title} | {fork_cell} |"
+            )
+        lines.append("")
+
+        out_path = dest_dir / project_slug / "_INDEX.md"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text("\n".join(lines), encoding="utf-8")
+        written.append(out_path)
+
+    return written
 
 
 def migrate_existing_exports(
@@ -478,6 +751,7 @@ def render_table(
     table.add_column("Source path", overflow="fold", max_width=50)
     table.add_column("State", justify="center")
     table.add_column("MTime")
+    table.add_column("Last msg")
     table.add_column("Export location", overflow="fold", max_width=40)
     table.add_column("Lines", justify="right")
 
@@ -491,6 +765,7 @@ def render_table(
             str(s.source_path),
             f"[{colour}]{cell} {status}[/{colour}]",
             _fmt_mtime(s.source_mtime),
+            _fmt_ts_short(s.latest_ts),
             _fmt_export_loc(entry, dest_dir, s),
             str(s.line_count),
         )
@@ -628,7 +903,11 @@ def main(
     """Export unexported Claude session transcripts."""
     console = Console()
 
-    sessions = discover_sessions(projects_dir)
+    # Keep the full unfiltered list around so `_INDEX.md` reflects every
+    # exported session in each project, not just the subset the caller asked
+    # to work on this run.
+    all_sessions = discover_sessions(projects_dir)
+    sessions = all_sessions
     if filter_substr:
         needle = filter_substr.lower()
 
@@ -645,30 +924,7 @@ def main(
         sessions = [s for s in sessions if _matches(s)]
 
     if list_sessions:
-        if not sessions:
-            console.print("[yellow]No sessions found.[/yellow]")
-            return
-        # TAB-separated so it's grep/awk-friendly. Columns:
-        #   session_id  mtime  lines  name  project_label
-        # `name` is the AI-generated title, falling back to the first user
-        # message, falling back to "-" — same precedence used for the short
-        # filename slug.
-        for s in sorted(sessions, key=_sort_key(sort)):
-            name = s.ai_title or s.first_user_text or "-"
-            name = name.replace("\t", " ").replace("\n", " ").strip()
-            if len(name) > 120:
-                name = name[:117] + "..."
-            print(
-                "\t".join(
-                    [
-                        s.session_id,
-                        _fmt_mtime(s.source_mtime),
-                        str(s.line_count),
-                        name,
-                        s.project_label,
-                    ]
-                )
-            )
+        _print_session_list(sessions, sort, console)
         return
 
     if session_id:
@@ -718,30 +974,20 @@ def main(
         console.print("[green]Nothing to do.[/green]")
         return
 
-    written_paths: list[Path] = []
-    now_iso = _dt.datetime.now().isoformat(timespec="seconds")
-    for s in pending:
-        md_path, jsonl_path = export_session(s, dest_dir)
-        # The state-file entry is keyed by the ORIGINAL source jsonl path
-        # (e.g. ~/.claude/projects/<proj>/<session-id>.jsonl). That key is the
-        # link between a session's source-of-truth and its renamed exports —
-        # `md_path` / `jsonl_path` record where the short-named copies live in
-        # knowledge-base-private. The file's basename is the raw session UUID,
-        # so the original "filename" is preserved both as the dict key and in
-        # the path itself.
-        state["entries"][str(s.source_path)] = {
-            "exported_at": now_iso,
-            "source_mtime": s.source_mtime,
-            "md_path": str(md_path),
-            "jsonl_path": str(jsonl_path),
-            "lines": s.line_count,
-            "project_label": s.project_label,
-        }
-        written_paths.extend([md_path, jsonl_path])
-        console.print(f"[green]exported[/green] {s.project_label} / {s.session_id}")
+    written_paths = _export_pending(pending, state, dest_dir, console)
 
     save_state(state_file, state)
     console.print(f"\n[bold]Exported {len(pending)} session(s).[/bold] State: {state_file}")
+
+    # Rebuild `_INDEX.md` for every project (always) so the exported directory
+    # shows conversation-recency, line counts, titles, and fork lineage without
+    # needing the shell. Runs off `all_sessions` so untouched projects still
+    # get a correct index when the user is exporting with --filter.
+    forks = _detect_forks(all_sessions)
+    index_paths = write_project_indexes(all_sessions, state, dest_dir, forks)
+    if index_paths:
+        console.print(f"[cyan]Wrote {len(index_paths)} _INDEX.md file(s).[/cyan]")
+    written_paths.extend(index_paths)
 
     # Re-render after exports so the user sees the updated status column.
     console.print(render_table(sessions, state, dest_dir, title="Claude session transcripts (after)", sort=sort))
