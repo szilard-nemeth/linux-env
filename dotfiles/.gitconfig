@@ -2,7 +2,20 @@
     insteadOf = git://
 
 [push]
-    default=upstream
+    # 'simple' refuses to push when the local branch name differs from its
+    # upstream's name — prevents accidentally pushing feature branch commits
+    # onto e.g. develop-taikun when the branch was created from that ref.
+    # (Was 'upstream', which is what let DEX-22852 nearly push to develop-taikun.)
+    default=simple
+
+[branch]
+    # Do NOT auto-set upstream when branching from a remote-tracking ref.
+    # With the default ('true'), `git checkout -b DEX-XXXXX origin/develop-taikun`
+    # silently makes develop-taikun the upstream of DEX-XXXXX — combined with
+    # push.default=upstream this would push feature commits onto develop-taikun.
+    # 'false' means new branches have no upstream until you explicitly set one
+    # (typically via `git push -u`), which is what we want.
+    autoSetupMerge = false
 
 [alias]
     co = checkout
