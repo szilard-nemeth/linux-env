@@ -127,6 +127,10 @@ alias dexter-clean-repo-branches="cd $HOME/dexter/dex && git checkout upgradeDex
 ## Runtime catalog
 alias cde-rtcatalog-compare="$CLOUDERA_DIR/scripts/cde/runtime-catalog/compare_catalog.py"
 
+## Claude
+alias claude-export="python3 ~/development/my-repos/linux-env/scripts/python/export_claude_sessions.py"
+alias claude-export-force="python3 ~/development/my-repos/linux-env/scripts/python/export_claude_sessions.py --force"
+
 function backup-currdir {
   local backup_path="$HOME/googledrive/backup/codebackup/"
   tar czf "$backup_path/$(basename $(pwd))-$(eval date-formatted).gz" ./

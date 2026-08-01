@@ -32,7 +32,11 @@
       "Bash(git merge-base:*)",
       "Bash(git remote:*)",
       "Bash(git add docs/security/**)",
+      "Bash(git add:*)",
       "Bash(git commit:*)",
+      "Bash(git fetch:*)",
+
+      "Bash(./docs/security/tools/render-diagrams.sh:*)",
 
       "Bash(mkdir docs/security/**)",
       "Bash(ln:*)",
@@ -57,6 +61,28 @@
       "Bash(git reset --hard:*)",
       "Write(.git/**)",
       "Write(.env*)"
+    ]
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Claude needs your input\" with title \"Claude Code\" sound name \"Ping\"'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Turn finished\" with title \"Claude Code\" sound name \"Pop\"'"
+          }
+        ]
+      }
     ]
   }
 }

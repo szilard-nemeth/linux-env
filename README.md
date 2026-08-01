@@ -76,6 +76,14 @@ See [scripts/disk_cleanup/README.md](scripts/disk_cleanup/README.md) for usage o
 
 See [scripts/git/git-workflow-for-moving-large-files.md](scripts/git/git-workflow-for-moving-large-files.md) for offloading large archives from a git working tree or specific commits via [`git_move_large_files.py`](scripts/git/git_move_large_files.py). Run it with `poetry run python scripts/git/git_move_large_files.py ...` from this repo so dependencies are available.
 
+## Claude session exporter
+
+The `export_claude_sessions.py` script (and its `session_rename_report.py` companion) has been extracted to its own repository:
+
+- https://github.com/szilard-nemeth/claude-session-exporter
+
+Full history was preserved via `git-filter-repo`. Clone it under `~/development/my-repos/claude-session-exporter/` and point your `claude-export` alias there.
+
 ## Troubleshooting
 
 ### pre-commit installation
