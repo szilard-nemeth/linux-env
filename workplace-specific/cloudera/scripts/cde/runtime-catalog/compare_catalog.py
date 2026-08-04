@@ -6,32 +6,33 @@ import sys
 import os
 
 DEBUG_ENABLED = True
-LOG_FILE = '/tmp/compare-catalog.log'
+LOG_FILE = "/tmp/compare-catalog.log"
+
 
 def configure_logging(debug=False):
     level = logging.DEBUG if debug else logging.INFO
-    fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-    logging.basicConfig(filename=LOG_FILE,
-                        filemode="w",
-                        format=fmt,
-                        level=level)
+    logging.basicConfig(filename=LOG_FILE, filemode="w", format=fmt, level=level)
+
 
 def load_json(filename):
-    with open(filename, 'r') as f:
+    with open(filename, "r") as f:
         return json.load(f)
 
+
 def make_key(entry):
-    spark_base_version = ".".join(entry['attr']['sparkVersion'].split('.')[:3])
-    dl_version = entry['attr'].get('datalakeVersion', '')
+    spark_base_version = ".".join(entry["attr"]["sparkVersion"].split(".")[:3])
+    dl_version = entry["attr"].get("datalakeVersion", "")
 
     return (
-        entry['attr'].get('cdeVersion', ''),
+        entry["attr"].get("cdeVersion", ""),
         normalize_dl_version(dl_version),
         spark_base_version,
-        entry['attr'].get('osName', ''),
-        entry['gpuSupport']
+        entry["attr"].get("osName", ""),
+        entry["gpuSupport"],
     )
+
 
 def normalize_dl_version(dl_version):
     parts = dl_version.split(".")
@@ -44,10 +45,12 @@ def normalize_dl_version(dl_version):
         raise ValueError(f"Invalid DL version: {dl_version}")
     return new_dl_version
 
+
 def map_by_key(json_array):
     result_map = {make_key(entry): entry for entry in json_array}
     entry_to_id_map = {make_key(entry): entry["id"] for entry in json_array}
     return result_map, entry_to_id_map
+
 
 def compare_dicts(d1, d2, prefix=""):
     diffs = []
@@ -65,9 +68,8 @@ def compare_dicts(d1, d2, prefix=""):
     return diffs
 
 
-
 def compare_mapped_json(map1, map2, entry_to_id_map1, entry_to_id_map2):
-    #Sort by versions
+    # Sort by versions
     all_keys = sorted(set(map1.keys()).union(set(map2.keys())), key=lambda k: (k[0], k[1]))
 
     for idx, key in enumerate(all_keys):
@@ -92,10 +94,10 @@ def compare_mapped_json(map1, map2, entry_to_id_map1, entry_to_id_map2):
                     _print(f"  catalog id: {old_catalog_id}")
 
                 for field, v1, v2 in diffs:
-                    #Don't print differences in these fields as this will be changing in all the entries and too much verbose
-                    if  any(val in field for val in ["digest", "id", "attr.sparkVersion", ".tag"]):
+                    # Don't print differences in these fields as this will be changing in all the entries and too much verbose
+                    if any(val in field for val in ["digest", "id", "attr.sparkVersion", ".tag"]):
                         pass
-                    else :
+                    else:
                         _print(f"Field: {field}")
                         _print(f"  old: {v1}")
                         _print(f"  new: {v2}")
@@ -122,6 +124,7 @@ def check_args():
     # print("Both files are valid.")
     return file1, file2
 
+
 def _print(msg, debug=False):
     # Only log message to file if Debug=True
     if debug:
@@ -130,20 +133,20 @@ def _print(msg, debug=False):
         print(msg)
         logging.getLogger().info(msg)
 
+
 if __name__ == "__main__":
     # old_data = load_json(os.path.expanduser('~/Downloads/catalog-entries.json')) # File1
     # new_data = load_json(os.path.expanduser('~/Downloads/catalog-entries-dale.json')) # File2
     configure_logging(debug=DEBUG_ENABLED)
-
 
     old_catalog, new_catalog = check_args()
     _print(f"Old catalog file: {old_catalog} (File 1)")
     _print(f"New catalog file: {new_catalog} (File 2)")
     _print(f"Logging to file: {LOG_FILE}")
 
-    old_data = load_json(old_catalog) # File1
-    new_data = load_json(new_catalog) # File2
-    
+    old_data = load_json(old_catalog)  # File1
+    new_data = load_json(new_catalog)  # File2
+
     map1, entry_to_id_map1 = map_by_key(old_data)
     map2, entry_to_id_map2 = map_by_key(new_data)
 

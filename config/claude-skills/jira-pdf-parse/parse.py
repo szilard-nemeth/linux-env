@@ -20,21 +20,21 @@ from pathlib import Path
 # (e.g. `Type: X   Priority: Y`, `Reporter: X   Assignee: Y`).
 # Pattern approach: grab from label to either 2+ spaces (column break) OR end of line.
 FIELD_PATTERNS = {
-    "status":      r"^\s*Status:\s+(\S[^\n]*?)\s*$",
-    "priority":    r"Priority:\s+([^\n]+?)\s*$",
-    "type":        r"^\s*Type:\s+(\S+?)(?:\s{2,}|\s*$)",
-    "resolution":  r"^\s*Resolution:\s+(\S[^\n]*?)(?:\s{2,}Votes:|\s*$)",
-    "assignee":    r"Assignee:\s+([^\n]+?)\s*$",
-    "reporter":    r"^\s*Reporter:\s+([^\n]+?)(?:\s{2,}Assignee:|\s*$)",
-    "components":  r"^\s*Components:\s+([^\n]+?)\s*$",
-    "labels":      r"^\s*Labels:\s+([^\n]+?)\s*$",
-    "parent":      r"^\s*Parent:\s+([^\n]+?)\s*$",
-    "sprint":      r"^\s*Sprint:\s+([^\n]*?)\s*$",
+    "status": r"^\s*Status:\s+(\S[^\n]*?)\s*$",
+    "priority": r"Priority:\s+([^\n]+?)\s*$",
+    "type": r"^\s*Type:\s+(\S+?)(?:\s{2,}|\s*$)",
+    "resolution": r"^\s*Resolution:\s+(\S[^\n]*?)(?:\s{2,}Votes:|\s*$)",
+    "assignee": r"Assignee:\s+([^\n]+?)\s*$",
+    "reporter": r"^\s*Reporter:\s+([^\n]+?)(?:\s{2,}Assignee:|\s*$)",
+    "components": r"^\s*Components:\s+([^\n]+?)\s*$",
+    "labels": r"^\s*Labels:\s+([^\n]+?)\s*$",
+    "parent": r"^\s*Parent:\s+([^\n]+?)\s*$",
+    "sprint": r"^\s*Sprint:\s+([^\n]*?)\s*$",
 }
 
 DATE_PATTERNS = {
-    "created":  r"Created:\s+(\d{1,2}/\w{3}/\d{2,4})",
-    "updated":  r"Updated:\s+(\d{1,2}/\w{3}/\d{2,4})",
+    "created": r"Created:\s+(\d{1,2}/\w{3}/\d{2,4})",
+    "updated": r"Updated:\s+(\d{1,2}/\w{3}/\d{2,4})",
     "resolved": r"Resolved:\s+(\d{1,2}/\w{3}/\d{2,4})",
 }
 
