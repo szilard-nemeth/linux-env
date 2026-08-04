@@ -1,0 +1,41 @@
+# ─── PR workflow ──────────────────────────────────────────────────
+
+## Generic form (placeholders — fill in yourself)
+
+# 1. Push the branch
+git push -u origin <branch>
+
+# 2. Open a PR
+GH_HOST=github.com gh pr create \
+  --base <base> \
+  --head <branch> \
+  --title "<title>" \
+  --body ""
+
+# 3. View / status
+GH_HOST=github.com gh pr view --web
+GH_HOST=github.com gh pr status
+
+# 4. After merge — clean up
+pr-cleanup <pr-id>
+# Or manually:
+#   git push origin --delete <branch>
+#   git checkout <base> && git pull
+#   git branch -D <branch>
+
+
+## Copy-pasteable form (auto-detects current branch + remote default base)
+
+# 1. Push the current branch
+git push -u origin "$(git symbolic-ref --short HEAD)"
+
+# 2. Open a PR against the remote's default branch
+GH_HOST=github.com gh pr create \
+  --base "$(git symbolic-ref refs/remotes/origin/HEAD | sed 's|refs/remotes/origin/||')" \
+  --head "$(git symbolic-ref --short HEAD)" \
+  --title "<title>" \
+  --body ""
+
+# 3. View / status (from the branch that has the PR)
+GH_HOST=github.com gh pr view --web
+GH_HOST=github.com gh pr status

@@ -5,16 +5,11 @@ import os
 import argparse
 import sys
 
+
 def run_command(command, cwd=None):
     """Utility to run shell commands and handle errors."""
     try:
-        result = subprocess.run(
-            command,
-            cwd=cwd,
-            check=True,
-            text=True,
-            capture_output=True
-        )
+        result = subprocess.run(command, cwd=cwd, check=True, text=True, capture_output=True)
         return result.stdout
     except subprocess.CalledProcessError as e:
         print(f"Error executing: {' '.join(command)}")
@@ -45,11 +40,7 @@ def sync_repository(source_url, mirror_url, source_branch, target_branch, force_
 
             print(f"--> Filtering history to subdirectory: {args.filter_dir}...")
             # Using filter-branch as per your original logic
-            filter_cmd = [
-                "git", "filter-branch", "--force",
-                "--subdirectory-filter", args.filter_dir,
-                "--", "--all"
-            ]
+            filter_cmd = ["git", "filter-branch", "--force", "--subdirectory-filter", args.filter_dir, "--", "--all"]
             run_command(filter_cmd, cwd=repo_path)
 
         # 3. Add Mirror Remote
@@ -70,7 +61,7 @@ def sync_repository(source_url, mirror_url, source_branch, target_branch, force_
             shutil.rmtree(tmp_dir)
         else:
             confirm = input(f"\nOK to remove directory: {tmp_dir}? (y/n): ").lower()
-            if confirm == 'y':
+            if confirm == "y":
                 shutil.rmtree(tmp_dir)
                 print("Directory removed.")
             else:
@@ -95,5 +86,5 @@ if __name__ == "__main__":
         mirror_url=args.mirror,
         source_branch=args.source_branch,
         target_branch=args.target_branch,
-        force_cleanup=args.force
+        force_cleanup=args.force,
     )

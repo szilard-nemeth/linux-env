@@ -8,7 +8,7 @@ Any additional note to the reviewers that can be useful while reviewing the PR.
 
 ### Checklist
 
-- [ ] I have opened a JIRA for this change: https://jira.cloudera.com/browse/DEX-<num>
+- [ ] I have opened a JIRA for this change: https://cloudera.atlassian.net/browse/DEX-<num>
 
 
 - [ ] I have added automated **tests** for this change. 
