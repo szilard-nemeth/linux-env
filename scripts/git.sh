@@ -467,6 +467,27 @@ function gh-pr-cleanup {
   fi
 }
 
+# Print a cheat-sheet of PR-workflow commands (push, open, view, cleanup).
+# Reads help/gh-pr.txt from the linux-env repo directly (not synced to
+# ~/.linuxenv/), so edits to the .txt are live without a shell reload.
+#
+# The .txt is plain text: both a generic <placeholder> form and a
+# copy-pasteable form with inline `$(git ...)` substitutions. Nothing
+# in it is expanded by this function — same output every time.
+#
+# Other helpers can follow the same shape: put the text in help/<name>.txt,
+# add a `cat "$LINUX_ENV_REPO/help/<name>.txt"` wrapper here.
+#
+# Usage: gh-pr-help
+function gh-pr-help {
+  local help_file="$LINUX_ENV_REPO/help/gh-pr.txt"
+  if [[ ! -f "$help_file" ]]; then
+    echo "Help file not found: $help_file (LINUX_ENV_REPO=$LINUX_ENV_REPO)" >&2
+    return 1
+  fi
+  cat "$help_file"
+}
+
 function gh-list-branches {
     git_script=$(find $HOME_LINUXENV_DIR/scripts -iname git.sh)
     # export -f _gh-list-branches
