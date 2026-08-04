@@ -3,12 +3,13 @@ import sys
 import yaml
 import difflib
 
+
 def diff_yaml_files(file1_path, file2_path):
     """
     Compares two YAML files and prints a unified diff.
     """
     try:
-        with open(file1_path, 'r') as file1, open(file2_path, 'r') as file2:
+        with open(file1_path, "r") as file1, open(file2_path, "r") as file2:
             data1 = yaml.safe_load(file1)
             data2 = yaml.safe_load(file2)
 
@@ -32,9 +33,8 @@ def diff_yaml_files(file1_path, file2_path):
     except yaml.YAMLError as e:
         print(f"Error parsing YAML: {e}")
 
-import yaml
 
-def structural_diff_files(file1_path, file2_path, list_key='files', item_key='path'):
+def structural_diff_files(file1_path, file2_path, list_key="files", item_key="path"):
     """
     Performs a structural diff on a specific list within two YAML files,
     identifying missing and added items based on a unique key.
@@ -46,19 +46,19 @@ def structural_diff_files(file1_path, file2_path, list_key='files', item_key='pa
         item_key (str): The key within each list item that serves as a unique identifier (e.g., 'path').
     """
     try:
-        with open(file1_path, 'r') as f1, open(file2_path, 'r') as f2:
+        with open(file1_path, "r") as f1, open(file2_path, "r") as f2:
             data1 = yaml.safe_load(f1)
             data2 = yaml.safe_load(f2)
 
         # Access the list of items from each file, or an empty list if not found
-        list1 = data1.get('resource', {}).get(list_key, [])
-        list2 = data2.get('resource', {}).get(list_key, [])
+        list1 = data1.get("resource", {}).get(list_key, [])
+        list2 = data2.get("resource", {}).get(list_key, [])
 
         i = 1
         for d in [data1, data2]:
-            name = d.get('resource').get("name")
-            created = d.get('resource').get("created")
-            modified = d.get('resource').get("modified")
+            name = d.get("resource").get("name")
+            created = d.get("resource").get("created")
+            modified = d.get("resource").get("modified")
             print(f"Resource #{i} name: {name}, created: {created}, modified: {modified}")
             i += 1
 
@@ -88,6 +88,7 @@ def structural_diff_files(file1_path, file2_path, list_key='files', item_key='pa
     except yaml.YAMLError as e:
         print(f"Error parsing YAML: {e}")
 
+
 def test_structural():
     # Example Usage:
     # Assuming you have two YAML files, 'file1.yaml' and 'file2.yaml',
@@ -95,8 +96,9 @@ def test_structural():
     # modified version (e.g., one file removed and another added).
 
     # Create a sample file with some changes for demonstration
-    with open('file1.yaml', 'w') as f:
-        f.write("""
+    with open("file1.yaml", "w") as f:
+        f.write(
+            """
     resource:
       name: PipelineResource-CAU_ETL-1712225495297
       type: files
@@ -104,10 +106,12 @@ def test_structural():
         - path: file_A.txt
         - path: file_B.txt
         - path: file_C.txt
-        """)
+        """
+        )
 
-    with open('file2.yaml', 'w') as f:
-        f.write("""
+    with open("file2.yaml", "w") as f:
+        f.write(
+            """
     resource:
       name: PipelineResource-CAU_ETL-1712225495297
       type: files
@@ -115,17 +119,19 @@ def test_structural():
         - path: file_A.txt
         - path: file_C.txt
         - path: file_D.txt
-        """)
+        """
+        )
 
     # Now run the function
-    structural_diff_files('file1.yaml', 'file2.yaml')
+    structural_diff_files("file1.yaml", "file2.yaml")
 
 
 def test():
     # Example usage:
     # Create two sample YAML files for demonstration
-    with open('file1.yaml', 'w') as f:
-        f.write("""
+    with open("file1.yaml", "w") as f:
+        f.write(
+            """
     name: John Doe
     age: 30
     city: New York
@@ -133,10 +139,12 @@ def test():
       - Python
       - JavaScript
       - Docker
-    """)
+    """
+        )
 
-    with open('file2.yaml', 'w') as f:
-        f.write("""
+    with open("file2.yaml", "w") as f:
+        f.write(
+            """
     name: John Doe
     age: 31
     city: New York
@@ -145,11 +153,13 @@ def test():
       - JavaScript
       - Kubernetes
       - Ansible
-    """)
+    """
+        )
 
-    diff_yaml_files('file1.yaml', 'file2.yaml')
+    diff_yaml_files("file1.yaml", "file2.yaml")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Initial implementation from: https://gemini.google.com/app/1ee7d6f7f08b4f56
     args = sys.argv
     # print(args)

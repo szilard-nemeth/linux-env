@@ -14,18 +14,22 @@ def parse_project_and_run_config_name(base_dir, path):
     if ".run" in split:
         split.remove(".run")
     if len(split) != 3:
-        raise ValueError(f"Unexpected length. List should contain <IDE name>, <project name>, <run config name>, actual value: {split}" )
+        raise ValueError(
+            f"Unexpected length. List should contain <IDE name>, <project name>, <run config name>, actual value: {split}"
+        )
     return split
+
 
 def parse_script_and_params(path):
     from lxml import objectify
+
     tree = objectify.parse(path)
 
     type = tree.getroot().configuration.attrib["type"]
     if type != "PythonConfigurationType":
         return None, None
     # PythonConfigurationType
-    options = {el.attrib["name"]: el.attrib["value"] for el in tree.getroot().configuration.iterchildren(tag='option')}
+    options = {el.attrib["name"]: el.attrib["value"] for el in tree.getroot().configuration.iterchildren(tag="option")}
     # print(config)
     return options["SCRIPT_NAME"], options["PARAMETERS"]
 
@@ -63,7 +67,7 @@ def print_run_configs(filter: Set[str] = None, only_commands=False, print_warnin
                         print(f"Dropped config as type != PythonConfigurationType: {filepath}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) not in (1, 2):
         raise ValueError("Invalid arguments! Need to be called without argument or one argument for project filter!")
 
