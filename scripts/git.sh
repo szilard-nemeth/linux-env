@@ -404,6 +404,69 @@ function gh-pr-comments {
         --jq '.[] | "--- \(.user.login) ---\n\(.body)\n"'
 }
 
+# Delete the remote + local branch for a merged/closed PR, with a y/N prompt
+# for each. Reads the branch name from the PR itself via `gh pr view` so you
+# never have to type it. Refuses to touch master/main/develop.
+#
+# Usage: pr-cleanup <pr-id>
+function pr-cleanup {
+  local pr_id="$1"
+  if [[ -z "$pr_id" ]]; then
+    echo "Usage: pr-cleanup <pr-id>" >&2
+    return 1
+  fi
+
+  # Read branch + merge state from the PR.
+  local info branch state
+  info=$(gh pr view "$pr_id" --json headRefName,state 2>&1) || {
+    echo "gh pr view failed: $info" >&2
+    return 1
+  }
+  branch=$(jq -r '.headRefName' <<<"$info")
+  state=$(jq  -r '.state'        <<<"$info")
+
+  echo "PR #$pr_id  branch=$branch  state=$state"
+  if [[ "$state" != "MERGED" && "$state" != "CLOSED" ]]; then
+    echo "⚠️  PR is $state — not merged/closed yet."
+  fi
+
+  # Guard: refuse to delete protected branches (typo in PR id → wrong branch).
+  case "$branch" in
+    master|main|develop)
+      echo "Refusing to delete protected branch: $branch" >&2
+      return 1
+      ;;
+  esac
+
+  # Remote
+  if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+    local ans
+    read "ans?Delete remote branch origin/$branch? (y/N) "
+    if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
+      git push origin --delete "$branch"
+    fi
+  else
+    echo "Remote branch origin/$branch already gone."
+  fi
+
+  # Local
+  if git show-ref --quiet --verify "refs/heads/$branch"; then
+    local ans
+    read "ans?Delete local branch $branch? (y/N) "
+    if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
+      # If we're on the branch we're about to delete, hop to master first.
+      if [[ "$(git rev-parse --abbrev-ref HEAD)" == "$branch" ]]; then
+        git checkout master
+      fi
+      # -D (force): a squash-merge on GitHub leaves the local branch not
+      # fully-merged from git's POV even though the PR merged fine.
+      git branch -D "$branch"
+    fi
+  else
+    echo "Local branch $branch already gone."
+  fi
+}
+
 function gh-list-branches {
     git_script=$(find $HOME_LINUXENV_DIR/scripts -iname git.sh)
     # export -f _gh-list-branches
