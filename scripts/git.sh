@@ -99,9 +99,9 @@ function gh-diff-cde-backport {
 function gh-checkout-pr {
     # https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally
     if [[ "$#" -lt 1 || "$#" -gt 2 ]]; then
-        echo "Usage: $0 <PR ID> [remote]"
-        echo "Usage example: $0 12345"
-        echo "Usage example: $0 12345 upstream"
+        echo "Usage: gh-checkout-pr <PR ID> [remote]"
+        echo "Usage example: gh-checkout-pr 12345"
+        echo "Usage example: gh-checkout-pr 12345 upstream"
         return 1
     fi
 
@@ -111,13 +111,24 @@ function gh-checkout-pr {
     BRANCHNAME="pr-review-$PR_ID"
 
     echo "Fetching PR #$PR_ID from remote '$REMOTE'..."
-    
-    git fetch "$REMOTE" pull/"$PR_ID"/head:"$BRANCHNAME"
-    if [ $? -eq 0 ]; then
-        git checkout "$BRANCHNAME"
+
+    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    if [[ "$current_branch" == "$BRANCHNAME" ]]; then
+        # Can't fetch directly into the checked-out branch; fast-forward instead.
+        if ! git fetch "$REMOTE" "pull/$PR_ID/head"; then
+            echo "Error: Could not fetch PR #$PR_ID from $REMOTE."
+            return 1
+        fi
+        if ! git merge --ff-only FETCH_HEAD; then
+            echo "Error: local '$BRANCHNAME' has diverged from PR head; resolve manually."
+            return 1
+        fi
     else
-        echo "Error: Could not fetch PR #$PR_ID from $REMOTE."
-        return 1
+        if ! git fetch "$REMOTE" "pull/$PR_ID/head:$BRANCHNAME"; then
+            echo "Error: Could not fetch PR #$PR_ID from $REMOTE."
+            return 1
+        fi
+        git checkout "$BRANCHNAME"
     fi
 }
 
