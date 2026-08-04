@@ -11,10 +11,10 @@ The primary dex checkout lives at ~/development/cloudera/cde/dex and is the
 
 from __future__ import annotations
 
-import os
 import subprocess
-import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 import click
 
@@ -25,10 +25,24 @@ DEX_REPO = Path.home() / "development" / "cloudera" / "cde" / "dex"
 WORKTREE_ROOT = DEX_REPO  # new worktrees are placed as subdirs of the main checkout
 
 
+@dataclass
+class WorktreeEntry:
+    """One entry from `git worktree list --porcelain`.
+
+    `branch` is the short name (e.g. "master") when HEAD is on a branch, or
+    the empty string when the worktree is detached — callers should treat
+    an empty `branch` as "(detached)".
+    """
+
+    worktree: str
+    head: str
+    branch: str
+
+
 # --- git helpers -------------------------------------------------------------
 
-def _run(cmd: list[str], cwd: Path, check: bool = True,
-         capture: bool = False) -> subprocess.CompletedProcess:
+
+def _run(cmd: list[str], cwd: Path, check: bool = True, capture: bool = False) -> subprocess.CompletedProcess:
     """Run a shell command, echoing it so the user sees what git is doing."""
     click.echo(f"$ (cd {cwd}) {' '.join(cmd)}", err=True)
     return subprocess.run(
@@ -40,37 +54,47 @@ def _run(cmd: list[str], cwd: Path, check: bool = True,
     )
 
 
-def _worktree_list(repo: Path) -> list[dict[str, str]]:
-    """Return `git worktree list --porcelain` parsed into dicts."""
+def _worktree_list(repo: Path) -> list[WorktreeEntry]:
+    """Return `git worktree list --porcelain` parsed into WorktreeEntry objects."""
     proc = _run(
         ["git", "worktree", "list", "--porcelain"],
         cwd=repo,
         capture=True,
     )
-    entries: list[dict[str, str]] = []
-    current: dict[str, str] = {}
+    entries: list[WorktreeEntry] = []
+    # Accumulate fields for the current entry; a blank line ends the entry.
+    fields: dict[str, str] = {}
+
+    def _flush() -> None:
+        if not fields:
+            return
+        entries.append(
+            WorktreeEntry(
+                worktree=fields.get("worktree", ""),
+                head=fields.get("HEAD", ""),
+                branch=fields.get("branch", "").removeprefix("refs/heads/"),
+            )
+        )
+        fields.clear()
+
     for line in proc.stdout.splitlines():
         if not line.strip():
-            if current:
-                entries.append(current)
-                current = {}
+            _flush()
             continue
         if " " in line:
             key, value = line.split(" ", 1)
         else:
+            # Bare keywords like `detached` or `bare` — record with empty value.
             key, value = line, ""
-        current[key] = value
-    if current:
-        entries.append(current)
+        fields[key] = value
+    _flush()
     return entries
 
 
-def _find_worktree_by_path(entries: list[dict[str, str]],
-                           path: Path) -> dict[str, str] | None:
-    resolved = str(path.resolve())
+def _find_worktree_by_path(entries: list[WorktreeEntry], path: Path) -> Optional[WorktreeEntry]:
+    resolved = Path(path).resolve().as_posix()
     for e in entries:
-        wt = e.get("worktree", "")
-        if wt and Path(wt).resolve().as_posix() == Path(resolved).as_posix():
+        if e.worktree and Path(e.worktree).resolve().as_posix() == resolved:
             return e
     return None
 
@@ -144,15 +168,14 @@ Mental model:
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument("name", required=False)
-@click.option("--list", "list_", is_flag=True,
-              help="List existing worktrees for the dex repo and exit.")
-@click.option("--info", is_flag=True,
-              help="Print the git worktree commands this script uses and exit.")
-@click.option("--start-point", default=None,
-              help="When creating a new branch, branch from this ref "
-                   "(default: current HEAD of the main checkout).")
-def main(name: str | None, list_: bool, info: bool,
-         start_point: str | None) -> None:
+@click.option("--list", "list_", is_flag=True, help="List existing worktrees for the dex repo and exit.")
+@click.option("--info", is_flag=True, help="Print the git worktree commands this script uses and exit.")
+@click.option(
+    "--start-point",
+    default=None,
+    help="When creating a new branch, branch from this ref " "(default: current HEAD of the main checkout).",
+)
+def main(name: str | None, list_: bool, info: bool, start_point: str | None) -> None:
     """Create or reuse a git worktree under ~/development/cloudera/cde/dex/<NAME>."""
 
     if info:
@@ -160,36 +183,28 @@ def main(name: str | None, list_: bool, info: bool,
         return
 
     if not DEX_REPO.is_dir():
-        raise click.ClickException(
-            f"dex repo not found at {DEX_REPO} — expected the main checkout there."
-        )
+        raise click.ClickException(f"dex repo not found at {DEX_REPO} — expected the main checkout there.")
 
     if list_:
         entries = _worktree_list(DEX_REPO)
         click.echo("")
         click.echo(f"Worktrees registered with {DEX_REPO}:")
         for e in entries:
-            path = e.get("worktree", "?")
-            head = e.get("HEAD", "")[:10]
-            branch = e.get("branch", "").removeprefix("refs/heads/") or "(detached)"
-            click.echo(f"  {branch:<40} {head}  {path}")
+            branch = e.branch or "(detached)"
+            click.echo(f"  {branch:<40} {e.head[:10]}  {e.worktree or '?'}")
         return
 
     if not name:
-        raise click.UsageError(
-            "NAME is required (unless --list or --info is used). "
-            "Run with --help for usage."
-        )
+        raise click.UsageError("NAME is required (unless --list or --info is used). " "Run with --help for usage.")
 
     target = WORKTREE_ROOT / name
     entries = _worktree_list(DEX_REPO)
     existing = _find_worktree_by_path(entries, target)
 
     if existing is not None:
-        branch = existing.get("branch", "").removeprefix("refs/heads/") or "(detached)"
+        branch = existing.branch or "(detached)"
         click.secho(
-            f"⚠  Worktree already exists at {target} (branch: {branch}). "
-            f"Reusing it — not removing or recreating.",
+            f"⚠  Worktree already exists at {target} (branch: {branch}). " f"Reusing it — not removing or recreating.",
             fg="yellow",
             err=True,
         )
