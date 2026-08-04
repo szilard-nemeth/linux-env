@@ -409,7 +409,7 @@ function gh-pr-comments {
 # never have to type it. Refuses to touch master/main/develop.
 #
 # Usage: pr-cleanup <pr-id>
-function pr-cleanup {
+function gh-pr-cleanup {
   local pr_id="$1"
   if [[ -z "$pr_id" ]]; then
     echo "Usage: pr-cleanup <pr-id>" >&2
