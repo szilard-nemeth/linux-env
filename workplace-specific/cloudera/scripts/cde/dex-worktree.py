@@ -38,6 +38,22 @@ class WorktreeEntry:
     head: str
     branch: str
 
+    @classmethod
+    def from_porcelain(cls, raw: dict[str, str]) -> "WorktreeEntry":
+        """Build an entry from one porcelain stanza.
+
+        Handles the format's quirks in one place:
+        - `HEAD` in the raw dict maps to the `head` field.
+        - Bare keywords like `detached` / `bare` appear as keys we ignore.
+        - `branch` values arrive as `refs/heads/<name>`; we store the short name.
+        Missing keys default to "" so a detached-HEAD stanza still parses.
+        """
+        return cls(
+            worktree=raw.get("worktree", ""),
+            head=raw.get("HEAD", ""),
+            branch=raw.get("branch", "").removeprefix("refs/heads/"),
+        )
+
 
 # --- git helpers -------------------------------------------------------------
 
@@ -55,27 +71,25 @@ def _run(cmd: list[str], cwd: Path, check: bool = True, capture: bool = False) -
 
 
 def _worktree_list(repo: Path) -> list[WorktreeEntry]:
-    """Return `git worktree list --porcelain` parsed into WorktreeEntry objects."""
+    """Return `git worktree list --porcelain` parsed into WorktreeEntry objects.
+
+    Porcelain output is one stanza per worktree — `<key> <value>` lines and
+    bare keywords like `detached` / `bare`, terminated by a blank line. We
+    collect each stanza into a dict and hand it to WorktreeEntry.from_porcelain,
+    which owns the git-format quirks.
+    """
     proc = _run(
         ["git", "worktree", "list", "--porcelain"],
         cwd=repo,
         capture=True,
     )
     entries: list[WorktreeEntry] = []
-    # Accumulate fields for the current entry; a blank line ends the entry.
-    fields: dict[str, str] = {}
+    raw: dict[str, str] = {}
 
     def _flush() -> None:
-        if not fields:
-            return
-        entries.append(
-            WorktreeEntry(
-                worktree=fields.get("worktree", ""),
-                head=fields.get("HEAD", ""),
-                branch=fields.get("branch", "").removeprefix("refs/heads/"),
-            )
-        )
-        fields.clear()
+        if raw:
+            entries.append(WorktreeEntry.from_porcelain(raw))
+            raw.clear()
 
     for line in proc.stdout.splitlines():
         if not line.strip():
@@ -86,7 +100,7 @@ def _worktree_list(repo: Path) -> list[WorktreeEntry]:
         else:
             # Bare keywords like `detached` or `bare` — record with empty value.
             key, value = line, ""
-        fields[key] = value
+        raw[key] = value
     _flush()
     return entries
 
