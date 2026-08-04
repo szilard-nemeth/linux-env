@@ -564,12 +564,18 @@ function setup-pythonpath {
   fi
 
   if [[ -d "$HOME/development/cloudera/cde/dex" ]]; then
+    # pushd into dex so `asdf where python` resolves via dex's .tool-versions
+    # (dex pins its own python version, distinct from the global default).
     pushd "$HOME/development/cloudera/cde/dex" > /dev/null || return 1
     echo "Setting up PYTHONPATH from dir: $(pwd)"
     asdf_python=$(asdf where python)
     ASDF_PYTHON_LIBS=$(find $asdf_python -type d -name "site-packages")
-    STANDARD_PYTHON_LIBS="$HOME/Library/Python/3.8/lib/python/site-packages/"
-    export PYTHONPATH="$STANDARD_PYTHON_LIBS:$ASDF_PYTHON_LIBS:${HOME_LINUXENV_DIR}/scripts/python/:$PYTHONPATH"
+    # Append (do NOT prepend): a venv's own site-packages must win over these
+    # global entries, or subprocesses like pre-commit's black venv will import
+    # ABI-incompatible modules from dex's python. See fix/precommit-black-hook.
+    # Also dropped the hardcoded ~/Library/Python/3.8 user-site entry — dex's
+    # python is 3.10, so 3.8 user-installed compiled packages would be a landmine.
+    export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$ASDF_PYTHON_LIBS:${HOME_LINUXENV_DIR}/scripts/python/"
     popd > /dev/null || true
   else
     echo "Warning: expected Cloudera project dir not found: $HOME/development/cloudera/cde/dex"
