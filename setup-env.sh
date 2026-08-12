@@ -362,7 +362,11 @@ function initial_setup_macos {
     
     #Install colorls
     #  colorls requires Ruby so install ruby :(
-    local RBENV_VERSION="2.7.1"
+    # 3.3.5 (Sep 2024): first stable Ruby available locally after moving off
+    # macOS system Ruby 2.6.10 (deprecated by Apple, and 2.7 is EOL since
+    # March 2023). Ruby 3.3 is supported through ~March 2027. Bump this to a
+    # newer 3.3.x / 3.4.x once `rbenv install --list-all` shows the target.
+    local RBENV_VERSION="3.3.5"
     check_version "rbenv" "rbenv version | cut -d' ' -f1" ${RBENV_VERSION}
     
     if [[ "$VERSIONCHECK_RESULT" -ne 0 ]]; then

@@ -13,8 +13,18 @@ export MANPATH="$NPM_PACKAGES/share/man:$(manpath)"
 #===================================
 
 #Setup Ruby
-add_to_path_directly "$HOME/.rbenv/shims:$PATH"
-add_to_path_directly $(find $(gem environment gempath | tr ':' '\n') -type d -name bin | tr '\n' ':')
+# Prepend rbenv shims so `ruby`, `gem`, `bundle` resolve to the rbenv-managed
+# Ruby before the macOS system Ruby at /usr/bin. add_to_path_directly appends,
+# not prepends, so we cannot use it here — the shim path MUST come first, or
+# /usr/bin/ruby wins the lookup and the whole rbenv indirection is defeated.
+export PATH="$HOME/.rbenv/shims:$PATH"
+# `gem environment gempath` runs against whichever gem is first on PATH — with
+# rbenv shims prepended above, this now yields the rbenv gempaths, so their
+# `bin` dirs get added and gem-installed executables (colorls, etc.) are
+# reachable directly. The 2>/dev/null suppresses the "No such file or
+# directory" warning `find` prints when a listed path was removed out-of-band
+# (e.g. `~/.gem/ruby/2.6.0` after migrating off system Ruby).
+add_to_path_directly $(find $(gem environment gempath | tr ':' '\n') -type d -name bin 2>/dev/null | tr '\n' ':')
 
 # Add common bins to path
 add_to_path_directly "$HOME/.local/bin"
