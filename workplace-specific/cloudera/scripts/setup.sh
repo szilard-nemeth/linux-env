@@ -60,8 +60,14 @@ function export-claude-settings {
 
     # Remove any leftover logs from the previous run before starting a new one
     rm -f /tmp/claude-proxy-setup-*.log
-    local setup_log
-    setup_log=$(mktemp /tmp/claude-proxy-setup-XXXXXX.log)
+    # Note: BSD mktemp (macOS) only expands trailing X's, so a template like
+    # "prefix-XXXXXX.log" is created literally (the .log breaks the trailing-X
+    # match). Generate the random path first, then rename to add the .log
+    # suffix — portable across macOS and Linux.
+    local setup_log_base setup_log
+    setup_log_base=$(mktemp /tmp/claude-proxy-setup-XXXXXX)
+    setup_log="${setup_log_base}.log"
+    mv "$setup_log_base" "$setup_log"
     echo "Logging Claude code setup to: $setup_log"
     if python3 -u "$HOME_LINUXENV_DIR/scripts/external-repos.py" sync-and-setup "claude_proxy" > "$setup_log" 2>&1; then
         print_debug "$(cat "$setup_log")"
