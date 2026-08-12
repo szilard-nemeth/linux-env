@@ -75,11 +75,11 @@ def structural_diff_files(file1_path, file2_path, list_key="files", item_key="pa
             print("No structural differences found in the 'files' list.")
         else:
             if missing_in_2:
-                print(f"🚨 Missing in the second file (resource: {data2.get('resource').get('name')}):")
+                print(f"Missing in the second file (resource: {data2.get('resource').get('name')}):")
                 for item in sorted(list(missing_in_2)):
                     print(f"- {item}")
             if added_in_2:
-                print(f"✨ Added to the second file (resource: {data2.get('resource').get('name')}):")
+                print(f"Added to the second file (resource: {data2.get('resource').get('name')}):")
                 for item in sorted(list(added_in_2)):
                     print(f"- {item}")
 

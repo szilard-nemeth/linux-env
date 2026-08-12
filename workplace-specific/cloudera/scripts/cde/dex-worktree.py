@@ -218,7 +218,8 @@ def main(name: str | None, list_: bool, info: bool, start_point: str | None) -> 
     if existing is not None:
         branch = existing.branch or "(detached)"
         click.secho(
-            f"⚠  Worktree already exists at {target} (branch: {branch}). " f"Reusing it — not removing or recreating.",
+            f"WARN: Worktree already exists at {target} (branch: {branch}). "
+            f"Reusing it — not removing or recreating.",
             fg="yellow",
             err=True,
         )
@@ -241,7 +242,7 @@ def main(name: str | None, list_: bool, info: bool, start_point: str | None) -> 
             cmd.append(start_point)
         _run(cmd, cwd=DEX_REPO)
 
-    click.secho(f"✓ Worktree ready at {target}", fg="green")
+    click.secho(f"OK: Worktree ready at {target}", fg="green")
     click.echo(str(target))
 
 

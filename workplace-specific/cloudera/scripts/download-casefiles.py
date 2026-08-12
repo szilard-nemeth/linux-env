@@ -13,11 +13,11 @@ def get_ssh_client(hostname, username, password):
 
     try:
         ssh_client.connect(hostname, username=username, password=password)
-        click.secho(f"✅ Successfully connected to {hostname}", fg="green")
+        click.secho(f"OK: Successfully connected to {hostname}", fg="green")
         return ssh_client
     except Exception as e:
         # except paramiko.AuthenticationException:
-        click.secho(f"❌ Connection error: {e}", fg="red")
+        click.secho(f"ERROR: Connection error: {e}", fg="red")
         return None
 
 
@@ -37,11 +37,11 @@ def sftp_walk(sftp, remote_path, local_path):
             # Download file with progress
             def progress(seen, total):
                 pct = (seen / total) * 100
-                sys.stdout.write(f"\r  📥 '{item.filename}': {pct:.2f}%")
+                sys.stdout.write(f"\r  Downloading '{item.filename}': {pct:.2f}%")
                 sys.stdout.flush()
 
             sftp.get(r_path, str(l_path), callback=progress)
-            click.echo(f"\r  ✅ Saved: {item.filename}      ")
+            click.echo(f"\r  OK: Saved: {item.filename}      ")
 
 
 def list_remote_files(ssh_client, case_number):
@@ -98,9 +98,9 @@ def download_files(ssh_client, filenames, case_number, local_dir):
 
         try:
             sftp.get(remote_path, str(local_file_path), callback=progress)
-            click.echo(f"\r✅ Downloaded: {filename}")
+            click.echo(f"\rOK: Downloaded: {filename}")
         except Exception as e:
-            click.echo(f"\r❌ Error downloading {filename}: {e}")
+            click.echo(f"\rERROR: Error downloading {filename}: {e}")
 
     sftp.close()
 
@@ -155,14 +155,14 @@ def main(case_number, target_dir, user, host):
             local_p = local_base / name
 
             if ftype == "dir":
-                click.secho(f"\n📂 Recursively downloading directory: {name}", fg="cyan")
+                click.secho(f"\n[dir] Recursively downloading directory: {name}", fg="cyan")
                 sftp_walk(sftp, remote_p, local_p)
             else:
-                click.echo(f"📄 Downloading file: {name}")
+                click.echo(f"[file] Downloading file: {name}")
                 sftp.get(remote_p, str(local_p))
 
         sftp.close()
-        click.secho("\n✨ All downloads complete.", fg="green")
+        click.secho("\nOK: All downloads complete.", fg="green")
     finally:
         client.close()
         click.echo("SSH connection closed.")
