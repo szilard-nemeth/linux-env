@@ -445,9 +445,9 @@ class MavenCleanup(CleanupTool):
             logger.info(f"\n{'='*20}\nCLEANING: {root}\n{'='*20}\n")
             returncode, _ = self.run_command(["mvn", "clean", "-f", str(pom_path)])
             if returncode == 0:
-                logger.info("✅ Done.")
+                logger.info("OK: Done.")
             else:
-                logger.info("❌ Failed (Check log).")
+                logger.info("ERROR: Failed (Check log).")
 
     def verify(self) -> CleanupResult:
         logger.info("\n--- Verifying reclaimed space ---")

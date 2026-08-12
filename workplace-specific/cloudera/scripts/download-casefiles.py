@@ -36,11 +36,11 @@ def get_ssh_client(hostname, username, password):
 
     try:
         ssh_client.connect(hostname, username=username, password=password)
-        click.secho(f"Successfully connected to {hostname}", fg="green")
+        click.secho(f"OK: Successfully connected to {hostname}", fg="green")
         return ssh_client
     except Exception as e:
         # except paramiko.AuthenticationException:
-        click.secho(f"Connection error: {e}", fg="red")
+        click.secho(f"ERROR: Connection error: {e}", fg="red")
         return None
 
 
@@ -65,12 +65,12 @@ def sftp_walk(sftp, remote_path, local_path):
             # Download file with progress
             def progress(seen, total):
                 pct = (seen / total) * 100
-                sys.stdout.write(f"\r  '{item.filename}': {pct:.2f}%")
+                sys.stdout.write(f"\r  Downloading '{item.filename}': {pct:.2f}%")
                 sys.stdout.flush()
 
             sftp.get(r_path, str(l_path), callback=progress)
             _apply_remote_mtime(l_path, item)
-            click.echo(f"\r  Saved: {item.filename}      ")
+            click.echo(f"\r  OK: Saved: {item.filename}      ")
 
 
 def list_remote_files(ssh_client, case_number):
@@ -139,7 +139,7 @@ def download_files(ssh_client, filenames, case_number, local_dir):
         try:
             sftp.get(remote_path, str(local_file_path), callback=progress)
             _apply_remote_mtime(local_file_path, attr)
-            click.echo(f"\rDownloaded: {filename}")
+            click.echo(f"\rOK: Downloaded: {filename}")
         except Exception as e:
             click.echo(f"\rERROR downloading {filename}: {e}")
 
@@ -215,7 +215,7 @@ def main(case_number, target_dir, user, host):
                 _apply_remote_mtime(local_p, attr)
 
         sftp.close()
-        click.secho("\nAll downloads complete.", fg="green")
+        click.secho("\nOK: All downloads complete.", fg="green")
     finally:
         client.close()
         click.echo("SSH connection closed.")

@@ -14,13 +14,13 @@ def create_and_diagnose():
     # These are the usual suspects that break venv creation in debuggers
     blocked_keys = ["PYTHONPATH", "PYTHONHOME", "PYDEVD_USE_CYTHON", "LIBRARY_PATH"]
 
-    print("📋 Current environment status (subset):")
+    print("Current environment status (subset):")
     for key in blocked_keys:
         val = os.environ.get(key, "NOT SET")
         print(f"  {key}: {val}")
         clean_env.pop(key, None)
 
-    print(f"\n🛠 Attempting to create venv at: {venv_dir}")
+    print(f"\nAttempting to create venv at: {venv_dir}")
 
     try:
         # Fixed: Removed the non-existent 'with_scm'
@@ -34,14 +34,14 @@ def create_and_diagnose():
         _call_ensurepip2(python_exe)
 
     except Exception as e:
-        print(f"\n❌ Builder failed during creation: {e}")
+        print(f"\nERROR: Builder failed during creation: {e}")
         import traceback
 
         traceback.print_exc()
 
 
 def _call_ensurepip1(clean_env: dict[str, str], python_exe: Path):
-    print(f"🔍 Running manual ensurepip via {python_exe}...")
+    print(f"Running manual ensurepip via {python_exe}...")
 
     # 2. Run ensurepip with the scrubbed environment
     result = subprocess.run(
@@ -52,13 +52,13 @@ def _call_ensurepip1(clean_env: dict[str, str], python_exe: Path):
     )
 
     if result.returncode != 0:
-        print("\n❌ ENSUREPIP FAILED")
+        print("\nERROR: ENSUREPIP FAILED")
         print("--- STDOUT ---")
         print(result.stdout if result.stdout else "(empty)")
         print("--- STDERR ---")
         print(result.stderr if result.stderr else "(empty)")
     else:
-        print("\n✅ Success! Pip installed correctly.")
+        print("\nOK: Pip installed correctly.")
 
 
 def _call_ensurepip2(python_exe: Path):
