@@ -41,6 +41,12 @@
     rbc = rebase --continue
     restore-deleted = !git restore $(git ls-files -d)
     restore-modified = !git restore $(git ls-files -m)
+    # Rewrites commits on the current branch (merge-base with <base> .. HEAD) to
+    # strip Claude Code trailers (Co-Authored-By: Claude, Generated with
+    # [Claude Code]). Default base is master. Pass -y to skip the prompt.
+    #   git strip-claude              # rewrite vs master, prompt first
+    #   git strip-claude main -y      # rewrite vs main, no prompt
+    strip-claude = "!git-strip-claude-trailers.sh"
 
 [credential]
     helper = cache --timeout=43200
