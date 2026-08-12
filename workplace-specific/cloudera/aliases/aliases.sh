@@ -151,6 +151,53 @@ function goto-cde-task {
   cd "$target_dir"
 }
 
+# List the last N (default 15) cde task dirs by mtime desc, full paths.
+# Usage: cde-recent [N]
+function cde-recent {
+  local n="${1:-15}"
+  # BSD stat (macOS): '%m %N' = mtime-epoch + absolute path. Sort desc, strip mtime.
+  find "$CLOUDERA_TASKS_CDE_DIR" -mindepth 1 -maxdepth 1 -type d \
+    -exec stat -f '%m %N' {} + \
+    | sort -rn \
+    | head -n "$n" \
+    | awk '{ $1=""; sub(/^ /,""); print }'
+}
+
+# Fuzzy-cd into a cde task dir. Accepts a full name, ticket number, or any substring.
+# Examples: cde-cd 11292   cde-cd DEX-11292   cde-cd 22097   cde-cd ENGESC-21081
+# On multiple matches: lists them (most-recent first) and does not cd.
+function cde-cd {
+  local query="$1"
+  if [[ -z "$query" ]]; then
+    echo "usage: cde-cd <ticket-number-or-substring>" >&2
+    return 2
+  fi
+
+  # Exact hit first (handles "DEX-11292" cleanly, no ambiguity check needed).
+  if [[ -d "$CLOUDERA_TASKS_CDE_DIR/$query" ]]; then
+    cd "$CLOUDERA_TASKS_CDE_DIR/$query"
+    return
+  fi
+
+  # Fuzzy: case-insensitive substring match on the basename, mtime-desc for readability.
+  local matches
+  matches=$(find "$CLOUDERA_TASKS_CDE_DIR" -mindepth 1 -maxdepth 1 -type d -iname "*${query}*" \
+              -exec stat -f '%m %N' {} + | sort -rn | awk '{ $1=""; sub(/^ /,""); print }')
+
+  local count
+  count=$(printf '%s\n' "$matches" | sed '/^$/d' | wc -l | tr -d ' ')
+  if [[ "$count" -eq 0 ]]; then
+    echo "no cde task dir matches: $query" >&2
+    return 1
+  elif [[ "$count" -eq 1 ]]; then
+    cd "$matches"
+  else
+    echo "multiple matches (most-recent first):"
+    printf '%s\n' "$matches"
+    return 1
+  fi
+}
+
 my_error_handler() {
   echo "An error occurred!"
   # Add any specific error handling logic here, like logging, cleanup, etc.
