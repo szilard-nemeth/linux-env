@@ -29,5 +29,9 @@ export FORKED_REPOS_DIR="$HOME/development/my-repos/fork"
 export LINUXENV_DIR="$HOME/development/my-repos/linux-env/"
 export KB_REPO="$HOME/development/my-repos/knowledge-base/"
 export KB_PRIVATE_REPO="$HOME/development/my-repos/knowledge-base-private/"
+# Where claude-session-exporter writes exported Claude Code transcripts.
+# One subdir per project-slug (e.g. Users-snemeth-development-cloudera-cde-dex);
+# see claude-sessions-recent / claude-sessions-cd in aliases/aliases.sh.
+export CLAUDE_SESSIONS_DIR="${KB_PRIVATE_REPO}claude-sessions"
 export PYTHON_COMMONS_REPO="$HOME/development/my-repos/python-commons/"
 export YARNDEVTOOLS_REPO="$HOME/development/my-repos/yarn-dev-tools/"
