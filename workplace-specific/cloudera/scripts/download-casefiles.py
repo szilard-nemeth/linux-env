@@ -1,9 +1,32 @@
+import os
 import sys
 import stat  # Added this import
 from pathlib import Path
 
 import click
 import paramiko
+
+
+def _apply_remote_mtime(local_path, attr):
+    """Set the local file's atime/mtime to match the remote SFTPAttributes."""
+    if attr is None or attr.st_mtime is None:
+        return
+    mtime = attr.st_mtime
+    atime = attr.st_atime if attr.st_atime is not None else mtime
+    try:
+        os.utime(str(local_path), (atime, mtime))
+    except OSError as e:
+        click.secho(f"  WARN: could not set mtime on {local_path}: {e}", fg="yellow")
+
+
+def _already_downloaded(local_path, attr):
+    """A file counts as already downloaded if it exists locally with the same size."""
+    p = Path(local_path)
+    if not p.exists() or not p.is_file():
+        return False
+    if attr is None or attr.st_size is None:
+        return p.exists()
+    return p.stat().st_size == attr.st_size
 
 
 def get_ssh_client(hostname, username, password):
@@ -34,6 +57,11 @@ def sftp_walk(sftp, remote_path, local_path):
         if stat.S_ISDIR(item.st_mode):
             sftp_walk(sftp, r_path, l_path)
         else:
+            if _already_downloaded(l_path, item):
+                _apply_remote_mtime(l_path, item)
+                click.echo(f"  SKIP (exists): {item.filename}      ")
+                continue
+
             # Download file with progress
             def progress(seen, total):
                 pct = (seen / total) * 100
@@ -41,6 +69,7 @@ def sftp_walk(sftp, remote_path, local_path):
                 sys.stdout.flush()
 
             sftp.get(r_path, str(l_path), callback=progress)
+            _apply_remote_mtime(l_path, item)
             click.echo(f"\r  OK: Saved: {item.filename}      ")
 
 
@@ -91,6 +120,17 @@ def download_files(ssh_client, filenames, case_number, local_dir):
         remote_path = f"{remote_dir}/{filename}"
         local_file_path = local_path_obj / filename
 
+        try:
+            attr = sftp.stat(remote_path)
+        except IOError as e:
+            click.echo(f"ERROR: could not stat {remote_path}: {e}")
+            continue
+
+        if _already_downloaded(local_file_path, attr):
+            _apply_remote_mtime(local_file_path, attr)
+            click.echo(f"SKIP (exists): {filename}")
+            continue
+
         def progress(seen, total):
             pct = (seen / total) * 100
             sys.stdout.write(f"\r  Downloading '{filename}': {pct:.2f}%")
@@ -98,9 +138,10 @@ def download_files(ssh_client, filenames, case_number, local_dir):
 
         try:
             sftp.get(remote_path, str(local_file_path), callback=progress)
+            _apply_remote_mtime(local_file_path, attr)
             click.echo(f"\rOK: Downloaded: {filename}")
         except Exception as e:
-            click.echo(f"\rERROR: Error downloading {filename}: {e}")
+            click.echo(f"\rERROR downloading {filename}: {e}")
 
     sftp.close()
 
@@ -155,11 +196,23 @@ def main(case_number, target_dir, user, host):
             local_p = local_base / name
 
             if ftype == "dir":
-                click.secho(f"\n[dir] Recursively downloading directory: {name}", fg="cyan")
+                click.secho(f"\nRecursively downloading directory: {name}", fg="cyan")
                 sftp_walk(sftp, remote_p, local_p)
             else:
-                click.echo(f"[file] Downloading file: {name}")
+                try:
+                    attr = sftp.stat(remote_p)
+                except IOError as e:
+                    click.secho(f"ERROR: could not stat {remote_p}: {e}", fg="red")
+                    continue
+
+                if _already_downloaded(local_p, attr):
+                    _apply_remote_mtime(local_p, attr)
+                    click.echo(f"SKIP (exists): {name}")
+                    continue
+
+                click.echo(f"Downloading file: {name}")
                 sftp.get(remote_p, str(local_p))
+                _apply_remote_mtime(local_p, attr)
 
         sftp.close()
         click.secho("\nOK: All downloads complete.", fg="green")

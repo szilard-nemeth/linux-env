@@ -57,12 +57,42 @@ alias ...='cd ../..'
 alias ....='cd ../../..'
 
 ## ls ALIASES
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
+# Bare `ls` is left as system ls (fast, script-safe, no icons/ANSI in
+# pipelines). Interactive listings go through colorls so you get icons +
+# per-filetype colors + dirs-first sorting.
+#
+# Flag notes:
+#   -l   long format
+#   -A   almost-all (like -a but hides . and ..; less noise than -a)
+#   --sd sort directories before files
+#   colorls has no -F equivalent — the Nerd Font icons already distinguish
+#   dirs / executables / symlinks / etc. visually.
+alias ll='colorls -lA --sd'
+alias la='colorls -A --sd'
+alias l='colorls --sd'
 
-#colorls
+# `lc` kept for muscle memory; identical to `ll` now.
 alias lc='colorls -lA --sd'
+
+# colorls tab completion (upstream-recommended setup step).
+#
+# Upstream README suggests:
+#   source $(dirname $(gem which colorls))/tab_complete.sh
+#
+# That resolves `gem which colorls` on every shell startup — two Ruby
+# invocations, ~200-500ms of latency per shell. Cache the resolved path
+# across shells so only the first shell of a session pays the cost, and
+# recompute if the cached file is missing (gem upgrade, rbenv version
+# change, etc.).
+if command -v colorls >/dev/null 2>&1 && command -v gem >/dev/null 2>&1; then
+    if [[ -z "$_COLORLS_TAB_COMPLETE" || ! -f "$_COLORLS_TAB_COMPLETE" ]]; then
+        _colorls_gem_path="$(gem which colorls 2>/dev/null)"
+        if [[ -n "$_colorls_gem_path" ]]; then
+            export _COLORLS_TAB_COMPLETE="$(dirname "$_colorls_gem_path")/tab_complete.sh"
+        fi
+    fi
+    [[ -f "$_COLORLS_TAB_COMPLETE" ]] && source "$_COLORLS_TAB_COMPLETE"
+fi
 
 ##Aliases for my DEV projects
 #Assuming venv is in googlechrometoolkit repo's root
@@ -115,3 +145,53 @@ alias mgitst-cloudera="cd ~/development/cloudera/;mgitst"
 
 # replace BSD sed with GNU sed
 alias sed=gsed
+
+# ---------------------------------------------------------------------------
+# claude-sessions helpers — navigate exports written by claude-session-exporter
+# into $CLAUDE_SESSIONS_DIR. The exporter sets each file's mtime to the last
+# conversation-message timestamp, so mtime-desc == "most recent work first".
+# ---------------------------------------------------------------------------
+
+# List last N (default 15) claude-session project dirs by mtime desc, full paths.
+# Usage: claude-sessions-recent [N]
+function claude-sessions-recent {
+  local n="${1:-15}"
+  # BSD stat (macOS): '%m %N' = mtime-epoch + absolute path. Sort desc, strip mtime.
+  find "$CLAUDE_SESSIONS_DIR" -mindepth 1 -maxdepth 1 -type d \
+    -exec stat -f '%m %N' {} + \
+    | sort -rn \
+    | head -n "$n" \
+    | awk '{ $1=""; sub(/^ /,""); print }'
+}
+
+# Interactive picker: numbered list of last N project dirs (basenames);
+# cd into the chosen one. Enter 'q' to abort.
+# Usage: claude-sessions-cd [N]
+function claude-sessions-cd {
+  local n="${1:-15}"
+  local -a dirs
+  local IFS=$'\n'
+  dirs=($(claude-sessions-recent "$n"))
+  if [[ ${#dirs[@]} -eq 0 ]]; then
+    echo "no claude-session project dirs under $CLAUDE_SESSIONS_DIR" >&2
+    return 1
+  fi
+
+  # Show basenames in the picker (full paths are long); cd by full path.
+  local -a labels=()
+  local d
+  for d in "${dirs[@]}"; do labels+=("$(basename "$d")"); done
+
+  PS3="pick a project (q to quit): "
+  local label
+  select label in "${labels[@]}"; do
+    [[ "$REPLY" == "q" ]] && return 130
+    if [[ -n "$label" ]]; then
+      # $label is a basename directly under $CLAUDE_SESSIONS_DIR — cd via that,
+      # not by indexing $dirs, because bash arrays are 0-based and zsh's are 1-based.
+      cd "$CLAUDE_SESSIONS_DIR/$label"
+      return
+    fi
+    echo "not a valid choice" >&2
+  done
+}
