@@ -115,3 +115,53 @@ alias mgitst-cloudera="cd ~/development/cloudera/;mgitst"
 
 # replace BSD sed with GNU sed
 alias sed=gsed
+
+# ---------------------------------------------------------------------------
+# claude-sessions helpers — navigate exports written by claude-session-exporter
+# into $CLAUDE_SESSIONS_DIR. The exporter sets each file's mtime to the last
+# conversation-message timestamp, so mtime-desc == "most recent work first".
+# ---------------------------------------------------------------------------
+
+# List last N (default 15) claude-session project dirs by mtime desc, full paths.
+# Usage: claude-sessions-recent [N]
+function claude-sessions-recent {
+  local n="${1:-15}"
+  # BSD stat (macOS): '%m %N' = mtime-epoch + absolute path. Sort desc, strip mtime.
+  find "$CLAUDE_SESSIONS_DIR" -mindepth 1 -maxdepth 1 -type d \
+    -exec stat -f '%m %N' {} + \
+    | sort -rn \
+    | head -n "$n" \
+    | awk '{ $1=""; sub(/^ /,""); print }'
+}
+
+# Interactive picker: numbered list of last N project dirs (basenames);
+# cd into the chosen one. Enter 'q' to abort.
+# Usage: claude-sessions-cd [N]
+function claude-sessions-cd {
+  local n="${1:-15}"
+  local -a dirs
+  local IFS=$'\n'
+  dirs=($(claude-sessions-recent "$n"))
+  if [[ ${#dirs[@]} -eq 0 ]]; then
+    echo "no claude-session project dirs under $CLAUDE_SESSIONS_DIR" >&2
+    return 1
+  fi
+
+  # Show basenames in the picker (full paths are long); cd by full path.
+  local -a labels=()
+  local d
+  for d in "${dirs[@]}"; do labels+=("$(basename "$d")"); done
+
+  PS3="pick a project (q to quit): "
+  local label
+  select label in "${labels[@]}"; do
+    [[ "$REPLY" == "q" ]] && return 130
+    if [[ -n "$label" ]]; then
+      # $label is a basename directly under $CLAUDE_SESSIONS_DIR — cd via that,
+      # not by indexing $dirs, because bash arrays are 0-based and zsh's are 1-based.
+      cd "$CLAUDE_SESSIONS_DIR/$label"
+      return
+    fi
+    echo "not a valid choice" >&2
+  done
+}
