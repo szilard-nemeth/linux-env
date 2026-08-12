@@ -52,7 +52,7 @@ def sync_repository(source_url, mirror_url, source_branch, target_branch, force_
         # Using -f for force push as per original script
         run_command(["git", "push", "-f", "mirror", f"{source_branch}:{target_branch}", "--tags"], cwd=repo_path)
 
-        print("\nOK: Sync successful.")
+        print("\n✅ Sync successful!")
 
     finally:
         # Cleanup Logic

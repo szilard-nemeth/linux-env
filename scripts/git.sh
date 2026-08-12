@@ -427,7 +427,7 @@ function gh-pr-cleanup {
 
   echo "PR #$pr_id  branch=$branch  state=$state"
   if [[ "$state" != "MERGED" && "$state" != "CLOSED" ]]; then
-    echo "WARN: PR is $state — not merged/closed yet."
+    echo "⚠️  PR is $state — not merged/closed yet."
   fi
 
   # Guard: refuse to delete protected branches (typo in PR id → wrong branch).

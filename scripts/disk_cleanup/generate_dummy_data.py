@@ -19,7 +19,7 @@ def _create_venvs() -> Path:
     # Create a persistent temp directory
     temp_path = tempfile.mkdtemp(prefix="venv_real_test_")
     base_dir = Path(temp_path)
-    print(f"Creating real environments in: {base_dir}")
+    print(f"🚀 Creating real environments in: {base_dir}")
 
     # Configuration: folder_name -> list of packages to pip install
     test_setups = {
@@ -31,7 +31,7 @@ def _create_venvs() -> Path:
 
     for folder, packages in test_setups.items():
         venv_dir = base_dir / folder
-        print(f"Setting up {folder}...")
+        print(f"📦 Setting up {folder}...")
         # _create_venv(packages, venv_dir)
         _create_venv_debugger_compatible(packages, venv_dir)
 
@@ -40,7 +40,7 @@ def _create_venvs() -> Path:
     fake_path.mkdir(parents=True, exist_ok=True)
     (fake_path / "important.txt").write_text("Don't delete me!")
 
-    print(f"\nOK: Test sandbox is ready at: {base_dir}")
+    print(f"\n✅ Done! Your test sandbox is ready at: {base_dir}")
     print(f"Total environments created: {len(test_setups)}")
     return base_dir
 
@@ -144,7 +144,7 @@ def _create_terraform_test_setup():
                 f.seek(int(size_mb * 1024 * 1024) - 1)
                 f.write(b"\0")
 
-    print(f"Terraform sandbox created at: {base_dir}")
+    print(f"🏗️ Terraform sandbox created at: {base_dir}")
     return base_dir
 
 

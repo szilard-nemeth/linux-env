@@ -725,7 +725,7 @@ function _dex-create-private-stack {
   done
 
   if [[ -z "$mow_env" ]]; then
-    echo "ERROR: You must provide an environment (mow-dev or mow-priv)"
+    echo "❌ Error: You must provide an environment (mow-dev or mow-priv)"
     return 1
   fi
 
