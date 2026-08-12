@@ -28,8 +28,6 @@ function setup {
     setup-kitty
     setup-sdkman
     setup-tab-title
-
-    setopt select_editor
 }
 
 function setup-antigen {
@@ -139,6 +137,20 @@ setup-prompt() {
     
     #Docker
     SPACESHIP_DOCKER_PREFIX=""
+
+    # Eagerly start spaceship's async worker.
+    #
+    # spaceship registers a chpwd zsh-hook (prompt_spaceship_chpwd) when antigen
+    # loads the theme. That hook calls async_worker_eval "spaceship" ...
+    # But the worker itself is only started inside prompt_spaceship_precmd,
+    # which fires just before the first prompt renders. Any `cd` that runs
+    # between antigen apply and the first prompt (setup-env.sh, setup-dex-env.sh
+    # etc. do several) hits a not-yet-started worker and prints:
+    #     async_worker_eval: no such async worker: spaceship
+    # Starting the worker here eliminates those startup-time errors.
+    if typeset -f spaceship::worker::init > /dev/null; then
+        spaceship::worker::init
+    fi
 }
 
 function setup-tab-title {

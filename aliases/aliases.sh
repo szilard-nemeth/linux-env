@@ -57,12 +57,42 @@ alias ...='cd ../..'
 alias ....='cd ../../..'
 
 ## ls ALIASES
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
+# Bare `ls` is left as system ls (fast, script-safe, no icons/ANSI in
+# pipelines). Interactive listings go through colorls so you get icons +
+# per-filetype colors + dirs-first sorting.
+#
+# Flag notes:
+#   -l   long format
+#   -A   almost-all (like -a but hides . and ..; less noise than -a)
+#   --sd sort directories before files
+#   colorls has no -F equivalent — the Nerd Font icons already distinguish
+#   dirs / executables / symlinks / etc. visually.
+alias ll='colorls -lA --sd'
+alias la='colorls -A --sd'
+alias l='colorls --sd'
 
-#colorls
+# `lc` kept for muscle memory; identical to `ll` now.
 alias lc='colorls -lA --sd'
+
+# colorls tab completion (upstream-recommended setup step).
+#
+# Upstream README suggests:
+#   source $(dirname $(gem which colorls))/tab_complete.sh
+#
+# That resolves `gem which colorls` on every shell startup — two Ruby
+# invocations, ~200-500ms of latency per shell. Cache the resolved path
+# across shells so only the first shell of a session pays the cost, and
+# recompute if the cached file is missing (gem upgrade, rbenv version
+# change, etc.).
+if command -v colorls >/dev/null 2>&1 && command -v gem >/dev/null 2>&1; then
+    if [[ -z "$_COLORLS_TAB_COMPLETE" || ! -f "$_COLORLS_TAB_COMPLETE" ]]; then
+        _colorls_gem_path="$(gem which colorls 2>/dev/null)"
+        if [[ -n "$_colorls_gem_path" ]]; then
+            export _COLORLS_TAB_COMPLETE="$(dirname "$_colorls_gem_path")/tab_complete.sh"
+        fi
+    fi
+    [[ -f "$_COLORLS_TAB_COMPLETE" ]] && source "$_COLORLS_TAB_COMPLETE"
+fi
 
 ##Aliases for my DEV projects
 #Assuming venv is in googlechrometoolkit repo's root

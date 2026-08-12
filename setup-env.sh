@@ -362,7 +362,11 @@ function initial_setup_macos {
     
     #Install colorls
     #  colorls requires Ruby so install ruby :(
-    local RBENV_VERSION="2.7.1"
+    # 3.3.5 (Sep 2024): first stable Ruby available locally after moving off
+    # macOS system Ruby 2.6.10 (deprecated by Apple, and 2.7 is EOL since
+    # March 2023). Ruby 3.3 is supported through ~March 2027. Bump this to a
+    # newer 3.3.x / 3.4.x once `rbenv install --list-all` shows the target.
+    local RBENV_VERSION="3.3.5"
     check_version "rbenv" "rbenv version | cut -d' ' -f1" ${RBENV_VERSION}
     
     if [[ "$VERSIONCHECK_RESULT" -ne 0 ]]; then
@@ -420,7 +424,7 @@ function detect_machine_type {
     MACHINE_TYPE_FILE="$HOME/.machine-type"
 
     if [ ! -f "$MACHINE_TYPE_FILE" ]; then
-      echo "❌ ERROR: Machine type file not found: $MACHINE_TYPE_FILE"
+      echo "ERROR: Machine type file not found: $MACHINE_TYPE_FILE"
       echo "Create it with one of the allowed values using one of these commands:"
       echo "  echo 'cloudera-mac' > $MACHINE_TYPE_FILE    # if this is a Cloudera Mac"
       echo "  echo 'personal-mac' > $MACHINE_TYPE_FILE    # if this is your personal Mac"
@@ -433,14 +437,14 @@ function detect_machine_type {
     case "$MACHINE_TYPE" in
       cloudera-mac|personal-mac) ;;
       *)
-        echo "❌ ERROR: Invalid machine type: '$MACHINE_TYPE'"
+        echo "ERROR: Invalid machine type: '$MACHINE_TYPE'"
         echo "Allowed values: cloudera-mac, personal-mac"
         return 1
         ;;
     esac
 
     export MACHINE_TYPE
-    echo "🔧 MACHINE_TYPE detected: $MACHINE_TYPE"
+    echo "MACHINE_TYPE detected: $MACHINE_TYPE"
 }
 
 function remove-stale-scripts {
@@ -600,7 +604,7 @@ function linuxenv-initial-setup-mark-incomplete {
 
 #####################################
 initial_setup || {
-    echo "❌ ERROR: initial_setup failed. Aborting script execution."
+    echo "ERROR: initial_setup failed. Aborting script execution."
     return 1
 }
 setup-pythonpath
