@@ -477,6 +477,7 @@ function setup-vars-aliases {
     add_to_path ".add-to-path" "$WORKPLACE_SPECIFIC_DIR"
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/python
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/git
+    add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/kitty
     setup-jetbrains-links
 }
 
