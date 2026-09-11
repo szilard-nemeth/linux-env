@@ -4,15 +4,32 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import errno
+import fcntl
 import json
 import os
 import shlex
 import shutil
 import subprocess
 import sys
+import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, Iterator, List, Optional
+
+
+# Multi-shell coordination: shell startup runs this script concurrently across
+# terminals. Without a lock, two shells racing on the same repo collide on
+# .git/index.lock and one aborts. We take a per-repo advisory lock; if another
+# process holds it, we skip — that process will finish the work.
+_LOCK_DIR = Path(os.environ.get("EXTERNAL_REPOS_LOCK_DIR", str(Path.home() / ".cache" / "linuxenv" / "external-repos-locks")))
+# Optional: skip sync entirely if the last successful sync for a repo is younger
+# than this many seconds. 0 disables (default — behavior unchanged).
+_SYNC_TTL_S = int(os.environ.get("EXTERNAL_REPOS_SYNC_TTL_SECS", "0"))
+# How long to wait for the lock before giving up. Non-blocking (0) is the shell-
+# load default: another shell is already handling it, so just skip.
+_LOCK_WAIT_S = float(os.environ.get("EXTERNAL_REPOS_LOCK_WAIT_SECS", "0"))
 
 
 @dataclass(frozen=True)
@@ -131,32 +148,101 @@ def _repo_config(repo_id: str, repo: dict) -> RepoConfig:
     )
 
 
+def _lock_path(repo_id: str, suffix: str) -> Path:
+    _LOCK_DIR.mkdir(parents=True, exist_ok=True)
+    # Slashes in repo ids would create unwanted subdirs.
+    safe_id = repo_id.replace("/", "_")
+    return _LOCK_DIR / f"{safe_id}.{suffix}"
+
+
+@contextmanager
+def _repo_lock(repo_id: str, wait_s: float = _LOCK_WAIT_S) -> Iterator[bool]:
+    """Take an exclusive per-repo file lock. Yields True if acquired, False if not.
+
+    Non-blocking by default: on shell load, if another terminal is already syncing
+    the repo, this call returns False immediately and the caller should skip.
+    """
+    lock_path = _lock_path(repo_id, "lock")
+    fh = lock_path.open("w")
+    acquired = False
+    try:
+        deadline = time.monotonic() + max(wait_s, 0.0)
+        while True:
+            try:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+                break
+            except OSError as exc:
+                if exc.errno not in (errno.EAGAIN, errno.EWOULDBLOCK):
+                    raise
+                if time.monotonic() >= deadline:
+                    break
+                time.sleep(0.25)
+        yield acquired
+    finally:
+        if acquired:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+        fh.close()
+
+
+def _sync_is_fresh(repo_id: str) -> bool:
+    if _SYNC_TTL_S <= 0:
+        return False
+    marker = _lock_path(repo_id, "last-sync")
+    try:
+        age = time.time() - marker.stat().st_mtime
+    except FileNotFoundError:
+        return False
+    return age < _SYNC_TTL_S
+
+
+def _mark_sync_success(repo_id: str) -> None:
+    marker = _lock_path(repo_id, "last-sync")
+    marker.touch()
+
+
 def _sync_repo(repo: RepoConfig) -> None:
     if not repo.url or not repo.repo_dir:
         print(f"External repo '{repo.repo_id}' missing url or dir; skipping")
         return
 
-    repo_path = Path(repo.repo_dir)
-    if not (repo_path / ".git").exists():
-        repo_path.parent.mkdir(parents=True, exist_ok=True)
-        _run_command(["git", "clone", repo.url, repo.repo_dir])
+    if _sync_is_fresh(repo.repo_id):
+        print(f"External repo '{repo.repo_id}' synced recently (< {_SYNC_TTL_S}s); skipping")
+        return
 
-    if repo.sparse_paths:
-        _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "init", "--cone"])
-        try:
-            _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", *repo.sparse_paths])
-        except subprocess.CalledProcessError:
-            no_cone_paths = _normalize_sparse_paths_for_no_cone(repo.sparse_paths)
-            _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", "--no-cone", *no_cone_paths])
-
-    _run_command(["git", "-C", repo.repo_dir, "fetch", "--all", "--tags", "--prune"])
-
-    if repo.ref:
-        status = _run_capture(["git", "-C", repo.repo_dir, "status", "--porcelain"])
-        if status:
-            print(f"External repo '{repo.repo_id}' has local changes; skipping checkout")
+    with _repo_lock(repo.repo_id) as acquired:
+        if not acquired:
+            print(f"External repo '{repo.repo_id}' is being synced by another process; skipping")
             return
-        _run_command(["git", "-C", repo.repo_dir, "checkout", "--detach", repo.ref])
+
+        # Re-check freshness under the lock: another process may have just finished.
+        if _sync_is_fresh(repo.repo_id):
+            print(f"External repo '{repo.repo_id}' synced by another process; skipping")
+            return
+
+        repo_path = Path(repo.repo_dir)
+        if not (repo_path / ".git").exists():
+            repo_path.parent.mkdir(parents=True, exist_ok=True)
+            _run_command(["git", "clone", repo.url, repo.repo_dir])
+
+        if repo.sparse_paths:
+            _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "init", "--cone"])
+            try:
+                _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", *repo.sparse_paths])
+            except subprocess.CalledProcessError:
+                no_cone_paths = _normalize_sparse_paths_for_no_cone(repo.sparse_paths)
+                _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", "--no-cone", *no_cone_paths])
+
+        _run_command(["git", "-C", repo.repo_dir, "fetch", "--all", "--tags", "--prune"])
+
+        if repo.ref:
+            status = _run_capture(["git", "-C", repo.repo_dir, "status", "--porcelain"])
+            if status:
+                print(f"External repo '{repo.repo_id}' has local changes; skipping checkout")
+                return
+            _run_command(["git", "-C", repo.repo_dir, "checkout", "--detach", repo.ref])
+
+        _mark_sync_success(repo.repo_id)
 
 
 def _ensure_repo(repo: RepoConfig) -> None:
@@ -330,14 +416,19 @@ def _setup_repo(repo: RepoConfig) -> None:
     if not setup.setup_type and not setup.command:
         return
 
-    if setup.setup_type == "docker-ensure-running":
-        _docker_ensure_running(repo)
-        return
-    if setup.command:
-        print(f"Warning! Unknown setup type '{setup.setup_type}'. Running setup command: {setup.command}")
-        subprocess.run(setup.command, cwd=repo.repo_dir, shell=True, check=True)
-    else:
-        raise ValueError(f"Unknown setup type '{setup.setup_type}' and setup command is not set!")
+    with _repo_lock(repo.repo_id) as acquired:
+        if not acquired:
+            print(f"External repo '{repo.repo_id}' is being set up by another process; skipping")
+            return
+
+        if setup.setup_type == "docker-ensure-running":
+            _docker_ensure_running(repo)
+            return
+        if setup.command:
+            print(f"Warning! Unknown setup type '{setup.setup_type}'. Running setup command: {setup.command}")
+            subprocess.run(setup.command, cwd=repo.repo_dir, shell=True, check=True)
+        else:
+            raise ValueError(f"Unknown setup type '{setup.setup_type}' and setup command is not set!")
 
 
 def _load_repos(config: dict, repo_ids: List[str]) -> List[RepoConfig]:
