@@ -61,6 +61,7 @@ yarn-dev-tools = { path = "../yarn-dev-tools", develop = false }
 testpaths = [
     "scripts/git",
     "scripts/disk_cleanup",
+    "scripts/kitty",
 ]
 python_files = ["test_*.py"]
 

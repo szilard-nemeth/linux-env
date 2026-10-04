@@ -39,6 +39,7 @@ jobs:
             --junitxml=junit/test-results.xml \
             --cov=scripts/git \
             --cov=scripts/disk_cleanup \
+            --cov=scripts/kitty \
             --cov-report=xml \
             --cov-report=html
 
