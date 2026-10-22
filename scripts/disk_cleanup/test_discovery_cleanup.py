@@ -2,7 +2,11 @@ import os
 import time
 from pathlib import Path
 
-from scripts.disk_cleanup.cleanup_disk import DiscoveryCleanup
+from scripts.disk_cleanup.cleanup_disk import (
+    CHROME_APP_SUPPORT_CACHE_PATTERNS,
+    ELECTRON_APP_SUPPORT_CACHE_PATTERNS,
+    DiscoveryCleanup,
+)
 
 
 def _make_stale(path: Path, days: int = 90):
@@ -51,3 +55,48 @@ def test_prepare_dedupes_across_patterns(tmp_path):
 
     registered = [d.dir for d in tool.tracker.unnamed_cleanup]
     assert registered == [tmp_path / "dist"]
+
+
+def test_chrome_app_support_patterns_skip_profile_data(tmp_path):
+    for rel in [
+        "Default/Cache/Cache_Data/blob",
+        "Profile 1/GPUCache/data_0",
+        "GrShaderCache/data_1",
+        "Crashpad/completed/report.dmp",
+        "Default/IndexedDB/https_docs.google.com_0.indexeddb.leveldb/000001.log",
+        "Default/Bookmarks",
+        "Profile 1/Web Applications/manifest.json",
+        "Crashpad/settings.dat",
+        "Local State",
+    ]:
+        _write(tmp_path / rel, 16)
+    for p in sorted(tmp_path.rglob("*"), key=lambda path: -len(path.parts)):
+        _make_stale(p)
+
+    tool = DiscoveryCleanup(
+        "Test", tmp_path, CHROME_APP_SUPPORT_CACHE_PATTERNS, age_days=30, target_type="any", recursive=False
+    )
+    tool.prepare()
+
+    registered = sorted(d.dir.relative_to(tmp_path).as_posix() for d in tool.tracker.unnamed_cleanup)
+    assert registered == [
+        "Crashpad/completed/report.dmp",
+        "Default/Cache",
+        "GrShaderCache",
+        "Profile 1/GPUCache",
+    ]
+
+
+def test_electron_app_support_patterns_skip_app_data(tmp_path):
+    for rel in ["Cache/Cache_Data/blob", "logs/app.log", "IndexedDB/x.leveldb/000001.log", "orionV3.db", "Cookies"]:
+        _write(tmp_path / rel, 16)
+    for p in sorted(tmp_path.rglob("*"), key=lambda path: -len(path.parts)):
+        _make_stale(p)
+
+    tool = DiscoveryCleanup(
+        "Test", tmp_path, ELECTRON_APP_SUPPORT_CACHE_PATTERNS, age_days=30, target_type="any", recursive=False
+    )
+    tool.prepare()
+
+    registered = sorted(d.dir.relative_to(tmp_path).as_posix() for d in tool.tracker.unnamed_cleanup)
+    assert registered == ["Cache", "logs/app.log"]

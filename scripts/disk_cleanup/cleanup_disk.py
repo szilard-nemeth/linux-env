@@ -29,6 +29,20 @@ DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 TOOL_OUTPUT_BASEDIR = Path(os.path.expanduser("~/snemeth-dev-projects/cleanup_disk/"))
 KB_PRIVATE_GIT_OFFLOAD_OUT_DIR = TOOL_OUTPUT_BASEDIR / "kb_private_git_offload"
 KB_PRIVATE_GIT_OFFLOAD_THRESHOLD_MB = 20
+
+# ~/Library/Application Support/<app> holds real user data (profiles, IndexedDB, local DBs) next to caches,
+# so only known, regenerable cache directories are matched there (non-recursive globs). Cache dirs are matched
+# as a whole: deleting some of their files (e.g. a stale index next to fresh data files) would corrupt them.
+# Crash reports and logs are independent files, so those are matched one by one.
+# Chromium/Electron cache dirs, relative to a profile dir (Chrome) or the app dir (Electron apps).
+CHROMIUM_CACHE_DIRS = ["Cache", "Code Cache", "GPUCache", "DawnCache", "DawnGraphiteCache", "DawnWebGPUCache"]
+CRASHPAD_REPORT_PATTERNS = ["Crashpad/completed/*", "Crashpad/pending/*"]
+CHROME_APP_SUPPORT_CACHE_PATTERNS = (
+    [f"*/{d}" for d in CHROMIUM_CACHE_DIRS]
+    + ["GrShaderCache", "ShaderCache", "GraphiteDawnCache", "component_crx_cache", "extensions_crx_cache"]
+    + CRASHPAD_REPORT_PATTERNS
+)
+ELECTRON_APP_SUPPORT_CACHE_PATTERNS = CHROMIUM_CACHE_DIRS + ["GraphiteDawnCache", "logs/*"] + CRASHPAD_REPORT_PATTERNS
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
 DEX_PROJECT_DIR = Path(os.path.expanduser("~/development/cloudera/cde/dex"))
 # TODO Add JetBrains tool cleanup?
@@ -1344,27 +1358,45 @@ def build_default_tools() -> List[CleanupTool]:
         # --- Application Support Caches ---
         DiscoveryCleanup(
             "Google App Support Cache",
-            Path(os.path.expanduser("~/Library/Application Support/Google")),
-            ["*"],
-            age_days=60,
+            Path(os.path.expanduser("~/Library/Application Support/Google/Chrome")),
+            CHROME_APP_SUPPORT_CACHE_PATTERNS,
+            age_days=30,
+            target_type="any",
+            recursive=False,
         ),
         DiscoveryCleanup(
+            "Google Drive App Support Cache",
+            Path(os.path.expanduser("~/Library/Application Support/Google/DriveFS/cef_cache")),
+            CHROMIUM_CACHE_DIRS,
+            age_days=30,
+            target_type="any",
+            recursive=False,
+        ),
+        # Firefox's HTTP cache lives under ~/Library/Caches/Firefox ("Firefox Cache"); only crash reports here.
+        DiscoveryCleanup(
             "Firefox App Support Cache",
-            Path(os.path.expanduser("~/Library/Application Support/Firefox")),
-            ["*"],
-            age_days=60,
+            Path(os.path.expanduser("~/Library/Application Support/Firefox/Crash Reports")),
+            ["pending/*", "events/*"],
+            age_days=30,
+            target_type="any",
+            recursive=False,
         ),
         DiscoveryCleanup(
             "Evernote App Support Cache",
             Path(os.path.expanduser("~/Library/Application Support/Evernote")),
-            ["*"],
-            age_days=60,
+            ELECTRON_APP_SUPPORT_CACHE_PATTERNS,
+            age_days=30,
+            target_type="any",
+            recursive=False,
         ),
+        # Slack/Cache is covered by "Slack Cache" above.
         DiscoveryCleanup(
             "Slack App Support Cache",
             Path(os.path.expanduser("~/Library/Application Support/Slack")),
-            ["*"],
-            age_days=60,
+            [p for p in ELECTRON_APP_SUPPORT_CACHE_PATTERNS if p != "Cache"],
+            age_days=30,
+            target_type="any",
+            recursive=False,
         ),
     ]
 
