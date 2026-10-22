@@ -11,7 +11,7 @@ from collections import defaultdict
 from contextlib import redirect_stdout
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, TextIO
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, TextIO
 
 import humanfriendly
 from rich.console import Console
@@ -881,6 +881,8 @@ class DiscoveryCleanup(CleanupTool):
         # Convert days to seconds: days * hours * minutes * seconds
         threshold_seconds = self.age_days * 24 * 60 * 60
 
+        # Path -> mtime (None when age filtering is off)
+        candidates: Dict[Path, Optional[float]] = {}
         for pattern in self.patterns:
             iterator = self.root_path.rglob(pattern) if self.recursive else self.root_path.glob(pattern)
             for p in iterator:
@@ -897,16 +899,38 @@ class DiscoveryCleanup(CleanupTool):
                         # Check the last modified time
                         mtime = p.stat().st_mtime
                         if (now - mtime) > threshold_seconds:
-                            details = self.tracker.register_unnamed_dir(p)
-                            last_touched = time.strftime("%Y-%m-%d", time.localtime(mtime))
-                            logger.info(
-                                f"Found stale target: {p} (Last mod: {last_touched}, Size: {format_du_style(details.before_size)})"
-                            )
+                            candidates[p] = mtime
                         else:
                             logger.info(f"Skipping active target: {p} (Recently modified)")
                     else:
-                        details = self.tracker.register_unnamed_dir(p)
-                        logger.info(f"Found {p} ({format_du_style(details.before_size)})")
+                        candidates[p] = None
+
+        for p in self._drop_nested(candidates):
+            details = self.tracker.register_unnamed_dir(p)
+            mtime = candidates[p]
+            if mtime is not None:
+                last_touched = time.strftime("%Y-%m-%d", time.localtime(mtime))
+                logger.info(
+                    f"Found stale target: {p} (Last mod: {last_touched}, Size: {format_du_style(details.before_size)})"
+                )
+            else:
+                logger.info(f"Found {p} ({format_du_style(details.before_size)})")
+
+    @staticmethod
+    def _drop_nested(paths: Iterable[Path]) -> List[Path]:
+        """Drop paths that sit inside another path of the set.
+
+        Deleting the outer path already removes the inner one, so registering both would count the
+        same bytes more than once (e.g. rglob("*") yields a directory and all of its descendants).
+        """
+        kept: List[Path] = []
+        kept_set: Set[Path] = set()
+        for p in sorted(paths, key=lambda path: len(path.parts)):
+            if any(parent in kept_set for parent in p.parents):
+                continue
+            kept.append(p)
+            kept_set.add(p)
+        return kept
 
     def execute(self):
         for details in self.tracker.unnamed_cleanup:
