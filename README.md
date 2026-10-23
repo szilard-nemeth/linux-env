@@ -84,6 +84,17 @@ The `export_claude_sessions.py` script (and its `session_rename_report.py` compa
 
 Full history was preserved via `git-filter-repo`. It is registered as the `claude_code_tools` external repo in [`config/external-repos.json`](config/external-repos.json), checked out at `~/development/my-repos/claude-code-tools/`. The `claude-export` / `claude-export-force` commands run `scripts/external-repos.py ensure claude_code_tools` first, which clones the repo if it is missing, so there's no manual setup step.
 
+## Dependabot PRs
+
+When Dependabot PRs pile up, don't merge them one by one: each rewrites `poetry.lock`, so every merge forces a rebase of the rest, and they usually cover only some of the open security alerts. Run [`dependabot-refresh.sh`](scripts/git/dependabot-refresh.sh) instead (it is on PATH). It updates `master`, creates `chore/security-dependency-updates-<date>`, runs `poetry update`, then `pytest` and `pre-commit run --all-files`, and after you confirm, commits, pushes and opens one PR that supersedes the Dependabot ones:
+
+```bash
+dependabot-refresh.sh                  # refresh within the current pyproject.toml ranges
+dependabot-refresh.sh 'lxml@^6.1.0'    # also raise a direct dependency whose range blocks a fix
+```
+
+A Dependabot PR that also changes `pyproject.toml` (not just `poetry.lock`) means a direct dependency's range is too narrow; pass that package as `PKG@CONSTRAINT`. Once the PR is merged, Dependabot closes the superseded PRs within a day. Check what's left with `gh api 'repos/{owner}/{repo}/dependabot/alerts?state=open' -q '.[].dependency.package.name' | sort | uniq -c`; alerts that stay open usually need a newer Python than `pyproject.toml` allows.
+
 ## Troubleshooting
 
 ### pre-commit installation
