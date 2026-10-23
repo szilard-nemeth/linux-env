@@ -27,6 +27,7 @@ function setup {
     setup-prompt
     setup-kitty
     setup-sdkman
+    setup-kind
     setup-tab-title
 }
 
@@ -175,6 +176,19 @@ function setup-sdkman {
         source "$HOME/.sdkman/bin/sdkman-init.sh"
     else
         echo "WARN: sdkman init script does not exist at: $HOME/.sdkman/bin/sdkman-init.sh"
+    fi
+}
+
+function setup-kind {
+    # kind is installed by mise (pinned in the CDE repo's mise.toml), but mise is not activated in zsh:
+    # 'mise activate' would also pick up ~/.tool-versions and shadow the asdf-managed tools.
+    # Only put kind's install dir on PATH. 'latest' is a symlink mise maintains to the newest installed version.
+    local kind_dir="$HOME/.local/share/mise/installs/kind/latest"
+    if [ -x "$kind_dir/kind" ]; then
+        echo "Setting up kind..."
+        export PATH="$PATH:$kind_dir"
+    else
+        echo "WARN: kind binary does not exist at: $kind_dir/kind (install with: mise install kind@0.32.0)"
     fi
 }
 
