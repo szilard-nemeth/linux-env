@@ -80,7 +80,15 @@ Run it for real (one confirmation after the plan table):
 poetry run python scripts/disk_cleanup/cleanup_disk.py --kb-private-git-offload
 ```
 
-This scans the working tree for tracked archive files above 20 MB (`.tar.gz`, `.zip`, etc.), previews what would be moved, and on confirmation moves them to `~/googledrive/development/KB-private-offloaded`. Git changes are **not** staged automatically; review `git status` in the repo and commit when ready. For commit-based analysis, staging, and other options, use [`git_move_large_files.py`](../git/git_move_large_files.py) via Poetry — see [`scripts/git/git-workflow-for-moving-large-files.md`](../git/git-workflow-for-moving-large-files.md).
+This scans the working tree for tracked archive files above 20 MB (`.tar.gz`, `.zip`, etc.), previews what would be moved, and on confirmation moves them to `~/googledrive/development/KB-private-offloaded`. Git changes are **not** staged automatically; review `git status` in the repo and commit when ready.
+
+To only offload large files changed in one commit (the "Single commit" mode of the git workflow) instead of scanning the whole working tree, add `--kb-private-offload-commit`. It also works with `--include-kb-private-offload` in a batch run:
+
+```bash
+poetry run python scripts/disk_cleanup/cleanup_disk.py --kb-private-git-offload --kb-private-offload-commit 6619c839 --dry-run
+```
+
+For staging and other options, use [`git_move_large_files.py`](../git/git_move_large_files.py) via Poetry — see [`scripts/git/git-workflow-for-moving-large-files.md`](../git/git-workflow-for-moving-large-files.md).
 
 ## Real-world example: Docker cleanup without removing Python venvs
 
