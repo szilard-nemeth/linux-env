@@ -14,3 +14,8 @@ if [[ -f ~/.zshrc ]]; then
 fi
 
 eval "$(/opt/homebrew/bin/brew shellenv)"
+
+
+# initialize asdf
+export ASDF_DIR="$(brew --prefix asdf)/libexec"
+. "$ASDF_DIR/asdf.sh"

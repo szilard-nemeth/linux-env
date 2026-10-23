@@ -16,6 +16,7 @@ alias goto-cde-tasks="cd $HOME/development/my-repos/knowledge-base-private/cloud
 alias goto-eyarn="cd $EYARN_DIR"
 alias goto-bundlelogprocessor="cd $CLOUDERA_DEV_ROOT/YARN-tools/bundle-log-processor"
 alias goto-dex="cd $DEX_DEV_ROOT"
+alias goto-dex-awc="cd $DEX_AWC_DEV_ROOT/CDE"
 alias goto-dex-review="cd $DEX_DEV_ROOT../dex-review"
 alias goto-dex-spark-performance="cd $DEX_DEV_ROOT../spark-scale-and-perf"
 alias goto-dexter="cd $HOME/development/cloudera/hackathon2022/dexter "
@@ -149,6 +150,11 @@ function goto-cde-task {
   fi
 
   cd "$target_dir"
+}
+
+function edit-cde-task {
+  local target_dir="$CLOUDERA_TASKS_CDE_DIR/$1"
+  subl $target_dir
 }
 
 # List the last N (default 15) cde task dirs by mtime desc, full paths.
