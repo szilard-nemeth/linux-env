@@ -11,7 +11,7 @@ from collections import defaultdict
 from contextlib import redirect_stdout
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, TextIO
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, TextIO
 
 import humanfriendly
 from rich.console import Console
@@ -29,6 +29,20 @@ DEVELOPMENT_ROOT = Path(os.path.expanduser("~/development"))
 TOOL_OUTPUT_BASEDIR = Path(os.path.expanduser("~/snemeth-dev-projects/cleanup_disk/"))
 KB_PRIVATE_GIT_OFFLOAD_OUT_DIR = TOOL_OUTPUT_BASEDIR / "kb_private_git_offload"
 KB_PRIVATE_GIT_OFFLOAD_THRESHOLD_MB = 20
+
+# ~/Library/Application Support/<app> holds real user data (profiles, IndexedDB, local DBs) next to caches,
+# so only known, regenerable cache directories are matched there (non-recursive globs). Cache dirs are matched
+# as a whole: deleting some of their files (e.g. a stale index next to fresh data files) would corrupt them.
+# Crash reports and logs are independent files, so those are matched one by one.
+# Chromium/Electron cache dirs, relative to a profile dir (Chrome) or the app dir (Electron apps).
+CHROMIUM_CACHE_DIRS = ["Cache", "Code Cache", "GPUCache", "DawnCache", "DawnGraphiteCache", "DawnWebGPUCache"]
+CRASHPAD_REPORT_PATTERNS = ["Crashpad/completed/*", "Crashpad/pending/*"]
+CHROME_APP_SUPPORT_CACHE_PATTERNS = (
+    [f"*/{d}" for d in CHROMIUM_CACHE_DIRS]
+    + ["GrShaderCache", "ShaderCache", "GraphiteDawnCache", "component_crx_cache", "extensions_crx_cache"]
+    + CRASHPAD_REPORT_PATTERNS
+)
+ELECTRON_APP_SUPPORT_CACHE_PATTERNS = CHROMIUM_CACHE_DIRS + ["GraphiteDawnCache", "logs/*"] + CRASHPAD_REPORT_PATTERNS
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
 DEX_PROJECT_DIR = Path(os.path.expanduser("~/development/cloudera/cde/dex"))
 # TODO Add JetBrains tool cleanup?
@@ -881,6 +895,8 @@ class DiscoveryCleanup(CleanupTool):
         # Convert days to seconds: days * hours * minutes * seconds
         threshold_seconds = self.age_days * 24 * 60 * 60
 
+        # Path -> mtime (None when age filtering is off)
+        candidates: Dict[Path, Optional[float]] = {}
         for pattern in self.patterns:
             iterator = self.root_path.rglob(pattern) if self.recursive else self.root_path.glob(pattern)
             for p in iterator:
@@ -897,16 +913,38 @@ class DiscoveryCleanup(CleanupTool):
                         # Check the last modified time
                         mtime = p.stat().st_mtime
                         if (now - mtime) > threshold_seconds:
-                            details = self.tracker.register_unnamed_dir(p)
-                            last_touched = time.strftime("%Y-%m-%d", time.localtime(mtime))
-                            logger.info(
-                                f"Found stale target: {p} (Last mod: {last_touched}, Size: {format_du_style(details.before_size)})"
-                            )
+                            candidates[p] = mtime
                         else:
                             logger.info(f"Skipping active target: {p} (Recently modified)")
                     else:
-                        details = self.tracker.register_unnamed_dir(p)
-                        logger.info(f"Found {p} ({format_du_style(details.before_size)})")
+                        candidates[p] = None
+
+        for p in self._drop_nested(candidates):
+            details = self.tracker.register_unnamed_dir(p)
+            mtime = candidates[p]
+            if mtime is not None:
+                last_touched = time.strftime("%Y-%m-%d", time.localtime(mtime))
+                logger.info(
+                    f"Found stale target: {p} (Last mod: {last_touched}, Size: {format_du_style(details.before_size)})"
+                )
+            else:
+                logger.info(f"Found {p} ({format_du_style(details.before_size)})")
+
+    @staticmethod
+    def _drop_nested(paths: Iterable[Path]) -> List[Path]:
+        """Drop paths that sit inside another path of the set.
+
+        Deleting the outer path already removes the inner one, so registering both would count the
+        same bytes more than once (e.g. rglob("*") yields a directory and all of its descendants).
+        """
+        kept: List[Path] = []
+        kept_set: Set[Path] = set()
+        for p in sorted(paths, key=lambda path: len(path.parts)):
+            if any(parent in kept_set for parent in p.parents):
+                continue
+            kept.append(p)
+            kept_set.add(p)
+        return kept
 
     def execute(self):
         for details in self.tracker.unnamed_cleanup:
@@ -1320,27 +1358,45 @@ def build_default_tools() -> List[CleanupTool]:
         # --- Application Support Caches ---
         DiscoveryCleanup(
             "Google App Support Cache",
-            Path(os.path.expanduser("~/Library/Application Support/Google")),
-            ["*"],
-            age_days=60,
+            Path(os.path.expanduser("~/Library/Application Support/Google/Chrome")),
+            CHROME_APP_SUPPORT_CACHE_PATTERNS,
+            age_days=30,
+            target_type="any",
+            recursive=False,
         ),
         DiscoveryCleanup(
+            "Google Drive App Support Cache",
+            Path(os.path.expanduser("~/Library/Application Support/Google/DriveFS/cef_cache")),
+            CHROMIUM_CACHE_DIRS,
+            age_days=30,
+            target_type="any",
+            recursive=False,
+        ),
+        # Firefox's HTTP cache lives under ~/Library/Caches/Firefox ("Firefox Cache"); only crash reports here.
+        DiscoveryCleanup(
             "Firefox App Support Cache",
-            Path(os.path.expanduser("~/Library/Application Support/Firefox")),
-            ["*"],
-            age_days=60,
+            Path(os.path.expanduser("~/Library/Application Support/Firefox/Crash Reports")),
+            ["pending/*", "events/*"],
+            age_days=30,
+            target_type="any",
+            recursive=False,
         ),
         DiscoveryCleanup(
             "Evernote App Support Cache",
             Path(os.path.expanduser("~/Library/Application Support/Evernote")),
-            ["*"],
-            age_days=60,
+            ELECTRON_APP_SUPPORT_CACHE_PATTERNS,
+            age_days=30,
+            target_type="any",
+            recursive=False,
         ),
+        # Slack/Cache is covered by "Slack Cache" above.
         DiscoveryCleanup(
             "Slack App Support Cache",
             Path(os.path.expanduser("~/Library/Application Support/Slack")),
-            ["*"],
-            age_days=60,
+            [p for p in ELECTRON_APP_SUPPORT_CACHE_PATTERNS if p != "Cache"],
+            age_days=30,
+            target_type="any",
+            recursive=False,
         ),
     ]
 
