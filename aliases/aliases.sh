@@ -33,6 +33,7 @@ alias git-remove-trailing-ws="git diff-tree --no-commit-id --name-only -r HEAD |
 alias git-fix-author-info-private="git config user.email 'szilard.nemeth88@gmail.com' && git config user.name 'Szilard Nemeth' && git commit --amend --reset-author"
 alias git-fix-author-info-cloudera="git config user.email 'snemeth@cloudera.com' && git config user.name 'Szilard Nemeth' && git commit --amend --reset-author"
 alias git-add-all-tracked="git status -s | grep -v \"??\" | cut -c 4- | xargs git add"
+alias git-merge-preview-simple="git merge-tree --write-tree --name-only HEAD"
 
 
 #https://stackoverflow.com/a/40884093/1106893 --> 4b825dc642cb6eb9a060e54bf8d69288fbee4904 is the id of the "empty tree"
@@ -146,6 +147,12 @@ alias mgitst-cloudera="cd ~/development/cloudera/;mgitst"
 # replace BSD sed with GNU sed
 alias sed=gsed
 
+# Pycharm diff
+alias pdiff="pycharm diff"
+alias git-diff-dir="git difftool --no-prompt"
+
+alias md2html="python -m markdown"
+
 # ---------------------------------------------------------------------------
 # claude-sessions helpers — navigate exports written by claude-session-exporter
 # into $CLAUDE_SESSIONS_DIR. The exporter sets each file's mtime to the last
@@ -194,4 +201,11 @@ function claude-sessions-cd {
     fi
     echo "not a valid choice" >&2
   done
+}
+
+function evernote-backup {
+  evernote-backup init-db
+  evernote-backup sync
+  curr_date=$(date +%Y%m%d_%H%M%S)
+  evernote-backup export /Users/snemeth/Downloads/evernote-backup-all-notes-$curr_date
 }

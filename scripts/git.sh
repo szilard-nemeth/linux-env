@@ -779,3 +779,42 @@ function git-rebase-rename-commits {
         --refs "$BASE_REF..$REF" \
         --force
 }
+
+
+# Preview a merge without touching the working tree, index, or HEAD.
+# Usage: git-merge-preview [ref]   (default: origin/develop)
+# Exit: 0 = clean, 1 = conflicts, 2 = bad ref
+git-merge-preview() {
+  local target_ref="${1:-origin/develop}"
+  if ! git rev-parse --verify --quiet "${target_ref}^{commit}" >/dev/null; then
+    printf 'git-merge-preview: unknown ref %s\n' "$target_ref" >&2
+    return 2
+  fi
+  local merge_output merge_status current_branch
+  merge_output=$(git merge-tree --write-tree --name-only HEAD "$target_ref")
+  merge_status=$?
+  current_branch=$(git branch --show-current)
+  [ -n "$current_branch" ] || current_branch=HEAD
+  if [ "$merge_status" -eq 0 ]; then
+    printf 'clean: merging %s into %s has no conflicts\n' "$target_ref" "$current_branch"
+    return 0
+  elif [ "$merge_status" -gt 1 ]; then
+    printf 'git-merge-preview: merge-tree failed (%s)\n%s\n' "$merge_status" "$merge_output" >&2
+    return "$merge_status"
+  fi
+  printf 'conflicts merging %s into %s:\n' "$target_ref" "$current_branch"
+  printf '%s\n' "$merge_output" | sed -n '2,/^$/p' | sed '/^$/d; s/^/  /'
+  return 1
+}
+
+# Full conflicted content (markers included) for one file, still without merging.
+# Usage: git-merge-preview-file <ref> <path>
+git-merge-preview-file() {
+  local target_ref="$1" file_path="$2" merged_tree
+  if [ -z "$target_ref" ] || [ -z "$file_path" ]; then
+    printf 'usage: git-merge-preview-file <ref> <path>\n' >&2
+    return 2
+  fi
+  merged_tree=$(git merge-tree --write-tree HEAD "$target_ref" | head -1) || return $?
+  git show "${merged_tree}:${file_path}"
+}
