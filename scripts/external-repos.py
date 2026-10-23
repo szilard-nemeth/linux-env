@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import shlex
@@ -156,6 +157,20 @@ def _sync_repo(repo: RepoConfig) -> None:
             print(f"External repo '{repo.repo_id}' has local changes; skipping checkout")
             return
         _run_command(["git", "-C", repo.repo_dir, "checkout", "--detach", repo.ref])
+
+
+def _ensure_repo(repo: RepoConfig) -> None:
+    """Clone the repo if it is missing (no fetch/checkout otherwise), then print its dir on stdout.
+
+    Meant for shell callers: `dir=$(external-repos.py ensure <id>)`. Progress output goes to stderr
+    so stdout carries only the path.
+    """
+    if not repo.repo_dir:
+        raise ValueError(f"External repo '{repo.repo_id}' has no dir configured")
+    if not (Path(repo.repo_dir) / ".git").exists():
+        with contextlib.redirect_stdout(sys.stderr):
+            _sync_repo(repo)
+    print(repo.repo_dir)
 
 
 def get_repo_config_prefix(repo: RepoConfig) -> str:
@@ -353,7 +368,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Manage external repos.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    for command in ("sync", "setup", "sync-and-setup"):
+    for command in ("sync", "setup", "sync-and-setup", "ensure"):
         subparser = subparsers.add_parser(command)
         subparser.add_argument("ids", nargs="*", help="Optional repo ids")
 
@@ -369,6 +384,9 @@ def main() -> int:
     elif args.command == "sync-and-setup":
         _sync(repos)
         _setup(repos)
+    elif args.command == "ensure":
+        for repo in repos:
+            _ensure_repo(repo)
     else:
         parser.error(f"Unknown command {args.command}")
 
