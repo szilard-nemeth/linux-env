@@ -1207,13 +1207,9 @@ class KbPrivateGitOffloadCleanup(CleanupTool):
 
     summary_name = "KB private git large-file offload"
 
-    def __init__(self, commit: Optional[str] = None):
-        """
-        :param commit: Only offload large files changed in this commit, instead of scanning the whole working tree.
-        """
+    def __init__(self):
         super().__init__()
         self.repo = Path(KB_PRIVATE_ROOT)
-        self.commit = commit
         self._estimated_reclaim_bytes = 0
         self._repo_before_size: Optional[int] = None
         self._execute_stats_bytes = 0
@@ -1234,8 +1230,8 @@ class KbPrivateGitOffloadCleanup(CleanupTool):
 
     def _workflow_config(self, execute: bool) -> WorkflowConfig:
         return WorkflowConfig(
-            commit=self.commit,
-            scan_working_tree=self.commit is None,
+            commit=None,
+            scan_working_tree=True,
             repo=self.repo,
             out_dir=KB_PRIVATE_GIT_OFFLOAD_OUT_DIR,
             threshold_mb=KB_PRIVATE_GIT_OFFLOAD_THRESHOLD_MB,
@@ -1276,7 +1272,6 @@ class KbPrivateGitOffloadCleanup(CleanupTool):
         config = self._workflow_config(execute=False)
         logger.info("--- KB private git large-file offload ---")
         logger.info("Repository: %s", config.resolved_repo())
-        logger.info("Source: %s", f"commit {self.commit}" if self.commit else "working tree scan")
         logger.info("Output directory: %s", config.resolved_out_dir())
         logger.info("Offload root: %s", config.resolved_offload_root())
         logger.info("Path prefix stripped: %s", config.resolved_path_prefix())
@@ -1525,13 +1520,13 @@ def build_default_tools() -> List[CleanupTool]:
     ]
 
 
-def build_optional_tool(name: str, *, docker_time_limit: str, kb_offload_commit: Optional[str] = None) -> CleanupTool:
+def build_optional_tool(name: str, *, docker_time_limit: str) -> CleanupTool:
     if name == OPTIONAL_TOOL_DOCKER_CLEANUP:
         return DockerCleanup(time_limit=docker_time_limit)
     if name == OPTIONAL_TOOL_DOCKER_SYSTEM_PRUNE:
         return DockerSystemPruneCleanup()
     if name == OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD:
-        return KbPrivateGitOffloadCleanup(commit=kb_offload_commit)
+        return KbPrivateGitOffloadCleanup()
     raise ValueError(f"Unknown optional cleanup tool: {name}")
 
 
@@ -1550,7 +1545,6 @@ def resolve_tools(
     skip_defaults: bool = False,
     include_optional: Optional[List[str]] = None,
     exclude_tools: Optional[Sequence[str]] = None,
-    kb_offload_commit: Optional[str] = None,
 ) -> List[CleanupTool]:
     include_optional = include_optional or []
     tools: List[CleanupTool] = []
@@ -1560,9 +1554,7 @@ def resolve_tools(
 
     if include_optional:
         for name in include_optional:
-            tools.append(
-                build_optional_tool(name, docker_time_limit=docker_time_limit, kb_offload_commit=kb_offload_commit)
-            )
+            tools.append(build_optional_tool(name, docker_time_limit=docker_time_limit))
     elif not skip_defaults:
         for name in DEFAULT_OPTIONAL_TOOLS:
             tools.append(build_optional_tool(name, docker_time_limit=docker_time_limit))
@@ -1977,15 +1969,6 @@ def print_app_dirs_info(dirs: Sequence[Path] = INFO_APP_DIRS, top_n: int = 5) ->
     help="Include KB private git large-file offload",
 )
 @click.option(
-    "--kb-private-offload-commit",
-    "kb_offload_commit",
-    metavar="COMMIT",
-    help=(
-        "With --kb-private-git-offload or --include-kb-private-offload: only offload large files changed in this "
-        "commit instead of scanning the whole working tree. Combine with --dry-run to preview"
-    ),
-)
-@click.option(
     "--exclude-tool",
     "exclude_tools",
     multiple=True,
@@ -2034,7 +2017,6 @@ def main(
     include_docker_cleanup: bool,
     include_docker_system_prune: bool,
     include_kb_private_offload: bool,
-    kb_offload_commit: Optional[str],
     exclude_tools: tuple[str, ...],
     list_tools: bool,
     info: bool,
@@ -2046,10 +2028,6 @@ def main(
     exclusive_modes = [docker_only, docker_system_prune_only, kb_private_git_offload]
     if sum(exclusive_modes) > 1:
         raise click.UsageError("Use only one of --docker-only, --docker-system-prune-only, or --kb-private-git-offload")
-    if kb_offload_commit and not (kb_private_git_offload or include_kb_private_offload):
-        raise click.UsageError(
-            "--kb-private-offload-commit requires --kb-private-git-offload or --include-kb-private-offload"
-        )
 
     if info_apps:
         if (
@@ -2108,7 +2086,7 @@ def main(
     elif docker_system_prune_only:
         tools = ToolRunner.filter_excluded_tools([DockerSystemPruneCleanup()], exclude_tools)
     elif kb_private_git_offload:
-        tools = ToolRunner.filter_excluded_tools([KbPrivateGitOffloadCleanup(commit=kb_offload_commit)], exclude_tools)
+        tools = ToolRunner.filter_excluded_tools([KbPrivateGitOffloadCleanup()], exclude_tools)
     else:
         include_optional: List[str] = []
         if include_docker_cleanup:
@@ -2123,7 +2101,6 @@ def main(
             skip_defaults=skip_defaults,
             include_optional=include_optional or None,
             exclude_tools=exclude_tools,
-            kb_offload_commit=kb_offload_commit,
         )
     ToolRunner.run_tools(tools, dry_run=dry_run, confirm=not force, exclude_tools=exclude_tools)
 

@@ -1,15 +1,7 @@
 import click
 import pytest
 
-from click.testing import CliRunner
-
-from scripts.disk_cleanup.cleanup_disk import (
-    OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD,
-    KbPrivateGitOffloadCleanup,
-    ToolRunner,
-    main,
-    resolve_tools,
-)
+from scripts.disk_cleanup.cleanup_disk import KbPrivateGitOffloadCleanup, ToolRunner
 from scripts.git.git_move_large_files import FileStats
 
 
@@ -245,49 +237,3 @@ def test_resolve_tools_include_kb_without_docker():
     assert KbPrivateGitOffloadCleanup in types
     assert DockerCleanup not in types
     assert DockerSystemPruneCleanup not in types
-
-
-def test_kb_private_git_offload_defaults_to_working_tree_scan():
-    config = KbPrivateGitOffloadCleanup()._workflow_config(execute=False)
-    assert config.scan_working_tree is True
-    assert config.commit is None
-    config.validate()
-
-
-def test_kb_private_git_offload_commit_mode():
-    config = KbPrivateGitOffloadCleanup(commit="6619c839")._workflow_config(execute=False)
-    assert config.scan_working_tree is False
-    assert config.commit == "6619c839"
-    config.validate()
-
-
-def test_resolve_tools_passes_kb_offload_commit():
-    tools = resolve_tools(
-        docker_time_limit="1440h",
-        skip_defaults=True,
-        include_optional=[OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD],
-        kb_offload_commit="abc123",
-    )
-    assert [type(t) for t in tools] == [KbPrivateGitOffloadCleanup]
-    assert tools[0].commit == "abc123"
-
-
-def test_kb_offload_commit_requires_kb_offload_flag():
-    result = CliRunner().invoke(main, ["--kb-private-offload-commit", "abc123", "--dry-run"])
-    assert result.exit_code != 0
-    assert "--kb-private-offload-commit requires" in result.output
-
-
-def test_kb_offload_commit_dry_run_runs_commit_workflow(monkeypatch):
-    seen = {}
-
-    def fake_run_tools(tools, dry_run, confirm, exclude_tools):
-        seen["commit"] = tools[0].commit
-        seen["dry_run"] = dry_run
-
-    monkeypatch.setattr(ToolRunner, "run_tools", staticmethod(fake_run_tools))
-    result = CliRunner().invoke(
-        main, ["--kb-private-git-offload", "--kb-private-offload-commit", "abc123", "--dry-run"]
-    )
-    assert result.exit_code == 0, result.output
-    assert seen == {"commit": "abc123", "dry_run": True}
