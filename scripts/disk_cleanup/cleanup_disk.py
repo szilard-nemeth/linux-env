@@ -885,8 +885,24 @@ class DiscoveryCleanup(CleanupTool):
     """Generic tool to find and delete specific directory or file patterns."""
 
     def __init__(
-        self, name, root_path, patterns: List[str], age_days: int = 30, target_type: str = "dir", recursive: bool = True
+        self,
+        name,
+        root_path,
+        patterns: List[str],
+        age_days: int = 30,
+        target_type: str = "dir",
+        recursive: bool = True,
+        skip_git_unignored: bool = False,
+        exclude_roots: Sequence[Path] = (),
+        skip_inside: Sequence[str] = (),
     ):
+        """
+        :param skip_git_unignored: Inside a git work tree, only delete a match when git ignores everything in it.
+            Matches holding tracked files or untracked-but-not-ignored files (i.e. source, not build output) are kept.
+        :param exclude_roots: Never delete anything under these directories.
+        :param skip_inside: Ignore matches below a directory with one of these names (e.g. a package's own dist/
+            inside node_modules or site-packages, which belongs to that installed package).
+        """
         super().__init__()
         self.name = name
         self.summary_name = name
@@ -895,6 +911,9 @@ class DiscoveryCleanup(CleanupTool):
         self.age_days = age_days
         self.target_type = target_type
         self.recursive = recursive
+        self.skip_git_unignored = skip_git_unignored
+        self.exclude_roots = [Path(r) for r in exclude_roots]
+        self.skip_inside = set(skip_inside)
         self.tracker = CleanupDetailsTracker()
 
     def _has_pending_work(self) -> bool:
@@ -917,6 +936,8 @@ class DiscoveryCleanup(CleanupTool):
         for pattern in self.patterns:
             iterator = self.root_path.rglob(pattern) if self.recursive else self.root_path.glob(pattern)
             for p in iterator:
+                if self._is_excluded(p):
+                    continue
                 is_match = False
                 if self.target_type == "dir" and p.is_dir():
                     is_match = True
@@ -936,6 +957,12 @@ class DiscoveryCleanup(CleanupTool):
                     else:
                         candidates[p] = None
 
+        if self.skip_git_unignored:
+            for p in list(candidates):
+                if self._has_git_unignored_files(p):
+                    logger.info(f"Skipping {p}: contains files git tracks or does not ignore")
+                    del candidates[p]
+
         for p in self._drop_nested(candidates):
             details = self.tracker.register_unnamed_dir(p)
             mtime = candidates[p]
@@ -946,6 +973,24 @@ class DiscoveryCleanup(CleanupTool):
                 )
             else:
                 logger.info(f"Found {p} ({format_du_style(details.before_size)})")
+
+    def _is_excluded(self, p: Path) -> bool:
+        if any(p == root or root in p.parents for root in self.exclude_roots):
+            return True
+        return bool(self.skip_inside.intersection(p.relative_to(self.root_path).parts[:-1]))
+
+    @staticmethod
+    def _has_git_unignored_files(p: Path) -> bool:
+        """True if p is inside a git work tree and holds any tracked or untracked-but-not-ignored file."""
+        if not p.is_dir():
+            return False
+        proc = subprocess.run(
+            ["git", "-C", str(p), "ls-files", "--cached", "--others", "--exclude-standard", "--", "."],
+            capture_output=True,
+            text=True,
+        )
+        # Non-zero exit: not inside a git work tree
+        return proc.returncode == 0 and bool(proc.stdout.strip())
 
     @staticmethod
     def _drop_nested(paths: Iterable[Path]) -> List[Path]:
@@ -1263,13 +1308,18 @@ OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD = "kb-private-offload"
 DEFAULT_OPTIONAL_TOOLS = (OPTIONAL_TOOL_DOCKER_CLEANUP, OPTIONAL_TOOL_DOCKER_SYSTEM_PRUNE)
 
 
+# Matches under ~/development can be real source (e.g. a committed dist/ or a Java package named build),
+# so only delete what git ignores, and never touch the knowledge base repo.
+DEV_TREE_SAFETY: Dict[str, Any] = {"skip_git_unignored": True, "exclude_roots": [Path(KB_PRIVATE_ROOT)]}
+
+
 def build_default_tools() -> List[CleanupTool]:
     pip_cache_root = Path(os.path.expanduser("~/Library/Caches/pip"))
     return [
         MavenCleanup("100M"),
         AsdfGolangCleanup(),
-        DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
-        DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
+        DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"], **DEV_TREE_SAFETY),
+        DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"], **DEV_TREE_SAFETY),
         DiscoveryCleanup("Pip Cache", pip_cache_root, ["*"]),
         PoetryCacheCleanup(),
         HomebrewCleanup(),
@@ -1369,9 +1419,16 @@ def build_default_tools() -> List[CleanupTool]:
             "Downloads", Path(os.path.expanduser("~/Downloads")), ["*"], age_days=60, target_type="any", recursive=False
         ),
         # --- Node/JS Modules ---
-        DiscoveryCleanup("Node Modules", DEVELOPMENT_ROOT, ["node_modules"], age_days=60),
+        DiscoveryCleanup("Node Modules", DEVELOPMENT_ROOT, ["node_modules"], age_days=60, **DEV_TREE_SAFETY),
         # --- Build/Target Directories ---
-        DiscoveryCleanup("Python Build Dirs", DEVELOPMENT_ROOT, ["build", "dist", "*.egg-info"], age_days=30),
+        DiscoveryCleanup(
+            "Python Build Dirs",
+            DEVELOPMENT_ROOT,
+            ["build", "dist", "*.egg-info"],
+            age_days=30,
+            skip_inside=["node_modules", "site-packages", ".git"],
+            **DEV_TREE_SAFETY,
+        ),
         # --- Application Support Caches ---
         DiscoveryCleanup(
             "Google App Support Cache",
