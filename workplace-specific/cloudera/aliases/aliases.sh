@@ -242,3 +242,6 @@ cde-rtcatalog-compare-current-with-develop() {
   "$compare_catalog_py" "$old_catalog" "$new_catalog" > $log_file
 }
 
+
+# Private CDE AWC helpers, kept in knowledge-base-private (not in this public repo)
+[[ -f "${KB_PRIVATE_REPO}cloudera/cde/cde-awc/scripts/cde-awc-aliases.sh" ]] && source "${KB_PRIVATE_REPO}cloudera/cde/cde-awc/scripts/cde-awc-aliases.sh"
