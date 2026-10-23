@@ -1,7 +1,7 @@
 {
   "ids": [
     "claude_proxy",
-    "claude_session_exporter"
+    "claude_code_tools"
   ],
   "repos": {
     "claude_proxy": {
@@ -22,9 +22,9 @@
         "run_args_env": "CLAUDE_PROXY_RUN_ARGS"
       }
     },
-    "claude_session_exporter": {
-      "url": "https://github.com/szilard-nemeth/claude-session-exporter.git",
-      "dir": "$HOME/development/my-repos/claude-session-exporter"
+    "claude_code_tools": {
+      "url": "https://github.com/szilard-nemeth/claude-code-tools.git",
+      "dir": "$HOME/development/my-repos/claude-code-tools"
     }
   }
 }

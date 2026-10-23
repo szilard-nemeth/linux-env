@@ -80,9 +80,9 @@ See [scripts/git/git-workflow-for-moving-large-files.md](scripts/git/git-workflo
 
 The `export_claude_sessions.py` script (and its `session_rename_report.py` companion) has been extracted to its own repository:
 
-- https://github.com/szilard-nemeth/claude-session-exporter
+- https://github.com/szilard-nemeth/claude-code-tools
 
-Full history was preserved via `git-filter-repo`. It is registered as the `claude_session_exporter` external repo in [`config/external-repos.json`](config/external-repos.json), checked out at `~/development/my-repos/claude-session-exporter/`. The `claude-export` / `claude-export-force` commands run `scripts/external-repos.py ensure claude_session_exporter` first, which clones the repo if it is missing, so there's no manual setup step.
+Full history was preserved via `git-filter-repo`. It is registered as the `claude_code_tools` external repo in [`config/external-repos.json`](config/external-repos.json), checked out at `~/development/my-repos/claude-code-tools/`. The `claude-export` / `claude-export-force` commands run `scripts/external-repos.py ensure claude_code_tools` first, which clones the repo if it is missing, so there's no manual setup step.
 
 ## Troubleshooting
 

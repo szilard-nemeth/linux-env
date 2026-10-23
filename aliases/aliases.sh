@@ -154,7 +154,7 @@ alias git-diff-dir="git difftool --no-prompt"
 alias md2html="python -m markdown"
 
 # ---------------------------------------------------------------------------
-# claude-sessions helpers — navigate exports written by claude-session-exporter
+# claude-sessions helpers — navigate exports written by claude-code-tools/export_claude_sessions.py
 # into $CLAUDE_SESSIONS_DIR. The exporter sets each file's mtime to the last
 # conversation-message timestamp, so mtime-desc == "most recent work first".
 # ---------------------------------------------------------------------------
