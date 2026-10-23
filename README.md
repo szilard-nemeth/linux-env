@@ -95,3 +95,27 @@ Check the log at /<userhome>/.cache/pre-commit/pre-commit.log
 ```
 , please run: `pre-commit autoupdate`
 More info here: https://github.com/pre-commit/pre-commit/issues/577
+
+### black hook: `ModuleNotFoundError: No module named 'typing_extensions'`
+
+If the `black` pre-commit hook fails on commit with a traceback like:
+
+```
+File ".../site-packages/black/cache.py", line 21, in <module>
+    from typing_extensions import Self
+ModuleNotFoundError: No module named 'typing_extensions'
+```
+
+this is not a lint failure — black's own pre-commit venv is corrupted/incomplete (observed with `black 24.8.0`). Fix by clearing the pre-commit cache so the hook environments are rebuilt from scratch:
+
+```bash
+pre-commit clean
+pre-commit install --install-hooks
+```
+
+If it still fails after that, force-reinstall by removing the specific hook env directory printed in the traceback (the `repoXXXXXX` path under `~/.cache/pre-commit/`), then re-run:
+
+```bash
+rm -rf ~/.cache/pre-commit/repoXXXXXX   # use the path from the traceback
+pre-commit run black --all-files
+```
