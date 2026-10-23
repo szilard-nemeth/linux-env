@@ -23,13 +23,18 @@ from typing import Iterable, Iterator, List, Optional
 # terminals. Without a lock, two shells racing on the same repo collide on
 # .git/index.lock and one aborts. We take a per-repo advisory lock; if another
 # process holds it, we skip — that process will finish the work.
-_LOCK_DIR = Path(os.environ.get("EXTERNAL_REPOS_LOCK_DIR", str(Path.home() / ".cache" / "linuxenv" / "external-repos-locks")))
+_LOCK_DIR = Path(
+    os.environ.get("EXTERNAL_REPOS_LOCK_DIR", str(Path.home() / ".cache" / "linuxenv" / "external-repos-locks"))
+)
 # Optional: skip sync entirely if the last successful sync for a repo is younger
 # than this many seconds. 0 disables (default — behavior unchanged).
 _SYNC_TTL_S = int(os.environ.get("EXTERNAL_REPOS_SYNC_TTL_SECS", "0"))
 # How long to wait for the lock before giving up. Non-blocking (0) is the shell-
 # load default: another shell is already handling it, so just skip.
 _LOCK_WAIT_S = float(os.environ.get("EXTERNAL_REPOS_LOCK_WAIT_SECS", "0"))
+# `ensure` callers need the repo on disk, so it waits for a concurrent clone
+# instead of skipping.
+_ENSURE_LOCK_WAIT_S = float(os.environ.get("EXTERNAL_REPOS_ENSURE_LOCK_WAIT_SECS", "300"))
 
 
 @dataclass(frozen=True)
@@ -201,7 +206,7 @@ def _mark_sync_success(repo_id: str) -> None:
     marker.touch()
 
 
-def _sync_repo(repo: RepoConfig) -> None:
+def _sync_repo(repo: RepoConfig, lock_wait_s: float = _LOCK_WAIT_S) -> None:
     if not repo.url or not repo.repo_dir:
         print(f"External repo '{repo.repo_id}' missing url or dir; skipping")
         return
@@ -210,7 +215,7 @@ def _sync_repo(repo: RepoConfig) -> None:
         print(f"External repo '{repo.repo_id}' synced recently (< {_SYNC_TTL_S}s); skipping")
         return
 
-    with _repo_lock(repo.repo_id) as acquired:
+    with _repo_lock(repo.repo_id, lock_wait_s) as acquired:
         if not acquired:
             print(f"External repo '{repo.repo_id}' is being synced by another process; skipping")
             return
@@ -255,7 +260,9 @@ def _ensure_repo(repo: RepoConfig) -> None:
         raise ValueError(f"External repo '{repo.repo_id}' has no dir configured")
     if not (Path(repo.repo_dir) / ".git").exists():
         with contextlib.redirect_stdout(sys.stderr):
-            _sync_repo(repo)
+            _sync_repo(repo, lock_wait_s=_ENSURE_LOCK_WAIT_S)
+    if not (Path(repo.repo_dir) / ".git").exists():
+        raise RuntimeError(f"External repo '{repo.repo_id}' is still missing at {repo.repo_dir}")
     print(repo.repo_dir)
 
 
