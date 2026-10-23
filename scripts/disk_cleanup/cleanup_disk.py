@@ -927,11 +927,31 @@ class DiscoveryCleanup(CleanupTool):
             logger.info(f"--- Scanning for {self.name} (Older than {self.age_days} days) ---")
         else:
             logger.info(f"--- Scanning for {self.name}")
-        now = time.time()
-        # Convert days to seconds: days * hours * minutes * seconds
-        threshold_seconds = self.age_days * 24 * 60 * 60
+        candidates = self._collect_candidates()
 
-        # Path -> mtime (None when age filtering is off)
+        if self.skip_git_unignored:
+            for p in list(candidates):
+                if self._has_git_unignored_files(p):
+                    logger.info(f"Skipping {p}: contains files git tracks or does not ignore")
+                    del candidates[p]
+
+        for p in self._drop_nested(candidates):
+            details = self.tracker.register_unnamed_dir(p)
+            mtime = candidates[p]
+            if mtime is not None:
+                last_touched = time.strftime("%Y-%m-%d", time.localtime(mtime))
+                logger.info(
+                    f"Found stale target: {p} (Last mod: {last_touched}, Size: {format_du_style(details.before_size)})"
+                )
+            else:
+                logger.info(f"Found {p} ({format_du_style(details.before_size)})")
+
+    def _is_stale(self, mtime: float) -> bool:
+        # Convert days to seconds: days * hours * minutes * seconds
+        return (time.time() - mtime) > self.age_days * 24 * 60 * 60
+
+    def _collect_candidates(self) -> Dict[Path, Optional[float]]:
+        """Matches to delete, as path -> mtime (None when age filtering is off)."""
         candidates: Dict[Path, Optional[float]] = {}
         for pattern in self.patterns:
             iterator = self.root_path.rglob(pattern) if self.recursive else self.root_path.glob(pattern)
@@ -950,29 +970,13 @@ class DiscoveryCleanup(CleanupTool):
                     if self.age_days != -1:
                         # Check the last modified time
                         mtime = p.stat().st_mtime
-                        if (now - mtime) > threshold_seconds:
+                        if self._is_stale(mtime):
                             candidates[p] = mtime
                         else:
                             logger.info(f"Skipping active target: {p} (Recently modified)")
                     else:
                         candidates[p] = None
-
-        if self.skip_git_unignored:
-            for p in list(candidates):
-                if self._has_git_unignored_files(p):
-                    logger.info(f"Skipping {p}: contains files git tracks or does not ignore")
-                    del candidates[p]
-
-        for p in self._drop_nested(candidates):
-            details = self.tracker.register_unnamed_dir(p)
-            mtime = candidates[p]
-            if mtime is not None:
-                last_touched = time.strftime("%Y-%m-%d", time.localtime(mtime))
-                logger.info(
-                    f"Found stale target: {p} (Last mod: {last_touched}, Size: {format_du_style(details.before_size)})"
-                )
-            else:
-                logger.info(f"Found {p} ({format_du_style(details.before_size)})")
+        return candidates
 
     def _is_excluded(self, p: Path) -> bool:
         if any(p == root or root in p.parents for root in self.exclude_roots):
@@ -1019,6 +1023,49 @@ class DiscoveryCleanup(CleanupTool):
 
     def verify(self) -> CleanupResult:
         return self._verify_with_tracker_unnamed(self.tracker)
+
+
+class MavenLocalRepoCleanup(DiscoveryCleanup):
+    """Delete superseded, stale artifact versions from a Maven local repository.
+
+    Works per version dir (<group path>/<artifact>/<version>/, recognized by its .pom), not per top-level
+    group dir like org/ or com/, which would wipe nearly the whole repository. Per artifact, the newest
+    version is always kept, and versions installed locally (mvn install) are never deleted, as they may not
+    exist on any remote repository.
+    """
+
+    def __init__(self, name: str, root_path: Path, age_days: int = 60):
+        super().__init__(name, root_path, [], age_days=age_days)
+
+    @staticmethod
+    def _is_locally_installed(version_dir: Path) -> bool:
+        # Maven Resolver records where each file came from as "<file>>=<repo id>"; an empty repo id means the
+        # file was installed locally. Without the file the origin is unknown, so treat it as local too.
+        remote_repos = version_dir / "_remote.repositories"
+        try:
+            lines = remote_repos.read_text().splitlines()
+        except OSError:
+            return True
+        return any(line.endswith(">") or line.endswith(">=") for line in lines if not line.startswith("#"))
+
+    def _collect_candidates(self) -> Dict[Path, Optional[float]]:
+        versions_by_artifact: Dict[Path, List[Path]] = defaultdict(list)
+        for version_dir in {pom.parent for pom in self.root_path.rglob("*.pom")}:
+            versions_by_artifact[version_dir.parent].append(version_dir)
+
+        candidates: Dict[Path, Optional[float]] = {}
+        for versions in versions_by_artifact.values():
+            versions.sort(key=lambda v: v.stat().st_mtime, reverse=True)
+            # versions[0] is the newest one: always kept
+            for version_dir in versions[1:]:
+                mtime = version_dir.stat().st_mtime
+                if not self._is_stale(mtime):
+                    continue
+                if self._is_locally_installed(version_dir):
+                    logger.info(f"Skipping locally installed artifact: {version_dir}")
+                    continue
+                candidates[version_dir] = mtime
+        return candidates
 
 
 class PoetryCacheCleanup(CleanupTool):
@@ -1378,9 +1425,7 @@ def build_default_tools() -> List[CleanupTool]:
             "Golangci-lint Cache", Path(os.path.expanduser("~/Library/Caches/golangci-lint")), ["*"], age_days=30
         ),
         # --- Additional Caches based on ncdu ---
-        DiscoveryCleanup(
-            "Maven Local Repo", Path(os.path.expanduser("~/.m2/repository")), ["*"], age_days=60, recursive=False
-        ),
+        MavenLocalRepoCleanup("Maven Local Repo", Path(os.path.expanduser("~/.m2/repository")), age_days=60),
         DiscoveryCleanup(
             "SDKMAN Archives",
             Path(os.path.expanduser("~/.sdkman/archives")),

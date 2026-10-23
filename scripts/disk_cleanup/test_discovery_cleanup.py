@@ -7,6 +7,7 @@ from scripts.disk_cleanup.cleanup_disk import (
     CHROME_APP_SUPPORT_CACHE_PATTERNS,
     ELECTRON_APP_SUPPORT_CACHE_PATTERNS,
     DiscoveryCleanup,
+    MavenLocalRepoCleanup,
 )
 
 
@@ -159,3 +160,31 @@ def test_skip_inside_ignores_matches_in_installed_packages(tmp_path):
     tool.prepare()
 
     assert [d.dir for d in tool.tracker.unnamed_cleanup] == [tmp_path / "proj" / "build"]
+
+
+def _maven_version(repo: Path, rel: str, remote_repo_id: str = "central", days_old: int = 90) -> Path:
+    version_dir = repo / rel
+    artifact, version = version_dir.parent.name, version_dir.name
+    _write(version_dir / f"{artifact}-{version}.jar", 1024)
+    _write(version_dir / f"{artifact}-{version}.pom", 16)
+    (version_dir / "_remote.repositories").write_text(
+        f"#NOTE: Maven Resolver internal file\n{artifact}-{version}.jar>{remote_repo_id}=\n"
+        f"{artifact}-{version}.pom>{remote_repo_id}=\n"
+    )
+    _make_stale(version_dir, days_old)
+    return version_dir
+
+
+def test_maven_local_repo_cleanup_keeps_newest_recent_and_local_versions(tmp_path):
+    repo = tmp_path / "repository"
+    old = _maven_version(repo, "org/apache/foo/foo-core/1.0", days_old=300)
+    _maven_version(repo, "org/apache/foo/foo-core/2.0", days_old=200)  # newest: kept even though stale
+    _maven_version(repo, "org/apache/foo/foo-core/0.9-local", remote_repo_id="", days_old=400)  # mvn install
+    _maven_version(repo, "com/example/bar/1.0", days_old=10)
+    _maven_version(repo, "com/example/bar/0.5", days_old=20)  # not stale yet
+    _maven_version(repo, "com/example/baz/3.0", days_old=500)  # only version
+
+    tool = MavenLocalRepoCleanup("Test", repo, age_days=60)
+    tool.prepare()
+
+    assert [d.dir for d in tool.tracker.unnamed_cleanup] == [old]
