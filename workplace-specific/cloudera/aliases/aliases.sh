@@ -129,8 +129,15 @@ alias dexter-clean-repo-branches="cd $HOME/dexter/dex && git checkout upgradeDex
 alias cde-rtcatalog-compare="$CLOUDERA_DIR/scripts/cde/runtime-catalog/compare_catalog.py"
 
 ## Claude
-alias claude-export='python3 ~/development/my-repos/claude-session-exporter/export_claude_sessions.py'
-alias claude-export-force="python3 ~/development/my-repos/claude-session-exporter/export_claude_sessions.py --force"
+# claude-session-exporter is an external repo (config/external-repos.json); `ensure` clones it on first use
+# (unalias: claude-export used to be an alias, which would shadow this function in already-open shells)
+unalias claude-export 2>/dev/null
+function claude-export {
+  local repo_dir
+  repo_dir=$(python3 "$HOME_LINUXENV_DIR/scripts/external-repos.py" ensure claude_session_exporter) || return 1
+  python3 "$repo_dir/export_claude_sessions.py" "$@"
+}
+alias claude-export-force="claude-export --force"
 
 function backup-currdir {
   local backup_path="$HOME/googledrive/backup/codebackup/"

@@ -82,7 +82,7 @@ The `export_claude_sessions.py` script (and its `session_rename_report.py` compa
 
 - https://github.com/szilard-nemeth/claude-session-exporter
 
-Full history was preserved via `git-filter-repo`. Clone it under `~/development/my-repos/claude-session-exporter/` and point your `claude-export` alias there.
+Full history was preserved via `git-filter-repo`. It is registered as the `claude_session_exporter` external repo in [`config/external-repos.json`](config/external-repos.json), checked out at `~/development/my-repos/claude-session-exporter/`. The `claude-export` / `claude-export-force` commands run `scripts/external-repos.py ensure claude_session_exporter` first, which clones the repo if it is missing, so there's no manual setup step.
 
 ## Troubleshooting
 
