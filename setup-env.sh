@@ -478,6 +478,7 @@ function setup-vars-aliases {
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/python
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/git
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/kitty
+    add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/scheduler
     setup-jetbrains-links
 }
 
