@@ -53,7 +53,7 @@ function export-claude-settings {
     echo "Exporting Claude Code settings..."
     export ANTHROPIC_AUTH_TOKEN=$(cat ~/claude-key.txt)
     export ANTHROPIC_BASE_URL=http://127.0.0.1:8083
-    export ANTHROPIC_DEFAULT_OPUS_MODEL="claude-opus"
+    export ANTHROPIC_DEFAULT_OPUS_MODEL="claude-opus-5-5"
     export ANTHROPIC_DEFAULT_SONNET_MODEL="claude-sonnet"
     export ANTHROPIC_DEFAULT_HAIKU_MODEL="claude-haiku"
     export CLAUDE_CODE_SUBAGENT_MODEL="claude-sonnet"

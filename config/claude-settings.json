@@ -1,5 +1,6 @@
 {
-  "model": "opus[1m]",
+  "model": "claude-opus-5-5",
+  "effortLevel": "medium",
   "theme": "auto",
   "permissions": {
     "allow": [
@@ -51,7 +52,8 @@
       "Edit(docs/security/**)",
       "Write(docs/security/**)",
       "Edit(.claude/worktrees/*/docs/security/**)",
-      "Write(.claude/worktrees/*/docs/security/**)"
+      "Write(.claude/worktrees/*/docs/security/**)",
+      "mcp__jira-mcp__jira_write_batch"
     ],
     "deny": [
       "Bash(curl:*)",

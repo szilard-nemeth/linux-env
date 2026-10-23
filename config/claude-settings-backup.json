@@ -1,0 +1,100 @@
+{
+  "model": "opus[1m]",
+  "theme": "auto",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Agent",
+      "WebSearch",
+
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(file:*)",
+
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git blame:*)",
+      "Bash(git branch:*)",
+      "Bash(git for-each-ref:*)",
+      "Bash(git ls-remote:*)",
+      "Bash(git merge-base:*)",
+      "Bash(git remote:*)",
+      "Bash(git add docs/security/**)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git fetch:*)",
+
+      "Bash(./docs/security/tools/render-diagrams.sh:*)",
+
+      "Bash(mkdir docs/security/**)",
+      "Bash(ln:*)",
+      "Bash(cp /tmp/*:*)",
+      "Bash(awk:*)",
+      "Bash(python3:*)",
+      "Bash(npx --yes @mermaid-js/mermaid-cli:*)",
+      "Bash(npx @mermaid-js/mermaid-cli:*)",
+
+      "Bash(bash docs/scripts/threat-modeling/*)",
+
+      "Edit(docs/security/**)",
+      "Write(docs/security/**)",
+      "Edit(.claude/worktrees/*/docs/security/**)",
+      "Write(.claude/worktrees/*/docs/security/**)"
+    ],
+    "deny": [
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(rm -rf:*)",
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Write(.git/**)",
+      "Write(.env*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(gh pr create*)",
+            "command": "jq -r '.tool_input.command' | grep -q 'gh pr create' && printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"REMINDER: You are about to open a PR. Before running `gh pr create`, invoke the `pr-body-from-template` skill at ~/.claude/skills/pr-body-from-template/SKILL.md — it locates the repo .github/pull_request_template.md, drafts What/Reviewer sections from the branch diff, and answers every checklist item with a justification. Show the drafted body to the user in a fenced block and wait for confirmation before running gh pr create.\"}}' || true"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Claude needs your input\" with title \"Claude Code\" sound name \"Ping\"'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Turn finished\" with title \"Claude Code\" sound name \"Pop\"'"
+          }
+        ]
+      }
+    ]
+  }
+}
