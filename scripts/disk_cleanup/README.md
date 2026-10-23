@@ -49,6 +49,15 @@ By default, this scans your home directory (`~`). To drill down into a specific 
 poetry run python scripts/disk_cleanup/cleanup_disk.py --info --info-dir "~/Library"
 ```
 
+To see how much space common app data and cache directories really take (Chrome/Google, Firefox, Evernote, Slack, Cursor, VS Code, Discord, JetBrains caches, Docker Desktop), use `--info-apps`. It prints one table with each directory's size, its largest subdirectories, and a total. It only reports; nothing is deleted. Missing directories are skipped:
+
+```bash
+poetry run python scripts/disk_cleanup/cleanup_disk.py --info-apps
+poetry run python scripts/disk_cleanup/cleanup_disk.py --info-apps --info-apps-top-n 10
+```
+
+To dig further into one of the listed subdirectories, pass it to `--info --info-dir`.
+
 ## Single-tool modes
 
 Use one of these flags to run a single cleanup tool instead of the default batch:

@@ -43,6 +43,23 @@ CHROME_APP_SUPPORT_CACHE_PATTERNS = (
     + CRASHPAD_REPORT_PATTERNS
 )
 ELECTRON_APP_SUPPORT_CACHE_PATTERNS = CHROMIUM_CACHE_DIRS + ["GraphiteDawnCache", "logs/*"] + CRASHPAD_REPORT_PATTERNS
+# Commonly large app data/cache dirs reported by --info-apps (report-only, never cleaned). Missing dirs are skipped.
+INFO_APP_DIRS = [
+    Path(os.path.expanduser(p))
+    for p in [
+        "~/Library/Application Support/Google",
+        "~/Library/Application Support/Firefox",
+        "~/Library/Application Support/Evernote",
+        "~/Library/Application Support/Slack",
+        "~/Library/Application Support/Cursor",
+        "~/Library/Application Support/Code",
+        "~/Library/Application Support/discord",
+        "~/Library/Caches/Google",
+        "~/Library/Caches/Firefox",
+        "~/Library/Caches/JetBrains",
+        "~/Library/Containers/com.docker.docker",
+    ]
+]
 ASDF_GOLANG_ROOT = Path(os.path.expanduser("~/.asdf/installs/golang"))
 DEX_PROJECT_DIR = Path(os.path.expanduser("~/development/cloudera/cde/dex"))
 # TODO Add JetBrains tool cleanup?
@@ -1737,6 +1754,66 @@ def print_disk_info(target_dir: Optional[str] = None, top_n: int = 25) -> None:
         console.print(f"[bold red]Failed to scan disk usage: {e}[/bold red]")
 
 
+@dataclass
+class AppDirUsage:
+    path: Path
+    size_bytes: int
+    # Largest direct children, biggest first
+    top_children: List["AppDirUsage"]
+
+
+def scan_dir_usage(path: Path, top_n: int) -> Optional[AppDirUsage]:
+    """Size of a directory and its top_n largest direct children, from a single 'du' pass.
+
+    Returns None when the directory does not exist.
+    """
+    if not path.is_dir():
+        return None
+    # -k: sizes in KiB, -d 1: print the dir itself plus its direct children.
+    # du exits non-zero on unreadable entries (e.g. macOS privacy-protected dirs) but still prints the rest.
+    proc = subprocess.run(["du", "-k", "-d", "1", str(path)], capture_output=True, text=True)
+    total_bytes = 0
+    children: List[AppDirUsage] = []
+    for line in proc.stdout.splitlines():
+        parts = line.split("\t", 1)
+        if len(parts) != 2:
+            continue
+        size_bytes = int(parts[0]) * 1024
+        entry = Path(parts[1])
+        if entry == path:
+            total_bytes = size_bytes
+        else:
+            children.append(AppDirUsage(entry, size_bytes, []))
+    children.sort(key=lambda c: c.size_bytes, reverse=True)
+    return AppDirUsage(path, total_bytes, children[:top_n])
+
+
+def print_app_dirs_info(dirs: Sequence[Path] = INFO_APP_DIRS, top_n: int = 5) -> None:
+    """Report-only: real on-disk size of common app data/cache dirs, each with its largest subdirs."""
+    console.print("[bold cyan]Scanning app directories (this may take a minute)...[/bold cyan]")
+    usages = [u for u in (scan_dir_usage(d, top_n) for d in dirs) if u is not None]
+    usages.sort(key=lambda u: u.size_bytes, reverse=True)
+
+    home_str = str(Path.home())
+
+    def _display(p: Path) -> str:
+        s = str(p)
+        return "~" + s[len(home_str) :] if s.startswith(home_str) else s
+
+    table = Table(title="App directory sizes", show_header=True, header_style="bold")
+    table.add_column("Size", justify="right", style="green")
+    table.add_column("Directory", style="cyan")
+    for i, usage in enumerate(usages):
+        table.add_row(f"[bold]{format_du_style(usage.size_bytes)}[/bold]", f"[bold]{_display(usage.path)}[/bold]")
+        for child in usage.top_children:
+            table.add_row(format_du_style(child.size_bytes), f"  {child.path.name}", style="dim")
+        if i < len(usages) - 1:
+            table.add_section()
+    table.add_section()
+    table.add_row(f"[bold]{format_du_style(sum(u.size_bytes for u in usages))}[/bold]", "[bold]TOTAL[/bold]")
+    console.print(table)
+
+
 @click.command()
 @click.option(
     "--docker-only",
@@ -1814,6 +1891,19 @@ def print_disk_info(target_dir: Optional[str] = None, top_n: int = 25) -> None:
     type=str,
     help="When used with --info, scans the specified directory instead of the home directory",
 )
+@click.option(
+    "--info-apps",
+    is_flag=True,
+    help="Print real sizes of common app data/cache dirs (Chrome, Firefox, Slack, ...) with their largest subdirs, "
+    "then exit. Report-only, nothing is deleted",
+)
+@click.option(
+    "--info-apps-top-n",
+    type=click.IntRange(min=0),
+    default=5,
+    show_default=True,
+    help="With --info-apps, number of largest subdirs listed under each app dir",
+)
 def main(
     docker_only: bool,
     docker_system_prune_only: bool,
@@ -1829,11 +1919,31 @@ def main(
     list_tools: bool,
     info: bool,
     info_dir: Optional[str],
+    info_apps: bool,
+    info_apps_top_n: int,
 ):
     """Disk cleanup utilities."""
     exclusive_modes = [docker_only, docker_system_prune_only, kb_private_git_offload]
     if sum(exclusive_modes) > 1:
         raise click.UsageError("Use only one of --docker-only, --docker-system-prune-only, or --kb-private-git-offload")
+
+    if info_apps:
+        if (
+            info
+            or info_dir
+            or any(exclusive_modes)
+            or exclude_tools
+            or skip_defaults
+            or include_docker_cleanup
+            or include_docker_system_prune
+            or include_kb_private_offload
+            or list_tools
+            or dry_run
+            or force
+        ):
+            raise click.UsageError("--info-apps cannot be combined with other options (except --info-apps-top-n)")
+        print_app_dirs_info(top_n=info_apps_top_n)
+        return
 
     if info:
         if (
