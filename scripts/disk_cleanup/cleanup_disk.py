@@ -1684,16 +1684,21 @@ class ToolRunner:
             return tools
 
         exclude_set = set(exclude_norm)
-        available_labels = sorted({tool._summary_label() for tool in tools})
+        # Names are validated against every known tool, so typos fail but excluding a known tool that the
+        # current selection doesn't run (e.g. docker-cleanup with --include-kb-private-offload) is a no-op.
+        catalog = build_catalog_tools(docker_time_limit=DockerCleanup.DEFAULT_TIME_LIMIT)
 
         for ex in exclude_norm:
-            if not any(ex in ToolRunner.tool_exclusion_keys(tool) for tool in tools):
-                hint = ", ".join(f'"{label}"' for label in available_labels)
-                slugs = sorted({ToolRunner.tool_exclusion_slug(tool) for tool in tools})
-                hint += f"; slugs: {', '.join(slugs)}"
-                raise click.UsageError(
-                    f"Unknown --exclude-tool {ex!r} for the current tool selection. Available: {hint}"
-                )
+            if any(ex in ToolRunner.tool_exclusion_keys(tool) for tool in tools):
+                continue
+            if any(ex in ToolRunner.tool_exclusion_keys(tool) for tool in catalog):
+                # Logging is not set up yet at tool-selection time
+                console.print(f"[yellow]WARN: --exclude-tool {ex}: not selected in this run, ignoring[/yellow]")
+                continue
+            hint = ", ".join(f'"{label}"' for label in sorted({tool._summary_label() for tool in catalog}))
+            slugs = sorted({ToolRunner.tool_exclusion_slug(tool) for tool in catalog})
+            hint += f"; slugs: {', '.join(slugs)}"
+            raise click.UsageError(f"Unknown --exclude-tool {ex!r}. Known tools: {hint}")
 
         filtered = [tool for tool in tools if not (ToolRunner.tool_exclusion_keys(tool) & exclude_set)]
         if not filtered:
