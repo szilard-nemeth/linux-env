@@ -205,6 +205,44 @@ def test_resolve_tools_exclude_unknown_raises():
         resolve_tools(docker_time_limit="24h", exclude_tools=["not-a-real-tool"])
 
 
+def test_resolve_tools_exclude_known_but_unselected_tool_is_ignored(capsys):
+    from scripts.disk_cleanup.cleanup_disk import (
+        OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD,
+        DockerCleanup,
+        KbPrivateGitOffloadCleanup,
+        resolve_tools,
+    )
+
+    tools = resolve_tools(
+        docker_time_limit="24h",
+        include_optional=[OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD],
+        exclude_tools=["docker-cleanup", "Poetry cache cleanup"],
+    )
+    types = [type(t) for t in tools]
+
+    assert KbPrivateGitOffloadCleanup in types
+    assert DockerCleanup not in types
+    assert "Poetry cache cleanup" not in [t._summary_label() for t in tools]
+    assert "WARN: --exclude-tool docker-cleanup: not selected in this run, ignoring" in capsys.readouterr().out
+
+
+def test_single_tool_mode_ignores_exclude_of_unselected_tool(monkeypatch):
+    from click.testing import CliRunner
+
+    from scripts.disk_cleanup.cleanup_disk import ToolRunner, main
+
+    seen = {}
+
+    def fake_run_tools(tools, dry_run, confirm, exclude_tools):
+        seen["labels"] = [t._summary_label() for t in tools]
+
+    monkeypatch.setattr(ToolRunner, "run_tools", staticmethod(fake_run_tools))
+    result = CliRunner().invoke(main, ["--kb-private-git-offload", "--exclude-tool", "docker-cleanup", "--dry-run"])
+
+    assert result.exit_code == 0, result.output
+    assert seen["labels"] == ["KB private git large-file offload"]
+
+
 def test_resolve_tools_exclude_all_raises():
     from scripts.disk_cleanup.cleanup_disk import OPTIONAL_TOOL_DOCKER_CLEANUP, resolve_tools
 

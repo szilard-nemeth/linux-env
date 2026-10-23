@@ -885,8 +885,24 @@ class DiscoveryCleanup(CleanupTool):
     """Generic tool to find and delete specific directory or file patterns."""
 
     def __init__(
-        self, name, root_path, patterns: List[str], age_days: int = 30, target_type: str = "dir", recursive: bool = True
+        self,
+        name,
+        root_path,
+        patterns: List[str],
+        age_days: int = 30,
+        target_type: str = "dir",
+        recursive: bool = True,
+        skip_git_unignored: bool = False,
+        exclude_roots: Sequence[Path] = (),
+        skip_inside: Sequence[str] = (),
     ):
+        """
+        :param skip_git_unignored: Inside a git work tree, only delete a match when git ignores everything in it.
+            Matches holding tracked files or untracked-but-not-ignored files (i.e. source, not build output) are kept.
+        :param exclude_roots: Never delete anything under these directories.
+        :param skip_inside: Ignore matches below a directory with one of these names (e.g. a package's own dist/
+            inside node_modules or site-packages, which belongs to that installed package).
+        """
         super().__init__()
         self.name = name
         self.summary_name = name
@@ -895,6 +911,9 @@ class DiscoveryCleanup(CleanupTool):
         self.age_days = age_days
         self.target_type = target_type
         self.recursive = recursive
+        self.skip_git_unignored = skip_git_unignored
+        self.exclude_roots = [Path(r) for r in exclude_roots]
+        self.skip_inside = set(skip_inside)
         self.tracker = CleanupDetailsTracker()
 
     def _has_pending_work(self) -> bool:
@@ -908,15 +927,37 @@ class DiscoveryCleanup(CleanupTool):
             logger.info(f"--- Scanning for {self.name} (Older than {self.age_days} days) ---")
         else:
             logger.info(f"--- Scanning for {self.name}")
-        now = time.time()
-        # Convert days to seconds: days * hours * minutes * seconds
-        threshold_seconds = self.age_days * 24 * 60 * 60
+        candidates = self._collect_candidates()
 
-        # Path -> mtime (None when age filtering is off)
+        if self.skip_git_unignored:
+            for p in list(candidates):
+                if self._has_git_unignored_files(p):
+                    logger.info(f"Skipping {p}: contains files git tracks or does not ignore")
+                    del candidates[p]
+
+        for p in self._drop_nested(candidates):
+            details = self.tracker.register_unnamed_dir(p)
+            mtime = candidates[p]
+            if mtime is not None:
+                last_touched = time.strftime("%Y-%m-%d", time.localtime(mtime))
+                logger.info(
+                    f"Found stale target: {p} (Last mod: {last_touched}, Size: {format_du_style(details.before_size)})"
+                )
+            else:
+                logger.info(f"Found {p} ({format_du_style(details.before_size)})")
+
+    def _is_stale(self, mtime: float) -> bool:
+        # Convert days to seconds: days * hours * minutes * seconds
+        return (time.time() - mtime) > self.age_days * 24 * 60 * 60
+
+    def _collect_candidates(self) -> Dict[Path, Optional[float]]:
+        """Matches to delete, as path -> mtime (None when age filtering is off)."""
         candidates: Dict[Path, Optional[float]] = {}
         for pattern in self.patterns:
             iterator = self.root_path.rglob(pattern) if self.recursive else self.root_path.glob(pattern)
             for p in iterator:
+                if self._is_excluded(p):
+                    continue
                 is_match = False
                 if self.target_type == "dir" and p.is_dir():
                     is_match = True
@@ -929,23 +970,31 @@ class DiscoveryCleanup(CleanupTool):
                     if self.age_days != -1:
                         # Check the last modified time
                         mtime = p.stat().st_mtime
-                        if (now - mtime) > threshold_seconds:
+                        if self._is_stale(mtime):
                             candidates[p] = mtime
                         else:
                             logger.info(f"Skipping active target: {p} (Recently modified)")
                     else:
                         candidates[p] = None
+        return candidates
 
-        for p in self._drop_nested(candidates):
-            details = self.tracker.register_unnamed_dir(p)
-            mtime = candidates[p]
-            if mtime is not None:
-                last_touched = time.strftime("%Y-%m-%d", time.localtime(mtime))
-                logger.info(
-                    f"Found stale target: {p} (Last mod: {last_touched}, Size: {format_du_style(details.before_size)})"
-                )
-            else:
-                logger.info(f"Found {p} ({format_du_style(details.before_size)})")
+    def _is_excluded(self, p: Path) -> bool:
+        if any(p == root or root in p.parents for root in self.exclude_roots):
+            return True
+        return bool(self.skip_inside.intersection(p.relative_to(self.root_path).parts[:-1]))
+
+    @staticmethod
+    def _has_git_unignored_files(p: Path) -> bool:
+        """True if p is inside a git work tree and holds any tracked or untracked-but-not-ignored file."""
+        if not p.is_dir():
+            return False
+        proc = subprocess.run(
+            ["git", "-C", str(p), "ls-files", "--cached", "--others", "--exclude-standard", "--", "."],
+            capture_output=True,
+            text=True,
+        )
+        # Non-zero exit: not inside a git work tree
+        return proc.returncode == 0 and bool(proc.stdout.strip())
 
     @staticmethod
     def _drop_nested(paths: Iterable[Path]) -> List[Path]:
@@ -974,6 +1023,49 @@ class DiscoveryCleanup(CleanupTool):
 
     def verify(self) -> CleanupResult:
         return self._verify_with_tracker_unnamed(self.tracker)
+
+
+class MavenLocalRepoCleanup(DiscoveryCleanup):
+    """Delete superseded, stale artifact versions from a Maven local repository.
+
+    Works per version dir (<group path>/<artifact>/<version>/, recognized by its .pom), not per top-level
+    group dir like org/ or com/, which would wipe nearly the whole repository. Per artifact, the newest
+    version is always kept, and versions installed locally (mvn install) are never deleted, as they may not
+    exist on any remote repository.
+    """
+
+    def __init__(self, name: str, root_path: Path, age_days: int = 60):
+        super().__init__(name, root_path, [], age_days=age_days)
+
+    @staticmethod
+    def _is_locally_installed(version_dir: Path) -> bool:
+        # Maven Resolver records where each file came from as "<file>>=<repo id>"; an empty repo id means the
+        # file was installed locally. Without the file the origin is unknown, so treat it as local too.
+        remote_repos = version_dir / "_remote.repositories"
+        try:
+            lines = remote_repos.read_text().splitlines()
+        except OSError:
+            return True
+        return any(line.endswith(">") or line.endswith(">=") for line in lines if not line.startswith("#"))
+
+    def _collect_candidates(self) -> Dict[Path, Optional[float]]:
+        versions_by_artifact: Dict[Path, List[Path]] = defaultdict(list)
+        for version_dir in {pom.parent for pom in self.root_path.rglob("*.pom")}:
+            versions_by_artifact[version_dir.parent].append(version_dir)
+
+        candidates: Dict[Path, Optional[float]] = {}
+        for versions in versions_by_artifact.values():
+            versions.sort(key=lambda v: v.stat().st_mtime, reverse=True)
+            # versions[0] is the newest one: always kept
+            for version_dir in versions[1:]:
+                mtime = version_dir.stat().st_mtime
+                if not self._is_stale(mtime):
+                    continue
+                if self._is_locally_installed(version_dir):
+                    logger.info(f"Skipping locally installed artifact: {version_dir}")
+                    continue
+                candidates[version_dir] = mtime
+        return candidates
 
 
 class PoetryCacheCleanup(CleanupTool):
@@ -1263,13 +1355,18 @@ OPTIONAL_TOOL_KB_PRIVATE_OFFLOAD = "kb-private-offload"
 DEFAULT_OPTIONAL_TOOLS = (OPTIONAL_TOOL_DOCKER_CLEANUP, OPTIONAL_TOOL_DOCKER_SYSTEM_PRUNE)
 
 
+# Matches under ~/development can be real source (e.g. a committed dist/ or a Java package named build),
+# so only delete what git ignores, and never touch the knowledge base repo.
+DEV_TREE_SAFETY: Dict[str, Any] = {"skip_git_unignored": True, "exclude_roots": [Path(KB_PRIVATE_ROOT)]}
+
+
 def build_default_tools() -> List[CleanupTool]:
     pip_cache_root = Path(os.path.expanduser("~/Library/Caches/pip"))
     return [
         MavenCleanup("100M"),
         AsdfGolangCleanup(),
-        DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"]),
-        DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"]),
+        DiscoveryCleanup("Python Venvs", DEVELOPMENT_ROOT, ["venv", ".venv"], **DEV_TREE_SAFETY),
+        DiscoveryCleanup("Terraform", DEVELOPMENT_ROOT, [".terraform"], **DEV_TREE_SAFETY),
         DiscoveryCleanup("Pip Cache", pip_cache_root, ["*"]),
         PoetryCacheCleanup(),
         HomebrewCleanup(),
@@ -1328,9 +1425,7 @@ def build_default_tools() -> List[CleanupTool]:
             "Golangci-lint Cache", Path(os.path.expanduser("~/Library/Caches/golangci-lint")), ["*"], age_days=30
         ),
         # --- Additional Caches based on ncdu ---
-        DiscoveryCleanup(
-            "Maven Local Repo", Path(os.path.expanduser("~/.m2/repository")), ["*"], age_days=60, recursive=False
-        ),
+        MavenLocalRepoCleanup("Maven Local Repo", Path(os.path.expanduser("~/.m2/repository")), age_days=60),
         DiscoveryCleanup(
             "SDKMAN Archives",
             Path(os.path.expanduser("~/.sdkman/archives")),
@@ -1369,9 +1464,16 @@ def build_default_tools() -> List[CleanupTool]:
             "Downloads", Path(os.path.expanduser("~/Downloads")), ["*"], age_days=60, target_type="any", recursive=False
         ),
         # --- Node/JS Modules ---
-        DiscoveryCleanup("Node Modules", DEVELOPMENT_ROOT, ["node_modules"], age_days=60),
+        DiscoveryCleanup("Node Modules", DEVELOPMENT_ROOT, ["node_modules"], age_days=60, **DEV_TREE_SAFETY),
         # --- Build/Target Directories ---
-        DiscoveryCleanup("Python Build Dirs", DEVELOPMENT_ROOT, ["build", "dist", "*.egg-info"], age_days=30),
+        DiscoveryCleanup(
+            "Python Build Dirs",
+            DEVELOPMENT_ROOT,
+            ["build", "dist", "*.egg-info"],
+            age_days=30,
+            skip_inside=["node_modules", "site-packages", ".git"],
+            **DEV_TREE_SAFETY,
+        ),
         # --- Application Support Caches ---
         DiscoveryCleanup(
             "Google App Support Cache",
@@ -1582,16 +1684,21 @@ class ToolRunner:
             return tools
 
         exclude_set = set(exclude_norm)
-        available_labels = sorted({tool._summary_label() for tool in tools})
+        # Names are validated against every known tool, so typos fail but excluding a known tool that the
+        # current selection doesn't run (e.g. docker-cleanup with --include-kb-private-offload) is a no-op.
+        catalog = build_catalog_tools(docker_time_limit=DockerCleanup.DEFAULT_TIME_LIMIT)
 
         for ex in exclude_norm:
-            if not any(ex in ToolRunner.tool_exclusion_keys(tool) for tool in tools):
-                hint = ", ".join(f'"{label}"' for label in available_labels)
-                slugs = sorted({ToolRunner.tool_exclusion_slug(tool) for tool in tools})
-                hint += f"; slugs: {', '.join(slugs)}"
-                raise click.UsageError(
-                    f"Unknown --exclude-tool {ex!r} for the current tool selection. Available: {hint}"
-                )
+            if any(ex in ToolRunner.tool_exclusion_keys(tool) for tool in tools):
+                continue
+            if any(ex in ToolRunner.tool_exclusion_keys(tool) for tool in catalog):
+                # Logging is not set up yet at tool-selection time
+                console.print(f"[yellow]WARN: --exclude-tool {ex}: not selected in this run, ignoring[/yellow]")
+                continue
+            hint = ", ".join(f'"{label}"' for label in sorted({tool._summary_label() for tool in catalog}))
+            slugs = sorted({ToolRunner.tool_exclusion_slug(tool) for tool in catalog})
+            hint += f"; slugs: {', '.join(slugs)}"
+            raise click.UsageError(f"Unknown --exclude-tool {ex!r}. Known tools: {hint}")
 
         filtered = [tool for tool in tools if not (ToolRunner.tool_exclusion_keys(tool) & exclude_set)]
         if not filtered:
