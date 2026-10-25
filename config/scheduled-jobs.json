@@ -1,0 +1,12 @@
+{
+  "_comment": "Recurring jobs installed as launchd agents by scripts/scheduler/scheduled_jobs.py. Edit here, then run `jobs-install`. Each `command` runs under `/bin/zsh -lc`, so .zprofile (brew + asdf python) is loaded but interactive aliases are NOT -- spell the alias out. `schedule` takes launchd StartCalendarInterval keys (Minute, Hour, Day, Weekday 0=Sun, Month); a list means 'any of these'. A slot missed while the Mac sleeps fires once on wake.",
+  "jobs": [
+    {
+      "name": "claude-export",
+      "description": "Daily export of Claude Code sessions into knowledge-base-private (same as the `claude-export` alias)",
+      "command": "python3 \"$HOME/development/my-repos/claude-code-tools/export_claude_sessions.py\"",
+      "schedule": {"Hour": 17, "Minute": 0},
+      "enabled": true
+    }
+  ]
+}
