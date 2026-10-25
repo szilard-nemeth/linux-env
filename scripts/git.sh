@@ -613,6 +613,12 @@ function git-move-large-files {
     python3 "${_GIT_SH_DIR}/git/git_move_large_files.py" "$@"
 }
 
+# Commit + push claude-sessions/ in knowledge-base-private, only if master is fully pushed.
+# Usage: kb-commit-claude-sessions [--dry-run] [--no-push]
+function kb-commit-claude-sessions {
+    python3 "${_GIT_SH_DIR}/git/kb_commit_claude_sessions.py" "$@"
+}
+
 function git-format-patch {
     #alias git-save-all-commits="git format-patch $(git rev-list --max-parents=0 HEAD)..HEAD -o /tmp/patches"
     if [ $# -ne 2 ]; then
