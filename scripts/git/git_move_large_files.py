@@ -2,6 +2,7 @@
 
 import datetime
 import enum
+import filecmp
 import io
 import os
 import re
@@ -11,7 +12,7 @@ from contextlib import redirect_stdout
 from dataclasses import dataclass
 from functools import reduce
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
 
 import click
 
@@ -443,8 +444,15 @@ class GitLargeFileMover:
     def _perform_file_move(self, c: FileMoveCandidate, stats: FileStats):
         if not self.dry_run:
             try:
-                shutil.move(c.paths.source_path_abs, c.paths.target_path_abs)
-                print("  SUCCESS: Moved file.")
+                # Copy and compare before deleting, instead of shutil.move: the offload root is
+                # usually a Google Drive mount, and a truncated copy must not cost the only original.
+                shutil.copy2(c.paths.source_path_abs, c.paths.target_path_abs)
+                if not filecmp.cmp(c.paths.source_path_abs, c.paths.target_path_abs, shallow=False):
+                    os.remove(c.paths.target_path_abs)
+                    print("  ERROR: Copy differs from source; removed the copy, kept the source.")
+                    return
+                os.remove(c.paths.source_path_abs)
+                print("  SUCCESS: Moved file (copied, verified, removed source).")
 
                 placeholder_content = (
                     "--- FILE MOVED ---\n"
@@ -463,7 +471,7 @@ class GitLargeFileMover:
             except Exception as e:
                 print(f"  ERROR moving file: {e}")
         else:
-            print(f"  Dry Run: mv {c.paths.source_path_abs} {c.paths.target_path_abs}")
+            print(f"  Dry Run: cp {c.paths.source_path_abs} {c.paths.target_path_abs}, verify, rm source")
             print(f"  Dry Run: Creating placeholder file: {c.paths.placeholder_path}")
             stats.record_file_moved(c.file_path)
 
@@ -499,16 +507,26 @@ class GitLargeFileWorkflow:
             )
 
     @staticmethod
-    def run_working_tree_scan(repo: Path, output_path: Path, *, verbose: bool = False) -> None:
-        tracked = subprocess.check_output(
-            ["git", "ls-files", "-z"],
-            cwd=repo,
-        ).split(b"\0")
+    def run_working_tree_scan(
+        repo: Path,
+        output_path: Path,
+        *,
+        verbose: bool = False,
+        include_untracked: bool = False,
+        pathspecs: Sequence[str] = (),
+    ) -> None:
+        cmd = ["git", "ls-files", "-z"]
+        if include_untracked:
+            cmd += ["--cached", "--others", "--exclude-standard"]
+        if pathspecs:
+            cmd += ["--", *pathspecs]
+        listed = subprocess.check_output(cmd, cwd=repo).split(b"\0")
 
-        paths = [raw.decode() for raw in tracked if raw]
+        paths = [raw.decode() for raw in listed if raw]
         total = len(paths)
         if verbose:
-            print(f"  Scanning {total} tracked path(s)...", flush=True)
+            kind = "tracked and untracked" if include_untracked else "tracked"
+            print(f"  Scanning {total} {kind} path(s)...", flush=True)
 
         lines: List[str] = []
         for index, rel_path in enumerate(paths, start=1):
@@ -622,7 +640,10 @@ class GitLargeFileWorkflow:
     def print_run_header(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
         print(f"Repository: {config.resolved_repo()}")
         if config.scan_working_tree:
-            print("Source: working tree (tracked files on disk)")
+            kind = "tracked and untracked" if config.include_untracked else "tracked"
+            print(f"Source: working tree ({kind} files on disk)")
+            if config.paths:
+                print(f"Paths: {' '.join(config.paths)}")
         else:
             print(f"Commit: {config.commit}")
         print(f"Output directory: {paths.out_dir}")
@@ -636,7 +657,13 @@ class GitLargeFileWorkflow:
     def collect_file_sizes(config: "WorkflowConfig", repo: Path, details_out: Path) -> None:
         if config.scan_working_tree:
             print("Step 1/3: Collecting file sizes from working tree...", flush=True)
-            GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, verbose=config.verbose)
+            GitLargeFileWorkflow.run_working_tree_scan(
+                repo,
+                details_out,
+                verbose=config.verbose,
+                include_untracked=config.include_untracked,
+                pathspecs=config.paths,
+            )
         else:
             print("Step 1/3: Collecting file sizes from commit...", flush=True)
             if config.verbose:
@@ -724,12 +751,16 @@ class WorkflowConfig:
     offload_root: Optional[str]
     path_prefix: Optional[str]
     verbose: bool = False
+    include_untracked: bool = False
+    paths: Sequence[str] = ()
 
     def validate(self) -> None:
         if self.scan_working_tree and self.commit:
             raise click.UsageError("Use either --commit or --scan-working-tree, not both.")
         if not self.scan_working_tree and not self.commit:
             raise click.UsageError("Provide --commit or --scan-working-tree.")
+        if not self.scan_working_tree and (self.include_untracked or self.paths):
+            raise click.UsageError("--include-untracked and --path require --scan-working-tree.")
         if self.stage and not self.execute:
             raise click.UsageError("--stage requires --execute (nothing to stage after a dry run).")
 
@@ -810,6 +841,17 @@ class ExpandedDirectoryPath(click.Path):
     help="Scan tracked files on disk instead of analyzing a single commit",
 )
 @click.option(
+    "--include-untracked",
+    is_flag=True,
+    help="With --scan-working-tree: also scan untracked files that are not gitignored",
+)
+@click.option(
+    "--path",
+    "paths",
+    multiple=True,
+    help="With --scan-working-tree: limit the scan to this repo-root-relative path or git pathspec (repeatable)",
+)
+@click.option(
     "--repo",
     required=True,
     type=ExpandedDirectoryPath(exists=True, file_okay=False, path_type=Path),
@@ -852,6 +894,8 @@ class ExpandedDirectoryPath(click.Path):
 def main(
     commit: Optional[str],
     scan_working_tree: bool,
+    include_untracked: bool,
+    paths: Sequence[str],
     repo: Path,
     out_dir: Optional[Path],
     threshold_mb: int,
@@ -875,6 +919,8 @@ def main(
             offload_root=offload_root,
             path_prefix=path_prefix,
             verbose=verbose,
+            include_untracked=include_untracked,
+            paths=paths,
         )
     )
 

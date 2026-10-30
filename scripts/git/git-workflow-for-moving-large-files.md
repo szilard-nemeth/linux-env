@@ -6,7 +6,7 @@ Offload oversized binary files from a repo to external storage, leaving `.MOVED.
 
 Use this workflow when cleaning up a repository that accumulated large archives (`.tar.gz`, `.zip`, etc.) in the working tree. Two modes:
 
-- **`--scan-working-tree`** — find large tracked files on disk now (most common)
+- **`--scan-working-tree`** — find large tracked files on disk now (most common). Add `--include-untracked` to also scan untracked files that are not gitignored, and `--path` (repeatable) to limit the scan to repo-root-relative paths or git pathspecs.
 - **`--commit`** — analyze files changed in a specific commit (useful when you know which commit introduced bulk)
 
 ## Prerequisites
@@ -51,6 +51,26 @@ git-move-large-files \
 cd ~/development/my-repos/knowledge-base-private && git status
 ```
 
+### Untracked file, never committed
+
+Offload a large file that was never committed, so it never enters git history. Only the `.MOVED.txt` placeholder gets staged. Without `--include-untracked` the file must be committed first, and the commit keeps it in history even after the move.
+
+```bash
+# 1. Preview, limited to one task directory
+git-move-large-files \
+  --scan-working-tree --include-untracked \
+  --path cloudera/tasks/cde/ENGESC-34035 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --dry-run
+
+# 2. Move it and stage the placeholder
+git-move-large-files \
+  --scan-working-tree --include-untracked \
+  --path cloudera/tasks/cde/ENGESC-34035 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --execute --stage
+```
+
 ### Single commit
 
 ```bash
@@ -90,6 +110,20 @@ git-move-large-files \
 # Single commit — files changed in that commit
 git-move-large-files \
   --commit 6619c839 \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --dry-run
+
+# Tracked and untracked files across the whole repo (gitignored files are skipped)
+git-move-large-files \
+  --scan-working-tree --include-untracked \
+  --repo ~/development/my-repos/knowledge-base-private \
+  --dry-run
+
+# Several paths, or a git pathspec glob (quote it so git expands it, not the shell)
+git-move-large-files \
+  --scan-working-tree --include-untracked \
+  --path cloudera/tasks/cde/ENGESC-34035 \
+  --path 'cloudera/tasks/cde/DEX-*/casefiles' \
   --repo ~/development/my-repos/knowledge-base-private \
   --dry-run
 
@@ -172,13 +206,14 @@ poetry run python scripts/git/git_move_large_files.py \
 - **Does not commit.** The script moves files and optionally stages changes (`--stage`); you commit manually after reviewing.
 - **Extension filter.** Only `.tar.gz`, `.gz`, `.zip`, and `.gzip` files above the threshold are moved. Other large files are reported but skipped.
 - **Offload destination.** Defaults to `~/googledrive/development/KB-private-offloaded`. Override with `--offload-root`.
+- **Verified move.** Each file is copied, compared byte-for-byte with the original, and only then deleted from the repo; on a mismatch the copy is removed and the original kept. On the Google Drive mount the comparison reads the local copy, so check that Drive has finished uploading before relying on it.
 - **`--stage` requires `--execute`.** Staging deleted files and MOVED placeholders only makes sense after a real move.
 
 ## Underlying tools
 
 `git_move_large_files.py` orchestrates:
 
-1. Working tree scan (`git ls-files` + file sizes) or `git-commit-size-detailed.sh` for a single commit
+1. Working tree scan (`git ls-files`, plus `--others --exclude-standard` with `--include-untracked`, + file sizes) or `git-commit-size-detailed.sh` for a single commit
 2. `GitCommitSizeAnalyzer` (in the same file) — sort by size; writes full sorted list
 3. `GitLargeFileMover` (in the same file) — move files above threshold; `--execute` to run for real
 
