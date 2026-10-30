@@ -597,11 +597,15 @@ class GitLargeFileWorkflow:
 
     @staticmethod
     def git_add_moved_placeholders(repo: Path) -> None:
-        for path in repo.rglob("*MOVED*"):
-            if "REMOVED" in path.name:
-                continue
-            rel = path.relative_to(repo)
-            subprocess.run(["git", "add", str(rel)], cwd=repo, check=True)
+        # Ask git rather than walking the tree: a placeholder under a gitignored directory makes `git add` fail.
+        listed = subprocess.check_output(
+            ["git", "ls-files", "-z", "--others", "--modified", "--exclude-standard", "--", "*MOVED*"],
+            cwd=repo,
+        ).split(b"\0")
+        rel_paths = {raw.decode() for raw in listed if raw}
+        placeholders = sorted(p for p in rel_paths if "REMOVED" not in Path(p).name)
+        if placeholders:
+            subprocess.run(["git", "add", "--", *placeholders], cwd=repo, check=True)
 
     @staticmethod
     def write_stage_summary(repo: Path, stage_summary_out: Path) -> None:

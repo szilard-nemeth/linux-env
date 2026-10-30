@@ -334,6 +334,24 @@ def test_execute_stage_offloads_untracked_file_and_stages_only_placeholder(tmp_p
     assert staged == [rel + ".MOVED.txt"]
 
 
+def test_git_add_moved_placeholders_skips_ignored_and_removed(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    (repo / ".gitignore").write_text("ignored-dir/\n")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+    (repo / "ignored-dir").mkdir()
+    (repo / "ignored-dir" / "old.log.MOVED.txt").write_text("x")
+    (repo / "case").mkdir()
+    (repo / "case" / "bundle.zip.MOVED.txt").write_text("x")
+    (repo / "case" / "notes-REMOVED.MOVED.txt").write_text("x")
+
+    GitLargeFileWorkflow.git_add_moved_placeholders(repo)
+
+    staged = subprocess.check_output(["git", "diff", "--cached", "--name-only"], cwd=repo, text=True).split()
+    assert staged == ["case/bundle.zip.MOVED.txt"]
+
+
 def test_execute_keeps_source_when_copy_differs(tmp_path, monkeypatch):
     import git_move_large_files
 
