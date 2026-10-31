@@ -192,6 +192,10 @@ function setup-kitty {
     else
         compinit -C
     fi
+    # diff completion: zsh 5.9's _diff_options detects GNU diff with 'diff -v', which Apple diff rejects, and only
+    # treats FreeBSD (not macOS) diff as GNU-compatible. The fallback spec lacks -q, so 'diff -rq a b<TAB>' completed
+    # nothing. Apple diff is FreeBSD's diff and takes the GNU options, so preset the variant zsh would detect.
+    [[ $OSTYPE == darwin* ]] && { typeset -gA _cmd_variant; _cmd_variant[diff]=gnu; }
     # TODO https://unix.stackexchange.com/a/470959/189441 / Add zstyle ':completion:*' menu select ?
     # Completion for kitty. 'kitty + complete setup zsh' starts kitty's python (~100ms), so cache its output.
     if ! { (( $+functions[linuxenv-cached-source] )) && linuxenv-cached-source kitty-completion-zsh "$(command -v kitty)" kitty + complete setup zsh; }; then
