@@ -210,7 +210,8 @@ function set_matched_dirs {
     ## matched_dirs=$(find $from_dir -name $marker_file_name -printf "%h\n")
 
     #compatible with MacOS / FreeBSD
-    matched_dirs=($(find ${from_dir} -name ${marker_file_name} -print0 | xargs -0 -n1 dirname | sort --unique))
+    # Strip the file name with one sed instead of 'xargs -n1 dirname', which forked one process per match
+    matched_dirs=($(find ${from_dir} -name ${marker_file_name} | sed 's|/[^/]*$||' | sort --unique))
 }
 
 #TODO migrate all programs to use this function
@@ -494,7 +495,7 @@ function setup-jetbrains-links {
       mkdir -p "$TARGET_DIR"
 
       for src in "$JETBRAINS_SCRIPTS"/*; do
-          name=$(basename "$src")
+          name="${src##*/}"   # basename without forking a process
           dst="$TARGET_DIR/$name"
 
           # Create link only if it does NOT already exist
