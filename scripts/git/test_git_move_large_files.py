@@ -259,6 +259,40 @@ def test_working_tree_scan_include_untracked_skips_ignored(tmp_path):
     assert _scanned_paths(details_out) == {".gitignore", "tracked.txt", "case/untracked.zip", "other.zip"}
 
 
+def test_working_tree_scan_include_ignored_adds_ignored_only(tmp_path):
+    repo = _repo_with_tracked_untracked_ignored(tmp_path)
+    details_out = tmp_path / "details.txt"
+
+    GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, include_ignored=True)
+
+    assert _scanned_paths(details_out) == {".gitignore", "tracked.txt", "ignored.zip"}
+
+
+def test_working_tree_scan_include_untracked_and_ignored_scans_everything(tmp_path):
+    repo = _repo_with_tracked_untracked_ignored(tmp_path)
+    details_out = tmp_path / "details.txt"
+
+    GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, include_untracked=True, include_ignored=True)
+
+    assert _scanned_paths(details_out) == {
+        ".gitignore",
+        "tracked.txt",
+        "case/untracked.zip",
+        "other.zip",
+        "ignored.zip",
+    }
+
+
+def test_working_tree_scan_pathspecs_limit_ignored_scan(tmp_path):
+    repo = _repo_with_tracked_untracked_ignored(tmp_path)
+    (repo / "case" / "ignored.zip").write_bytes(b"i")
+    details_out = tmp_path / "details.txt"
+
+    GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, include_ignored=True, pathspecs=["case"])
+
+    assert _scanned_paths(details_out) == {"case/ignored.zip"}
+
+
 def test_working_tree_scan_pathspecs_limit_scan(tmp_path):
     repo = _repo_with_tracked_untracked_ignored(tmp_path)
     details_out = tmp_path / "details.txt"
@@ -284,7 +318,7 @@ def _config(repo: Path, **overrides) -> WorkflowConfig:
     return WorkflowConfig(**values)
 
 
-@pytest.mark.parametrize("overrides", [{"include_untracked": True}, {"paths": ("case",)}])
+@pytest.mark.parametrize("overrides", [{"include_untracked": True}, {"include_ignored": True}, {"paths": ("case",)}])
 def test_untracked_and_path_options_require_scan_working_tree(tmp_path, overrides):
     config = _config(tmp_path, scan_working_tree=False, commit="abc123", **overrides)
 
@@ -350,6 +384,53 @@ def test_git_add_moved_placeholders_skips_ignored_and_removed(tmp_path):
 
     staged = subprocess.check_output(["git", "diff", "--cached", "--name-only"], cwd=repo, text=True).split()
     assert staged == ["case/bundle.zip.MOVED.txt"]
+
+
+def test_execute_offloads_ignored_file_with_extra_extension(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    (repo / ".gitignore").write_text("casefiles/\n")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+    rel = "cloudera/tasks/cde/ENGESC-1/casefiles/eventlogs.7z"
+    (repo / rel).parent.mkdir(parents=True)
+    content = os.urandom(2 * 1024 * 1024)
+    (repo / rel).write_bytes(content)
+    offload = tmp_path / "offload"
+
+    config = _config(
+        repo,
+        out_dir=tmp_path / "out",
+        execute=True,
+        offload_root=str(offload),
+        include_ignored=True,
+        paths=("cloudera/tasks/cde/ENGESC-1",),
+        allow_ext=(".7Z",),
+    )
+    with redirect_stdout(io.StringIO()):
+        GitLargeFileWorkflow.run(config)
+
+    assert not (repo / rel).exists()
+    assert (offload / "ENGESC-1/casefiles/eventlogs.7z").read_bytes() == content
+    assert (repo / (rel + ".MOVED.txt")).exists()
+
+
+def test_execute_skips_ignored_file_without_extra_extension(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    (repo / ".gitignore").write_text("*.7z\n")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+    (repo / "eventlogs.7z").write_bytes(os.urandom(2 * 1024 * 1024))
+
+    config = _config(
+        repo, out_dir=tmp_path / "out", execute=True, offload_root=str(tmp_path / "offload"), include_ignored=True
+    )
+    with redirect_stdout(io.StringIO()):
+        GitLargeFileWorkflow.run(config)
+
+    assert (repo / "eventlogs.7z").exists()
+    assert "SKIP extension" in (tmp_path / "out" / "git-large-file-mover-out-working-tree.txt").read_text()
 
 
 def test_execute_keeps_source_when_copy_differs(tmp_path, monkeypatch):

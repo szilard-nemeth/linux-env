@@ -72,6 +72,15 @@ def parse_human_size(size_str: str) -> Optional[int]:
     return int(value * multiplier)
 
 
+def describe_scan_kind(include_untracked: bool, include_ignored: bool) -> str:
+    kinds = ["tracked"]
+    if include_untracked:
+        kinds.append("untracked")
+    if include_ignored:
+        kinds.append("gitignored")
+    return ", ".join(kinds[:-1]) + " and " + kinds[-1] if len(kinds) > 1 else kinds[0]
+
+
 def format_size_for_details_output(size_bytes: int) -> str:
     """Format bytes like git-commit-size-detailed.sh (numfmt --to=iec, single token)."""
     if size_bytes >= 1024**4:
@@ -513,19 +522,26 @@ class GitLargeFileWorkflow:
         *,
         verbose: bool = False,
         include_untracked: bool = False,
+        include_ignored: bool = False,
         pathspecs: Sequence[str] = (),
     ) -> None:
         cmd = ["git", "ls-files", "-z"]
         if include_untracked:
             cmd += ["--cached", "--others", "--exclude-standard"]
-        if pathspecs:
-            cmd += ["--", *pathspecs]
-        listed = subprocess.check_output(cmd, cwd=repo).split(b"\0")
+        cmds = [cmd]
+        if include_ignored:
+            # --ignored shows only ignored files, so they need a listing of their own.
+            cmds.append(["git", "ls-files", "-z", "--others", "--ignored", "--exclude-standard"])
+        paths: List[str] = []
+        for c in cmds:
+            if pathspecs:
+                c += ["--", *pathspecs]
+            listed = subprocess.check_output(c, cwd=repo).split(b"\0")
+            paths += [raw.decode() for raw in listed if raw]
 
-        paths = [raw.decode() for raw in listed if raw]
         total = len(paths)
         if verbose:
-            kind = "tracked and untracked" if include_untracked else "tracked"
+            kind = describe_scan_kind(include_untracked, include_ignored)
             print(f"  Scanning {total} {kind} path(s)...", flush=True)
 
         lines: List[str] = []
@@ -566,6 +582,7 @@ class GitLargeFileWorkflow:
         execute: bool,
         offload_root: Optional[str],
         path_prefix: Optional[str],
+        extra_extensions: Sequence[str] = (),
     ) -> FileStats:
         mover = GitLargeFileMover(
             str(all_sorted_out),
@@ -574,6 +591,7 @@ class GitLargeFileWorkflow:
             repo_root=str(repo),
             offload_root=os.path.expanduser(offload_root) if offload_root else DEFAULT_OFFLOAD_ROOT,
             path_prefix_to_strip=path_prefix if path_prefix else PATH_PREFIX_TO_STRIP,
+            allowed_extensions=ALLOWED_EXTENSIONS + [ext.lower() for ext in extra_extensions],
         )
         buffer = io.StringIO()
         with redirect_stdout(buffer):
@@ -644,7 +662,7 @@ class GitLargeFileWorkflow:
     def print_run_header(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
         print(f"Repository: {config.resolved_repo()}")
         if config.scan_working_tree:
-            kind = "tracked and untracked" if config.include_untracked else "tracked"
+            kind = describe_scan_kind(config.include_untracked, config.include_ignored)
             print(f"Source: working tree ({kind} files on disk)")
             if config.paths:
                 print(f"Paths: {' '.join(config.paths)}")
@@ -652,6 +670,8 @@ class GitLargeFileWorkflow:
             print(f"Commit: {config.commit}")
         print(f"Output directory: {paths.out_dir}")
         print(f"Threshold: {config.threshold_mb}MB")
+        if config.allow_ext:
+            print(f"Extra extensions: {' '.join(config.allow_ext)}")
         print(f"Mode: {'EXECUTE (files will be moved)' if config.execute else 'DRY RUN (preview only)'}")
         if config.verbose:
             print("Verbose: enabled")
@@ -666,6 +686,7 @@ class GitLargeFileWorkflow:
                 details_out,
                 verbose=config.verbose,
                 include_untracked=config.include_untracked,
+                include_ignored=config.include_ignored,
                 pathspecs=config.paths,
             )
         else:
@@ -699,6 +720,7 @@ class GitLargeFileWorkflow:
             execute=config.execute,
             offload_root=config.offload_root,
             path_prefix=config.path_prefix,
+            extra_extensions=config.allow_ext,
         )
         print(f"  Wrote {paths.mover_out}")
 
@@ -756,15 +778,17 @@ class WorkflowConfig:
     path_prefix: Optional[str]
     verbose: bool = False
     include_untracked: bool = False
+    include_ignored: bool = False
     paths: Sequence[str] = ()
+    allow_ext: Sequence[str] = ()
 
     def validate(self) -> None:
         if self.scan_working_tree and self.commit:
             raise click.UsageError("Use either --commit or --scan-working-tree, not both.")
         if not self.scan_working_tree and not self.commit:
             raise click.UsageError("Provide --commit or --scan-working-tree.")
-        if not self.scan_working_tree and (self.include_untracked or self.paths):
-            raise click.UsageError("--include-untracked and --path require --scan-working-tree.")
+        if not self.scan_working_tree and (self.include_untracked or self.include_ignored or self.paths):
+            raise click.UsageError("--include-untracked, --include-ignored and --path require --scan-working-tree.")
         if self.stage and not self.execute:
             raise click.UsageError("--stage requires --execute (nothing to stage after a dry run).")
 
@@ -850,10 +874,20 @@ class ExpandedDirectoryPath(click.Path):
     help="With --scan-working-tree: also scan untracked files that are not gitignored",
 )
 @click.option(
+    "--include-ignored",
+    is_flag=True,
+    help="With --scan-working-tree: also scan gitignored files (these exist only on disk; pair with --path)",
+)
+@click.option(
     "--path",
     "paths",
     multiple=True,
     help="With --scan-working-tree: limit the scan to this repo-root-relative path or git pathspec (repeatable)",
+)
+@click.option(
+    "--allow-ext",
+    multiple=True,
+    help=f"Also move files ending in this suffix, e.g. .7z (repeatable; defaults: {' '.join(ALLOWED_EXTENSIONS)})",
 )
 @click.option(
     "--repo",
@@ -899,7 +933,9 @@ def main(
     commit: Optional[str],
     scan_working_tree: bool,
     include_untracked: bool,
+    include_ignored: bool,
     paths: Sequence[str],
+    allow_ext: Sequence[str],
     repo: Path,
     out_dir: Optional[Path],
     threshold_mb: int,
@@ -924,7 +960,9 @@ def main(
             path_prefix=path_prefix,
             verbose=verbose,
             include_untracked=include_untracked,
+            include_ignored=include_ignored,
             paths=paths,
+            allow_ext=allow_ext,
         )
     )
 
