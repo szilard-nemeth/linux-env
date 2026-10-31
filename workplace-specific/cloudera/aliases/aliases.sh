@@ -245,3 +245,155 @@ cde-rtcatalog-compare-current-with-develop() {
 
 # Private CDE AWC helpers, kept in knowledge-base-private (not in this public repo)
 [[ -f "${KB_PRIVATE_REPO}cloudera/cde/cde-awc/scripts/cde-awc-aliases.sh" ]] && source "${KB_PRIVATE_REPO}cloudera/cde/cde-awc/scripts/cde-awc-aliases.sh"
+
+#==============================================
+# CDE AWC kind clusters (cde-dev from 'make dev', cde-e2e from 'make test-e2e').
+# Cluster-name argument is optional everywhere except cde-kind-delete; default is cde-e2e.
+# Notes: knowledge-base-private/cloudera/cde/cde-awc/cde-awc-kind-101.md
+
+alias cde-kind-clusters="kind get clusters"
+alias cde-kind-nodes="docker ps --filter label=io.x-k8s.kind.cluster"
+
+function cde-kind-stats {
+  docker ps -q --filter label=io.x-k8s.kind.cluster \
+    | xargs docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}'
+}
+
+# Writes the same /tmp kubeconfig the CDE scripts use and exports KUBECONFIG to it.
+function cde-kind-use {
+  local cluster="${1:-cde-e2e}"
+  local kc="/tmp/kubeconfig-kind-${cluster}"
+  kind get kubeconfig --name "$cluster" > "$kc" || return 1
+  export KUBECONFIG="$kc"
+  echo "KUBECONFIG=$KUBECONFIG"
+}
+
+function cde-kind-shell {
+  docker exec -it "${1:-cde-e2e}-control-plane" bash
+}
+
+function cde-kind-health {
+  cde-kind-use "${1:-cde-e2e}" > /dev/null || return 1
+  kubectl get engines
+  kubectl get engineinstances -A
+  kubectl get cdecomputes -A
+  kubectl get helmreleases -A
+  echo "--- pods not Running/Completed:"
+  kubectl get pods -A --no-headers | grep -v -E 'Running|Completed'
+}
+
+# Top processes inside the node by cumulative CPU time. 'top' inside a kind node shows the
+# whole Docker VM, so cumulative time is the useful per-cluster signal.
+function cde-kind-top {
+  docker exec "${1:-cde-e2e}-control-plane" sh -c 'ps -eo pid,etimes,time,rss,args --sort=-time | head -20' | cut -c1-160
+}
+
+# amd64-only images run under Rosetta on Apple Silicon and cost several times the CPU.
+function cde-kind-rosetta {
+  docker exec "${1:-cde-e2e}-control-plane" sh -c 'ps -eo pid,time,args | grep "/run/rosetta/rosetta" | grep -v grep' | cut -c1-140
+}
+
+# Maps a PID from cde-kind-top to its pod and images.
+function cde-kind-pod-of-pid {
+  local pid="$1" cluster="${2:-cde-e2e}"
+  if [[ -z "$pid" ]]; then
+    echo "usage: cde-kind-pod-of-pid <pid> [cluster]" >&2
+    return 2
+  fi
+  local uid
+  uid=$(docker exec "${cluster}-control-plane" cat "/proc/${pid}/cgroup" \
+          | grep -o 'pod[0-9a-f_]*\.slice' | tail -1 | sed -e 's/^pod//' -e 's/\.slice$//' -e 's/_/-/g')
+  if [[ -z "$uid" ]]; then
+    echo "PID $pid is not in a pod (node-level process)" >&2
+    return 1
+  fi
+  local kc
+  kc=$(mktemp)
+  kind get kubeconfig --name "$cluster" > "$kc"
+  local pod
+  pod=$(kubectl --kubeconfig "$kc" get pods -A -o json \
+    | jq -r --arg uid "$uid" '.items[] | select(.metadata.uid == $uid)
+        | "\(.metadata.namespace)/\(.metadata.name)  \([.spec.containers[].image] | join(" "))"')
+  rm -f "$kc"
+  # Static pods (kube-apiserver, etcd, ...) carry a config hash as UID, not their mirror pod's UID.
+  echo "${pod:-no API pod with UID $uid (static control-plane pod?)}"
+}
+
+# Stop frees CPU and RAM; pause frees CPU only. Both keep the cluster for 'make test-e2e' reuse.
+function cde-kind-stop    { docker stop    "${1:-cde-e2e}-control-plane"; }
+function cde-kind-start   { docker start   "${1:-cde-e2e}-control-plane"; }
+function cde-kind-pause   { docker pause   "${1:-cde-e2e}-control-plane"; }
+function cde-kind-unpause { docker unpause "${1:-cde-e2e}-control-plane"; }
+
+# No default: a bare 'kind delete cluster' deletes the cluster named 'kind'.
+function cde-kind-delete {
+  if [[ -z "$1" ]]; then
+    echo "usage: cde-kind-delete <cluster>   (clusters: $(kind get clusters | tr '\n' ' '))" >&2
+    return 2
+  fi
+  kind delete cluster --name "$1"
+}
+
+function cde-kind-export-logs {
+  local cluster="${1:-cde-e2e}"
+  local dir="/tmp/kind-logs-${cluster}-$(date +%Y%m%d-%H%M%S)"
+  kind export logs "$dir" --name "$cluster"
+}
+
+function cde-kind-jobs-api-pf {
+  cde-kind-use "${1:-cde-e2e}" > /dev/null || return 1
+  echo "Jobs API / UI on http://localhost:18443/ (Ctrl-C to stop)"
+  kubectl port-forward svc/cde-jobs-api 18443:8443 -n cde-job-mgmt-ns
+}
+
+#==============================================
+# Removes every directory under CDE-wt except the kept ones (default: dex-review integration).
+# Removal is forced, so untracked and ignored files go too; review the warnings before confirming.
+function cde-wt-clean {
+  local repo="$HOME/development/cloudera/cde/dex-awc/CDE"
+  local wt_root="$HOME/development/cloudera/cde/dex-awc/CDE-wt"
+  local -a keep=("$@")
+  (( ${#keep[@]} )) || keep=(dex-review integration)
+
+  local -a targets=()
+  local d name k kept dirty unpushed
+  for d in "$wt_root"/*; do
+    [[ -d "$d" ]] || continue
+    name="${d##*/}"
+    kept=0
+    for k in "${keep[@]}"; do [[ "$name" == "$k" ]] && kept=1; done
+    (( kept )) || targets+=("$d")
+  done
+
+  if (( ${#targets[@]} == 0 )); then
+    echo "Nothing to remove (keeping: ${keep[*]})"
+    return 0
+  fi
+
+  echo "Keeping: ${keep[*]}"
+  echo "Removing:"
+  for d in "${targets[@]}"; do
+    if git -C "$repo" worktree list --porcelain | grep -qxF "worktree $d"; then
+      dirty=$(git -C "$d" status --porcelain | wc -l | tr -d ' ')
+      unpushed=$(git -C "$d" rev-list --count HEAD --not --remotes)
+      echo "  ${d##*/}  [$(git -C "$d" symbolic-ref -q --short HEAD || echo detached)] dirty=$dirty commits-on-no-remote=$unpushed"
+    else
+      echo "  ${d##*/}  [not a worktree, safe-rm -rf]"
+    fi
+  done
+
+  printf "Proceed? [y/N] "
+  local reply
+  read -r reply
+  [[ "$reply" == [yY] ]] || { echo "Aborted"; return 1; }
+
+  for d in "${targets[@]}"; do
+    if git -C "$repo" worktree list --porcelain | grep -qxF "worktree $d"; then
+      git -C "$repo" worktree remove --force "$d"
+    else
+      safe-rm -rf "$d"
+    fi
+  done
+  git -C "$repo" worktree prune
+  git -C "$repo" worktree list
+}
