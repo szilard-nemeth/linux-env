@@ -2,6 +2,7 @@
 
 import datetime
 import enum
+import filecmp
 import io
 import os
 import re
@@ -11,7 +12,7 @@ from contextlib import redirect_stdout
 from dataclasses import dataclass
 from functools import reduce
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
 
 import click
 
@@ -69,6 +70,15 @@ def parse_human_size(size_str: str) -> Optional[int]:
     multiplier = units_map.get(unit, 1)
 
     return int(value * multiplier)
+
+
+def describe_scan_kind(include_untracked: bool, include_ignored: bool) -> str:
+    kinds = ["tracked"]
+    if include_untracked:
+        kinds.append("untracked")
+    if include_ignored:
+        kinds.append("gitignored")
+    return ", ".join(kinds[:-1]) + " and " + kinds[-1] if len(kinds) > 1 else kinds[0]
 
 
 def format_size_for_details_output(size_bytes: int) -> str:
@@ -443,8 +453,15 @@ class GitLargeFileMover:
     def _perform_file_move(self, c: FileMoveCandidate, stats: FileStats):
         if not self.dry_run:
             try:
-                shutil.move(c.paths.source_path_abs, c.paths.target_path_abs)
-                print("  SUCCESS: Moved file.")
+                # Copy and compare before deleting, instead of shutil.move: the offload root is
+                # usually a Google Drive mount, and a truncated copy must not cost the only original.
+                shutil.copy2(c.paths.source_path_abs, c.paths.target_path_abs)
+                if not filecmp.cmp(c.paths.source_path_abs, c.paths.target_path_abs, shallow=False):
+                    os.remove(c.paths.target_path_abs)
+                    print("  ERROR: Copy differs from source; removed the copy, kept the source.")
+                    return
+                os.remove(c.paths.source_path_abs)
+                print("  SUCCESS: Moved file (copied, verified, removed source).")
 
                 placeholder_content = (
                     "--- FILE MOVED ---\n"
@@ -463,7 +480,7 @@ class GitLargeFileMover:
             except Exception as e:
                 print(f"  ERROR moving file: {e}")
         else:
-            print(f"  Dry Run: mv {c.paths.source_path_abs} {c.paths.target_path_abs}")
+            print(f"  Dry Run: cp {c.paths.source_path_abs} {c.paths.target_path_abs}, verify, rm source")
             print(f"  Dry Run: Creating placeholder file: {c.paths.placeholder_path}")
             stats.record_file_moved(c.file_path)
 
@@ -499,16 +516,33 @@ class GitLargeFileWorkflow:
             )
 
     @staticmethod
-    def run_working_tree_scan(repo: Path, output_path: Path, *, verbose: bool = False) -> None:
-        tracked = subprocess.check_output(
-            ["git", "ls-files", "-z"],
-            cwd=repo,
-        ).split(b"\0")
+    def run_working_tree_scan(
+        repo: Path,
+        output_path: Path,
+        *,
+        verbose: bool = False,
+        include_untracked: bool = False,
+        include_ignored: bool = False,
+        pathspecs: Sequence[str] = (),
+    ) -> None:
+        cmd = ["git", "ls-files", "-z"]
+        if include_untracked:
+            cmd += ["--cached", "--others", "--exclude-standard"]
+        cmds = [cmd]
+        if include_ignored:
+            # --ignored shows only ignored files, so they need a listing of their own.
+            cmds.append(["git", "ls-files", "-z", "--others", "--ignored", "--exclude-standard"])
+        paths: List[str] = []
+        for c in cmds:
+            if pathspecs:
+                c += ["--", *pathspecs]
+            listed = subprocess.check_output(c, cwd=repo).split(b"\0")
+            paths += [raw.decode() for raw in listed if raw]
 
-        paths = [raw.decode() for raw in tracked if raw]
         total = len(paths)
         if verbose:
-            print(f"  Scanning {total} tracked path(s)...", flush=True)
+            kind = describe_scan_kind(include_untracked, include_ignored)
+            print(f"  Scanning {total} {kind} path(s)...", flush=True)
 
         lines: List[str] = []
         for index, rel_path in enumerate(paths, start=1):
@@ -548,6 +582,7 @@ class GitLargeFileWorkflow:
         execute: bool,
         offload_root: Optional[str],
         path_prefix: Optional[str],
+        extra_extensions: Sequence[str] = (),
     ) -> FileStats:
         mover = GitLargeFileMover(
             str(all_sorted_out),
@@ -556,6 +591,7 @@ class GitLargeFileWorkflow:
             repo_root=str(repo),
             offload_root=os.path.expanduser(offload_root) if offload_root else DEFAULT_OFFLOAD_ROOT,
             path_prefix_to_strip=path_prefix if path_prefix else PATH_PREFIX_TO_STRIP,
+            allowed_extensions=ALLOWED_EXTENSIONS + [ext.lower() for ext in extra_extensions],
         )
         buffer = io.StringIO()
         with redirect_stdout(buffer):
@@ -579,11 +615,15 @@ class GitLargeFileWorkflow:
 
     @staticmethod
     def git_add_moved_placeholders(repo: Path) -> None:
-        for path in repo.rglob("*MOVED*"):
-            if "REMOVED" in path.name:
-                continue
-            rel = path.relative_to(repo)
-            subprocess.run(["git", "add", str(rel)], cwd=repo, check=True)
+        # Ask git rather than walking the tree: a placeholder under a gitignored directory makes `git add` fail.
+        listed = subprocess.check_output(
+            ["git", "ls-files", "-z", "--others", "--modified", "--exclude-standard", "--", "*MOVED*"],
+            cwd=repo,
+        ).split(b"\0")
+        rel_paths = {raw.decode() for raw in listed if raw}
+        placeholders = sorted(p for p in rel_paths if "REMOVED" not in Path(p).name)
+        if placeholders:
+            subprocess.run(["git", "add", "--", *placeholders], cwd=repo, check=True)
 
     @staticmethod
     def write_stage_summary(repo: Path, stage_summary_out: Path) -> None:
@@ -622,11 +662,16 @@ class GitLargeFileWorkflow:
     def print_run_header(config: "WorkflowConfig", paths: "WorkflowOutputPaths") -> None:
         print(f"Repository: {config.resolved_repo()}")
         if config.scan_working_tree:
-            print("Source: working tree (tracked files on disk)")
+            kind = describe_scan_kind(config.include_untracked, config.include_ignored)
+            print(f"Source: working tree ({kind} files on disk)")
+            if config.paths:
+                print(f"Paths: {' '.join(config.paths)}")
         else:
             print(f"Commit: {config.commit}")
         print(f"Output directory: {paths.out_dir}")
         print(f"Threshold: {config.threshold_mb}MB")
+        if config.allow_ext:
+            print(f"Extra extensions: {' '.join(config.allow_ext)}")
         print(f"Mode: {'EXECUTE (files will be moved)' if config.execute else 'DRY RUN (preview only)'}")
         if config.verbose:
             print("Verbose: enabled")
@@ -636,7 +681,14 @@ class GitLargeFileWorkflow:
     def collect_file_sizes(config: "WorkflowConfig", repo: Path, details_out: Path) -> None:
         if config.scan_working_tree:
             print("Step 1/3: Collecting file sizes from working tree...", flush=True)
-            GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, verbose=config.verbose)
+            GitLargeFileWorkflow.run_working_tree_scan(
+                repo,
+                details_out,
+                verbose=config.verbose,
+                include_untracked=config.include_untracked,
+                include_ignored=config.include_ignored,
+                pathspecs=config.paths,
+            )
         else:
             print("Step 1/3: Collecting file sizes from commit...", flush=True)
             if config.verbose:
@@ -668,6 +720,7 @@ class GitLargeFileWorkflow:
             execute=config.execute,
             offload_root=config.offload_root,
             path_prefix=config.path_prefix,
+            extra_extensions=config.allow_ext,
         )
         print(f"  Wrote {paths.mover_out}")
 
@@ -724,12 +777,18 @@ class WorkflowConfig:
     offload_root: Optional[str]
     path_prefix: Optional[str]
     verbose: bool = False
+    include_untracked: bool = False
+    include_ignored: bool = False
+    paths: Sequence[str] = ()
+    allow_ext: Sequence[str] = ()
 
     def validate(self) -> None:
         if self.scan_working_tree and self.commit:
             raise click.UsageError("Use either --commit or --scan-working-tree, not both.")
         if not self.scan_working_tree and not self.commit:
             raise click.UsageError("Provide --commit or --scan-working-tree.")
+        if not self.scan_working_tree and (self.include_untracked or self.include_ignored or self.paths):
+            raise click.UsageError("--include-untracked, --include-ignored and --path require --scan-working-tree.")
         if self.stage and not self.execute:
             raise click.UsageError("--stage requires --execute (nothing to stage after a dry run).")
 
@@ -810,6 +869,27 @@ class ExpandedDirectoryPath(click.Path):
     help="Scan tracked files on disk instead of analyzing a single commit",
 )
 @click.option(
+    "--include-untracked",
+    is_flag=True,
+    help="With --scan-working-tree: also scan untracked files that are not gitignored",
+)
+@click.option(
+    "--include-ignored",
+    is_flag=True,
+    help="With --scan-working-tree: also scan gitignored files (these exist only on disk; pair with --path)",
+)
+@click.option(
+    "--path",
+    "paths",
+    multiple=True,
+    help="With --scan-working-tree: limit the scan to this repo-root-relative path or git pathspec (repeatable)",
+)
+@click.option(
+    "--allow-ext",
+    multiple=True,
+    help=f"Also move files ending in this suffix, e.g. .7z (repeatable; defaults: {' '.join(ALLOWED_EXTENSIONS)})",
+)
+@click.option(
     "--repo",
     required=True,
     type=ExpandedDirectoryPath(exists=True, file_okay=False, path_type=Path),
@@ -852,6 +932,10 @@ class ExpandedDirectoryPath(click.Path):
 def main(
     commit: Optional[str],
     scan_working_tree: bool,
+    include_untracked: bool,
+    include_ignored: bool,
+    paths: Sequence[str],
+    allow_ext: Sequence[str],
     repo: Path,
     out_dir: Optional[Path],
     threshold_mb: int,
@@ -875,6 +959,10 @@ def main(
             offload_root=offload_root,
             path_prefix=path_prefix,
             verbose=verbose,
+            include_untracked=include_untracked,
+            include_ignored=include_ignored,
+            paths=paths,
+            allow_ext=allow_ext,
         )
     )
 

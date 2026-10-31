@@ -26,7 +26,18 @@ from git_move_large_files import (  # noqa: E402
     GitLargeFileMover,
     GitLargeFileWorkflow,
     PATH_PREFIX_TO_STRIP,
+    WorkflowConfig,
 )
+
+
+def _init_repo(repo: Path) -> None:
+    repo.mkdir(parents=True, exist_ok=True)
+    for cmd in (
+        ["git", "init"],
+        ["git", "config", "user.email", "test@example.com"],
+        ["git", "config", "user.name", "Test User"],
+    ):
+        subprocess.run(cmd, cwd=repo, check=True, capture_output=True)
 
 
 class TestGitLargeFileMover(unittest.TestCase):
@@ -210,6 +221,230 @@ def test_run_working_tree_scan_verbose_prints_progress(capsys, tmp_path):
     captured = capsys.readouterr()
     assert "Scanning 2 tracked path(s)" in captured.out
     assert details_out.read_text().count("\n") >= 1
+
+
+def _repo_with_tracked_untracked_ignored(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    (repo / ".gitignore").write_text("ignored.zip\n")
+    (repo / "tracked.txt").write_text("t")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+    (repo / "case").mkdir()
+    (repo / "case" / "untracked.zip").write_bytes(b"u")
+    (repo / "other.zip").write_bytes(b"o")
+    (repo / "ignored.zip").write_bytes(b"i")
+    return repo
+
+
+def _scanned_paths(details_out: Path) -> set:
+    return {line.split(maxsplit=1)[1] for line in details_out.read_text().splitlines()}
+
+
+def test_working_tree_scan_skips_untracked_by_default(tmp_path):
+    repo = _repo_with_tracked_untracked_ignored(tmp_path)
+    details_out = tmp_path / "details.txt"
+
+    GitLargeFileWorkflow.run_working_tree_scan(repo, details_out)
+
+    assert _scanned_paths(details_out) == {".gitignore", "tracked.txt"}
+
+
+def test_working_tree_scan_include_untracked_skips_ignored(tmp_path):
+    repo = _repo_with_tracked_untracked_ignored(tmp_path)
+    details_out = tmp_path / "details.txt"
+
+    GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, include_untracked=True)
+
+    assert _scanned_paths(details_out) == {".gitignore", "tracked.txt", "case/untracked.zip", "other.zip"}
+
+
+def test_working_tree_scan_include_ignored_adds_ignored_only(tmp_path):
+    repo = _repo_with_tracked_untracked_ignored(tmp_path)
+    details_out = tmp_path / "details.txt"
+
+    GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, include_ignored=True)
+
+    assert _scanned_paths(details_out) == {".gitignore", "tracked.txt", "ignored.zip"}
+
+
+def test_working_tree_scan_include_untracked_and_ignored_scans_everything(tmp_path):
+    repo = _repo_with_tracked_untracked_ignored(tmp_path)
+    details_out = tmp_path / "details.txt"
+
+    GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, include_untracked=True, include_ignored=True)
+
+    assert _scanned_paths(details_out) == {
+        ".gitignore",
+        "tracked.txt",
+        "case/untracked.zip",
+        "other.zip",
+        "ignored.zip",
+    }
+
+
+def test_working_tree_scan_pathspecs_limit_ignored_scan(tmp_path):
+    repo = _repo_with_tracked_untracked_ignored(tmp_path)
+    (repo / "case" / "ignored.zip").write_bytes(b"i")
+    details_out = tmp_path / "details.txt"
+
+    GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, include_ignored=True, pathspecs=["case"])
+
+    assert _scanned_paths(details_out) == {"case/ignored.zip"}
+
+
+def test_working_tree_scan_pathspecs_limit_scan(tmp_path):
+    repo = _repo_with_tracked_untracked_ignored(tmp_path)
+    details_out = tmp_path / "details.txt"
+
+    GitLargeFileWorkflow.run_working_tree_scan(repo, details_out, include_untracked=True, pathspecs=["case"])
+
+    assert _scanned_paths(details_out) == {"case/untracked.zip"}
+
+
+def _config(repo: Path, **overrides) -> WorkflowConfig:
+    values = dict(
+        commit=None,
+        scan_working_tree=True,
+        repo=repo,
+        out_dir=None,
+        threshold_mb=1,
+        execute=False,
+        stage=False,
+        offload_root=None,
+        path_prefix=None,
+    )
+    values.update(overrides)
+    return WorkflowConfig(**values)
+
+
+@pytest.mark.parametrize("overrides", [{"include_untracked": True}, {"include_ignored": True}, {"paths": ("case",)}])
+def test_untracked_and_path_options_require_scan_working_tree(tmp_path, overrides):
+    config = _config(tmp_path, scan_working_tree=False, commit="abc123", **overrides)
+
+    with pytest.raises(click.UsageError, match="require --scan-working-tree"):
+        config.validate()
+
+
+def _repo_with_untracked_bundle(tmp_path: Path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    (repo / "notes.md").write_text("n")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+    rel = "cloudera/tasks/cde/ENGESC-1/casefiles/bundle.zip"
+    big = repo / rel
+    big.parent.mkdir(parents=True)
+    content = os.urandom(2 * 1024 * 1024)
+    big.write_bytes(content)
+    return repo, rel, content
+
+
+def _run_execute_stage(repo: Path, tmp_path: Path, offload: Path) -> None:
+    config = _config(
+        repo,
+        out_dir=tmp_path / "out",
+        execute=True,
+        stage=True,
+        offload_root=str(offload),
+        include_untracked=True,
+        paths=("cloudera/tasks/cde/ENGESC-1",),
+    )
+    with redirect_stdout(io.StringIO()):
+        GitLargeFileWorkflow.run(config)
+
+
+def test_execute_stage_offloads_untracked_file_and_stages_only_placeholder(tmp_path):
+    repo, rel, content = _repo_with_untracked_bundle(tmp_path)
+    offload = tmp_path / "offload"
+
+    _run_execute_stage(repo, tmp_path, offload)
+
+    target = offload / "ENGESC-1/casefiles/bundle.zip"
+    assert not (repo / rel).exists()
+    assert target.read_bytes() == content
+    assert str(target) in (repo / (rel + ".MOVED.txt")).read_text()
+    staged = subprocess.check_output(["git", "diff", "--cached", "--name-only"], cwd=repo, text=True).split()
+    assert staged == [rel + ".MOVED.txt"]
+
+
+def test_git_add_moved_placeholders_skips_ignored_and_removed(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    (repo / ".gitignore").write_text("ignored-dir/\n")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+    (repo / "ignored-dir").mkdir()
+    (repo / "ignored-dir" / "old.log.MOVED.txt").write_text("x")
+    (repo / "case").mkdir()
+    (repo / "case" / "bundle.zip.MOVED.txt").write_text("x")
+    (repo / "case" / "notes-REMOVED.MOVED.txt").write_text("x")
+
+    GitLargeFileWorkflow.git_add_moved_placeholders(repo)
+
+    staged = subprocess.check_output(["git", "diff", "--cached", "--name-only"], cwd=repo, text=True).split()
+    assert staged == ["case/bundle.zip.MOVED.txt"]
+
+
+def test_execute_offloads_ignored_file_with_extra_extension(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    (repo / ".gitignore").write_text("casefiles/\n")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+    rel = "cloudera/tasks/cde/ENGESC-1/casefiles/eventlogs.7z"
+    (repo / rel).parent.mkdir(parents=True)
+    content = os.urandom(2 * 1024 * 1024)
+    (repo / rel).write_bytes(content)
+    offload = tmp_path / "offload"
+
+    config = _config(
+        repo,
+        out_dir=tmp_path / "out",
+        execute=True,
+        offload_root=str(offload),
+        include_ignored=True,
+        paths=("cloudera/tasks/cde/ENGESC-1",),
+        allow_ext=(".7Z",),
+    )
+    with redirect_stdout(io.StringIO()):
+        GitLargeFileWorkflow.run(config)
+
+    assert not (repo / rel).exists()
+    assert (offload / "ENGESC-1/casefiles/eventlogs.7z").read_bytes() == content
+    assert (repo / (rel + ".MOVED.txt")).exists()
+
+
+def test_execute_skips_ignored_file_without_extra_extension(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    (repo / ".gitignore").write_text("*.7z\n")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+    (repo / "eventlogs.7z").write_bytes(os.urandom(2 * 1024 * 1024))
+
+    config = _config(
+        repo, out_dir=tmp_path / "out", execute=True, offload_root=str(tmp_path / "offload"), include_ignored=True
+    )
+    with redirect_stdout(io.StringIO()):
+        GitLargeFileWorkflow.run(config)
+
+    assert (repo / "eventlogs.7z").exists()
+    assert "SKIP extension" in (tmp_path / "out" / "git-large-file-mover-out-working-tree.txt").read_text()
+
+
+def test_execute_keeps_source_when_copy_differs(tmp_path, monkeypatch):
+    import git_move_large_files
+
+    repo, rel, content = _repo_with_untracked_bundle(tmp_path)
+    offload = tmp_path / "offload"
+    monkeypatch.setattr(git_move_large_files.filecmp, "cmp", lambda *args, **kwargs: False)
+
+    _run_execute_stage(repo, tmp_path, offload)
+
+    assert (repo / rel).read_bytes() == content
+    assert not (offload / "ENGESC-1/casefiles/bundle.zip").exists()
+    assert not (repo / (rel + ".MOVED.txt")).exists()
 
 
 if __name__ == "__main__":
