@@ -84,6 +84,30 @@ The `export_claude_sessions.py` script (and its `session_rename_report.py` compa
 
 Full history was preserved via `git-filter-repo`. It is registered as the `claude_code_tools` external repo in [`config/external-repos.json`](config/external-repos.json), checked out at `~/development/my-repos/claude-code-tools/`. The `claude-export` / `claude-export-force` commands run `scripts/external-repos.py ensure claude_code_tools` first, which clones the repo if it is missing, so there's no manual setup step.
 
+## Shell startup performance
+
+Every new terminal tab runs `.zprofile`, `.zshrc` and `setup-env.sh`, so anything slow in them is paid on every tab. In October 2026 a new tab took ~7.6 s; it now takes ~1.2 s.
+
+Measuring:
+
+| Command | Answers |
+|---|---|
+| `hyperfine -w 2 -r 10 -N 'zsh -li -c exit' 'zsh -f -c exit'` | How slow is startup overall, compared to bare zsh? |
+| `LINUXENV_PROFILE=1 zsh -li -c exit 2>&1 >/dev/null \| grep -aE "ms  "` | How long does each phase / sourced file take? |
+| `LINUXENV_ZPROF=1 zsh -li -c exit; head -30 /tmp/zprof.txt` | Which functions are slow? |
+| `PS4='+%D{%s.%6.} %N:%i> ' zsh -lix -c exit 2> /tmp/trace.log` | Which exact lines are slow? (sort the gaps between timestamps) |
+
+Rules for anything that runs at startup:
+
+- No network or daemon calls (`git fetch`, `docker`, ...). Check cheap local state first (a stamp file, `nc -z` on a port) and offer a `*_FORCE*` env var.
+- Don't redo idempotent work. The repo to home copy only runs when `find ... -newer ~/.env/.last-copy` finds a change (force it with `LINUXENV_FORCE_COPY=1`).
+- Don't `eval "$(tool ...)"` or `$(tool --completion ...)` directly. Use `linuxenv-cached-source <name> <dependency-file> <cmd...>` from [`scripts/startup-cache.sh`](scripts/startup-cache.sh), which caches the output in `~/.cache/linuxenv/` until the dependency file changes (`linuxenv-cache-clear` wipes it).
+- Count forks: each process costs 20–70 ms here. Prefer `$HOMEBREW_PREFIX` over `brew --prefix`, `${var##*/}` over `$(basename ...)`, one `sed` over `xargs -n1`.
+- Only one `compinit` (in `.zshrc`, with `-C`).
+- Don't `cd` at startup (it fires chpwd hooks); use `$(cd dir && cmd)`.
+- Cache in files, not env vars: new kitty tabs don't inherit a sibling shell's environment.
+- The last command of an rc file must not return non-zero, or the first prompt shows `<1>`.
+
 ## Troubleshooting
 
 ### pre-commit installation
