@@ -28,7 +28,8 @@ DEX_CFG_GREP_FOR="\*\*"
 
 # asdf setup
 #. /usr/local/opt/asdf/libexec/asdf.sh
-. /opt/homebrew/opt/asdf/libexec/asdf.sh
+# Login shells already loaded asdf in .zprofile; only load it here for non-login shells
+type asdf > /dev/null 2>&1 || . /opt/homebrew/opt/asdf/libexec/asdf.sh
 
 # aws-okta
 #autoload -U +X bashcompinit && bashcompinit
@@ -37,15 +38,23 @@ DEX_CFG_GREP_FOR="\*\*"
 # ~aws-okta
 
 
-# saml2aws auto-completion
-eval "$(saml2aws --completion-script-zsh)"
+# saml2aws auto-completion (~400ms to generate, so cached until saml2aws is upgraded).
+# Its script starts with 'autoload -U compinit && compinit': a full compinit on every shell, on top of the
+# one in .zshrc. Drop that line; keep its bashcompinit line, which its 'complete -F' needs.
+function _saml2aws-completion-without-compinit {
+    local script
+    script=$(saml2aws --completion-script-zsh) || return 1
+    printf '%s\n' "$script" | grep -vx 'autoload -U compinit && compinit'
+}
+linuxenv-cached-source saml2aws-completion-zsh-no-compinit "$(command -v saml2aws)" _saml2aws-completion-without-compinit \
+    || eval "$(_saml2aws-completion-without-compinit)"
 
 
 
 # https://github.infra.cloudera.com/SRE/cloud-users/tree/master/scripts/cloudera-cloud-users
-source "$(brew --prefix)/lib/cloudera-cloud-users.sh"
+source "${HOMEBREW_PREFIX:-$(brew --prefix)}/lib/cloudera-cloud-users.sh"
+# compinit already ran in .zshrc (setup-kitty); bashcompinit is still needed for 'complete -C' below
 autoload -U +X bashcompinit && bashcompinit
-autoload -U +X compinit && compinit
 
 
 # https://github.infra.cloudera.com/pages/SRE/docs/AWS/usage_command-line/#install-and-configure
@@ -84,15 +93,20 @@ function dex-kubeconfig-pvc-sharedrkedev01 {
 
 
 #Go setup
+function _dex-print-gopath-export {
+  # Run in dex's dir so asdf resolves dex's pinned go version (dex/.tool-versions), not the global one
+  local gopath
+  gopath=$(cd "$DEX_DEV_ROOT" && go env GOPATH) || return 1 # $HOME/.asdf/installs/golang/<version>/go
+  echo "export GOPATH=\"$gopath\""
+}
+
 function dex-export-gopath {
-  cd $DEX_DEV_ROOT
-	
-  export GOPATH=$(go env GOPATH) # $HOME/.asdf/installs/golang/1.20.7/go
+  # 'go env' through the asdf shim takes ~450ms, so the result is cached until dex/.tool-versions changes
+  linuxenv-cached-source dex-gopath "$DEX_DEV_ROOT/.tool-versions" _dex-print-gopath-export \
+    || export GOPATH=$(cd "$DEX_DEV_ROOT" && go env GOPATH)
 	export GOBIN=$GOPATH/bin
 	add_to_path_directly "$GOPATH/bin"
 	export GOOS=darwin
-
-  cd -
 }
 
 

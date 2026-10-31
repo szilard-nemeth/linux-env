@@ -10,6 +10,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Optional
@@ -37,17 +38,37 @@ class RepoConfig:
     setup: RepoSetup
 
 
+_START = time.monotonic()
+
+# Set to 1 to always 'git fetch', even when the pinned ref is already present locally.
+FORCE_FETCH_ENV = "EXTERNAL_REPOS_FORCE_FETCH"
+
+
+def _log(*args) -> None:
+    """print() with a wall-clock timestamp and the seconds elapsed since the script started."""
+    stamp = time.strftime("%H:%M:%S") + f".{int(time.time() * 1000) % 1000:03d}"
+    print(f"[{stamp} +{time.monotonic() - _START:6.3f}s]", *args, flush=True)
+
+
+def _run(cmd: List[str], cwd: Optional[str] = None, check: bool = False, **kwargs) -> subprocess.CompletedProcess:
+    """subprocess.run() that logs the command and how long it took."""
+    _log("Running:", shlex.join(cmd))
+    started = time.monotonic()
+    result = subprocess.run(cmd, cwd=cwd, check=False, **kwargs)
+    _log(f"  done in {time.monotonic() - started:.3f}s (rc={result.returncode})")
+    if check:
+        result.check_returncode()
+    return result
+
+
 def _run_command(
     cmd: List[str], cwd: Optional[str] = None, check: bool = True, stdout=None, stderr=None
 ) -> subprocess.CompletedProcess:
-    print("Running:", shlex.join(cmd))
-    return subprocess.run(cmd, cwd=cwd, check=check, stdout=stdout, stderr=stderr)
+    return _run(cmd, cwd=cwd, check=check, stdout=stdout, stderr=stderr)
 
 
 def _run_capture(cmd: List[str], cwd: Optional[str] = None) -> str:
-    print("Running:", shlex.join(cmd))
-    result = subprocess.run(cmd, cwd=cwd, check=False, capture_output=True, text=True)
-    return result.stdout.strip()
+    return _run(cmd, cwd=cwd, capture_output=True, text=True).stdout.strip()
 
 
 def _expand(value: Optional[str]) -> Optional[str]:
@@ -131,9 +152,39 @@ def _repo_config(repo_id: str, repo: dict) -> RepoConfig:
     )
 
 
+def _is_commit_sha(ref: Optional[str]) -> bool:
+    return bool(ref) and len(ref) == 40 and all(c in "0123456789abcdef" for c in ref.lower())
+
+
+def _resolve_commit(repo: RepoConfig) -> Optional[str]:
+    """Return the commit SHA repo.ref points to in the local clone, or None if it is not present."""
+    result = _run(
+        ["git", "-C", repo.repo_dir, "rev-parse", "--verify", "--quiet", f"{repo.ref}^{{commit}}"],
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def _ensure_sparse_checkout(repo: RepoConfig) -> None:
+    """Apply repo.sparse_paths, unless the clone already has exactly these patterns."""
+    no_cone_paths = _normalize_sparse_paths_for_no_cone(repo.sparse_paths)
+    enabled = _run_capture(["git", "-C", repo.repo_dir, "config", "--get", "core.sparseCheckout"]) == "true"
+    current = set(_run_capture(["git", "-C", repo.repo_dir, "sparse-checkout", "list"]).splitlines())
+    if enabled and current in (set(repo.sparse_paths), set(no_cone_paths)):
+        _log(f"External repo '{repo.repo_id}' sparse-checkout already configured; skipping")
+        return
+
+    _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "init", "--cone"])
+    try:
+        _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", *repo.sparse_paths])
+    except subprocess.CalledProcessError:
+        _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", "--no-cone", *no_cone_paths])
+
+
 def _sync_repo(repo: RepoConfig) -> None:
     if not repo.url or not repo.repo_dir:
-        print(f"External repo '{repo.repo_id}' missing url or dir; skipping")
+        _log(f"External repo '{repo.repo_id}' missing url or dir; skipping")
         return
 
     repo_path = Path(repo.repo_dir)
@@ -142,19 +193,26 @@ def _sync_repo(repo: RepoConfig) -> None:
         _run_command(["git", "clone", repo.url, repo.repo_dir])
 
     if repo.sparse_paths:
-        _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "init", "--cone"])
-        try:
-            _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", *repo.sparse_paths])
-        except subprocess.CalledProcessError:
-            no_cone_paths = _normalize_sparse_paths_for_no_cone(repo.sparse_paths)
-            _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", "--no-cone", *no_cone_paths])
+        _ensure_sparse_checkout(repo)
 
-    _run_command(["git", "-C", repo.repo_dir, "fetch", "--all", "--tags", "--prune"])
+    # A pinned commit SHA never moves, so once it is present locally there is nothing to fetch.
+    # Branch/tag refs can move, so those are always fetched.
+    target = _resolve_commit(repo) if repo.ref else None
+    if _is_commit_sha(repo.ref) and target and not os.environ.get(FORCE_FETCH_ENV):
+        _log(
+            f"Pinned commit {repo.ref[:12]} already present locally; skipping fetch (set {FORCE_FETCH_ENV}=1 to force)"
+        )
+    else:
+        _run_command(["git", "-C", repo.repo_dir, "fetch", "--all", "--tags", "--prune"])
+        target = _resolve_commit(repo) if repo.ref else None
 
     if repo.ref:
+        if target and target == _run_capture(["git", "-C", repo.repo_dir, "rev-parse", "HEAD"]):
+            _log(f"External repo '{repo.repo_id}' is already at {repo.ref[:12]}; skipping checkout")
+            return
         status = _run_capture(["git", "-C", repo.repo_dir, "status", "--porcelain"])
         if status:
-            print(f"External repo '{repo.repo_id}' has local changes; skipping checkout")
+            _log(f"External repo '{repo.repo_id}' has local changes; skipping checkout")
             return
         _run_command(["git", "-C", repo.repo_dir, "checkout", "--detach", repo.ref])
 
@@ -179,14 +237,13 @@ def get_repo_config_prefix(repo: RepoConfig) -> str:
 
 def print_prefixed(repo: RepoConfig, s: str):
     prefix = get_repo_config_prefix(repo)
-    print(f"{prefix}{s}")
+    _log(f"{prefix}{s}")
 
 
 def _docker_image_built_commit(image: str) -> Optional[str]:
     """Return the git-commit label baked into an existing image, or None if the image does not exist."""
-    result = subprocess.run(
+    result = _run(
         ["docker", "image", "inspect", "--format", '{{index .Config.Labels "git-commit"}}', image],
-        check=False,
         capture_output=True,
         text=True,
     )
@@ -197,9 +254,8 @@ def _docker_image_built_commit(image: str) -> Optional[str]:
 
 def _docker_image_id(image: str) -> Optional[str]:
     """Return the full image ID for the given image name/tag, or None if it does not exist."""
-    result = subprocess.run(
+    result = _run(
         ["docker", "image", "inspect", "--format", "{{.Id}}", image],
-        check=False,
         capture_output=True,
         text=True,
     )
@@ -210,9 +266,8 @@ def _docker_image_id(image: str) -> Optional[str]:
 
 def _docker_container_image_id(container: str) -> Optional[str]:
     """Return the image ID that a container (running or stopped) was created from, or None."""
-    result = subprocess.run(
+    result = _run(
         ["docker", "inspect", "--format", "{{.Image}}", container],
-        check=False,
         capture_output=True,
         text=True,
     )
@@ -238,22 +293,22 @@ def _docker_build(repo: RepoConfig, current_commit: Optional[str]) -> None:
 
 
 def _docker_ensure_running(repo: RepoConfig) -> None:
-    print("Ensuring Docker is running...")
+    _log("Ensuring Docker is running...")
     if shutil.which("docker") is None:
-        print(f"docker not available; skipping {repo.repo_id}")
+        _log(f"docker not available; skipping {repo.repo_id}")
         return
 
     if (
         _run_command(["docker", "info"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
         != 0
     ):
-        print(f"Docker daemon is not running; skipping {repo.repo_id}")
+        _log(f"Docker daemon is not running; skipping {repo.repo_id}")
         return
 
     setup = repo.setup
     container = setup.container
     if not setup.dockerfile or not setup.docker_context or not setup.image or not container:
-        print(f"Missing docker settings for external repo '{repo.repo_id}'; skipping")
+        _log(f"Missing docker settings for external repo '{repo.repo_id}'; skipping")
         return
 
     run_args = setup.run_args
@@ -334,7 +389,7 @@ def _setup_repo(repo: RepoConfig) -> None:
         _docker_ensure_running(repo)
         return
     if setup.command:
-        print(f"Warning! Unknown setup type '{setup.setup_type}'. Running setup command: {setup.command}")
+        _log(f"Warning! Unknown setup type '{setup.setup_type}'. Running setup command: {setup.command}")
         subprocess.run(setup.command, cwd=repo.repo_dir, shell=True, check=True)
     else:
         raise ValueError(f"Unknown setup type '{setup.setup_type}' and setup command is not set!")
@@ -346,7 +401,7 @@ def _load_repos(config: dict, repo_ids: List[str]) -> List[RepoConfig]:
     for repo_id in repo_ids:
         repo = repos.get(repo_id)
         if not repo:
-            print(f"External repo '{repo_id}' not found in config; skipping")
+            _log(f"External repo '{repo_id}' not found in config; skipping")
             continue
         result.append(_repo_config(repo_id, repo))
     return result
@@ -354,13 +409,13 @@ def _load_repos(config: dict, repo_ids: List[str]) -> List[RepoConfig]:
 
 def _sync(repos: List[RepoConfig]) -> None:
     for repo in repos:
-        print("Syncing repo: " + repo.repo_id)
+        _log("Syncing repo: " + repo.repo_id)
         _sync_repo(repo)
 
 
 def _setup(repos: List[RepoConfig]) -> None:
     for repo in repos:
-        print("Setting up repo: " + repo.repo_id)
+        _log("Setting up repo: " + repo.repo_id)
         _setup_repo(repo)
 
 

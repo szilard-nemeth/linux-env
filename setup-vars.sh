@@ -24,7 +24,17 @@ export PATH="$HOME/.rbenv/shims:$PATH"
 # reachable directly. The 2>/dev/null suppresses the "No such file or
 # directory" warning `find` prints when a listed path was removed out-of-band
 # (e.g. `~/.gem/ruby/2.6.0` after migrating off system Ruby).
-add_to_path_directly $(find $(gem environment gempath | tr ':' '\n') -type d -name bin 2>/dev/null | tr '\n' ':')
+# Starting Ruby for `gem environment` costs ~400ms per shell, and the bin dirs only change
+# with the Ruby version, so the result is cached until ~/.rbenv/version changes.
+function _print-gem-bin-dirs-path {
+    local dirs
+    dirs=$(find $(gem environment gempath | tr ':' '\n') -type d -name bin 2>/dev/null | tr '\n' ':') || return 1
+    echo "add_to_path_directly '$dirs'"
+}
+if ! { type linuxenv-cached-source > /dev/null 2>&1 \
+       && linuxenv-cached-source gem-bin-dirs "$HOME/.rbenv/version" _print-gem-bin-dirs-path; }; then
+    add_to_path_directly $(find $(gem environment gempath | tr ':' '\n') -type d -name bin 2>/dev/null | tr '\n' ':')
+fi
 
 # Add common bins to path
 add_to_path_directly "$HOME/.local/bin"

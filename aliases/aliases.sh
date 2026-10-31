@@ -4,7 +4,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #cd $DIR
 
 ## LINUX-ENV ALIASES
-alias linuxenv-reload="cp ~/development/my-repos/linux-env/setup-env.sh ~/.linuxenv/setup-env.sh && cp ~/development/my-repos/linux-env/.zshrc ~/ && LINUXENV_SKIP_COPY=0 LINUXENV_DEBUG=1 source ~/.linuxenv/setup-env.sh"
+alias linuxenv-reload="cp ~/development/my-repos/linux-env/setup-env.sh ~/.linuxenv/setup-env.sh && cp ~/development/my-repos/linux-env/.zshrc ~/ && LINUXENV_SKIP_COPY=0 LINUXENV_FORCE_COPY=1 LINUXENV_DEBUG=1 source ~/.linuxenv/setup-env.sh"
 alias linuxenv-todos="grep '#TODO' -r $LINUX_ENV_REPO"
 alias linuxenv-debug-on="echo \"enabled\" > ${ENV_DEBUG_SETUP_FILE}"
 alias linuxenv-debug-off="echo \"disabled\" > ${ENV_DEBUG_SETUP_FILE}"
@@ -81,18 +81,18 @@ alias lc='colorls -lA --sd'
 #   source $(dirname $(gem which colorls))/tab_complete.sh
 #
 # That resolves `gem which colorls` on every shell startup — two Ruby
-# invocations, ~200-500ms of latency per shell. Cache the resolved path
-# across shells so only the first shell of a session pays the cost, and
-# recompute if the cached file is missing (gem upgrade, rbenv version
-# change, etc.).
+# invocations, ~200-500ms of latency per shell. Cache the resolved path in a
+# file (an env var does not help: new kitty tabs don't inherit a sibling
+# shell's environment) and recompute it when the colorls executable changes
+# (gem upgrade/reinstall) or the cached tab_complete.sh disappears.
+function _print-colorls-tab-complete-source {
+    local gem_path
+    gem_path="$(gem which colorls 2>/dev/null)" || return 1
+    [[ -f "$(dirname "$gem_path")/tab_complete.sh" ]] || return 1
+    echo "[[ -f '$(dirname "$gem_path")/tab_complete.sh' ]] && source '$(dirname "$gem_path")/tab_complete.sh'"
+}
 if command -v colorls >/dev/null 2>&1 && command -v gem >/dev/null 2>&1; then
-    if [[ -z "$_COLORLS_TAB_COMPLETE" || ! -f "$_COLORLS_TAB_COMPLETE" ]]; then
-        _colorls_gem_path="$(gem which colorls 2>/dev/null)"
-        if [[ -n "$_colorls_gem_path" ]]; then
-            export _COLORLS_TAB_COMPLETE="$(dirname "$_colorls_gem_path")/tab_complete.sh"
-        fi
-    fi
-    [[ -f "$_COLORLS_TAB_COMPLETE" ]] && source "$_COLORLS_TAB_COMPLETE"
+    linuxenv-cached-source colorls-tab-complete "$(command -v colorls)" _print-colorls-tab-complete-source
 fi
 
 ##Aliases for my DEV projects
@@ -114,7 +114,8 @@ alias gpwh="git-push-with-hooks.sh"
 # Add an "alert" alias for long running commands.  Use like so:
 # sleep 10; alert
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
-eval $(thefuck --alias)
+# 'thefuck --alias' starts python (~200ms), so cache its output until thefuck is upgraded
+linuxenv-cached-source thefuck-alias "$(command -v thefuck)" thefuck --alias || eval $(thefuck --alias)
 alias mc='LANG=en_EN.UTF-8 mc'
 
 #TODO create alias: resync all changes from linuxenv repo (copies all files)

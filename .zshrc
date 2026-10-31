@@ -1,4 +1,22 @@
+# Startup profiling, off by default; see .zprofile for usage. Defined here too for non-login shells.
+if ! (( $+functions[_lenv_t] )); then
+    [[ -n $LINUXENV_ZPROF ]] && zmodload zsh/zprof
+    if [[ -n $LINUXENV_PROFILE ]]; then
+        zmodload zsh/datetime
+        typeset -g _LENV_T0=$EPOCHREALTIME
+    fi
+    function _lenv_t {
+        [[ -n $LINUXENV_PROFILE ]] || return 0
+        local now=$EPOCHREALTIME
+        printf '%8.1fms %+8.1fms  %s\n' $(( (now - _LENV_T0) * 1000 )) $(( (now - ${_LENV_TL:-$_LENV_T0}) * 1000 )) "$1" >&2
+        typeset -g _LENV_TL=$now
+    }
+fi
+
 echo "$(date) -- .zshrc executed by shell: $0" >> $HOME/.zshrc.log
+
+# Output cache for slow init commands (already loaded by .zprofile in login shells)
+(( $+functions[linuxenv-cached-source] )) || { [[ -f ~/.linuxenv/scripts/startup-cache.sh ]] && . ~/.linuxenv/scripts/startup-cache.sh; }
 
 function setup-history {  
     export HISTFILESIZE=1000000000          #How many lines of history to keep in memory
@@ -23,17 +41,17 @@ function setup {
     
     setup-key-bindings
     setup-history
-    setup-antigen
+    setup-antigen; _lenv_t "zshrc: setup-antigen"
     setup-prompt
-    setup-kitty
-    setup-sdkman
+    setup-kitty; _lenv_t "zshrc: setup-kitty"
+    setup-sdkman; _lenv_t "zshrc: setup-sdkman"
     setup-kind
     setup-tab-title
 }
 
 function setup-antigen {
     #Load antigen
-    source $(brew --prefix)/share/antigen/antigen.zsh
+    source ${HOMEBREW_PREFIX:-$(brew --prefix)}/share/antigen/antigen.zsh
     
     # Load the oh-my-zsh's library.
     antigen use oh-my-zsh
@@ -163,11 +181,26 @@ function setup-tab-title {
 
 function setup-kitty {
     echo "Setting up kitty..."
+    # The only compinit of the shell (setup-dex-env.sh used to run a second one).
+    # -C skips the security check of fpath dirs (compaudit) and trusts the existing dump;
+    # do the full check at most once a day, when the dump is older than 24h.
     autoload -Uz compinit
-    compinit
+    local zcompdump=${ZDOTDIR:-$HOME}/.zcompdump
+    local -a stale_dump=( $zcompdump(N.mh+24) )   # glob qualifier: matches only if modified >24h ago
+    if [[ ! -f $zcompdump ]] || (( $#stale_dump )); then
+        compinit
+    else
+        compinit -C
+    fi
+    # diff completion: zsh 5.9's _diff_options detects GNU diff with 'diff -v', which Apple diff rejects, and only
+    # treats FreeBSD (not macOS) diff as GNU-compatible. The fallback spec lacks -q, so 'diff -rq a b<TAB>' completed
+    # nothing. Apple diff is FreeBSD's diff and takes the GNU options, so preset the variant zsh would detect.
+    [[ $OSTYPE == darwin* ]] && { typeset -gA _cmd_variant; _cmd_variant[diff]=gnu; }
     # TODO https://unix.stackexchange.com/a/470959/189441 / Add zstyle ':completion:*' menu select ?
-    # Completion for kitty
-    kitty + complete setup zsh | source /dev/stdin
+    # Completion for kitty. 'kitty + complete setup zsh' starts kitty's python (~100ms), so cache its output.
+    if ! { (( $+functions[linuxenv-cached-source] )) && linuxenv-cached-source kitty-completion-zsh "$(command -v kitty)" kitty + complete setup zsh; }; then
+        kitty + complete setup zsh | source /dev/stdin
+    fi
 }
 
 function setup-sdkman {
@@ -249,8 +282,13 @@ function run-setup-scripts {
 setup
 set_debug
 run-setup-scripts
-export SKIP_LINUXENV_COPY=1
+_lenv_t "zshrc: run-setup-scripts"
 
 
 
 print-welcome-screen
+_lenv_t "zshrc: done"
+# 'if' rather than '&&': a false test as the last command would leave $? = 1 for the first prompt
+if [[ -n $LINUXENV_ZPROF ]]; then
+    zprof > /tmp/zprof.txt
+fi

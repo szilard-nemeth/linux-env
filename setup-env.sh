@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Startup profiling marks (see .zprofile); no-op when the helper is not defined, e.g. under bash.
+type _lenv_t > /dev/null 2>&1 || function _lenv_t { :; }
+
 function print_debug {
   if [[ $LINUXENV_DEBUG == 1 ]]; then
     echo $1
@@ -140,7 +143,7 @@ function source_scripts {
 #          . "$f"
 #        fi
         printf_debug "Sourcing file ${f}"
-        . "$f"
+        . "$f"; _lenv_t "  sourced: $f"
     done
     printf_debug "Done sourcing files from ${source_from}"
 }
@@ -164,7 +167,7 @@ function source_files {
         setup_sh="$d/setup.sh"
         if [[ -f "$setup_sh" ]]; then
             printf_debug "\tSourcing setup file $setup_sh\n"
-            . "$setup_sh"
+            . "$setup_sh"; _lenv_t "  sourced: $setup_sh"
         fi
     done
 
@@ -172,7 +175,7 @@ function source_files {
         printf_debug "\tSourcing files from $d"
         for f in $(find ${d} -maxdepth 1 -iname  "*.sh" -not -iname "setup.sh" | xargs grep -L "##SKIPSOURCING##"); do
             printf_debug "\tSourcing file $f"
-            . "$f"
+            . "$f"; _lenv_t "  sourced: $f"
         done
     done
     printf_debug "Done sourcing $marker_file_name files from $from_dir"
@@ -207,7 +210,8 @@ function set_matched_dirs {
     ## matched_dirs=$(find $from_dir -name $marker_file_name -printf "%h\n")
 
     #compatible with MacOS / FreeBSD
-    matched_dirs=($(find ${from_dir} -name ${marker_file_name} -print0 | xargs -0 -n1 dirname | sort --unique))
+    # Strip the file name with one sed instead of 'xargs -n1 dirname', which forked one process per match
+    matched_dirs=($(find ${from_dir} -name ${marker_file_name} | sed 's|/[^/]*$||' | sort --unique))
 }
 
 #TODO migrate all programs to use this function
@@ -470,15 +474,17 @@ function setup-vars-aliases {
   # !!! THE ORDER OF THE FOLLOWING SOURCE COMMANDS ARE STRICT !!!
     #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
     source_single_file "${HOME_LINUXENV_DIR}/scripts/load-these-first.sh"
-    source_single_file "${HOME_LINUXENV_DIR}/setup-vars.sh"
+    # linuxenv-cached-source, used by setup-vars.sh and aliases/ (which are sourced before scripts/)
+    source_single_file "${HOME_LINUXENV_DIR}/scripts/startup-cache.sh"
+    source_single_file "${HOME_LINUXENV_DIR}/setup-vars.sh"; _lenv_t "  setup-vars.sh"
     source_scripts ${HOME_LINUXENV_DIR}/aliases
     source_scripts ${HOME_LINUXENV_DIR}/scripts
     source_files ".source-this"
-    add_to_path ".add-to-path" "$WORKPLACE_SPECIFIC_DIR"
+    add_to_path ".add-to-path" "$WORKPLACE_SPECIFIC_DIR"; _lenv_t "  add_to_path"
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/python
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/git
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/kitty
-    setup-jetbrains-links
+    setup-jetbrains-links; _lenv_t "  setup-jetbrains-links"
 }
 
 function setup-jetbrains-links {
@@ -489,7 +495,7 @@ function setup-jetbrains-links {
       mkdir -p "$TARGET_DIR"
 
       for src in "$JETBRAINS_SCRIPTS"/*; do
-          name=$(basename "$src")
+          name="${src##*/}"   # basename without forking a process
           dst="$TARGET_DIR/$name"
 
           # Create link only if it does NOT already exist
@@ -562,19 +568,32 @@ function copy_files_from_linuxenv_repo_to_home {
     #set +e
 }
 
+# Prints an ASDF_PYTHON_LIBS=... assignment for the python that dex pins.
+# Runs in dex's dir (subshell) so `asdf where python` resolves via dex's .tool-versions
+# (dex pins its own python version, distinct from the global default).
+function _dex-print-python-libs {
+  local asdf_python libs
+  asdf_python=$(cd "$1" && asdf where python) || return 1
+  libs=$(find "$asdf_python" -type d -name "site-packages")
+  printf "ASDF_PYTHON_LIBS='%s'\n" "$libs"
+}
+
 function setup-pythonpath {
   if [[ "$MACHINE_TYPE" != "cloudera-mac" ]]; then
     echo "Skipping setup-pythonpath (MACHINE_TYPE=$MACHINE_TYPE)"
     return 0
   fi
 
-  if [[ -d "$HOME/development/cloudera/cde/dex" ]]; then
-    # pushd into dex so `asdf where python` resolves via dex's .tool-versions
-    # (dex pins its own python version, distinct from the global default).
-    pushd "$HOME/development/cloudera/cde/dex" > /dev/null || return 1
-    echo "Setting up PYTHONPATH from dir: $(pwd)"
-    asdf_python=$(asdf where python)
-    ASDF_PYTHON_LIBS=$(find $asdf_python -type d -name "site-packages")
+  local dex_dir="$HOME/development/cloudera/cde/dex"
+  if [[ -d "$dex_dir" ]]; then
+    echo "Setting up PYTHONPATH from dir: $dex_dir"
+    # 'asdf where' + find over the python install take ~450ms, so cache the result until
+    # dex/.tool-versions (which pins the python version) changes.
+    # The helper is loaded by .zprofile/.zshrc; it can be missing on the very first shell.
+    if ! { type linuxenv-cached-source > /dev/null 2>&1 \
+           && linuxenv-cached-source dex-python-libs "$dex_dir/.tool-versions" _dex-print-python-libs "$dex_dir"; }; then
+      eval "$(_dex-print-python-libs "$dex_dir")"
+    fi
     # Append (do NOT prepend): a venv's own site-packages must win over these
     # global entries, or subprocesses like pre-commit's black venv will import
     # ABI-incompatible modules from dex's python. See fix/precommit-black-hook.
@@ -592,7 +611,6 @@ function setup-pythonpath {
     # to ~/Library/Python/3.10/, which is invisible to a `Python/3.8/` entry
     # and vice versa. If you find yourself typing a version literal here, stop.
     export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$ASDF_PYTHON_LIBS:${HOME_LINUXENV_DIR}/scripts/python/"
-    popd > /dev/null || true
   else
     echo "Warning: expected Cloudera project dir not found: $HOME/development/cloudera/cde/dex"
   fi
@@ -608,19 +626,40 @@ initial_setup || {
     echo "ERROR: initial_setup failed. Aborting script execution."
     return 1
 }
-setup-pythonpath
-remove-stale-scripts
+_lenv_t "setup-env: initial_setup"
+setup-pythonpath; _lenv_t "setup-env: setup-pythonpath"
 
 # Define LINUXENV_* vars
 LINUXENV_DEBUG="${LINUXENV_DEBUG:-0}"
 export LINUXENV_DEBUG_YARNDEVTOOLS="${LINUXENV_DEBUG_YARNDEVTOOLS:-0}"
 LINUXENV_SKIP_COPY="${LINUXENV_SKIP_COPY:-0}"
+LINUXENV_FORCE_COPY="${LINUXENV_FORCE_COPY:-0}"
 
-if [[ $LINUXENV_SKIP_COPY == 0 ]]; then
-  copy_files_from_linuxenv_repo_to_home
-else
+# Copying (~20 recursive diffs) and the stale-script cleanup cost ~2s per shell, so only do them when
+# something under the copied sources changed since the last copy. Deleting a file or switching branches
+# also bumps a directory mtime, so -newer catches those too. Force with: LINUXENV_FORCE_COPY=1
+LINUXENV_COPY_STAMP="$HOME_ENV/.last-copy"
+function linuxenv-sources-changed {
+    [[ ! -f "$LINUXENV_COPY_STAMP" ]] && return 0
+    local changed
+    changed=$(cd "$DIR" && find .bashrc .bash_profile .zshrc .zprofile .npmrc setup-vars.sh setup-env.sh reset-env.sh \
+        dotfiles aliases scripts config workplace-specific/cloudera/aliases workplace-specific/cloudera/config \
+        workplace-specific/cloudera/scripts -newer "$LINUXENV_COPY_STAMP" -print 2>/dev/null | head -n1)
+    [[ -n "$changed" ]]
+}
+
+if [[ $LINUXENV_SKIP_COPY != 0 ]]; then
   echo "NOTE: Skip copying files from linuxenv repo."
+elif [[ $LINUXENV_FORCE_COPY != 0 ]] || linuxenv-sources-changed; then
+  remove-stale-scripts; _lenv_t "setup-env: remove-stale-scripts"
+  # Stamp taken before copying, so edits made while the copy runs are still picked up next time
+  touch "$LINUXENV_COPY_STAMP.new"
+  copy_files_from_linuxenv_repo_to_home && mv "$LINUXENV_COPY_STAMP.new" "$LINUXENV_COPY_STAMP"
+  _lenv_t "setup-env: copy_files"
+else
+  print_debug "No changes in linuxenv repo since last copy; skipping copy (force with LINUXENV_FORCE_COPY=1)"
+  _lenv_t "setup-env: copy check (unchanged)"
 fi
 
-setup-vars-aliases
+setup-vars-aliases; _lenv_t "setup-env: setup-vars-aliases"
 set +x
