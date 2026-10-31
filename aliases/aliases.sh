@@ -151,6 +151,46 @@ alias sed=gsed
 alias pdiff="pycharm diff"
 alias git-diff-dir="git difftool --no-prompt"
 
+# pdiff-unstaged — show unstaged changes (working tree vs index) in PyCharm.
+# One directory argument: a single PyCharm directory diff of the index copy of that
+# directory vs the real one, so the right side stays editable; untracked files show
+# as right-only and deleted ones as left-only. Anything else (no args, several paths,
+# globs): one diff window per file `git diff -- <pathspec>...` lists, skipping
+# untracked and deleted files.
+# The index side is written to a temp dir that is not cleaned up: the launcher returns
+# before PyCharm has read it. Paths are absolute because the launcher goes through
+# `open`, which does not keep the current directory.
+# Usage: pdiff-unstaged [<pathspec>...]
+#   pdiff-unstaged cloudera/tasks/cde/DEX-24419      # one directory diff window
+#   pdiff-unstaged                                   # every unstaged file in this repo
+#   pdiff-unstaged '*.md' notes/todo.md              # one window per file
+function pdiff-unstaged {
+  local top
+  top="$(git rev-parse --show-toplevel)" || return
+  local tmp
+  tmp="$(mktemp -d -t pdiff-unstaged)" || return
+
+  if [[ $# -eq 1 && -d "$1" ]]; then
+    local rel abs
+    rel="$(git -C "$1" rev-parse --show-prefix)" || return
+    abs="$(cd "$1" && pwd)"
+    git ls-files -z --full-name -- "$1" | git -C "$top" checkout-index -z --stdin --prefix="$tmp/"
+    mkdir -p "$tmp/$rel"
+    pycharm diff "$tmp/$rel" "$abs"
+    return
+  fi
+
+  local f n=0
+  while IFS= read -r -d '' f; do
+    [[ -e "$top/$f" ]] || { echo "skip (deleted): $f" >&2; continue; }
+    mkdir -p "$tmp/$(dirname "$f")"
+    git -C "$top" show ":$f" > "$tmp/$f" || continue
+    pycharm diff "$tmp/$f" "$top/$f"
+    n=$((n + 1))
+  done < <(git diff --name-only -z -- "$@")
+  [[ $n -gt 0 ]] || echo "no unstaged changes${*:+ under $*}" >&2
+}
+
 alias md2html="python -m markdown"
 
 # ---------------------------------------------------------------------------
@@ -201,6 +241,65 @@ function claude-sessions-cd {
     fi
     echo "not a valid choice" >&2
   done
+}
+
+# kbc — commit ONLY the given paths in the private KB, from any directory.
+# `git commit -- <paths>` ignores anything else that is staged, so session
+# exports, DEX task files and learning notes never leak into each other's commits.
+# Paths are relative to the KB root ($KB_PRIVATE_REPO). Quote globs so git
+# expands them, not the shell (zsh fails with "no matches found" outside the KB).
+#
+# Usage: kbc "<message>" <path>...
+#   kbc "Export Claude session markdown files" claude-sessions
+#   kbc "DEX-25018: Record cluster evidence" 'cloudera/tasks/cde/DEX-22893/DEX-25018*'
+#   kbc "Learnings: AWC auth and kind" cloudera/claude cloudera/cde/cde-awc
+#   kbc "Learnings: Knox JWT" cloudera/cde/cde-awc/cde-awc-auth.md
+#
+# Preview what one area would commit: git -C "$KB_PRIVATE_REPO" status -- cloudera/tasks
+function kbc {
+  if [[ $# -lt 2 ]]; then
+    echo 'usage: kbc "<message>" <path>...' >&2
+    return 2
+  fi
+  local msg="$1"
+  shift
+  git -C "$KB_PRIVATE_REPO" add -A -- "$@" &&
+    git -C "$KB_PRIVATE_REPO" commit -m "$msg" -- "$@"
+}
+
+# kbc-claude-sessions — commit everything under claude-sessions/ via kbc.
+# Usage: kbc-claude-sessions ["<message>"]
+#   kbc-claude-sessions
+#   kbc-claude-sessions "Export Claude sessions after the DEX-25018 cluster test"
+function kbc-claude-sessions {
+  kbc "${1:-Export Claude session markdown files}" claude-sessions
+}
+
+# kbc-dex-task — commit a DEX task's directories under cloudera/tasks/ via kbc,
+# as "<TICKET>: <message>". Matches dirs named exactly <TICKET> or <TICKET>-<slug>
+# at any depth (task dirs nest under their epic), so DEX-1234 never picks up DEX-12345.
+# A task dir nested inside it (e.g. a sub-ticket) is committed with it.
+# Usage: kbc-dex-task DEX-1234 "<message>"
+#   kbc-dex-task DEX-25018 "Record cluster evidence"
+#     -> commits cloudera/tasks/cde/DEX-22893/DEX-25018-issues-identified-from-sr-verifications
+#        as "DEX-25018: Record cluster evidence"
+function kbc-dex-task {
+  if [[ $# -ne 2 || ! "$1" =~ ^DEX-[0-9]+$ ]]; then
+    echo 'usage: kbc-dex DEX-1234 "<message>"' >&2
+    return 2
+  fi
+  local ticket="$1" msg="$2"
+  local root="${KB_PRIVATE_REPO%/}/"
+  local -a paths=()
+  local p
+  while IFS= read -r p; do
+    paths+=("${p#"$root"}")
+  done < <(find "${root}cloudera/tasks" -type d \( -name "$ticket" -o -name "$ticket-*" \) -prune)
+  if [[ ${#paths[@]} -eq 0 ]]; then
+    echo "no task dir for $ticket under ${root}cloudera/tasks" >&2
+    return 1
+  fi
+  kbc "$ticket: $msg" "${paths[@]}"
 }
 
 function evernote-backup {
