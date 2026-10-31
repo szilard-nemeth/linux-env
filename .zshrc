@@ -265,7 +265,6 @@ setup
 set_debug
 run-setup-scripts
 _lenv_t "zshrc: run-setup-scripts"
-export SKIP_LINUXENV_COPY=1
 
 
 

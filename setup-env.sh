@@ -613,17 +613,37 @@ initial_setup || {
 }
 _lenv_t "setup-env: initial_setup"
 setup-pythonpath; _lenv_t "setup-env: setup-pythonpath"
-remove-stale-scripts; _lenv_t "setup-env: remove-stale-scripts"
 
 # Define LINUXENV_* vars
 LINUXENV_DEBUG="${LINUXENV_DEBUG:-0}"
 export LINUXENV_DEBUG_YARNDEVTOOLS="${LINUXENV_DEBUG_YARNDEVTOOLS:-0}"
 LINUXENV_SKIP_COPY="${LINUXENV_SKIP_COPY:-0}"
+LINUXENV_FORCE_COPY="${LINUXENV_FORCE_COPY:-0}"
 
-if [[ $LINUXENV_SKIP_COPY == 0 ]]; then
-  copy_files_from_linuxenv_repo_to_home; _lenv_t "setup-env: copy_files"
-else
+# Copying (~20 recursive diffs) and the stale-script cleanup cost ~2s per shell, so only do them when
+# something under the copied sources changed since the last copy. Deleting a file or switching branches
+# also bumps a directory mtime, so -newer catches those too. Force with: LINUXENV_FORCE_COPY=1
+LINUXENV_COPY_STAMP="$HOME_ENV/.last-copy"
+function linuxenv-sources-changed {
+    [[ ! -f "$LINUXENV_COPY_STAMP" ]] && return 0
+    local changed
+    changed=$(cd "$DIR" && find .bashrc .bash_profile .zshrc .zprofile .npmrc setup-vars.sh setup-env.sh reset-env.sh \
+        dotfiles aliases scripts config workplace-specific/cloudera/aliases workplace-specific/cloudera/config \
+        workplace-specific/cloudera/scripts -newer "$LINUXENV_COPY_STAMP" -print 2>/dev/null | head -n1)
+    [[ -n "$changed" ]]
+}
+
+if [[ $LINUXENV_SKIP_COPY != 0 ]]; then
   echo "NOTE: Skip copying files from linuxenv repo."
+elif [[ $LINUXENV_FORCE_COPY != 0 ]] || linuxenv-sources-changed; then
+  remove-stale-scripts; _lenv_t "setup-env: remove-stale-scripts"
+  # Stamp taken before copying, so edits made while the copy runs are still picked up next time
+  touch "$LINUXENV_COPY_STAMP.new"
+  copy_files_from_linuxenv_repo_to_home && mv "$LINUXENV_COPY_STAMP.new" "$LINUXENV_COPY_STAMP"
+  _lenv_t "setup-env: copy_files"
+else
+  print_debug "No changes in linuxenv repo since last copy; skipping copy (force with LINUXENV_FORCE_COPY=1)"
+  _lenv_t "setup-env: copy check (unchanged)"
 fi
 
 setup-vars-aliases; _lenv_t "setup-env: setup-vars-aliases"
