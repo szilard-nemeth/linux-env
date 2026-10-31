@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Startup profiling marks (see .zprofile); no-op when the helper is not defined, e.g. under bash.
+type _lenv_t > /dev/null 2>&1 || function _lenv_t { :; }
+
 function print_debug {
   if [[ $LINUXENV_DEBUG == 1 ]]; then
     echo $1
@@ -140,7 +143,7 @@ function source_scripts {
 #          . "$f"
 #        fi
         printf_debug "Sourcing file ${f}"
-        . "$f"
+        . "$f"; _lenv_t "  sourced: $f"
     done
     printf_debug "Done sourcing files from ${source_from}"
 }
@@ -164,7 +167,7 @@ function source_files {
         setup_sh="$d/setup.sh"
         if [[ -f "$setup_sh" ]]; then
             printf_debug "\tSourcing setup file $setup_sh\n"
-            . "$setup_sh"
+            . "$setup_sh"; _lenv_t "  sourced: $setup_sh"
         fi
     done
 
@@ -172,7 +175,7 @@ function source_files {
         printf_debug "\tSourcing files from $d"
         for f in $(find ${d} -maxdepth 1 -iname  "*.sh" -not -iname "setup.sh" | xargs grep -L "##SKIPSOURCING##"); do
             printf_debug "\tSourcing file $f"
-            . "$f"
+            . "$f"; _lenv_t "  sourced: $f"
         done
     done
     printf_debug "Done sourcing $marker_file_name files from $from_dir"
@@ -470,15 +473,15 @@ function setup-vars-aliases {
   # !!! THE ORDER OF THE FOLLOWING SOURCE COMMANDS ARE STRICT !!!
     #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
     source_single_file "${HOME_LINUXENV_DIR}/scripts/load-these-first.sh"
-    source_single_file "${HOME_LINUXENV_DIR}/setup-vars.sh"
+    source_single_file "${HOME_LINUXENV_DIR}/setup-vars.sh"; _lenv_t "  setup-vars.sh"
     source_scripts ${HOME_LINUXENV_DIR}/aliases
     source_scripts ${HOME_LINUXENV_DIR}/scripts
     source_files ".source-this"
-    add_to_path ".add-to-path" "$WORKPLACE_SPECIFIC_DIR"
+    add_to_path ".add-to-path" "$WORKPLACE_SPECIFIC_DIR"; _lenv_t "  add_to_path"
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/python
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/git
     add_to_path_directly ${HOME_LINUXENV_DIR}/scripts/kitty
-    setup-jetbrains-links
+    setup-jetbrains-links; _lenv_t "  setup-jetbrains-links"
 }
 
 function setup-jetbrains-links {
@@ -608,8 +611,9 @@ initial_setup || {
     echo "ERROR: initial_setup failed. Aborting script execution."
     return 1
 }
-setup-pythonpath
-remove-stale-scripts
+_lenv_t "setup-env: initial_setup"
+setup-pythonpath; _lenv_t "setup-env: setup-pythonpath"
+remove-stale-scripts; _lenv_t "setup-env: remove-stale-scripts"
 
 # Define LINUXENV_* vars
 LINUXENV_DEBUG="${LINUXENV_DEBUG:-0}"
@@ -617,10 +621,10 @@ export LINUXENV_DEBUG_YARNDEVTOOLS="${LINUXENV_DEBUG_YARNDEVTOOLS:-0}"
 LINUXENV_SKIP_COPY="${LINUXENV_SKIP_COPY:-0}"
 
 if [[ $LINUXENV_SKIP_COPY == 0 ]]; then
-  copy_files_from_linuxenv_repo_to_home
+  copy_files_from_linuxenv_repo_to_home; _lenv_t "setup-env: copy_files"
 else
   echo "NOTE: Skip copying files from linuxenv repo."
 fi
 
-setup-vars-aliases
+setup-vars-aliases; _lenv_t "setup-env: setup-vars-aliases"
 set +x

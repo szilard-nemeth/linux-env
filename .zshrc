@@ -1,3 +1,18 @@
+# Startup profiling, off by default; see .zprofile for usage. Defined here too for non-login shells.
+if ! (( $+functions[_lenv_t] )); then
+    [[ -n $LINUXENV_ZPROF ]] && zmodload zsh/zprof
+    if [[ -n $LINUXENV_PROFILE ]]; then
+        zmodload zsh/datetime
+        typeset -g _LENV_T0=$EPOCHREALTIME
+    fi
+    function _lenv_t {
+        [[ -n $LINUXENV_PROFILE ]] || return 0
+        local now=$EPOCHREALTIME
+        printf '%8.1fms %+8.1fms  %s\n' $(( (now - _LENV_T0) * 1000 )) $(( (now - ${_LENV_TL:-$_LENV_T0}) * 1000 )) "$1" >&2
+        typeset -g _LENV_TL=$now
+    }
+fi
+
 echo "$(date) -- .zshrc executed by shell: $0" >> $HOME/.zshrc.log
 
 function setup-history {  
@@ -23,10 +38,10 @@ function setup {
     
     setup-key-bindings
     setup-history
-    setup-antigen
+    setup-antigen; _lenv_t "zshrc: setup-antigen"
     setup-prompt
-    setup-kitty
-    setup-sdkman
+    setup-kitty; _lenv_t "zshrc: setup-kitty"
+    setup-sdkman; _lenv_t "zshrc: setup-sdkman"
     setup-kind
     setup-tab-title
 }
@@ -249,8 +264,14 @@ function run-setup-scripts {
 setup
 set_debug
 run-setup-scripts
+_lenv_t "zshrc: run-setup-scripts"
 export SKIP_LINUXENV_COPY=1
 
 
 
 print-welcome-screen
+_lenv_t "zshrc: done"
+# 'if' rather than '&&': a false test as the last command would leave $? = 1 for the first prompt
+if [[ -n $LINUXENV_ZPROF ]]; then
+    zprof > /tmp/zprof.txt
+fi
