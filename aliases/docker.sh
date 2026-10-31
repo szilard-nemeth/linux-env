@@ -13,3 +13,6 @@ alias docker-rmfv-all="docker rm -fv \$(docker ps -q)"
 alias docker-rmf-dangling="docker images -f \"dangling=true\" -q | xargs docker rmi -f"
 alias docker-list-dangling="docker images -f \"dangling=true\" -q"
 alias dim='docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedAt}}\t{{.Size}}"'
+alias docker-images-list-date="docker image ls --format \"table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\""
+alias docker-images-list-date-raw="docker image ls --format \"{{.Repository}}:{{.Tag}} -> {{.CreatedAt}}\""
+alias docker-images-list-raw-json"docker image ls --format \"{{json .}}\""
