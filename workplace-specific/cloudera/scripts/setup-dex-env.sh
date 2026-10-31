@@ -38,9 +38,16 @@ type asdf > /dev/null 2>&1 || . /opt/homebrew/opt/asdf/libexec/asdf.sh
 # ~aws-okta
 
 
-# saml2aws auto-completion (~400ms to generate, so cached until saml2aws is upgraded)
-linuxenv-cached-source saml2aws-completion-zsh "$(command -v saml2aws)" saml2aws --completion-script-zsh \
-    || eval "$(saml2aws --completion-script-zsh)"
+# saml2aws auto-completion (~400ms to generate, so cached until saml2aws is upgraded).
+# Its script starts with 'autoload -U compinit && compinit': a full compinit on every shell, on top of the
+# one in .zshrc. Drop that line; keep its bashcompinit line, which its 'complete -F' needs.
+function _saml2aws-completion-without-compinit {
+    local script
+    script=$(saml2aws --completion-script-zsh) || return 1
+    printf '%s\n' "$script" | grep -vx 'autoload -U compinit && compinit'
+}
+linuxenv-cached-source saml2aws-completion-zsh-no-compinit "$(command -v saml2aws)" _saml2aws-completion-without-compinit \
+    || eval "$(_saml2aws-completion-without-compinit)"
 
 
 
