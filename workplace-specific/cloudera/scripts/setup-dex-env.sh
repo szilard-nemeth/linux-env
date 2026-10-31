@@ -37,8 +37,9 @@ DEX_CFG_GREP_FOR="\*\*"
 # ~aws-okta
 
 
-# saml2aws auto-completion
-eval "$(saml2aws --completion-script-zsh)"
+# saml2aws auto-completion (~400ms to generate, so cached until saml2aws is upgraded)
+linuxenv-cached-source saml2aws-completion-zsh "$(command -v saml2aws)" saml2aws --completion-script-zsh \
+    || eval "$(saml2aws --completion-script-zsh)"
 
 
 
@@ -84,15 +85,20 @@ function dex-kubeconfig-pvc-sharedrkedev01 {
 
 
 #Go setup
+function _dex-print-gopath-export {
+  # Run in dex's dir so asdf resolves dex's pinned go version (dex/.tool-versions), not the global one
+  local gopath
+  gopath=$(cd "$DEX_DEV_ROOT" && go env GOPATH) || return 1 # $HOME/.asdf/installs/golang/<version>/go
+  echo "export GOPATH=\"$gopath\""
+}
+
 function dex-export-gopath {
-  cd $DEX_DEV_ROOT
-	
-  export GOPATH=$(go env GOPATH) # $HOME/.asdf/installs/golang/1.20.7/go
+  # 'go env' through the asdf shim takes ~450ms, so the result is cached until dex/.tool-versions changes
+  linuxenv-cached-source dex-gopath "$DEX_DEV_ROOT/.tool-versions" _dex-print-gopath-export \
+    || export GOPATH=$(cd "$DEX_DEV_ROOT" && go env GOPATH)
 	export GOBIN=$GOPATH/bin
 	add_to_path_directly "$GOPATH/bin"
 	export GOOS=darwin
-
-  cd -
 }
 
 

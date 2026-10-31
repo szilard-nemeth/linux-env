@@ -473,6 +473,8 @@ function setup-vars-aliases {
   # !!! THE ORDER OF THE FOLLOWING SOURCE COMMANDS ARE STRICT !!!
     #source and add to path happens from $WORKPLACE_SPECIFIC_DIR/**
     source_single_file "${HOME_LINUXENV_DIR}/scripts/load-these-first.sh"
+    # linuxenv-cached-source, used by setup-vars.sh and aliases/ (which are sourced before scripts/)
+    source_single_file "${HOME_LINUXENV_DIR}/scripts/startup-cache.sh"
     source_single_file "${HOME_LINUXENV_DIR}/setup-vars.sh"; _lenv_t "  setup-vars.sh"
     source_scripts ${HOME_LINUXENV_DIR}/aliases
     source_scripts ${HOME_LINUXENV_DIR}/scripts
@@ -565,19 +567,32 @@ function copy_files_from_linuxenv_repo_to_home {
     #set +e
 }
 
+# Prints an ASDF_PYTHON_LIBS=... assignment for the python that dex pins.
+# Runs in dex's dir (subshell) so `asdf where python` resolves via dex's .tool-versions
+# (dex pins its own python version, distinct from the global default).
+function _dex-print-python-libs {
+  local asdf_python libs
+  asdf_python=$(cd "$1" && asdf where python) || return 1
+  libs=$(find "$asdf_python" -type d -name "site-packages")
+  printf "ASDF_PYTHON_LIBS='%s'\n" "$libs"
+}
+
 function setup-pythonpath {
   if [[ "$MACHINE_TYPE" != "cloudera-mac" ]]; then
     echo "Skipping setup-pythonpath (MACHINE_TYPE=$MACHINE_TYPE)"
     return 0
   fi
 
-  if [[ -d "$HOME/development/cloudera/cde/dex" ]]; then
-    # pushd into dex so `asdf where python` resolves via dex's .tool-versions
-    # (dex pins its own python version, distinct from the global default).
-    pushd "$HOME/development/cloudera/cde/dex" > /dev/null || return 1
-    echo "Setting up PYTHONPATH from dir: $(pwd)"
-    asdf_python=$(asdf where python)
-    ASDF_PYTHON_LIBS=$(find $asdf_python -type d -name "site-packages")
+  local dex_dir="$HOME/development/cloudera/cde/dex"
+  if [[ -d "$dex_dir" ]]; then
+    echo "Setting up PYTHONPATH from dir: $dex_dir"
+    # 'asdf where' + find over the python install take ~450ms, so cache the result until
+    # dex/.tool-versions (which pins the python version) changes.
+    # The helper is loaded by .zprofile/.zshrc; it can be missing on the very first shell.
+    if ! { type linuxenv-cached-source > /dev/null 2>&1 \
+           && linuxenv-cached-source dex-python-libs "$dex_dir/.tool-versions" _dex-print-python-libs "$dex_dir"; }; then
+      eval "$(_dex-print-python-libs "$dex_dir")"
+    fi
     # Append (do NOT prepend): a venv's own site-packages must win over these
     # global entries, or subprocesses like pre-commit's black venv will import
     # ABI-incompatible modules from dex's python. See fix/precommit-black-hook.
@@ -595,7 +610,6 @@ function setup-pythonpath {
     # to ~/Library/Python/3.10/, which is invisible to a `Python/3.8/` entry
     # and vice versa. If you find yourself typing a version literal here, stop.
     export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$ASDF_PYTHON_LIBS:${HOME_LINUXENV_DIR}/scripts/python/"
-    popd > /dev/null || true
   else
     echo "Warning: expected Cloudera project dir not found: $HOME/development/cloudera/cde/dex"
   fi

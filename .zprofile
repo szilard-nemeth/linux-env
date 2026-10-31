@@ -28,7 +28,12 @@ if [[ -f ~/.zshrc ]]; then
    #source ~/.zshrc
 fi
 
-eval "$(/opt/homebrew/bin/brew shellenv)"
+# Output cache for slow init commands; the file is deployed by setup-env.sh, so it is missing on the very first shell
+[[ -f ~/.linuxenv/scripts/startup-cache.sh ]] && . ~/.linuxenv/scripts/startup-cache.sh
+
+if ! { (( $+functions[linuxenv-cached-source] )) && linuxenv-cached-source brew-shellenv /opt/homebrew/bin/brew /opt/homebrew/bin/brew shellenv; }; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
 _lenv_t "zprofile: brew shellenv"
 
 

@@ -15,6 +15,9 @@ fi
 
 echo "$(date) -- .zshrc executed by shell: $0" >> $HOME/.zshrc.log
 
+# Output cache for slow init commands (already loaded by .zprofile in login shells)
+(( $+functions[linuxenv-cached-source] )) || { [[ -f ~/.linuxenv/scripts/startup-cache.sh ]] && . ~/.linuxenv/scripts/startup-cache.sh; }
+
 function setup-history {  
     export HISTFILESIZE=1000000000          #How many lines of history to keep in memory
     export HISTSIZE=1000000000              #How many lines of history to keep in memory
@@ -181,8 +184,10 @@ function setup-kitty {
     autoload -Uz compinit
     compinit
     # TODO https://unix.stackexchange.com/a/470959/189441 / Add zstyle ':completion:*' menu select ?
-    # Completion for kitty
-    kitty + complete setup zsh | source /dev/stdin
+    # Completion for kitty. 'kitty + complete setup zsh' starts kitty's python (~100ms), so cache its output.
+    if ! { (( $+functions[linuxenv-cached-source] )) && linuxenv-cached-source kitty-completion-zsh "$(command -v kitty)" kitty + complete setup zsh; }; then
+        kitty + complete setup zsh | source /dev/stdin
+    fi
 }
 
 function setup-sdkman {
