@@ -44,7 +44,7 @@ linuxenv-cached-source saml2aws-completion-zsh "$(command -v saml2aws)" saml2aws
 
 
 # https://github.infra.cloudera.com/SRE/cloud-users/tree/master/scripts/cloudera-cloud-users
-source "$(brew --prefix)/lib/cloudera-cloud-users.sh"
+source "${HOMEBREW_PREFIX:-$(brew --prefix)}/lib/cloudera-cloud-users.sh"
 autoload -U +X bashcompinit && bashcompinit
 autoload -U +X compinit && compinit
 

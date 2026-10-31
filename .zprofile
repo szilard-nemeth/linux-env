@@ -37,7 +37,7 @@ fi
 _lenv_t "zprofile: brew shellenv"
 
 
-# initialize asdf
-export ASDF_DIR="$(brew --prefix asdf)/libexec"
+# initialize asdf. $HOMEBREW_PREFIX/opt/<formula> is what 'brew --prefix <formula>' prints, without the ~150ms brew call.
+export ASDF_DIR="$HOMEBREW_PREFIX/opt/asdf/libexec"
 . "$ASDF_DIR/asdf.sh"
 _lenv_t "zprofile: asdf"

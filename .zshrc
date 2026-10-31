@@ -51,7 +51,7 @@ function setup {
 
 function setup-antigen {
     #Load antigen
-    source $(brew --prefix)/share/antigen/antigen.zsh
+    source ${HOMEBREW_PREFIX:-$(brew --prefix)}/share/antigen/antigen.zsh
     
     # Load the oh-my-zsh's library.
     antigen use oh-my-zsh
