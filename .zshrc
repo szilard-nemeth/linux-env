@@ -181,8 +181,17 @@ function setup-tab-title {
 
 function setup-kitty {
     echo "Setting up kitty..."
+    # The only compinit of the shell (setup-dex-env.sh used to run a second one).
+    # -C skips the security check of fpath dirs (compaudit) and trusts the existing dump;
+    # do the full check at most once a day, when the dump is older than 24h.
     autoload -Uz compinit
-    compinit
+    local zcompdump=${ZDOTDIR:-$HOME}/.zcompdump
+    local -a stale_dump=( $zcompdump(N.mh+24) )   # glob qualifier: matches only if modified >24h ago
+    if [[ ! -f $zcompdump ]] || (( $#stale_dump )); then
+        compinit
+    else
+        compinit -C
+    fi
     # TODO https://unix.stackexchange.com/a/470959/189441 / Add zstyle ':completion:*' menu select ?
     # Completion for kitty. 'kitty + complete setup zsh' starts kitty's python (~100ms), so cache its output.
     if ! { (( $+functions[linuxenv-cached-source] )) && linuxenv-cached-source kitty-completion-zsh "$(command -v kitty)" kitty + complete setup zsh; }; then

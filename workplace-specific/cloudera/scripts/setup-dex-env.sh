@@ -28,7 +28,8 @@ DEX_CFG_GREP_FOR="\*\*"
 
 # asdf setup
 #. /usr/local/opt/asdf/libexec/asdf.sh
-. /opt/homebrew/opt/asdf/libexec/asdf.sh
+# Login shells already loaded asdf in .zprofile; only load it here for non-login shells
+type asdf > /dev/null 2>&1 || . /opt/homebrew/opt/asdf/libexec/asdf.sh
 
 # aws-okta
 #autoload -U +X bashcompinit && bashcompinit
@@ -45,8 +46,8 @@ linuxenv-cached-source saml2aws-completion-zsh "$(command -v saml2aws)" saml2aws
 
 # https://github.infra.cloudera.com/SRE/cloud-users/tree/master/scripts/cloudera-cloud-users
 source "${HOMEBREW_PREFIX:-$(brew --prefix)}/lib/cloudera-cloud-users.sh"
+# compinit already ran in .zshrc (setup-kitty); bashcompinit is still needed for 'complete -C' below
 autoload -U +X bashcompinit && bashcompinit
-autoload -U +X compinit && compinit
 
 
 # https://github.infra.cloudera.com/pages/SRE/docs/AWS/usage_command-line/#install-and-configure
