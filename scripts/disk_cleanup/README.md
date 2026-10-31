@@ -119,3 +119,15 @@ poetry -C "$LINUX_ENV_REPO" run python "$LINUX_ENV_REPO/scripts/disk_cleanup/cle
   --exclude-tool docker-system-prune \
   --exclude-tool maven-cleanup
 ```
+
+## Before deleting a directory: verify-dir-copy.sh
+
+[`verify-dir-copy.sh`](verify-dir-copy.sh) checks that another directory already holds everything in a directory you want to delete. Every file and symlink under SOURCE must exist at the same relative path under COPY with identical content (`cmp`); files that only exist under COPY are fine.
+
+```sh
+scripts/disk_cleanup/verify-dir-copy.sh [-v] SOURCE COPY
+# e.g. a stale home copy vs. the repo it came from
+scripts/disk_cleanup/verify-dir-copy.sh ~/.linuxenv/workplace-specific/hellmann workplace-specific/hellmann
+```
+
+It prints one `MISSING` / `DIFFERS` / `MISSING (empty dir)` line per problem, then a summary. Exit code 0 means deleting SOURCE loses nothing, 1 means something would be lost. `-v` also prints an `OK` line per verified file.
