@@ -59,6 +59,19 @@ function export-claude-settings {
     export ANTHROPIC_DEFAULT_HAIKU_MODEL="claude-haiku"
     export CLAUDE_CODE_SUBAGENT_MODEL="claude-sonnet"
 
+    # Fast path: the full sync (python + git + ~6 docker CLI calls) costs ~2s per shell. Skip it when
+    # the proxy already answers and neither the repo config nor the sync script changed since the
+    # last successful sync. Force a full sync with: LINUXENV_FORCE_CLAUDE_PROXY_SYNC=1
+    local sync_stamp="$HOME/.env/.claude-proxy-synced"
+    local proxy_port="${ANTHROPIC_BASE_URL##*:}"
+    if [[ -z "$LINUXENV_FORCE_CLAUDE_PROXY_SYNC" && -f "$sync_stamp" \
+          && ! "$HOME_LINUXENV_DIR/config/external-repos.json" -nt "$sync_stamp" \
+          && ! "$HOME_LINUXENV_DIR/scripts/external-repos.py" -nt "$sync_stamp" ]] \
+          && nc -z -G 1 127.0.0.1 "$proxy_port" > /dev/null 2>&1; then
+        print_debug "claude_proxy is up and its config is unchanged; skipping sync"
+        return 0
+    fi
+
     # Remove any leftover logs from the previous run before starting a new one
     rm -f /tmp/claude-proxy-setup-*.log
     # Note: BSD mktemp (macOS) only expands trailing X's, so a template like
@@ -72,6 +85,7 @@ function export-claude-settings {
     echo "Logging Claude code setup to: $setup_log"
     if python3 -u "$HOME_LINUXENV_DIR/scripts/external-repos.py" sync-and-setup "claude_proxy" > "$setup_log" 2>&1; then
         print_debug "$(cat "$setup_log")"
+        touch "$sync_stamp"
     else
         print_red "Error during claude_proxy setup. Logs saved to: $setup_log"
     fi
