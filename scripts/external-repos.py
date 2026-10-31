@@ -40,6 +40,9 @@ class RepoConfig:
 
 _START = time.monotonic()
 
+# Set to 1 to always 'git fetch', even when the pinned ref is already present locally.
+FORCE_FETCH_ENV = "EXTERNAL_REPOS_FORCE_FETCH"
+
 
 def _log(*args) -> None:
     """print() with a wall-clock timestamp and the seconds elapsed since the script started."""
@@ -149,6 +152,36 @@ def _repo_config(repo_id: str, repo: dict) -> RepoConfig:
     )
 
 
+def _is_commit_sha(ref: Optional[str]) -> bool:
+    return bool(ref) and len(ref) == 40 and all(c in "0123456789abcdef" for c in ref.lower())
+
+
+def _resolve_commit(repo: RepoConfig) -> Optional[str]:
+    """Return the commit SHA repo.ref points to in the local clone, or None if it is not present."""
+    result = _run(
+        ["git", "-C", repo.repo_dir, "rev-parse", "--verify", "--quiet", f"{repo.ref}^{{commit}}"],
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def _ensure_sparse_checkout(repo: RepoConfig) -> None:
+    """Apply repo.sparse_paths, unless the clone already has exactly these patterns."""
+    no_cone_paths = _normalize_sparse_paths_for_no_cone(repo.sparse_paths)
+    enabled = _run_capture(["git", "-C", repo.repo_dir, "config", "--get", "core.sparseCheckout"]) == "true"
+    current = set(_run_capture(["git", "-C", repo.repo_dir, "sparse-checkout", "list"]).splitlines())
+    if enabled and current in (set(repo.sparse_paths), set(no_cone_paths)):
+        _log(f"External repo '{repo.repo_id}' sparse-checkout already configured; skipping")
+        return
+
+    _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "init", "--cone"])
+    try:
+        _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", *repo.sparse_paths])
+    except subprocess.CalledProcessError:
+        _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", "--no-cone", *no_cone_paths])
+
+
 def _sync_repo(repo: RepoConfig) -> None:
     if not repo.url or not repo.repo_dir:
         _log(f"External repo '{repo.repo_id}' missing url or dir; skipping")
@@ -160,16 +193,23 @@ def _sync_repo(repo: RepoConfig) -> None:
         _run_command(["git", "clone", repo.url, repo.repo_dir])
 
     if repo.sparse_paths:
-        _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "init", "--cone"])
-        try:
-            _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", *repo.sparse_paths])
-        except subprocess.CalledProcessError:
-            no_cone_paths = _normalize_sparse_paths_for_no_cone(repo.sparse_paths)
-            _run_command(["git", "-C", repo.repo_dir, "sparse-checkout", "set", "--no-cone", *no_cone_paths])
+        _ensure_sparse_checkout(repo)
 
-    _run_command(["git", "-C", repo.repo_dir, "fetch", "--all", "--tags", "--prune"])
+    # A pinned commit SHA never moves, so once it is present locally there is nothing to fetch.
+    # Branch/tag refs can move, so those are always fetched.
+    target = _resolve_commit(repo) if repo.ref else None
+    if _is_commit_sha(repo.ref) and target and not os.environ.get(FORCE_FETCH_ENV):
+        _log(
+            f"Pinned commit {repo.ref[:12]} already present locally; skipping fetch (set {FORCE_FETCH_ENV}=1 to force)"
+        )
+    else:
+        _run_command(["git", "-C", repo.repo_dir, "fetch", "--all", "--tags", "--prune"])
+        target = _resolve_commit(repo) if repo.ref else None
 
     if repo.ref:
+        if target and target == _run_capture(["git", "-C", repo.repo_dir, "rev-parse", "HEAD"]):
+            _log(f"External repo '{repo.repo_id}' is already at {repo.ref[:12]}; skipping checkout")
+            return
         status = _run_capture(["git", "-C", repo.repo_dir, "status", "--porcelain"])
         if status:
             _log(f"External repo '{repo.repo_id}' has local changes; skipping checkout")
