@@ -53,7 +53,11 @@
       "Write(docs/security/**)",
       "Edit(.claude/worktrees/*/docs/security/**)",
       "Write(.claude/worktrees/*/docs/security/**)",
-      "mcp__jira-mcp__jira_write_batch"
+      "mcp__jira-mcp__jira_write_batch",
+      "Edit(~/development/my-repos/linux-env/**)",
+      "Write(~/development/my-repos/linux-env/**)",
+      "Edit(~/development/my-repos/knowledge-base-private/**)",
+      "Write(~/development/my-repos/knowledge-base-private/**)"
     ],
     "deny": [
       "Bash(curl:*)",
